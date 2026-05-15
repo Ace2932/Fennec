@@ -15,6 +15,8 @@ Constraints recap:
 
 ## Week 1 — 2026-05-15 → 2026-05-22 (this week)
 
+> **Detailed actionable checklist:** [`checklists/week-1.md`](./checklists/week-1.md)
+
 **Primary: leg-joint CAD on OnShape**
 
 - [ ] Pull STS3215 19kg + 30kg STEP from GrabCAD or Feetech site; import to OnShape
