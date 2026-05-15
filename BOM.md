@@ -1,8 +1,8 @@
-# NovaSM3 Quadruped Build — BOM v3.1 (Committed)
+# NovaSM3 Quadruped Build — BOM v3.2 (Committed)
 
 **Last updated:** May 15, 2026
-**Supersedes:** BOM v3
-**Status:** Final committed parts list. All "optional" items resolved — either committed or deferred. Charger resolved to ISDT 608AC. NVMe deferred due to May-2026 NAND shortage.
+**Supersedes:** BOM v3.1
+**Status:** v1 scope narrowed to **quadruped only** (12 servos active). Arm (6 STS3215) demoted to Phase 4 future work; bus IDs 13-18 + arm-rail buck footprint reserved on PCB redesign. Power rails redesigned around Pololu modules after XL4016 capacity audit (8A continuous insufficient for walking-gait + impact transients). Full safety scope adopted: LVC alarm + E-stop + INA226 per-rail telemetry + MOSFET hard-cutoff. Pattern A/B selectable on new PCB via 74HC125 + solder bridge.
 
 ---
 
@@ -29,16 +29,24 @@
 |------|-------|--------|
 | Teensy 4.1 (with pins) | $50 | ✅ Owned |
 | Arduino Nano (ELEGOO 3-pack, CH340) | $15 | ✅ Ordered |
-| NovaSM3 PCB v5.2b | $60 | ✅ To order from PCBWay |
+| ~~NovaSM3 PCB v5.2b~~ → **NovaSM3 PCB v6 (custom redesign)** | $60 (est.) | 🆕 Design + order from PCBWay — see [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md) for feature set |
 | FE-URT-1 USB→TTL Feetech interface | $20 | ✅ Ordered |
+| **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — populated on PCB; solder bridge selects FE-URT-1 (Pattern A) vs Teensy UART (Pattern B) |
+| **E-stop button (panel-mount, latching, NC contact)** | $10 | 🆕 Order |
+| **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.4V, hip 12V, Jetson 12V). I²C to Teensy. |
+| **Comparator + MOSFET parts for hard-cutoff at 12.4V** | $10 | 🆕 Order — autonomous LVC backstop independent of charger alarm |
 
-**Feetech bus architecture: Pattern A confirmed for now** — FE-URT-1 → USB → Jetson directly drives the 18-servo bus. No Teensy half-duplex circuit until/unless latency becomes a measured problem.
+**Feetech bus architecture: Pattern A active, Pattern B PCB-ready.**
+- **Pattern A (v1 active):** FE-URT-1 → USB → Jetson directly drives the 12-servo bus.
+- **Pattern B (footprint reserved):** Teensy 4.1 UART → 74HC125 half-duplex driver → same bus pads. Solder bridge selects active master. Cost today ~$1 (74HC125 IC + routing). Saves a chassis teardown if Pattern A jitter forces migration. Decision criterion: measure gait-loop jitter once 12-servo daisy-chain is live; migrate to Pattern B only if p99 latency >5 ms or stalls observed.
 
 ---
 
 ## 3. Power
 
-### Main power chain
+### Main power chain (v3.2 — Pololu redesign)
+
+XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating is insufficient for walking-gait current (8-12A avg, 25-40A impact transients per leg-rail load profile). See [`docs/power-budget.md`](../docs/power-budget.md) for math. XL4016 boards stay in spares bin for low-current aux duty.
 
 | Item | Price | Status |
 |------|-------|--------|
@@ -46,10 +54,14 @@
 | XT60 plug + high-current switch | $15 | ✅ Ordered |
 | Lighted rocker switch 12V | $5 | ✅ Ordered |
 | Mini digital voltmeter | $10 | ✅ Ordered |
-| XL4016 12A buck (×2) — 6.8V servo + 12V hip rails | $30 | ✅ Ordered |
+| ~~XL4016 12A buck (×2)~~ | $30 | ⚠️ Already ordered — relegated to spares (8A cont. inadequate for servo rails). |
 | XL6009 buck-boost | $10 | ✅ Owned — spare, no allocated role |
-| **Pololu D42V55F12 — 12V buck for Jetson** | **$32** | 🆕 Order — replaces deprecated D24V50F12 (older/supply-constrained family). Datasheet: 4.5A typ @ 42V in, derates to ~3A continuous at 14.8V Vin (still ~1.4× headroom over Jetson MAXN 2.1A). Min Vin 12V → **set LiPo LVC alarm at 3.3V/cell = 13.2V** to stay above dropout. 60V Vin tolerance handles any 4S spike. Reverse-polarity protected. |
-| UBEC 5V/5A | $15 | ✅ Owned — repurposed for 5V peripherals (Ethernet switch, fans, aux sensors) |
+| **Pololu D42V110F7 — 7.4V leg rail (10A+ cont.)** | **$60** | 🆕 Order — drives 8× femur/tibia STS3215 (19kg). 12-60V Vin, headroom for 25-40A impact transients via bulk caps at injection points. |
+| **Pololu D42V110F12 — 12V hip+L2 rail (10A+ cont.)** | **$60** | 🆕 Order — drives 4× hip STS3215 (30kg) + Unitree L2 LiDAR via LC filter tap. |
+| **Pololu D42V55F12 — 12V Jetson rail** | **$32** | 🆕 Order — replaces deprecated D24V50F12. Derates to ~3A cont. at 14.8V Vin → ~1.4× headroom over Jetson MAXN 2.1A. Min Vin 12V → **LVC alarm at 13.2V**. Reverse-polarity protected. |
+| **Pololu D42V55F7 — 7.4V arm rail (future)** | **$0** | ⚠️ **Footprint reserved on PCB v6; don't populate until Phase 4 arm install.** Estimated cost when ordered: ~$32. |
+| UBEC 5V/5A | $15 | ✅ Owned — 5V peripherals (Ethernet switch, fans, aux sensors) |
+| Bulk caps for rail injection points (1000 µF / 25V × 4) | $4 | 🆕 Order with electronics — soaks servo impact transients near point of load |
 | PCB terminals + misc boards | $8 | ✅ Ordered |
 | Dip switches + resistors + buttons | $8 | ✅ Ordered |
 
@@ -62,34 +74,55 @@
 | **XT60 jumper** | **$5** | ⚠️ Verify Ovonic 4S kit on arrival — likely supplied. Order only if missing. |
 | XT60 charging lead | $8 | ⚠️ Verify Ovonic 4S kit on arrival — likely supplied (XT60 ↔ JST-XH balance). Order only if missing. |
 
-### Final power rail map
+### Final power rail map (v3.2)
 
 ```
-4S LiPo (12.8-16.8V) ──┬── XL4016 #1 → 6.8V rail → 8x femur/tibia STS3215 (19kg)
-                       │                          → 6x arm STS3215 (19kg)
+4S LiPo (12.8-16.8V) ──┬── Pololu D42V110F7  → 7.4V/10A+ → 8× femur/tibia STS3215 (19kg)
+                       │                                   ↑ star injection: 4 points across chain
                        │
-                       ├── XL4016 #2 → 12V rail → 4x hip STS3215 (30kg)
-                       │                       └── (LC filter tap) → Unitree L2 LiDAR
+                       ├── Pololu D42V110F12 → 12V/10A+  ─┬→ 4× hip STS3215 (30kg)
+                       │                                  └→ Unitree L2 LiDAR (LC filter)
                        │
-                       ├── Pololu D42V55F12 → 12V → Jetson barrel jack
+                       ├── Pololu D42V55F12  → 12V/~3A   → Jetson barrel jack
                        │
-                       └── UBEC 5V/5A → 5V rail → Ethernet switch, fans, aux 5V peripherals
+                       ├── [reserved arm rail]            → 7.4V/3-8A → 6× arm STS3215 (Phase 4)
+                       │   (D42V55F7 footprint, unstuffed)
+                       │
+                       └── UBEC 5V/5A        → 5V        → Ethernet switch, fans, aux 5V peripherals
 ```
+
+**Power tree safety chain:**
+- 608AC charger LVC alarm: **3.3V/cell = 13.2V** pack (above D42V55F12 dropout knee)
+- MOSFET hard-cutoff: **12.4V pack** (autonomous backstop, comparator-driven, breaks main battery feed)
+- Panel-mount E-stop: NC contact in series with the **servo-rail enable lines only** — kills D42V110F7 + D42V110F12 outputs while Jetson rail stays live for debug
+- INA226 per active rail (3×): I²C → Teensy → ROS 2 diagnostics topic
+- ANL 30A fuse on battery feed (sized for hip-rail worst case ~15A + headroom)
 
 ---
 
 ## 4. Servos (Feetech TTL Unified Bus)
 
+**v1 scope: 12 active servos** (4 hip + 8 femur/tibia). Arm (6× STS3215) deferred to Phase 4 — kept on shelf, bus IDs 13-18 reserved, arm-rail PCB footprint reserved.
+
 | Item | Price | Status |
 |------|-------|--------|
-| STS3215 12V 30kg × 4 (hips) | $120 | ✅ Ordered |
-| STS3215 7.4V 19kg × 8 (femur + tibia) | $200 | ⚠️ Have ~6, order remaining |
-| STS3215 7.4V 19kg × 6 (arm, from SO-ARM101) | $0 | ✅ Carry over |
+| STS3215 12V 30kg × 4 (hips) | $120 | ✅ Ordered — bus IDs 1-4 |
+| STS3215 7.4V 19kg × 8 (femur + tibia) | $200 | ⚠️ Have ~6, order remaining 2 — bus IDs 5-12 |
+| STS3215 7.4V 19kg × 6 (arm) | $0 | ⏸ **Phase 4 future** — carry over from SO-ARM101, IDs 13-18 reserved, not on bus for v1 |
 | Feetech TTL daisy-chain cables | $20 | ✅ Ordered |
 | Feetech 25T servo horns × 12 | $35 | ✅ Ordered — *horn fitment integrated into leg redesign* |
 | Feetech FD debugging software (Windows) | Free | 🆕 Download — for ID setup |
 
-**Process:** Set unique bus IDs (1-12 locomotion, 13-18 arm) before chaining. Label each servo physically.
+**Process:** Set unique bus IDs (**1-12 active** for v1 quadruped; 13-18 reserved for Phase 4 arm) before chaining. Label each servo physically.
+
+### Bus integrity (12 nodes @ 1Mbps over ~2 m harness)
+
+PCB v6 includes footprints for the following bus-integrity mitigations (populate per measured bus error rate):
+- **Series R** (22-100 Ω, 0603) at FE-URT-1 output — slope rate-limiting
+- **Ferrite bead** at each servo entry — common-mode noise rejection
+- **Star ground** at FE-URT-1 — eliminates daisy-chain ground-loop pickup
+
+Note: Feetech bus is single-ended half-duplex TTL UART. 120 Ω differential termination (RS-485 trick) is NOT appropriate here. If bus errors persist after the above, drop baud 1M → 500k → 250k.
 
 ---
 
@@ -212,15 +245,19 @@ Post-Jetson-flash install list (Phase 1):
 
 2. **Power rail validation (with one LiPo, second still wrapped)**
    - Charge LiPo to full inside the safe bag
-   - Bench-test Pololu D42V55F12: 4S in → 12V out, loaded with Jetson MAXN. **Sweep Vin from 16.8V down to 13.2V** and confirm 12V rail stays clean (no >100 mV droop, no oscillation) — this validates behavior across the full usable LiPo discharge range and confirms LVC-alarm setpoint is above dropout knee.
-   - Bench-test XL4016 #1 set to 6.8V, loaded with one STS3215
-   - Bench-test XL4016 #2 set to 12V, loaded with one 30kg hip STS3215
-   - Bench-test 5V UBEC loaded with Ethernet switch
+   - Bench-test Pololu D42V55F12 (Jetson 12V): 4S in → 12V out, loaded with Jetson MAXN. **Sweep Vin from 16.8V down to 13.2V** and confirm 12V rail stays clean (no >100 mV droop, no oscillation) — validates dropout-knee setpoint.
+   - Bench-test Pololu D42V110F7 (leg 7.4V): load with 1× then 4× then 8× STS3215 19kg in a walking-gait stand-in (alternating PWM positions @ 2 Hz). Watch for thermal rise, voltage sag, and rail oscillation under transient steps.
+   - Bench-test Pololu D42V110F12 (hip+L2 12V): load with 1× 30kg hip + L2 LiDAR. Verify LC filter cleans the L2 tap (scope before/after).
+   - Bench-test 5V UBEC loaded with Ethernet switch.
+   - Verify E-stop physically opens the leg + hip rail enable lines (Jetson rail stays alive).
+   - Verify MOSFET hard-cutoff trips at 12.4V Vin (use bench supply to sweep down; restore battery only after verifying).
+   - Verify INA226 per-rail I²C reads sane current/voltage values under load.
 
 3. **Servo bring-up**
-   - Power one servo at a time, assign IDs 1-18, label each
-   - Single-servo SCServo SDK Python test via FE-URT-1 → Jetson
-   - Full 18-servo daisy chain: continuity check unpowered, then ping-all powered
+   - Power one servo at a time, assign IDs **1-12 for v1** (4 hips, 8 femur/tibia), label each. IDs 13-18 reserved for future arm.
+   - Single-servo SCServo SDK Python test via FE-URT-1 → Jetson.
+   - Full 12-servo daisy chain: continuity check unpowered, then ping-all powered.
+   - Measure FE-URT-1 → bus gait-loop p99 latency under SCServo SDK polling at 100 Hz across all 12 servos. **If p99 >5 ms or stalls observed, switch solder bridge to Pattern B (Teensy + 74HC125 owning the bus).**
 
 4. **Network**
    - Configure Jetson eth0 static 192.168.1.2/24
@@ -235,17 +272,22 @@ Post-Jetson-flash install list (Phase 1):
 
 ## 13. Cost Summary
 
-### Committed net adds (this audit)
+### Committed net adds (v3.2 audit)
 
 | Category | Amount |
 |----------|--------|
 | DP adapter | $10 |
-| Pololu D42V55F12 (swapped from deprecated D24V50F12) | $32 |
+| Pololu D42V55F12 (Jetson 12V) | $32 |
+| **Pololu D42V110F7 (leg 7.4V)** | **$60** |
+| **Pololu D42V110F12 (hip+L2 12V)** | **$60** |
 | Ethernet switch + Cat6 + LC filter parts | $26 |
 | Threadlocker + tape | $18 |
 | Magigoo PA | $15 |
 | ISDT 608AC + LiPo safe bag + XT60 jumper + XT60 charging lead | $88 |
-| **Subtotal (608AC charger path)** | **~$199** |
+| **74HC125 + E-stop + INA226 ×3 + hard-cutoff parts + bulk caps** | **$34** |
+| **Subtotal** | **~$343** |
+
+Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not refunded. New PCB v6 design cost (PCBWay) absorbs the v5.2b $60 line. Net forward spend ≈ $343.
 
 ### Deferred (order when you actually need them)
 
@@ -263,17 +305,19 @@ Post-Jetson-flash install list (Phase 1):
 
 ### Project total estimate
 
-- **Already-owned/ordered:** ~$2,650
-- **Committed net adds (608AC path):** ~$199
-- **Realistic total spend:** **~$2,817**
-- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,525**
+- **Already-owned/ordered:** ~$2,650 (includes XL4016 ×2 sunk to spares)
+- **Committed net adds (v3.2):** ~$343
+- **Realistic total spend:** **~$2,993**
+- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,740**
 
 ---
 
 ## 14. Pending Items
 
-- [ ] Verify included WiFi 5 module works on Jetson arrival; confirm BT presence
-- [ ] Order remaining STS3215 19kg servos to complete 8-count for legs
+- [ ] Verify included WiFi works on Jetson arrival (802.11ac/ab/gn confirmed from NVIDIA spec); confirm BT presence (not explicitly in spec)
+- [ ] Order remaining STS3215 19kg servos to complete 8-count for legs (v1 = 12 active total)
+- [ ] Design PCB v6 — see [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md)
+- [ ] Measure gait-loop p99 latency under SCServo SDK once 12-servo bus is live → resolves Pattern A vs B
 
 ---
 

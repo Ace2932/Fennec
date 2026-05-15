@@ -3,10 +3,10 @@
 > A modified [NovaSM3](https://github.com/SovGVD/NovaSM3) quadruped platform rebuilt around a unified Feetech STS3215 TTL servo bus, NVIDIA Jetson Orin Nano Super compute, and ROS 2 Humble — designed as a platform for Vision-Language-Action (VLA) model deployment, 3D SLAM, and autonomous mobile manipulation.
 
 **Status:** 🔧 Phase 1 — Build & Bring-Up
-**Platform:** Quadruped (12 DOF) + 6-DOF arm
+**Platform:** Quadruped (12 DOF) — arm (6-DOF, Phase 4 future) on shelf
 **Compute:** NVIDIA Jetson Orin Nano Super 8GB
 **Middleware:** ROS 2 Humble
-**Last updated:** May 15, 2026 (BOM v3.1)
+**Last updated:** May 15, 2026 (BOM v3.2)
 
 ---
 
@@ -31,16 +31,16 @@
 
 This project is a heavily modified fork of the open-source NovaSM3 quadruped, redesigned to serve as a research platform for embodied AI. Stock Nova uses PWM hobby servos and a Raspberry Pi running custom locomotion code. This build replaces:
 
-- **All 18 servos** with Feetech STS3215 TTL bus servos for unified protocol, real-time joint feedback (position, load, temperature, voltage), and elimination of PWM wiring complexity
-- **The Pi** with an NVIDIA Jetson Orin Nano Super (67 TOPS, suitable for VLA inference on-board)
+- **12 servos** with Feetech STS3215 TTL bus servos for unified protocol, real-time joint feedback (position, load, temperature, voltage), and elimination of PWM wiring complexity. Six additional STS3215 (arm) remain on shelf for Phase 4.
+- **The Pi** with an NVIDIA Jetson Orin Nano Super (67 TOPS sparse INT8 / ~33 TOPS dense; 8GB RAM tight but workable for VLA inference + ROS 2 + SLAM — see Phase 4 notes)
 - **The stock perception** with Intel RealSense D456 (depth + RGB + IMU) and Unitree L2 4D LiDAR (360° × 96° FOV, 30m range)
 - **The stock locomotion stack** with ROS 2 Humble + Nav2 + RTAB-Map / POINT-LIO
 
-The arm is carried over from a prior SO-ARM101 build, also Feetech-based, allowing all 18 joints to live on a single daisy-chained TTL bus.
+The arm is carried over from a prior SO-ARM101 build, also Feetech-based. **v1 build scope: quadruped only (12 servos active).** Arm install + integration is Phase 4 future work — bus IDs 13-18 and the 7.4V arm-rail buck footprint are reserved on the PCB v6 redesign so the future install is a populate-and-go.
 
 ### Goals
 
-- ✅ Unified TTL servo bus across locomotion + manipulation (18 servos, one protocol)
+- ✅ Unified TTL servo bus across locomotion (12 servos v1; future-ready for 18 with arm)
 - 🔧 ROS 2 locomotion via micro-ROS bridge to Teensy 4.1 (or direct via FE-URT-1)
 - 📋 3D SLAM using LiDAR + visual-inertial fusion (POINT-LIO baseline, RTAB-Map comparison)
 - 📋 Autonomous navigation (Nav2) on legged platform with stair climbing
@@ -57,25 +57,28 @@ The arm is carried over from a prior SO-ARM101 build, also Feetech-based, allowi
 | Compute (MCU) | Teensy 4.0 | Teensy 4.1 (more RAM + SD slot) |
 | Aux MCU | Arduino Nano | Arduino Nano (kept, peripherals only) |
 | Locomotion servos | 12× PWM hobby servos | 12× Feetech STS3215 (4× 12V/30kg hip, 8× 7.4V/19kg femur/tibia) |
-| Arm | None (stock) | 6× Feetech STS3215 (carried over from SO-ARM101) |
+| Arm | None (stock) | 6× Feetech STS3215 from SO-ARM101 — **on shelf, Phase 4** |
 | Servo protocol | PWM (one signal per servo) | TTL half-duplex serial bus (daisy-chained) |
 | Perception | None / optional | RealSense D456 + Unitree L2 LiDAR |
 | Middleware | Custom Arduino loops | ROS 2 Humble + micro-ROS |
-| Power | 3S 11.1V LiPo | 4S 14.8V LiPo + dual-rail (6.8V + 12V) |
+| Power | 3S 11.1V LiPo | 4S 14.8V LiPo + Pololu D42V110-class buck rails (7.4V leg, 12V hip+L2, 12V Jetson, 5V aux). XL4016 dropped after capacity audit. |
 | Print materials | PLA / PETG | PA6-CF / PETG-CF / TPU 95A |
 
-### What is reused from the Nova PCB
+### Why we're redesigning the PCB (v5.2b → v6)
 
-The NovaSM3 v5.2b PCB is retained for:
-- Battery input + reverse polarity protection
-- One of the 12A buck converter footprints (6.8V rail)
-- Power switch, voltmeter, fuse
+After the v3.1 architecture audit, the stock Nova PCB v5.2b can't host the upgraded power tree (Pololu modules, INA226 telemetry, hard-cutoff MOSFET, E-stop chain) or the Pattern A/B bus master selector. The redesign retains the spirit of the stock board (Arduino Nano aux slot, battery input geometry) and adds the new safety + power architecture. Full feature set in [`hardware/pcb-mods/README.md`](./hardware/pcb-mods/README.md).
+
+### What carries over from Nova v5.2b
+
 - Arduino Nano slot for aux peripherals (PIR, ultrasonic, OLED, RGB LEDs, MP3, IMU)
+- Battery input + reverse polarity protection geometry (replicated with MOSFET-based reverse protection instead of diode)
+- Power switch, voltmeter, fuse (rating revised to ANL 30A)
 
-### What is bypassed on the Nova PCB
+### What changes
 
-- All 12 PWM servo output headers (Feetech bus doesn't use PWM)
-- Any Teensy code driving Servo.h / PWMServo.h
+- All 12 PWM servo output headers removed (Feetech bus is daisy-chain TTL, doesn't use PWM)
+- XL4016 buck footprints → Pololu D42V110-class module footprints
+- Add: 74HC125 half-duplex driver (Pattern B prep), INA226 ×3, E-stop chain, hard-cutoff MOSFET, ANL fuse holder, bulk caps at injection points, bus-integrity footprints (series R + ferrite beads), reserved arm-rail buck footprint
 
 ---
 
@@ -88,47 +91,49 @@ The NovaSM3 v5.2b PCB is retained for:
 │                  NVIDIA Jetson Orin Nano Super 8GB                 │
 │                          (ROS 2 Humble)                            │
 │   • Locomotion, Nav2, SLAM, VLA inference, sensor fusion           │
-│   • Built-in WiFi 5 (802.11ac) + antennas (included in P3766 kit)  │
+│   • Built-in WiFi 5 (802.11ac/ab/gn) per NVIDIA P3766 spec sheet   │
 └──┬──────────┬─────────────┬─────────────┬───────────────────────────┘
    │ USB-C    │ USB 3.1     │ Ethernet    │ USB
    │          │             │             │
-┌──▼───────┐ ┌▼───────────┐ ┌▼───────────┐ ┌▼─────────┐
-│ Realsense│ │ FE-URT-1   │ │ Gig switch │ │ Teensy   │
-│ D456     │ │ USB→TTL    │ │            │ │ 4.1      │
-│ (depth + │ │            │ │ ◄─ L2 ─►   │ │ (μROS)   │
-│  RGB +   │ └────┬───────┘ └────────────┘ └──┬───────┘
-│  IMU)    │      │                           │
-└──────────┘      │ TTL half-duplex           │ I2C / GPIO
-                  │                           │
-        ┌─────────▼─────────┐         ┌──────▼──────┐
-        │ 18× STS3215       │         │ Arduino Nano│
-        │ daisy-chained     │         │ (aux only:  │
-        │                   │         │  PIR, OLED, │
-        │ IDs 1-12: legs    │         │  RGB, MP3,  │
-        │ IDs 13-18: arm    │         │  ultrasonic,│
-        │                   │         │  MPU-6050)  │
-        └───────────────────┘         └─────────────┘
+┌──▼───────┐ ┌▼───────────┐ ┌▼───────────┐ ┌▼─────────────────────┐
+│ Realsense│ │ FE-URT-1   │ │ Gig switch │ │ Teensy 4.1            │
+│ D456     │ │ USB→TTL    │ │            │ │  • aux I/O (v1)       │
+│ (depth + │ │ (bus       │ │ ◄─ L2 ─►   │ │  • INA226 I²C reader  │
+│  RGB +   │ │  master    │ │            │ │  • E-stop GPIO        │
+│  IMU)    │ │  Pattern A)│ └────────────┘ │  • 74HC125 → bus      │
+└──────────┘ └────┬───────┘                │    (Pattern B prep)   │
+                  │                        └──┬────────────────────┘
+                  │ TTL half-duplex           │ I²C / GPIO
+                  │ (solder-bridge select)    │
+        ┌─────────▼─────────┐         ┌──────▼──────────────────┐
+        │ 12× STS3215       │         │ Arduino Nano            │
+        │ daisy-chained     │         │ (aux only:              │
+        │  IDs 1-4:  hips   │         │  PIR, OLED, RGB, MP3,   │
+        │  IDs 5-12: f/tib  │         │  ultrasonic, MPU-6050)  │
+        │  IDs 13-18: ⏸    │         │                         │
+        │  (arm, Phase 4)   │         └─────────────────────────┘
+        └───────────────────┘
 ```
 
 ### Servo configuration
 
-| Joint group | Count | Servo | Voltage | Bus IDs |
-|-------------|-------|-------|---------|---------|
-| Hips | 4 | STS3215 30kg | 12V | 1-4 |
-| Femur + tibia | 8 | STS3215 19kg | 7.4V | 5-12 |
-| Arm (shoulder + elbow) | 3 | STS3215 19kg | 7.4V | 13-15 |
-| Arm (wrist + gripper) | 3 | STS3215 19kg (existing) | 7.4V | 16-18 |
+| Joint group | Count | Servo | Voltage | Bus IDs | Status |
+|-------------|-------|-------|---------|---------|--------|
+| Hips | 4 | STS3215 30kg | 12V | 1-4 | v1 active |
+| Femur + tibia | 8 | STS3215 19kg | 7.4V | 5-12 | v1 active |
+| Arm (shoulder + elbow) | 3 | STS3215 19kg | 7.4V | 13-15 | ⏸ Phase 4 — reserved |
+| Arm (wrist + gripper) | 3 | STS3215 19kg | 7.4V | 16-18 | ⏸ Phase 4 — reserved |
 
-All 18 share a single daisy-chained TTL bus. Power is split across two voltage rails but data is unified.
+**v1 build = 12 active servos** on a single daisy-chained TTL bus, 2 active voltage rails (7.4V leg, 12V hip+L2). Bus IDs 13-18 and the 7.4V arm rail (D42V55F7 footprint) reserved on PCB v6 for Phase 4 arm install — populate-and-go.
 
 ### Bus master pattern
 
-Two viable patterns; **Pattern A is current**:
+Two viable patterns. **PCB v6 supports both via solder-bridge selector** — no chassis teardown to migrate.
 
-- **Pattern A (current):** Jetson → USB → FE-URT-1 → TTL bus. Simple, matches SO-ARM101 architecture. Acceptable latency for walking gaits. Risk: Jetson restart kills servo commands.
-- **Pattern B (future):** Teensy 4.1 owns the bus via hardware UART + half-duplex driver circuit; Jetson sends joint targets via micro-ROS. Hard real-time, survives Jetson restarts. Requires building a half-duplex driver (1 transistor or TXS0108).
+- **Pattern A (v1 default):** Jetson → USB → FE-URT-1 → TTL bus. Simple, matches SO-ARM101 architecture. **Real risk is not "Jetson restart kills servo commands" — it's Linux jitter.** USB-CDC latency on Jetson is 1-10 ms typical, 50 ms+ under load (CUDA kernel preemption, journald flushes, kworker spikes). At 100 Hz gait, 100 ms = robot on the floor.
+- **Pattern B (footprint-ready):** Teensy 4.1 UART → 74HC125 half-duplex driver → same bus pads as FE-URT-1. Hard real-time, survives Jetson restarts and kernel preemption. PCB v6 routes both paths; a solder bridge selects which master drives the bus.
 
-Migration to B happens only if measured latency or robustness becomes a problem.
+**Migration criterion:** measure gait-loop p99 latency once 12-servo bus is live (Pre-Assembly §12 step 3). If p99 >5 ms or stalls observed, flip the solder bridge. Zero hardware rework.
 
 ---
 
@@ -147,7 +152,6 @@ Migration to B happens only if measured latency or robustness becomes a problem.
 │            Navigation Layer                  │
 │  • Nav2 (planning + control)                 │
 │  • robot_localization (EKF)                  │
-│  • Gait controller                           │
 └──────────────────────────────────────────────┘
 ┌──────────────────────────────────────────────┐
 │              Perception Layer                │
@@ -156,10 +160,16 @@ Migration to B happens only if measured latency or robustness becomes a problem.
 │  • unitree_lidar_ros2                        │
 └──────────────────────────────────────────────┘
 ┌──────────────────────────────────────────────┐
+│            Locomotion Layer                  │
+│  • Gait controller (8-phase walk)            │
+│  • 3-DOF-per-leg IK solver                   │
+└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
 │               Hardware Layer                 │
 │  • Feetech SCServo SDK (joint state + cmd)   │
 │  • micro-ROS bridge (Teensy ↔ Jetson)        │
 │  • IMU driver, peripheral I/O                │
+│  • INA226 per-rail telemetry → diagnostics   │
 └──────────────────────────────────────────────┘
 ```
 
@@ -187,23 +197,32 @@ Migration to B happens only if measured latency or robustness becomes a problem.
 
 ```
 4S LiPo 14.8V nominal (12.8-16.8V)
+   │  ANL 30A fuse · MOSFET reverse-protection · MOSFET hard-cutoff @12.4V · E-stop NC (servo rails only)
    │
-   ├── XL4016 #1 ──► 6.8V rail ──► 14× STS3215 7.4V/19kg (8 leg + 6 arm)
+   ├── Pololu D42V110F7  ──► 7.4V/10A+ ──► 8× STS3215 19kg femur/tibia
+   │       (star injection at 4 points along chain, bulk caps near point of load)
    │
-   ├── XL4016 #2 ──► 12V rail  ──┬── 4× STS3215 12V/30kg (hips)
-   │                              └── (LC filter) ──► Unitree L2 LiDAR (12V/1A)
+   ├── Pololu D42V110F12 ──► 12V/10A+ ──┬── 4× STS3215 30kg hips
+   │                                     └── (LC filter) ──► Unitree L2 LiDAR (12V/1A)
    │
-   ├── Pololu D42V55F12 ──► 12V ──► Jetson Orin Nano (barrel jack, 7-20V tolerant)
+   ├── Pololu D42V55F12  ──► 12V/~3A  ──► Jetson Orin Nano (barrel jack)
+   │
+   ├── [reserved D42V55F7] ► 7.4V/3-8A ──► 6× STS3215 arm (Phase 4 — footprint unstuffed)
    │
    └── UBEC 5V/5A ──► 5V rail ──► Ethernet switch, fans, aux 5V peripherals
+
+   INA226 ×3 (leg 7.4V, hip+L2 12V, Jetson 12V) ──► I²C ──► Teensy 4.1 ──► ROS 2 diagnostics
 ```
 
 ### Notes
 
 - All rails share a common ground
-- Jetson MAXN peak power ~25W → ~2.1A at 12V. **Pololu D42V55F12** derates to ~3A continuous at 14.8V Vin (4.5A typ headline is at 42V in) → ~1.4× headroom. 60V Vin tolerance, reverse-polarity protected, min Vin 12V — set LiPo LVC alarm at 3.3V/cell = 13.2V to stay above dropout.
+- Jetson MAXN peak power ~25W → ~2.1A at 12V. **Pololu D42V55F12** derates to ~3A continuous at 14.8V Vin (4.5A typ headline is at 42V in) → ~1.4× headroom. Min Vin 12V — set LiPo LVC alarm at 3.3V/cell = 13.2V to stay above dropout.
+- **Leg rail D42V110F7** (~10A+ cont. at 14.8V Vin) sized for walking-gait avg 5-8A with bulk caps absorbing 25-40A impact transients near each star injection point. See [`docs/power-budget.md`](./docs/power-budget.md).
+- **Hip+L2 rail D42V110F12** (~10A+ cont.) sized for 4× 30kg hips peak ~12A + L2 1A.
+- **MOSFET hard-cutoff at 12.4V** is the autonomous safety net independent of the charger's LVC alarm. E-stop kills only the leg + hip rail enables — Jetson stays alive for post-mortem debug.
 - L2 self-heats below 30°C ambient; ~30-60s delay before point cloud output on cold boots
-- LC filter on the L2 12V tap is required if shared with the hip servo rail to prevent servo current noise from causing UDP packet loss
+- LC filter on the L2 12V tap is required to prevent hip-servo current noise from causing UDP packet loss
 
 ### Battery safety
 
@@ -245,13 +264,13 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 | Category | Cost |
 |----------|------|
 | Compute + perception | ~$1,300 (NVMe deferred — NAND shortage) |
-| Servos | ~$320 (+ 6 carried over from SO-ARM101) |
-| Power + safety | ~$215 |
+| Servos | ~$320 active (12-servo v1) + 6 SO-ARM101 carryover on shelf |
+| Power + safety | ~$335 (Pololu rails + INA226 + E-stop + MOSFET hard-cutoff) |
 | Mechanical + hardware | ~$110 |
 | Sensors (stock Nova) | ~$76 |
 | Filament + Bambu accessories | ~$700 |
 | Wiring + consumables | ~$80 |
-| **Realistic total** | **~$2,817** (ISDT 608AC charger + D42V55F12 swap) |
+| **Realistic total** | **~$2,993** (v3.2: Pololu rail redesign + full safety scope) |
 
 ---
 
@@ -259,11 +278,14 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 
 ### Phase 0 — Pre-build setup (current)
 
-- [x] Define modified BOM
+- [x] Define modified BOM (v3.2: Pololu rails + safety + arm deferred)
 - [x] Validate component compatibility (Jetson power rail, Feetech bus, L2 ethernet)
 - [x] Pick LiPo charger → **ISDT 608AC**
-- [ ] Order remaining parts (switch, D42V55F12, charger bundle, accessories) — NVMe deferred
-- [ ] Set up GitHub repo with this README and BOM
+- [x] Power rail audit (XL4016 → Pololu D42V110-class)
+- [x] Confirm v1 scope = quadruped only (arm → Phase 4)
+- [ ] Order remaining parts (switch, Pololu bucks ×3, charger bundle, safety parts, accessories) — NVMe deferred
+- [ ] Design PCB v6 — see [`hardware/pcb-mods/README.md`](./hardware/pcb-mods/README.md)
+- [x] Set up GitHub repo with this README and BOM
 - [ ] Back up LeRobot Pi SD contents
 - [ ] Create NVIDIA Developer account, download JetPack 6.x image
 
@@ -276,10 +298,12 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] D456 standalone test (`realsense-viewer`)
 - [ ] L2 standalone test (included 12V adapter + rviz2)
 - [ ] Print parts: Bambu P1S + PA6-CF (dry 24h before each print)
-- [ ] Bench-validate Pololu D42V55F12 (16.8V→13.2V Vin sweep under MAXN), XL4016 #1/#2, UBEC 5V
-- [ ] Set Feetech servo IDs 1-18, label each
+- [ ] Bench-validate Pololu D42V55F12 / D42V110F7 / D42V110F12 / UBEC 5V (per BOM §12 step 2)
+- [ ] Verify E-stop chain + MOSFET hard-cutoff @ 12.4V + INA226 I²C reads
+- [ ] Set Feetech servo IDs **1-12** (v1 active), label each. IDs 13-18 reserved for Phase 4.
 - [ ] Single-servo SCServo SDK test from Jetson via FE-URT-1
-- [ ] Full 18-servo daisy chain ping test
+- [ ] Full 12-servo daisy chain ping test
+- [ ] **Measure gait-loop p99 latency @ 100 Hz** → resolves Pattern A vs B (solder bridge flip if >5 ms)
 - [ ] Assemble legs (redesigned for STS3215 dimensions)
 - [ ] Assemble chassis, mount L2 on top-center riser
 - [ ] Network setup: eth0 static 192.168.1.2; verify L2 UDP flow
@@ -306,11 +330,22 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] Stair climbing test (gait variation)
 - [ ] Telemetry dashboard
 
-### Phase 4 — Manipulation + VLA (weeks 13+)
+### Phase 4 — Arm install + Manipulation + VLA (future, after Phase 3 stable)
 
+Split into two sub-phases since hardware-arm-install precedes any manipulation software.
+
+**Phase 4a — Arm hardware install:**
+- [ ] Populate D42V55F7 arm-rail buck on PCB v6
+- [ ] Install 6× STS3215 arm servos (carried from SO-ARM101), assign bus IDs 13-18
+- [ ] Mechanical mount of arm to chassis (CAD pending)
+- [ ] Full 18-servo daisy-chain ping test
+- [ ] Bench-validate arm rail under realistic load
+
+**Phase 4b — Manipulation + VLA software:**
 - [ ] Arm joint state integration into unified URDF
 - [ ] MoveIt 2 motion planning for arm
-- [ ] VLA model selection (OpenVLA / Pi0 / RT-2 class)
+- [ ] **COM-shift compensation** in gait controller (arm extension + payload mass shifts support polygon — gait controller needs arm-state input)
+- [ ] VLA model selection (OpenVLA / Pi0 / RT-2 class). Constraint: 8 GB RAM shared with ROS 2 + SLAM + RealSense full rate. OpenVLA INT4 fits but tight; budget memory carefully.
 - [ ] Data collection harness for in-house fine-tuning
 - [ ] On-device VLA inference (TensorRT-optimized)
 - [ ] Mobile manipulation demo: navigate to object, grasp, transport
@@ -350,14 +385,19 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | # | Decision | Status | Notes |
 |---|----------|--------|-------|
 | 1 | Charger model | Resolved → ISDT 608AC | ~$60. AC mode ~55W ≈ 75 min for 4S 4000mAh. Charge / discharge / **storage** modes. Bag + XT60 jumper bought separately. |
-| 2 | WiFi on P3766 kit | Resolved → included with dev kit | 802.11ac/abgn pre-installed per official spec. WiFi 5, **not** 6E. Order AX210NGW only if missing on arrival. |
-| 2b | Bluetooth presence on P3766 | Open | BT not explicitly listed in NVIDIA spec — verify on arrival |
+| 2 | WiFi on P3766 kit | Resolved → 802.11ac/ab/gn included | Confirmed from NVIDIA P3766 datasheet (Developer Kit Content): "802.11ac/ab/gn wireless network interface controller". WiFi 5, **not** 6E. Antennas implied via product photos; verify-on-unbox. |
+| 2b | Bluetooth presence on P3766 | Open | BT not explicitly listed in NVIDIA datasheet. Third-party teardowns suggest the module is RTL8822CE (WiFi 5 + BT 5.0) but unverified from NVIDIA. Verify on arrival via `hciconfig` / `bluetoothctl list`. |
 | 3 | L2 12V tap: shared with hip rail vs dedicated buck | Open | Bench-test servo noise before deciding |
 | 4 | SLAM stack: POINT-LIO vs RTAB-Map | Open | Compare during Phase 2 |
-| 5 | Bus master: Pattern A (Jetson direct) vs Pattern B (Teensy) | Resolved → A | Migrate to B only if measured latency problems |
+| 5 | Bus master: Pattern A (Jetson direct) vs Pattern B (Teensy) | Resolved → A default, B PCB-ready | PCB v6 hosts both via solder-bridge selector. Migration criterion: gait-loop p99 latency >5 ms during Pre-Assembly §12 step 3 → flip bridge. Zero hardware rework. |
 | 6 | L2 mounting position | Resolved → top-center on riser | Symmetric 360° FOV, minimal yaw moment |
 | 7 | Horn spline verification | Resolved → absorbed into leg redesign | |
 | 8 | NVMe SSD purchase | Deferred → NAND shortage | May-2026 NAND flash shortage 2-3x'd 1TB SSD prices ($60→$165-220). Revisit when prices recover (<~$100 for 1TB) or storage becomes a measured bottleneck. Run from 128GB microSD until then. |
+| 9 | v1 scope: arm included vs deferred | Resolved → arm deferred to Phase 4 | 12 active servos (4 hip + 8 femur/tibia). 6 arm servos on shelf. Bus IDs 13-18 + arm-rail buck footprint reserved on PCB v6. |
+| 10 | Power rail strategy | Resolved → Pololu D42V110-class modules | XL4016 8A cont. inadequate for walking-gait + impact transients. Replaced with D42V110F7 (leg) + D42V110F12 (hip+L2) + D42V55F12 (Jetson). Arm rail D42V55F7 footprint reserved. See [`docs/power-budget.md`](./docs/power-budget.md). |
+| 11 | Safety scope | Resolved → full | 608AC LVC alarm + E-stop on servo rails + INA226 per-rail telemetry + MOSFET hard-cutoff @ 12.4V. ~$30 BOM add. |
+| 12 | Phase 4 COM-shift compensation | Open (Phase 4) | Arm extension + payload mass shifts support polygon; gait controller needs arm-state input to stay stable. Design when arm install begins. |
+| 13 | Bus integrity strategy at 12 nodes / 1 Mbps | Open (measure first) | PCB v6 includes footprints for series R + ferrite beads + star ground. Single-ended TTL — **not** RS-485, so 120 Ω differential termination is not the right tool. Populate iteratively based on measured error rate; drop baud if needed. |
 
 ---
 
@@ -378,7 +418,9 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | Date | Milestone |
 |------|-----------|
 | 2026-05-15 | BOM v3 finalized, README v1 created |
-| 2026-05-15 | BOM v3.1 — NVMe deferred due to NAND shortage, charger resolved to ISDT 608AC, WiFi confirmed included |
+| 2026-05-15 | BOM v3.1 — NVMe deferred (NAND shortage), charger resolved to ISDT 608AC, WiFi confirmed included |
+| 2026-05-15 | D24V50F12 → D42V55F12 buck swap (older Pololu family deprecated) |
+| 2026-05-15 | BOM v3.2 — v1 scope narrowed to quadruped only; arm to Phase 4. Power rails redesigned (XL4016 → Pololu D42V110-class). Full safety scope adopted (LVC + E-stop + INA226 + MOSFET hard-cutoff). PCB v5.2b → v6 redesign. |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 

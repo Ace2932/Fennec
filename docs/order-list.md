@@ -1,8 +1,9 @@
-# Committed Order List — Phase 0 Final Pass
+# Committed Order List — Phase 0 Final Pass (v3.2)
 
-One-shot consolidated checkout for the BOM v3.1 committed adds (~$187, ISDT 608AC charger path). Each item below has primary + backup vendor/SKU options. **Verify in-stock + ship-by date before clicking buy.**
+One-shot consolidated checkout for the BOM v3.2 committed adds (~$343, ISDT 608AC charger + Pololu rail redesign + full safety scope). Each item below has primary + backup vendor/SKU options. **Verify in-stock + ship-by date before clicking buy.**
 
 > NVMe is intentionally NOT on this list — deferred until NAND prices recover (<~$100 for 1TB). See BOM §1 + open decision row 8.
+> Arm-rail buck (D42V55F7) is NOT on this list — Phase 4 future. PCB v6 footprint reserved.
 
 ---
 
@@ -27,12 +28,22 @@ One-shot consolidated checkout for the BOM v3.1 committed adds (~$187, ISDT 608A
 - **Fallback primary:** HobbyKing — XT60 ↔ 4S JST-XH balance lead
 - Make sure the JST-XH end matches the LiPo's balance plug (5-pin for 4S)
 
-### Pololu D42V55F12 — ~$32
+### Pololu D42V55F12 (Jetson 12V rail) — ~$32
 - **Primary:** `pololu.com` direct (most reliable for genuine part)
 - **Backup:** DigiKey / Mouser (same part #)
-- **Why this part:** 12V fixed out, 12-60V in, 4.5A typ @ 42V Vin (derates to ~3A at 14.8V Vin per Pololu's de-rating graph). Reverse-polarity protected. Replaces the older D24V50F12 (now supply-constrained on Pololu's catalog).
-- **LVC reminder:** min Vin is 12V, so set the LiPo low-voltage alarm at **3.3V/cell = 13.2V** to keep the 12V rail clean. Stop discharging before the regulator hits dropout.
-- **Bench validation:** sweep Vin 16.8V → 13.2V under Jetson MAXN load (≈25W). 12V rail should stay flat (no >100 mV droop). Verify before chassis commit.
+- **Why:** 12V fixed out, 12-60V in, 4.5A typ @ 42V Vin (derates to ~3A at 14.8V Vin per Pololu's de-rating graph). Reverse-polarity protected.
+- **LVC reminder:** min Vin is 12V, so set LiPo low-voltage alarm at **3.3V/cell = 13.2V**.
+- **Bench validation:** sweep Vin 16.8V → 13.2V under Jetson MAXN load (≈25W). 12V rail should stay flat (no >100 mV droop).
+
+### Pololu D42V110F7 (leg 7.4V rail, 8× STS3215 19kg) — ~$60
+- **Primary:** `pololu.com` direct
+- **Why:** 7.4V fixed out, 12-60V in, 6-16A continuous depending on Vin (~10A+ at 14.8V Vin). Sized for walking-gait avg 5-8A with bulk caps absorbing 25-40A impact transients near point of load.
+- **Bench validation:** load with 1×, 4×, then 8× STS3215 19kg in a walking-gait stand-in (alternating PWM @ 2 Hz). Watch thermal rise, voltage sag, and transient overshoot. Add bulk caps (1000 µF) at each star injection point if observed.
+
+### Pololu D42V110F12 (hip+L2 12V rail) — ~$60
+- **Primary:** `pololu.com` direct
+- **Why:** 12V fixed out, 12-60V in, ~10A+ cont. at 14.8V Vin. Sized for 4× hip STS3215 30kg (peak ~12A) + Unitree L2 LiDAR (1A) via LC filter tap.
+- **Bench validation:** load with 1× 30kg hip + L2 simultaneously. Scope the 12V rail before/after the LC filter — confirm hip servo current spikes don't reach the L2 (UDP packet drops are the failure mode).
 
 ---
 
@@ -52,6 +63,35 @@ One-shot consolidated checkout for the BOM v3.1 committed adds (~$187, ISDT 608A
 - 1× inductor: ~22 µH, ≥2A rated (DigiKey series-resonant choke)
 - 1× electrolytic cap: 470 µF, 25V
 - Bundle into the next DigiKey / Mouser order to save shipping
+
+---
+
+## 3. Safety + bus-master parts (PCB v6)
+
+### 74HC125 quad tri-state buffer (Pattern B half-duplex driver) — ~$1
+- **Primary:** DigiKey / Mouser (SOIC-14, e.g. SN74HC125N)
+- **Why:** Drives the Feetech bus from the Teensy 4.1 UART when the solder bridge selects Pattern B. Single-IC half-duplex driver. Buy 3-5 (cheap, easy to fry).
+
+### E-stop button (panel-mount, latching, NC contact) — ~$10
+- **Primary:** Amazon / DigiKey — 22 mm panel mount, mushroom head, twist-to-release
+- **Wiring:** NC contact in series with the **leg + hip rail enable lines only** (Jetson stays alive for debug)
+
+### INA226 current/voltage monitor × 3 — ~$9
+- **Primary:** Adafruit / Amazon — INA226 breakout (or bare IC if rolling SMD into PCB v6)
+- **Why:** One per active rail (leg 7.4V, hip+L2 12V, Jetson 12V). I²C to Teensy → ROS 2 diagnostics topic.
+- Buy 4× — one spare.
+
+### Comparator + MOSFET parts for hard-cutoff at 12.4V — ~$10
+- 1× TL431 or LM393 comparator (DigiKey)
+- 1× IRLB3034PBF logic-level N-channel MOSFET (or similar Rds(on) <5 mΩ at Vgs=4.5V, Id ≥30A)
+- 1× P-channel power MOSFET on the high side if doing high-side switching
+- Trim-pot or precision resistor divider to set 12.4V trip point
+- Bundle with DigiKey order
+
+### Bulk caps for rail injection points — ~$4
+- 4× 1000 µF / 25V electrolytic (Nichicon UPW series or equivalent)
+- One per star injection point on the leg 7.4V rail
+- Absorbs servo impact transients near point of load
 
 ---
 
@@ -80,12 +120,23 @@ One-shot consolidated checkout for the BOM v3.1 committed adds (~$187, ISDT 608A
 
 ---
 
-## 5. Servo top-up (not in $187 subtotal — separate spend)
+## 5. Servo top-up (not in main subtotal — separate spend)
 
 ### STS3215 7.4V 19kg × 2 (complete 8-count for legs) — ~$50
 - **Primary:** Feetech AliExpress store (slow but cheapest)
 - **Backup:** Amazon — verify they're genuine Feetech, not clones (clones have inconsistent center calibration)
 - Already have ~6 of 8 needed; buy 2 + ideally 1 spare = 3
+- Reminder: v1 build = 12 active servos. Arm 6× already on shelf, not in scope.
+
+---
+
+## 6. PCB v6 (separate order, after design)
+
+### NovaSM3 PCB v6 — custom redesign (~$60 PCBWay)
+- Design spec lives in [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md)
+- Order after schematic + Gerbers reviewed
+- Recommend ordering 5 boards (PCBWay minimum is usually 5 or 10) for spares + revision iteration
+- Stencil: order alongside for SMD population
 
 ---
 
@@ -97,35 +148,45 @@ One-shot consolidated checkout for the BOM v3.1 committed adds (~$187, ISDT 608A
 | LiPo safe bag | 15 |
 | XT60 jumper | 5 (⚠️ skip if Ovonic kit included one) |
 | XT60 charging lead | 8 (⚠️ skip if Ovonic kit included one) |
-| Pololu D42V55F12 | 32 |
+| Pololu D42V55F12 (Jetson) | 32 |
+| Pololu D42V110F7 (leg) | 60 |
+| Pololu D42V110F12 (hip+L2) | 60 |
+| 74HC125 + INA226 ×3 + comparator + MOSFETs + bulk caps | 30 |
+| E-stop button | 10 |
 | Switch + Cat6 ×2 + LC parts | 26 |
 | Threadlocker + tape | 18 |
 | Magigoo PA | 15 |
 | DP adapter | 10 |
-| **Subtotal (worst case)** | **~$189** |
-| **Subtotal if Ovonic supplied leads** | **~$176** |
+| **Subtotal (worst case)** | **~$349** |
+| **Subtotal if Ovonic supplied leads** | **~$336** |
 
-Add ~$10 shipping buffer across vendors → BOM §13 **~$199** (worst case) or **~$186** (Ovonic leads included).
+Plus ~$10 shipping buffer across vendors → matches BOM §13 **~$343** (typical) target. Not included: PCB v6 (~$60), arm servo top-up (~$50).
 
 ---
 
 ## Ordering strategy
 
 1. **Bundle by vendor** to minimize shipping:
-   - **Amazon:** safe bag, threadlocker, tape, DP adapter, Cat6 cables, switch
-   - **Pololu direct:** D42V55F12 (consider grabbing spare USB-serial or a cheap multimeter probe to amortize shipping)
-   - **DigiKey or Mouser:** LC filter parts (inductor + cap) — bundle with anything else electronics-shaped you've been deferring
+   - **Amazon:** safe bag, threadlocker, tape, DP adapter, Cat6 cables, switch, E-stop button, INA226 breakouts
+   - **Pololu direct:** D42V55F12 + D42V110F7 + D42V110F12 (one shop, free shipping over threshold — bundle a spare USB-serial or multimeter probe to qualify)
+   - **DigiKey or Mouser:** LC filter parts (inductor + cap), 74HC125, comparator, MOSFETs, bulk caps — single electronics order
    - **HobbyKing / ISDT direct:** 608AC + XT60 leads (one shop)
    - **Feetech / AliExpress:** servo top-up (separate, slow boat)
+   - **PCBWay:** PCB v6 (after design freeze)
 
 2. **Verify before pulling trigger:**
    - 608AC vs 608PD (you want AC)
    - DP cable matches your actual monitor input
    - JST-XH balance lead is 5-pin (4S, not 3S/6S)
    - Switch SKU explicitly "gigabit" not "fast ethernet 10/100"
+   - Pololu part numbers: F7 = 7.4V output, F12 = 12V output (don't mix up)
+   - MOSFET Rds(on) <5 mΩ at Vgs = 4.5V (logic-level), Id ≥30A (battery dead-short worst case)
+   - INA226 shunt rating sized to rail (legs need 10A+ shunt, Jetson can use stock 1Ω)
 
 3. **Don't order yet:**
    - NVMe — wait for NAND price recovery
+   - Arm-rail D42V55F7 — Phase 4
+   - PCB v6 — until schematic + Gerbers complete
    - Spare bearings / spare servo — order with the next Feetech batch when you actually need them
 
 ---
@@ -135,7 +196,12 @@ Add ~$10 shipping buffer across vendors → BOM §13 **~$199** (worst case) or *
 - [ ] Power up 608AC with no battery — verify storage-mode menu works
 - [ ] Set LiPo LVC alarm at 3.3V/cell = 13.2V (above D42V55F12 dropout)
 - [ ] Bench-load Pololu D42V55F12 → 12V out under Jetson MAXN draw. Sweep Vin 16.8V → 13.2V, verify 12V rail stays clean (<100 mV droop, no oscillation)
+- [ ] Bench-load Pololu D42V110F7 → 7.4V under 1× / 4× / 8× STS3215 19kg walking-stand-in. Thermal IR check after 10 min sustained load.
+- [ ] Bench-load Pololu D42V110F12 → 12V under 1× hip + L2. Scope LC filter before/after for L2 feed.
+- [ ] Verify MOSFET hard-cutoff trip point at 12.4V via bench-supply sweep before connecting battery
+- [ ] Verify E-stop physically opens leg + hip rail enables (Jetson rail stays alive on press)
+- [ ] Verify INA226 ×3 I²C reads (current + voltage) under nominal and loaded states
 - [ ] Switch power test: 5V UBEC → switch → all 5 ports link-up
 - [ ] LC filter measurement: scope the 12V hip rail under servo load, before/after the LC tap, for the L2 power feed
 
-> Status: drafted at v0.2.0-bom-v3.1. Update with actual SKUs / order #s as items hit Cart.
+> Status: updated at BOM v3.2. Update with actual SKUs / order #s as items hit Cart.
