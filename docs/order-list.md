@@ -27,10 +27,12 @@ One-shot consolidated checkout for the BOM v3.1 committed adds (~$187, ISDT 608A
 - **Fallback primary:** HobbyKing — XT60 ↔ 4S JST-XH balance lead
 - Make sure the JST-XH end matches the LiPo's balance plug (5-pin for 4S)
 
-### Pololu D24V50F12 — ~$20
+### Pololu D42V55F12 — ~$32
 - **Primary:** `pololu.com` direct (most reliable for genuine part)
 - **Backup:** DigiKey / Mouser (same part #)
-- **Why this part:** 12V/5A out, 7-22V in, ~90% efficiency, has UVLO. Drives Jetson barrel jack from 4S LiPo.
+- **Why this part:** 12V fixed out, 12-60V in, 4.5A typ @ 42V Vin (derates to ~3A at 14.8V Vin per Pololu's de-rating graph). Reverse-polarity protected. Replaces the older D24V50F12 (now supply-constrained on Pololu's catalog).
+- **LVC reminder:** min Vin is 12V, so set the LiPo low-voltage alarm at **3.3V/cell = 13.2V** to keep the 12V rail clean. Stop discharging before the regulator hits dropout.
+- **Bench validation:** sweep Vin 16.8V → 13.2V under Jetson MAXN load (≈25W). 12V rail should stay flat (no >100 mV droop). Verify before chassis commit.
 
 ---
 
@@ -95,15 +97,15 @@ One-shot consolidated checkout for the BOM v3.1 committed adds (~$187, ISDT 608A
 | LiPo safe bag | 15 |
 | XT60 jumper | 5 (⚠️ skip if Ovonic kit included one) |
 | XT60 charging lead | 8 (⚠️ skip if Ovonic kit included one) |
-| Pololu D24V50F12 | 20 |
+| Pololu D42V55F12 | 32 |
 | Switch + Cat6 ×2 + LC parts | 26 |
 | Threadlocker + tape | 18 |
 | Magigoo PA | 15 |
 | DP adapter | 10 |
-| **Subtotal (worst case)** | **~$177** |
-| **Subtotal if Ovonic supplied leads** | **~$164** |
+| **Subtotal (worst case)** | **~$189** |
+| **Subtotal if Ovonic supplied leads** | **~$176** |
 
-Add ~$10 shipping buffer across vendors → BOM §13 **~$187** (worst case) or **~$174** (Ovonic leads included).
+Add ~$10 shipping buffer across vendors → BOM §13 **~$199** (worst case) or **~$186** (Ovonic leads included).
 
 ---
 
@@ -111,7 +113,7 @@ Add ~$10 shipping buffer across vendors → BOM §13 **~$187** (worst case) or *
 
 1. **Bundle by vendor** to minimize shipping:
    - **Amazon:** safe bag, threadlocker, tape, DP adapter, Cat6 cables, switch
-   - **Pololu direct:** D24V50F12 (consider grabbing spare USB-serial or a cheap multimeter probe to amortize shipping)
+   - **Pololu direct:** D42V55F12 (consider grabbing spare USB-serial or a cheap multimeter probe to amortize shipping)
    - **DigiKey or Mouser:** LC filter parts (inductor + cap) — bundle with anything else electronics-shaped you've been deferring
    - **HobbyKing / ISDT direct:** 608AC + XT60 leads (one shop)
    - **Feetech / AliExpress:** servo top-up (separate, slow boat)
@@ -131,7 +133,8 @@ Add ~$10 shipping buffer across vendors → BOM §13 **~$187** (worst case) or *
 ## After things arrive
 
 - [ ] Power up 608AC with no battery — verify storage-mode menu works
-- [ ] Bench-load Pololu D24V50F12 → 12V out under Jetson MAXN draw
+- [ ] Set LiPo LVC alarm at 3.3V/cell = 13.2V (above D42V55F12 dropout)
+- [ ] Bench-load Pololu D42V55F12 → 12V out under Jetson MAXN draw. Sweep Vin 16.8V → 13.2V, verify 12V rail stays clean (<100 mV droop, no oscillation)
 - [ ] Switch power test: 5V UBEC → switch → all 5 ports link-up
 - [ ] LC filter measurement: scope the 12V hip rail under servo load, before/after the LC tap, for the L2 power feed
 

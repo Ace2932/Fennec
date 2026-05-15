@@ -48,7 +48,7 @@
 | Mini digital voltmeter | $10 | ✅ Ordered |
 | XL4016 12A buck (×2) — 6.8V servo + 12V hip rails | $30 | ✅ Ordered |
 | XL6009 buck-boost | $10 | ✅ Owned — spare, no allocated role |
-| **Pololu D24V50F12 — 12V/5A buck for Jetson** | **$20** | 🆕 Order — replaces UBEC for Jetson |
+| **Pololu D42V55F12 — 12V buck for Jetson** | **$32** | 🆕 Order — replaces deprecated D24V50F12 (older/supply-constrained family). Datasheet: 4.5A typ @ 42V in, derates to ~3A continuous at 14.8V Vin (still ~1.4× headroom over Jetson MAXN 2.1A). Min Vin 12V → **set LiPo LVC alarm at 3.3V/cell = 13.2V** to stay above dropout. 60V Vin tolerance handles any 4S spike. Reverse-polarity protected. |
 | UBEC 5V/5A | $15 | ✅ Owned — repurposed for 5V peripherals (Ethernet switch, fans, aux sensors) |
 | PCB terminals + misc boards | $8 | ✅ Ordered |
 | Dip switches + resistors + buttons | $8 | ✅ Ordered |
@@ -71,7 +71,7 @@
                        ├── XL4016 #2 → 12V rail → 4x hip STS3215 (30kg)
                        │                       └── (LC filter tap) → Unitree L2 LiDAR
                        │
-                       ├── Pololu D24V50F12 → 12V → Jetson barrel jack
+                       ├── Pololu D42V55F12 → 12V → Jetson barrel jack
                        │
                        └── UBEC 5V/5A → 5V rail → Ethernet switch, fans, aux 5V peripherals
 ```
@@ -212,7 +212,7 @@ Post-Jetson-flash install list (Phase 1):
 
 2. **Power rail validation (with one LiPo, second still wrapped)**
    - Charge LiPo to full inside the safe bag
-   - Bench-test Pololu D24V50F12: 4S in → 12V out, loaded with Jetson MAXN
+   - Bench-test Pololu D42V55F12: 4S in → 12V out, loaded with Jetson MAXN. **Sweep Vin from 16.8V down to 13.2V** and confirm 12V rail stays clean (no >100 mV droop, no oscillation) — this validates behavior across the full usable LiPo discharge range and confirms LVC-alarm setpoint is above dropout knee.
    - Bench-test XL4016 #1 set to 6.8V, loaded with one STS3215
    - Bench-test XL4016 #2 set to 12V, loaded with one 30kg hip STS3215
    - Bench-test 5V UBEC loaded with Ethernet switch
@@ -240,12 +240,12 @@ Post-Jetson-flash install list (Phase 1):
 | Category | Amount |
 |----------|--------|
 | DP adapter | $10 |
-| Pololu D24V50F12 | $20 |
+| Pololu D42V55F12 (swapped from deprecated D24V50F12) | $32 |
 | Ethernet switch + Cat6 + LC filter parts | $26 |
 | Threadlocker + tape | $18 |
 | Magigoo PA | $15 |
 | ISDT 608AC + LiPo safe bag + XT60 jumper + XT60 charging lead | $88 |
-| **Subtotal (608AC charger path)** | **~$187** |
+| **Subtotal (608AC charger path)** | **~$199** |
 
 ### Deferred (order when you actually need them)
 
@@ -264,9 +264,9 @@ Post-Jetson-flash install list (Phase 1):
 ### Project total estimate
 
 - **Already-owned/ordered:** ~$2,650
-- **Committed net adds (608AC path):** ~$187
-- **Realistic total spend:** **~$2,805**
-- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,510**
+- **Committed net adds (608AC path):** ~$199
+- **Realistic total spend:** **~$2,817**
+- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,525**
 
 ---
 

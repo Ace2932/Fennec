@@ -193,7 +193,7 @@ Migration to B happens only if measured latency or robustness becomes a problem.
    ├── XL4016 #2 ──► 12V rail  ──┬── 4× STS3215 12V/30kg (hips)
    │                              └── (LC filter) ──► Unitree L2 LiDAR (12V/1A)
    │
-   ├── Pololu D24V50F12 ──► 12V ──► Jetson Orin Nano (barrel jack, 7-20V tolerant)
+   ├── Pololu D42V55F12 ──► 12V ──► Jetson Orin Nano (barrel jack, 7-20V tolerant)
    │
    └── UBEC 5V/5A ──► 5V rail ──► Ethernet switch, fans, aux 5V peripherals
 ```
@@ -201,7 +201,7 @@ Migration to B happens only if measured latency or robustness becomes a problem.
 ### Notes
 
 - All rails share a common ground
-- Jetson MAXN peak power ~25W → ~2.1A at 12V (well within Pololu D24V50F12 5A rating)
+- Jetson MAXN peak power ~25W → ~2.1A at 12V. **Pololu D42V55F12** derates to ~3A continuous at 14.8V Vin (4.5A typ headline is at 42V in) → ~1.4× headroom. 60V Vin tolerance, reverse-polarity protected, min Vin 12V — set LiPo LVC alarm at 3.3V/cell = 13.2V to stay above dropout.
 - L2 self-heats below 30°C ambient; ~30-60s delay before point cloud output on cold boots
 - LC filter on the L2 12V tap is required if shared with the hip servo rail to prevent servo current noise from causing UDP packet loss
 
@@ -251,7 +251,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 | Sensors (stock Nova) | ~$76 |
 | Filament + Bambu accessories | ~$700 |
 | Wiring + consumables | ~$80 |
-| **Realistic total** | **~$2,805** (ISDT 608AC charger) |
+| **Realistic total** | **~$2,817** (ISDT 608AC charger + D42V55F12 swap) |
 
 ---
 
@@ -262,7 +262,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [x] Define modified BOM
 - [x] Validate component compatibility (Jetson power rail, Feetech bus, L2 ethernet)
 - [x] Pick LiPo charger → **ISDT 608AC**
-- [ ] Order remaining parts (switch, D24V50F12, charger bundle, accessories) — NVMe deferred
+- [ ] Order remaining parts (switch, D42V55F12, charger bundle, accessories) — NVMe deferred
 - [ ] Set up GitHub repo with this README and BOM
 - [ ] Back up LeRobot Pi SD contents
 - [ ] Create NVIDIA Developer account, download JetPack 6.x image
@@ -276,7 +276,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] D456 standalone test (`realsense-viewer`)
 - [ ] L2 standalone test (included 12V adapter + rviz2)
 - [ ] Print parts: Bambu P1S + PA6-CF (dry 24h before each print)
-- [ ] Bench-validate Pololu D24V50F12, XL4016 #1/#2, UBEC 5V
+- [ ] Bench-validate Pololu D42V55F12 (16.8V→13.2V Vin sweep under MAXN), XL4016 #1/#2, UBEC 5V
 - [ ] Set Feetech servo IDs 1-18, label each
 - [ ] Single-servo SCServo SDK test from Jetson via FE-URT-1
 - [ ] Full 18-servo daisy chain ping test
