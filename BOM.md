@@ -14,12 +14,11 @@
 | NVIDIA Jetson Orin Nano Super Dev Kit 8GB | $249 | ✅ Owned |
 | Intel RealSense D456 | $584 | ✅ Ordered (#000187781) |
 | **Crucial P3 Plus 1TB NVMe SSD** (M.2 2280) | **$65** | 🆕 Order |
-| **Intel AX210 M.2 2230 E-key WiFi/BT card** (part# AX210NGW) | **$25** | 🆕 Order — *verify on arrival; Seeed listing claims pre-installed* |
-| **U.FL pigtail WiFi antennas (2-pack)** | **$5** | 🆕 Order — required for any usable WiFi range |
+| WiFi/BT module | $0 | ✅ Included — Jetson Orin Nano Super Dev Kit (P3766) ships with 802.11ac/abgn module + antennas. **Verify on arrival.** BT presence not explicitly listed in spec — verify too. |
 | **DisplayPort cable OR DP→HDMI adapter** | **$10** | 🆕 Order |
 | LeRobot Pi's 128GB Amazon Basics microSD | $0 | ✅ Reuse — back up LeRobot configs first |
 
-**Compute subtotal of new adds: $105**
+**Compute subtotal of new adds: $75**
 
 ---
 
@@ -207,7 +206,7 @@ Post-Jetson-flash install list (Phase 1):
 
 1. **Jetson desk bring-up**
    - Update Orin Nano firmware to JetPack-6.x-compatible version
-   - Verify whether AX210 is pre-installed; install if not
+   - Verify included WiFi module works (WiFi 5 / 802.11ac); confirm BT presence
    - Flash JetPack 6.x SD, boot, complete Ubuntu setup, WiFi up
    - Install NVMe, migrate rootfs to SSD per NVIDIA guide
    - Install ROS 2 Humble + sensor SDKs
@@ -244,38 +243,38 @@ Post-Jetson-flash install list (Phase 1):
 | Category | Amount |
 |----------|--------|
 | Crucial P3 Plus 1TB NVMe | $65 |
-| Intel AX210 + antennas | $30 |
 | DP adapter | $10 |
 | Pololu D24V50F12 | $20 |
 | Ethernet switch + Cat6 + LC filter parts | $26 |
 | Threadlocker + tape | $18 |
 | Magigoo PA | $15 |
 | Charger + bag + XT60 lead (TN267 path) | $33 |
-| **Subtotal (TN267 charger path)** | **$217** |
+| **Subtotal (TN267 charger path)** | **~$187** |
 | Charger + bag + XT60 lead (ISDT 608PD path) | $78 |
-| **Subtotal (ISDT 608PD charger path)** | **$262** |
+| **Subtotal (ISDT 608PD charger path)** | **~$232** |
 
 ### Deferred (order when you actually need them)
 
 - Spare STS3215 19kg servo — when one dies
 - Spare bearings — when you ruin a press-fit
-- Calipers — when leg-redesign CAD demands tighter tolerances
 - Logic analyzer — when the Feetech bus is misbehaving
 - Spare build plate — when current one is scratched up
+
+*Calipers: already on hand.*
 
 ### Project total estimate
 
 - **Already-owned/ordered:** ~$2,650
-- **Committed net adds (incl. charger):** ~$220-260
-- **Realistic total spend:** **~$2,870-2,910**
-- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **$3,600-3,800**
+- **Committed net adds (incl. charger):** ~$187-232
+- **Realistic total spend:** **~$2,840-2,880**
+- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **$3,550-3,600**
 
 ---
 
 ## 14. Pending Items
 
 - [ ] Pick charger model (TN267 vs ISDT 608PD)
-- [ ] Verify AX210 pre-installed vs needs purchase when Jetson arrives
+- [ ] Verify included WiFi 5 module works on Jetson arrival; confirm BT presence
 - [ ] Order remaining STS3215 19kg servos to complete 8-count for legs
 
 ---

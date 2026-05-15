@@ -88,14 +88,15 @@ The NovaSM3 v5.2b PCB is retained for:
 │                  NVIDIA Jetson Orin Nano Super 8GB                 │
 │                          (ROS 2 Humble)                            │
 │   • Locomotion, Nav2, SLAM, VLA inference, sensor fusion           │
-└──┬──────────┬─────────────┬─────────────┬─────────────┬────────────┘
-   │ USB-C    │ USB 3.1     │ Ethernet    │ USB         │ M.2 E-key
-   │          │             │             │             │
-┌──▼───────┐ ┌▼───────────┐ ┌▼───────────┐ ┌▼─────────┐ ┌▼─────────┐
-│ Realsense│ │ FE-URT-1   │ │ Gig switch │ │ Teensy   │ │ AX210    │
-│ D456     │ │ USB→TTL    │ │            │ │ 4.1      │ │ WiFi/BT  │
-│ (depth + │ │            │ │ ◄─ L2 ─►   │ │ (μROS)   │ │          │
-│  RGB +   │ └────┬───────┘ └────────────┘ └──┬───────┘ └──────────┘
+│   • Built-in WiFi 5 (802.11ac) + antennas (included in P3766 kit)  │
+└──┬──────────┬─────────────┬─────────────┬───────────────────────────┘
+   │ USB-C    │ USB 3.1     │ Ethernet    │ USB
+   │          │             │             │
+┌──▼───────┐ ┌▼───────────┐ ┌▼───────────┐ ┌▼─────────┐
+│ Realsense│ │ FE-URT-1   │ │ Gig switch │ │ Teensy   │
+│ D456     │ │ USB→TTL    │ │            │ │ 4.1      │
+│ (depth + │ │            │ │ ◄─ L2 ─►   │ │ (μROS)   │
+│  RGB +   │ └────┬───────┘ └────────────┘ └──┬───────┘
 │  IMU)    │      │                           │
 └──────────┘      │ TTL half-duplex           │ I2C / GPIO
                   │                           │
@@ -233,7 +234,7 @@ Migration to B happens only if measured latency or robustness becomes a problem.
 
 - L2 → UDP port 6101 on the Jetson
 - Jetson's `eth0` needs a manual static IP because L2 is not a DHCP client/server
-- WiFi (AX210) handles dev SSH access + internet, leaving Ethernet free for the LiDAR
+- WiFi (built-in WiFi 5 / 802.11ac module on P3766 kit) handles dev SSH access + internet, leaving Ethernet free for the LiDAR. BT presence not explicitly listed in spec — verify on arrival.
 
 ---
 
@@ -243,14 +244,14 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 
 | Category | Cost |
 |----------|------|
-| Compute + perception | ~$1,330 |
+| Compute + perception | ~$1,300 |
 | Servos | ~$320 (+ 6 carried over from SO-ARM101) |
 | Power + safety | ~$215 |
 | Mechanical + hardware | ~$110 |
 | Sensors (stock Nova) | ~$76 |
 | Filament + Bambu accessories | ~$700 |
 | Wiring + consumables | ~$80 |
-| **Realistic total** | **~$2,900** |
+| **Realistic total** | **~$2,840-2,880** (TN267 / ISDT 608PD charger paths) |
 
 ---
 
@@ -261,7 +262,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [x] Define modified BOM
 - [x] Validate component compatibility (Jetson power rail, Feetech bus, L2 ethernet)
 - [ ] Pick LiPo charger (TN267 vs ISDT 608PD)
-- [ ] Order remaining parts (NVMe, AX210, switch, D24V50F12, accessories)
+- [ ] Order remaining parts (NVMe, switch, D24V50F12, accessories)
 - [ ] Set up GitHub repo with this README and BOM
 - [ ] Back up LeRobot Pi SD contents
 - [ ] Create NVIDIA Developer account, download JetPack 6.x image
@@ -270,7 +271,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 
 - [ ] Flash JetPack 6.x to microSD; firmware update Jetson if needed
 - [ ] Boot Jetson, complete Ubuntu setup
-- [ ] Verify AX210 WiFi or install AX210NGW
+- [ ] Verify built-in WiFi 5 module functions; confirm BT presence
 - [ ] Install Crucial P3 Plus 1TB NVMe; migrate rootfs from SD
 - [ ] Install ROS 2 Humble + librealsense2 + unilidar_sdk2
 - [ ] D456 standalone test (`realsense-viewer`)
@@ -336,7 +337,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 > 📋 To be written as components arrive. Will include:
 > - JetPack 6.x flash + firmware update procedure
 > - NVMe rootfs migration
-> - AX210 WiFi setup
+> - Built-in WiFi 5 setup + BT verification
 > - ROS 2 Humble + sensor SDK install scripts
 > - Feetech servo ID assignment procedure
 > - Network static IP configuration
@@ -350,7 +351,8 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | # | Decision | Status | Notes |
 |---|----------|--------|-------|
 | 1 | Charger model: TN267 vs ISDT 608PD | Open | TN267 cheaper + includes bag; ISDT faster + storage mode |
-| 2 | AX210 needed vs pre-installed | Open | Verify on Jetson arrival |
+| 2 | WiFi/BT on P3766 kit | Resolved → included | WiFi 5 (802.11ac/abgn) module + antennas ship with Jetson Orin Nano Super Dev Kit. **Verify on arrival.** |
+| 2b | Bluetooth presence on P3766 | Open | BT not explicitly listed in NVIDIA spec — verify on arrival |
 | 3 | L2 12V tap: shared with hip rail vs dedicated buck | Open | Bench-test servo noise before deciding |
 | 4 | SLAM stack: POINT-LIO vs RTAB-Map | Open | Compare during Phase 2 |
 | 5 | Bus master: Pattern A (Jetson direct) vs Pattern B (Teensy) | Resolved → A | Migrate to B only if measured latency problems |
