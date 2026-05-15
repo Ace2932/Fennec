@@ -59,8 +59,8 @@
 |------|-------|--------|
 | **ISDT 608AC charger** | **$60** | 🆕 Order — AC mode caps ~55W ≈ 75 min for 4S 4000mAh pack (fine for dev workflow). Includes charge / discharge / **storage** modes (storage critical for keeping unused pack healthy >1 week). |
 | **LiPo safe bag** | **$15** | 🆕 Order separately — 608AC does not include one |
-| **XT60 jumper** | **$5** | 🆕 Order — 608AC does not include one |
-| XT60 charging lead | $8 | 🆕 Order |
+| **XT60 jumper** | **$5** | ⚠️ Verify Ovonic 4S kit on arrival — likely supplied. Order only if missing. |
+| XT60 charging lead | $8 | ⚠️ Verify Ovonic 4S kit on arrival — likely supplied (XT60 ↔ JST-XH balance). Order only if missing. |
 
 ### Final power rail map
 

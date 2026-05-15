@@ -18,11 +18,13 @@ One-shot consolidated checkout for the BOM v3.1 committed adds (~$187, ISDT 608A
 - Look for: zipper closure, ≥240×180×65 mm internal
 
 ### XT60 jumper (for 608AC battery input) — ~$5
-- **Primary:** Amazon / HobbyKing — XT60 female ↔ banana-plug pigtail (or whatever the 608AC input expects — confirm with charger datasheet on arrival)
+- ⚠️ **Likely already have:** Ovonic 4S LiPo packs typically ship with XT60 leads + accessories. **Verify on arrival before ordering.**
+- **Fallback primary:** Amazon / HobbyKing — XT60 female ↔ banana-plug pigtail (or whatever the 608AC input expects — confirm with charger datasheet on arrival)
 - Could also build from leftover 18AWG silicone wire + spare XT60
 
 ### XT60 charging lead — ~$8
-- **Primary:** HobbyKing — XT60 ↔ 4S JST-XH balance lead
+- ⚠️ **Likely already have:** Ovonic LiPo kit reportedly included the XT60 ↔ JST-XH charging lead. **Verify on arrival before ordering.**
+- **Fallback primary:** HobbyKing — XT60 ↔ 4S JST-XH balance lead
 - Make sure the JST-XH end matches the LiPo's balance plug (5-pin for 4S)
 
 ### Pololu D24V50F12 — ~$20
@@ -91,16 +93,17 @@ One-shot consolidated checkout for the BOM v3.1 committed adds (~$187, ISDT 608A
 |------|----|
 | ISDT 608AC | 60 |
 | LiPo safe bag | 15 |
-| XT60 jumper | 5 |
-| XT60 charging lead | 8 |
+| XT60 jumper | 5 (⚠️ skip if Ovonic kit included one) |
+| XT60 charging lead | 8 (⚠️ skip if Ovonic kit included one) |
 | Pololu D24V50F12 | 20 |
 | Switch + Cat6 ×2 + LC parts | 26 |
 | Threadlocker + tape | 18 |
 | Magigoo PA | 15 |
 | DP adapter | 10 |
-| **Subtotal** | **~$177** |
+| **Subtotal (worst case)** | **~$177** |
+| **Subtotal if Ovonic supplied leads** | **~$164** |
 
-Add ~$10 shipping buffer across vendors → matches BOM §13 **~$187**.
+Add ~$10 shipping buffer across vendors → BOM §13 **~$187** (worst case) or **~$174** (Ovonic leads included).
 
 ---
 
