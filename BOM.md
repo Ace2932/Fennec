@@ -1,8 +1,8 @@
-# NovaSM3 Quadruped Build — BOM v3 (Committed)
+# NovaSM3 Quadruped Build — BOM v3.1 (Committed)
 
 **Last updated:** May 15, 2026
-**Supersedes:** BOM v2
-**Status:** Final committed parts list. All "optional" items resolved — either committed or deferred. One pending decision: charger model.
+**Supersedes:** BOM v3
+**Status:** Final committed parts list. All "optional" items resolved — either committed or deferred. Charger resolved to ISDT 608AC. NVMe deferred due to May-2026 NAND shortage.
 
 ---
 
@@ -13,12 +13,13 @@
 | Unitree L2 3D LiDAR | $451 | ✅ Ordered (DLZ-3974) |
 | NVIDIA Jetson Orin Nano Super Dev Kit 8GB | $249 | ✅ Owned |
 | Intel RealSense D456 | $584 | ✅ Ordered (#000187781) |
-| **Crucial P3 Plus 1TB NVMe SSD** (M.2 2280) | **$65** | 🆕 Order |
-| WiFi/BT module | $0 | ✅ Included — Jetson Orin Nano Super Dev Kit (P3766) ships with 802.11ac/abgn module + antennas. **Verify on arrival.** BT presence not explicitly listed in spec — verify too. |
+| WiFi/BT module | $0 | ✅ Included — Jetson Orin Nano Super Dev Kit (P3766) ships with 802.11ac/abgn WiFi pre-installed per official spec. WiFi 5 (ac), **not** WiFi 6E. BT not explicitly listed in spec — verify on arrival. If somehow missing, order AX210NGW + U.FL antennas separately (~$30). |
 | **DisplayPort cable OR DP→HDMI adapter** | **$10** | 🆕 Order |
-| LeRobot Pi's 128GB Amazon Basics microSD | $0 | ✅ Reuse — back up LeRobot configs first |
+| LeRobot Pi's 128GB Amazon Basics microSD | $0 | ✅ Reuse — back up LeRobot configs first. **128GB enough for Phase 1-2.** NVMe migration deferred until NAND prices recover or storage becomes a measured bottleneck. |
 
-**Compute subtotal of new adds: $75**
+**Compute subtotal of new adds: $10**
+
+> **NVMe deferred (May 2026):** AI-data-center-driven NAND flash shortage has 2-3x'd consumer SSD prices. 1TB Crucial P3 Plus that quoted $60-80 in early 2026 is now $165-220 retail. Kingston: NAND wafer costs +246% since 2024. TrendForce: client SSD +40% QoQ in Q1 2026. Relief not expected until late 2026 / 2027-2028. See Deferred section for revisit triggers.
 
 ---
 
@@ -56,14 +57,10 @@
 
 | Item | Price | Status |
 |------|-------|--------|
-| LiPo balance charger | $25-55 | 🆕 **Decision pending** — see below |
-| LiPo safe bag | $0 or $15 | Depends on charger choice |
+| **ISDT 608AC charger** | **$60** | 🆕 Order — AC mode caps ~55W ≈ 75 min for 4S 4000mAh pack (fine for dev workflow). Includes charge / discharge / **storage** modes (storage critical for keeping unused pack healthy >1 week). |
+| **LiPo safe bag** | **$15** | 🆕 Order separately — 608AC does not include one |
+| **XT60 jumper** | **$5** | 🆕 Order — 608AC does not include one |
 | XT60 charging lead | $8 | 🆕 Order |
-
-**Charger decision (pick one before ordering):**
-
-- **Tenergy TN267** (~$25, includes LiPo bag): Fixed 0.8A charge rate. 4000mAh pack takes ~5h to fully charge. No storage mode. **Choose if budget is tight and you'll do short test sessions.**
-- **ISDT 608PD** (~$55, no bag → buy separately $15): 6A charge rate. 4000mAh pack charges in ~1h. Has dedicated storage mode (critical with two packs — prevents the unused pack from degrading at 100% charge). **Recommended for active dev work.** Total cost with bag = $70.
 
 ### Final power rail map
 
@@ -208,7 +205,7 @@ Post-Jetson-flash install list (Phase 1):
    - Update Orin Nano firmware to JetPack-6.x-compatible version
    - Verify included WiFi module works (WiFi 5 / 802.11ac); confirm BT presence
    - Flash JetPack 6.x SD, boot, complete Ubuntu setup, WiFi up
-   - Install NVMe, migrate rootfs to SSD per NVIDIA guide
+   - (Skip NVMe migration — deferred due to NAND shortage; run from 128GB microSD)
    - Install ROS 2 Humble + sensor SDKs
    - Test D456 standalone (`realsense-viewer`)
    - Test L2 standalone with included 12V wall adapter → point cloud in rviz2
@@ -242,19 +239,21 @@ Post-Jetson-flash install list (Phase 1):
 
 | Category | Amount |
 |----------|--------|
-| Crucial P3 Plus 1TB NVMe | $65 |
 | DP adapter | $10 |
 | Pololu D24V50F12 | $20 |
 | Ethernet switch + Cat6 + LC filter parts | $26 |
 | Threadlocker + tape | $18 |
 | Magigoo PA | $15 |
-| Charger + bag + XT60 lead (TN267 path) | $33 |
-| **Subtotal (TN267 charger path)** | **~$187** |
-| Charger + bag + XT60 lead (ISDT 608PD path) | $78 |
-| **Subtotal (ISDT 608PD charger path)** | **~$232** |
+| ISDT 608AC + LiPo safe bag + XT60 jumper + XT60 charging lead | $88 |
+| **Subtotal (608AC charger path)** | **~$187** |
 
 ### Deferred (order when you actually need them)
 
+- **NVMe SSD (Crucial P3 Plus 1TB or equivalent)** — deferred due to May-2026 NAND flash shortage (1TB now $165-220 vs $60-80 pre-shortage). Revisit triggers:
+  - SD card fills up
+  - Docker build times become painful
+  - SD card dies
+  - 1TB NVMe street price recovers to <~$100
 - Spare STS3215 19kg servo — when one dies
 - Spare bearings — when you ruin a press-fit
 - Logic analyzer — when the Feetech bus is misbehaving
@@ -265,15 +264,14 @@ Post-Jetson-flash install list (Phase 1):
 ### Project total estimate
 
 - **Already-owned/ordered:** ~$2,650
-- **Committed net adds (incl. charger):** ~$187-232
-- **Realistic total spend:** **~$2,840-2,880**
-- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **$3,550-3,600**
+- **Committed net adds (608AC path):** ~$187
+- **Realistic total spend:** **~$2,805**
+- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,510**
 
 ---
 
 ## 14. Pending Items
 
-- [ ] Pick charger model (TN267 vs ISDT 608PD)
 - [ ] Verify included WiFi 5 module works on Jetson arrival; confirm BT presence
 - [ ] Order remaining STS3215 19kg servos to complete 8-count for legs
 

@@ -6,7 +6,7 @@
 **Platform:** Quadruped (12 DOF) + 6-DOF arm
 **Compute:** NVIDIA Jetson Orin Nano Super 8GB
 **Middleware:** ROS 2 Humble
-**Last updated:** May 15, 2026
+**Last updated:** May 15, 2026 (BOM v3.1)
 
 ---
 
@@ -244,14 +244,14 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 
 | Category | Cost |
 |----------|------|
-| Compute + perception | ~$1,300 |
+| Compute + perception | ~$1,300 (NVMe deferred — NAND shortage) |
 | Servos | ~$320 (+ 6 carried over from SO-ARM101) |
 | Power + safety | ~$215 |
 | Mechanical + hardware | ~$110 |
 | Sensors (stock Nova) | ~$76 |
 | Filament + Bambu accessories | ~$700 |
 | Wiring + consumables | ~$80 |
-| **Realistic total** | **~$2,840-2,880** (TN267 / ISDT 608PD charger paths) |
+| **Realistic total** | **~$2,805** (ISDT 608AC charger) |
 
 ---
 
@@ -261,8 +261,8 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 
 - [x] Define modified BOM
 - [x] Validate component compatibility (Jetson power rail, Feetech bus, L2 ethernet)
-- [ ] Pick LiPo charger (TN267 vs ISDT 608PD)
-- [ ] Order remaining parts (NVMe, switch, D24V50F12, accessories)
+- [x] Pick LiPo charger → **ISDT 608AC**
+- [ ] Order remaining parts (switch, D24V50F12, charger bundle, accessories) — NVMe deferred
 - [ ] Set up GitHub repo with this README and BOM
 - [ ] Back up LeRobot Pi SD contents
 - [ ] Create NVIDIA Developer account, download JetPack 6.x image
@@ -271,9 +271,8 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 
 - [ ] Flash JetPack 6.x to microSD; firmware update Jetson if needed
 - [ ] Boot Jetson, complete Ubuntu setup
-- [ ] Verify built-in WiFi 5 module functions; confirm BT presence
-- [ ] Install Crucial P3 Plus 1TB NVMe; migrate rootfs from SD
-- [ ] Install ROS 2 Humble + librealsense2 + unilidar_sdk2
+- [ ] Verify pre-installed WiFi works; install AX210NGW only if missing. Confirm BT presence.
+- [ ] Install ROS 2 Humble + librealsense2 + unilidar_sdk2 (run from 128GB microSD; NVMe deferred)
 - [ ] D456 standalone test (`realsense-viewer`)
 - [ ] L2 standalone test (included 12V adapter + rviz2)
 - [ ] Print parts: Bambu P1S + PA6-CF (dry 24h before each print)
@@ -322,7 +321,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 
 Before assembling any subsystem into the chassis, validate on the bench. Catching a bad part on the desk is minutes; catching it after assembly is hours.
 
-1. **Jetson desk bring-up** — Firmware update → JetPack flash → Ubuntu setup → NVMe migration → SDK installs → individual sensor smoke tests
+1. **Jetson desk bring-up** — Firmware update → JetPack flash → Ubuntu setup → SDK installs → individual sensor smoke tests (NVMe migration deferred — see BOM §1)
 2. **Power rail validation** — Each buck/converter loaded with realistic current draw before being committed to the chassis
 3. **Servo bring-up** — Single-servo bench tests before daisy-chaining; full chain ping before powered movement
 4. **Network smoke test** — Static IPs, L2 UDP packet flow, simultaneous SSH-over-WiFi
@@ -336,7 +335,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 
 > 📋 To be written as components arrive. Will include:
 > - JetPack 6.x flash + firmware update procedure
-> - NVMe rootfs migration
+> - NVMe rootfs migration (when NAND prices recover; see BOM §1)
 > - Built-in WiFi 5 setup + BT verification
 > - ROS 2 Humble + sensor SDK install scripts
 > - Feetech servo ID assignment procedure
@@ -350,14 +349,15 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 
 | # | Decision | Status | Notes |
 |---|----------|--------|-------|
-| 1 | Charger model: TN267 vs ISDT 608PD | Open | TN267 cheaper + includes bag; ISDT faster + storage mode |
-| 2 | WiFi/BT on P3766 kit | Resolved → included | WiFi 5 (802.11ac/abgn) module + antennas ship with Jetson Orin Nano Super Dev Kit. **Verify on arrival.** |
+| 1 | Charger model | Resolved → ISDT 608AC | ~$60. AC mode ~55W ≈ 75 min for 4S 4000mAh. Charge / discharge / **storage** modes. Bag + XT60 jumper bought separately. |
+| 2 | WiFi on P3766 kit | Resolved → included with dev kit | 802.11ac/abgn pre-installed per official spec. WiFi 5, **not** 6E. Order AX210NGW only if missing on arrival. |
 | 2b | Bluetooth presence on P3766 | Open | BT not explicitly listed in NVIDIA spec — verify on arrival |
 | 3 | L2 12V tap: shared with hip rail vs dedicated buck | Open | Bench-test servo noise before deciding |
 | 4 | SLAM stack: POINT-LIO vs RTAB-Map | Open | Compare during Phase 2 |
 | 5 | Bus master: Pattern A (Jetson direct) vs Pattern B (Teensy) | Resolved → A | Migrate to B only if measured latency problems |
 | 6 | L2 mounting position | Resolved → top-center on riser | Symmetric 360° FOV, minimal yaw moment |
 | 7 | Horn spline verification | Resolved → absorbed into leg redesign | |
+| 8 | NVMe SSD purchase | Deferred → NAND shortage | May-2026 NAND flash shortage 2-3x'd 1TB SSD prices ($60→$165-220). Revisit when prices recover (<~$100 for 1TB) or storage becomes a measured bottleneck. Run from 128GB microSD until then. |
 
 ---
 
@@ -378,6 +378,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | Date | Milestone |
 |------|-----------|
 | 2026-05-15 | BOM v3 finalized, README v1 created |
+| 2026-05-15 | BOM v3.1 — NVMe deferred due to NAND shortage, charger resolved to ISDT 608AC, WiFi confirmed included |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 
