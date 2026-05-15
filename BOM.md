@@ -1,8 +1,8 @@
-# NovaSM3 Quadruped Build — BOM v3.2 (Committed)
+# NovaSM3 Quadruped Build — BOM v3.3 (Committed)
 
 **Last updated:** May 15, 2026
-**Supersedes:** BOM v3.1
-**Status:** v1 scope narrowed to **quadruped only** (12 servos active). Arm (6 STS3215) demoted to Phase 4 future work; bus IDs 13-18 + arm-rail buck footprint reserved on PCB redesign. Power rails redesigned around Pololu modules after XL4016 capacity audit (8A continuous insufficient for walking-gait + impact transients). Full safety scope adopted: LVC alarm + E-stop + INA226 per-rail telemetry + MOSFET hard-cutoff. Pattern A/B selectable on new PCB via 74HC125 + solder bridge.
+**Supersedes:** BOM v3.2
+**Status:** v1 scope narrowed to **quadruped only** (12 servos active). Arm (6 STS3215) demoted to Phase 4 future work; bus IDs 13-18 + arm-rail buck footprint reserved on PCB redesign. Power rails redesigned around Pololu modules after XL4016 capacity audit. Full safety scope: LVC alarm + E-stop + INA226 per-rail telemetry + MOSFET hard-cutoff. **Bus master: Pattern B is v1 default** — Teensy 4.1 UART → 74HC125 half-duplex driver → bus. Pattern A (FE-URT-1 → bus) kept as bench/debug fallback via solder bridge.
 
 ---
 
@@ -31,14 +31,18 @@
 | Arduino Nano (ELEGOO 3-pack, CH340) | $15 | ✅ Ordered |
 | ~~NovaSM3 PCB v5.2b~~ → **NovaSM3 PCB v6 (custom redesign)** | $60 (est.) | 🆕 Design + order from PCBWay — see [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md) for feature set |
 | FE-URT-1 USB→TTL Feetech interface | $20 | ✅ Ordered |
-| **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — populated on PCB; solder bridge selects FE-URT-1 (Pattern A) vs Teensy UART (Pattern B) |
+| **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — **populated on PCB; v1 default active**. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
 | **E-stop button (panel-mount, latching, NC contact)** | $10 | 🆕 Order |
 | **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.4V, hip 12V, Jetson 12V). I²C to Teensy. |
 | **Comparator + MOSFET parts for hard-cutoff at 12.4V** | $10 | 🆕 Order — autonomous LVC backstop independent of charger alarm |
 
-**Feetech bus architecture: Pattern A active, Pattern B PCB-ready.**
-- **Pattern A (v1 active):** FE-URT-1 → USB → Jetson directly drives the 12-servo bus.
-- **Pattern B (footprint reserved):** Teensy 4.1 UART → 74HC125 half-duplex driver → same bus pads. Solder bridge selects active master. Cost today ~$1 (74HC125 IC + routing). Saves a chassis teardown if Pattern A jitter forces migration. Decision criterion: measure gait-loop jitter once 12-servo daisy-chain is live; migrate to Pattern B only if p99 latency >5 ms or stalls observed.
+**Feetech bus architecture: Pattern B is v1 default.**
+- **Pattern B (v1 active):** Teensy 4.1 hardware UART → 74HC125 half-duplex driver → 12-servo TTL bus. Bare-metal real-time. Jetson sends joint targets via micro-ROS over USB; Teensy translates to bus writes at 200-500 Hz. Survives Jetson restarts, kernel preemption, CUDA stalls, journald flushes — none of which affect bus servicing. Solder bridge `JP_BUS_MASTER` defaults to B.
+- **Pattern A (bench / debug fallback):** FE-URT-1 → USB → Jetson directly drives the bus. Flip `JP_BUS_MASTER` to A for: initial servo ID assignment from a workstation (before Teensy firmware is ready), debug if Teensy firmware misbehaves, or post-mortem inspection of bus traffic. Not the runtime path.
+
+Why B as default (revised from v3.2): Linux is not a real-time OS. USB-CDC latency on Jetson is 1-10 ms typical, 50 ms+ under load (CUDA kernel preemption, kworker spikes). At 100 Hz gait, a 100 ms stall = robot on the floor. Teensy bare-metal UART has hard real-time guarantees by construction. Defaulting to A would force a measure-then-migrate decision in Phase 1; defaulting to B skips that risk for the cost of populating one IC and writing the firmware in Phase 1.
+
+Cost of Pattern B as default: 74HC125 must be populated (~$1, already in §2 above) + Teensy firmware becomes a Phase 1 critical-path deliverable (was a Phase 2+ stub).
 
 ---
 
@@ -254,10 +258,11 @@ Post-Jetson-flash install list (Phase 1):
    - Verify INA226 per-rail I²C reads sane current/voltage values under load.
 
 3. **Servo bring-up**
-   - Power one servo at a time, assign IDs **1-12 for v1** (4 hips, 8 femur/tibia), label each. IDs 13-18 reserved for future arm.
-   - Single-servo SCServo SDK Python test via FE-URT-1 → Jetson.
-   - Full 12-servo daisy chain: continuity check unpowered, then ping-all powered.
-   - Measure FE-URT-1 → bus gait-loop p99 latency under SCServo SDK polling at 100 Hz across all 12 servos. **If p99 >5 ms or stalls observed, switch solder bridge to Pattern B (Teensy + 74HC125 owning the bus).**
+   - **Bridge in Pattern A** (temporary) for initial ID assignment: power one servo at a time, assign IDs **1-12 for v1** (4 hips, 8 femur/tibia), label each. IDs 13-18 reserved for future arm. Use FE-URT-1 + SCServo SDK Python from workstation — simpler than booting micro-ROS for ID setup.
+   - **Flip `JP_BUS_MASTER` to Pattern B** (v1 default). Teensy firmware running: micro-ROS + half-duplex driver via 74HC125.
+   - Single-servo test via Teensy: subscribe to `/joint_commands`, publish `/joint_states`. Verify with `ros2 topic echo` from Jetson.
+   - Full 12-servo daisy chain: continuity check unpowered, then ping-all powered via Teensy.
+   - **Verify** gait-loop p99 latency: ROS 2 → Teensy → bus → return at 100 Hz across all 12 servos. **Pass criterion: p99 <2 ms** (well within Teensy bare-metal capability). If p99 misses, debug Teensy firmware before chassis assembly — do not fall back to Pattern A as a workaround.
 
 4. **Network**
    - Configure Jetson eth0 static 192.168.1.2/24
@@ -317,7 +322,8 @@ Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not re
 - [ ] Verify included WiFi works on Jetson arrival (802.11ac/ab/gn confirmed from NVIDIA spec); confirm BT presence (not explicitly in spec)
 - [ ] Order remaining STS3215 19kg servos to complete 8-count for legs (v1 = 12 active total)
 - [ ] Design PCB v6 — see [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md)
-- [ ] Measure gait-loop p99 latency under SCServo SDK once 12-servo bus is live → resolves Pattern A vs B
+- [ ] Write Teensy firmware (Pattern B bus driver + micro-ROS) — see [`firmware/teensy/README.md`](../firmware/teensy/README.md). **Critical path for Phase 1.**
+- [ ] Verify Pattern B gait-loop p99 <2 ms across 12-servo bus (Phase 1 acceptance gate)
 
 ---
 

@@ -6,7 +6,7 @@
 **Platform:** Quadruped (12 DOF) — arm (6-DOF, Phase 4 future) on shelf
 **Compute:** NVIDIA Jetson Orin Nano Super 8GB
 **Middleware:** ROS 2 Humble
-**Last updated:** May 15, 2026 (BOM v3.2)
+**Last updated:** May 15, 2026 (BOM v3.3)
 
 ---
 
@@ -32,16 +32,16 @@
 This project is a heavily modified fork of the open-source NovaSM3 quadruped, redesigned to serve as a research platform for embodied AI. Stock Nova uses PWM hobby servos and a Raspberry Pi running custom locomotion code. This build replaces:
 
 - **12 servos** with Feetech STS3215 TTL bus servos for unified protocol, real-time joint feedback (position, load, temperature, voltage), and elimination of PWM wiring complexity. Six additional STS3215 (arm) remain on shelf for Phase 4.
-- **The Pi** with an NVIDIA Jetson Orin Nano Super (67 TOPS sparse INT8 / ~33 TOPS dense; 8GB RAM tight but workable for VLA inference + ROS 2 + SLAM — see Phase 4 notes)
+- **The Pi** with an NVIDIA Jetson Orin Nano Super (67 TOPS sparse INT8 / ~33 TOPS dense; 8GB RAM tight but workable for VLA inference + ROS 2 + SLAM — see Phase 4 notes). Real-time servo bus is offloaded to a Teensy 4.1 (Pattern B); Jetson runs ROS 2 + perception only.
 - **The stock perception** with Intel RealSense D456 (depth + RGB + IMU) and Unitree L2 4D LiDAR (360° × 96° FOV, 30m range)
-- **The stock locomotion stack** with ROS 2 Humble + Nav2 + RTAB-Map / POINT-LIO
+- **The stock locomotion stack** with ROS 2 Humble (Jetson) + Teensy bus master (Pattern B) + Nav2 + RTAB-Map / POINT-LIO
 
 The arm is carried over from a prior SO-ARM101 build, also Feetech-based. **v1 build scope: quadruped only (12 servos active).** Arm install + integration is Phase 4 future work — bus IDs 13-18 and the 7.4V arm-rail buck footprint are reserved on the PCB v6 redesign so the future install is a populate-and-go.
 
 ### Goals
 
 - ✅ Unified TTL servo bus across locomotion (12 servos v1; future-ready for 18 with arm)
-- 🔧 ROS 2 locomotion via micro-ROS bridge to Teensy 4.1 (or direct via FE-URT-1)
+- 🔧 ROS 2 locomotion via micro-ROS bridge to Teensy 4.1 (Teensy owns the Feetech bus in Pattern B; FE-URT-1 retained as bench fallback)
 - 📋 3D SLAM using LiDAR + visual-inertial fusion (POINT-LIO baseline, RTAB-Map comparison)
 - 📋 Autonomous navigation (Nav2) on legged platform with stair climbing
 - 📋 VLA fine-tuning and deployment for mobile manipulation tasks
@@ -90,29 +90,36 @@ After the v3.1 architecture audit, the stock Nova PCB v5.2b can't host the upgra
 ┌────────────────────────────────────────────────────────────────────┐
 │                  NVIDIA Jetson Orin Nano Super 8GB                 │
 │                          (ROS 2 Humble)                            │
-│   • Locomotion, Nav2, SLAM, VLA inference, sensor fusion           │
+│   • Nav2, SLAM, VLA inference, sensor fusion                       │
+│   • Sends /joint_commands to Teensy via micro-ROS over USB         │
 │   • Built-in WiFi 5 (802.11ac/ab/gn) per NVIDIA P3766 spec sheet   │
 └──┬──────────┬─────────────┬─────────────┬───────────────────────────┘
-   │ USB-C    │ USB 3.1     │ Ethernet    │ USB
+   │ USB-C    │ USB 3.1     │ Ethernet    │ USB (micro-ROS transport)
    │          │             │             │
-┌──▼───────┐ ┌▼───────────┐ ┌▼───────────┐ ┌▼─────────────────────┐
-│ Realsense│ │ FE-URT-1   │ │ Gig switch │ │ Teensy 4.1            │
-│ D456     │ │ USB→TTL    │ │            │ │  • aux I/O (v1)       │
-│ (depth + │ │ (bus       │ │ ◄─ L2 ─►   │ │  • INA226 I²C reader  │
-│  RGB +   │ │  master    │ │            │ │  • E-stop GPIO        │
-│  IMU)    │ │  Pattern A)│ └────────────┘ │  • 74HC125 → bus      │
-└──────────┘ └────┬───────┘                │    (Pattern B prep)   │
-                  │                        └──┬────────────────────┘
-                  │ TTL half-duplex           │ I²C / GPIO
-                  │ (solder-bridge select)    │
-        ┌─────────▼─────────┐         ┌──────▼──────────────────┐
-        │ 12× STS3215       │         │ Arduino Nano            │
-        │ daisy-chained     │         │ (aux only:              │
-        │  IDs 1-4:  hips   │         │  PIR, OLED, RGB, MP3,   │
-        │  IDs 5-12: f/tib  │         │  ultrasonic, MPU-6050)  │
-        │  IDs 13-18: ⏸    │         │                         │
-        │  (arm, Phase 4)   │         └─────────────────────────┘
-        └───────────────────┘
+┌──▼───────┐ ┌▼───────────┐ ┌▼───────────┐ ┌▼─────────────────────────┐
+│ Realsense│ │ FE-URT-1   │ │ Gig switch │ │ Teensy 4.1 (BUS MASTER v1)│
+│ D456     │ │ (debug/    │ │            │ │  • Real-time gait loop    │
+│ (depth + │ │  bench     │ │ ◄─ L2 ─►   │ │  • UART → 74HC125 → bus   │
+│  RGB +   │ │  fallback) │ │            │ │  • INA226 I²C reader      │
+│  IMU)    │ │            │ └────────────┘ │  • E-stop GPIO sense      │
+└──────────┘ └────┬───────┘                │  • micro-ROS over USB     │
+                  ↓                        └──┬────────────────────────┘
+              (JP_BUS_MASTER                  │ UART → 74HC125 half-duplex
+               solder bridge:                 │ (active v1 path)
+               default = B,                   │
+               flip to A for ID setup)        ▼
+                                  ┌───────────────────────┐
+                                  │ 12× STS3215 (TTL bus) │
+                                  │  IDs 1-4:  hips       │
+                                  │  IDs 5-12: f/tib      │
+                                  │  IDs 13-18: ⏸ arm    │
+                                  │  (Phase 4 reserved)   │
+                                  └───────────────────────┘
+
+       ┌──── Arduino Nano (separate I²C, aux only:
+       │                   PIR, OLED, RGB, MP3, ultrasonic, MPU-6050) ────┐
+       │                                                                  │
+       └──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Servo configuration
@@ -124,16 +131,18 @@ After the v3.1 architecture audit, the stock Nova PCB v5.2b can't host the upgra
 | Arm (shoulder + elbow) | 3 | STS3215 19kg | 7.4V | 13-15 | ⏸ Phase 4 — reserved |
 | Arm (wrist + gripper) | 3 | STS3215 19kg | 7.4V | 16-18 | ⏸ Phase 4 — reserved |
 
-**v1 build = 12 active servos** on a single daisy-chained TTL bus, 2 active voltage rails (7.4V leg, 12V hip+L2). Bus IDs 13-18 and the 7.4V arm rail (D42V55F7 footprint) reserved on PCB v6 for Phase 4 arm install — populate-and-go.
+**v1 build = 12 active servos** on a single daisy-chained TTL bus, 2 active voltage rails (7.4V leg, 12V hip+L2). Bus master is the **Teensy 4.1 (Pattern B)** via a 74HC125 half-duplex driver. Bus IDs 13-18 and the 7.4V arm rail (D42V55F7 footprint) reserved on PCB v6 for Phase 4 arm install — populate-and-go.
 
 ### Bus master pattern
 
-Two viable patterns. **PCB v6 supports both via solder-bridge selector** — no chassis teardown to migrate.
+**Pattern B is v1 default.** Both paths live on PCB v6 via solder bridge `JP_BUS_MASTER`.
 
-- **Pattern A (v1 default):** Jetson → USB → FE-URT-1 → TTL bus. Simple, matches SO-ARM101 architecture. **Real risk is not "Jetson restart kills servo commands" — it's Linux jitter.** USB-CDC latency on Jetson is 1-10 ms typical, 50 ms+ under load (CUDA kernel preemption, journald flushes, kworker spikes). At 100 Hz gait, 100 ms = robot on the floor.
-- **Pattern B (footprint-ready):** Teensy 4.1 UART → 74HC125 half-duplex driver → same bus pads as FE-URT-1. Hard real-time, survives Jetson restarts and kernel preemption. PCB v6 routes both paths; a solder bridge selects which master drives the bus.
+- **Pattern B (v1 active):** Teensy 4.1 hardware UART → 74HC125 quad tri-state buffer (half-duplex driver) → TTL bus pads. Bare-metal real-time loop at 200-500 Hz. Jetson sends joint targets via micro-ROS over USB; Teensy translates to bus reads/writes. Survives Jetson restarts, kernel preemption, CUDA stalls, journald flushes — none of which affect bus servicing. Solder bridge defaults to B.
+- **Pattern A (bench / debug fallback):** Jetson → USB → FE-URT-1 → TTL bus. Use for: initial servo ID assignment with the Feetech FD / SCServo SDK Python tools from a workstation (simpler than booting micro-ROS for ID setup), debug if Teensy firmware misbehaves, post-mortem inspection of bus traffic. Flip `JP_BUS_MASTER` to A.
 
-**Migration criterion:** measure gait-loop p99 latency once 12-servo bus is live (Pre-Assembly §12 step 3). If p99 >5 ms or stalls observed, flip the solder bridge. Zero hardware rework.
+**Why B as default (decision history):** Linux is not a real-time OS. USB-CDC latency on Jetson runs 1-10 ms typical, 50 ms+ under load. At 100 Hz gait, a single 100 ms stall puts the robot on the floor. Teensy bare-metal UART has hard real-time guarantees by construction. v3.2 originally defaulted to A with "migrate if measurement forces it" — v3.3 flips to B-default because the migration cost is just populating one $1 IC and writing Phase 1 firmware, and the measurement path risks a Phase 2 surprise. See Open Decisions row 5.
+
+**Phase 1 acceptance gate:** ROS 2 → Teensy → bus → return p99 latency <2 ms across the 12-servo bus at 100 Hz polling. If missed, debug Teensy firmware before chassis assembly — Pattern A is not a workaround.
 
 ---
 
@@ -160,16 +169,24 @@ Two viable patterns. **PCB v6 supports both via solder-bridge selector** — no 
 │  • unitree_lidar_ros2                        │
 └──────────────────────────────────────────────┘
 ┌──────────────────────────────────────────────┐
-│            Locomotion Layer                  │
+│            Locomotion Layer (Jetson)         │
 │  • Gait controller (8-phase walk)            │
 │  • 3-DOF-per-leg IK solver                   │
+│  • Publishes /joint_commands                 │
+│  • Subscribes /joint_states                  │
 └──────────────────────────────────────────────┘
 ┌──────────────────────────────────────────────┐
-│               Hardware Layer                 │
-│  • Feetech SCServo SDK (joint state + cmd)   │
-│  • micro-ROS bridge (Teensy ↔ Jetson)        │
-│  • IMU driver, peripheral I/O                │
-│  • INA226 per-rail telemetry → diagnostics   │
+│        Bus Master Layer (Teensy 4.1)         │
+│  • micro-ROS client (USB transport)          │
+│  • SCServo SDK port — Feetech bus driver     │
+│  • 74HC125 half-duplex TX/RX gating          │
+│  • Real-time loop @ 200-500 Hz               │
+│  • INA226 I²C reader → /diagnostics          │
+└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│              Hardware Layer                  │
+│  • Feetech STS3215 bus (12 servos v1)        │
+│  • IMU driver, aux peripheral I/O            │
 └──────────────────────────────────────────────┘
 ```
 
@@ -187,7 +204,7 @@ Two viable patterns. **PCB v6 supports both via solder-bridge selector** — no 
 | Nav2 | Autonomous navigation | 📋 Phase 3 |
 | robot_localization | EKF sensor fusion | 📋 Phase 2 |
 | micro-ROS (Teensy) | Embedded ROS 2 | 📋 Phase 2 |
-| SCServo SDK | Feetech bus driver | ⚠️ Already familiar from SO-ARM101 |
+| SCServo SDK (Teensy port) | Feetech bus driver running on Teensy in Pattern B | ⚠️ Already familiar from SO-ARM101 — port to TeensyDuino in Phase 1 |
 
 ---
 
@@ -300,10 +317,10 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] Print parts: Bambu P1S + PA6-CF (dry 24h before each print)
 - [ ] Bench-validate Pololu D42V55F12 / D42V110F7 / D42V110F12 / UBEC 5V (per BOM §12 step 2)
 - [ ] Verify E-stop chain + MOSFET hard-cutoff @ 12.4V + INA226 I²C reads
-- [ ] Set Feetech servo IDs **1-12** (v1 active), label each. IDs 13-18 reserved for Phase 4.
-- [ ] Single-servo SCServo SDK test from Jetson via FE-URT-1
-- [ ] Full 12-servo daisy chain ping test
-- [ ] **Measure gait-loop p99 latency @ 100 Hz** → resolves Pattern A vs B (solder bridge flip if >5 ms)
+- [ ] **Write Teensy firmware** (Pattern B critical path) — micro-ROS client + SCServo SDK port + 74HC125 TX/RX gating
+- [ ] ID setup pass: flip `JP_BUS_MASTER` to A (FE-URT-1), assign servo IDs **1-12** (v1 active), label each. IDs 13-18 reserved for Phase 4.
+- [ ] Flip `JP_BUS_MASTER` back to B (default). Verify Teensy firmware drives single servo, then full 12-servo chain.
+- [ ] **Acceptance gate: ROS 2 → Teensy → bus p99 latency <2 ms** @ 100 Hz across 12 servos. If missed, debug Teensy firmware (do NOT fall back to Pattern A as a workaround).
 - [ ] Assemble legs (redesigned for STS3215 dimensions)
 - [ ] Assemble chassis, mount L2 on top-center riser
 - [ ] Network setup: eth0 static 192.168.1.2; verify L2 UDP flow
@@ -313,7 +330,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 ### Phase 2 — Locomotion (weeks 5-8)
 
 - [ ] Implement 3-DOF-per-leg IK solver (reference mogar/spot_micro)
-- [ ] 8-phase walk gait controller on Jetson via Teensy micro-ROS bridge
+- [ ] 8-phase walk gait controller on Jetson — publishes `/joint_commands` to Teensy via micro-ROS
 - [ ] Stand, sit, walk validated on hardware
 - [ ] MPU-6050 body stabilization feedback
 - [ ] Calibrate LiDAR ↔ RealSense extrinsics
@@ -389,7 +406,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2b | Bluetooth presence on P3766 | Open | BT not explicitly listed in NVIDIA datasheet. Third-party teardowns suggest the module is RTL8822CE (WiFi 5 + BT 5.0) but unverified from NVIDIA. Verify on arrival via `hciconfig` / `bluetoothctl list`. |
 | 3 | L2 12V tap: shared with hip rail vs dedicated buck | Open | Bench-test servo noise before deciding |
 | 4 | SLAM stack: POINT-LIO vs RTAB-Map | Open | Compare during Phase 2 |
-| 5 | Bus master: Pattern A (Jetson direct) vs Pattern B (Teensy) | Resolved → A default, B PCB-ready | PCB v6 hosts both via solder-bridge selector. Migration criterion: gait-loop p99 latency >5 ms during Pre-Assembly §12 step 3 → flip bridge. Zero hardware rework. |
+| 5 | Bus master: Pattern A (FE-URT-1) vs Pattern B (Teensy) | **Resolved → B is v1 default** | Linux jitter (USB-CDC 1-10 ms typical, 50 ms+ under load) is unacceptable at 100 Hz gait. Teensy bare-metal UART gives hard real-time. PCB v6 keeps Pattern A via `JP_BUS_MASTER` bridge for bench / ID setup / debug. Phase 1 acceptance: p99 <2 ms ROS 2 → Teensy → bus. |
 | 6 | L2 mounting position | Resolved → top-center on riser | Symmetric 360° FOV, minimal yaw moment |
 | 7 | Horn spline verification | Resolved → absorbed into leg redesign | |
 | 8 | NVMe SSD purchase | Deferred → NAND shortage | May-2026 NAND flash shortage 2-3x'd 1TB SSD prices ($60→$165-220). Revisit when prices recover (<~$100 for 1TB) or storage becomes a measured bottleneck. Run from 128GB microSD until then. |
@@ -421,6 +438,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-15 | BOM v3.1 — NVMe deferred (NAND shortage), charger resolved to ISDT 608AC, WiFi confirmed included |
 | 2026-05-15 | D24V50F12 → D42V55F12 buck swap (older Pololu family deprecated) |
 | 2026-05-15 | BOM v3.2 — v1 scope narrowed to quadruped only; arm to Phase 4. Power rails redesigned (XL4016 → Pololu D42V110-class). Full safety scope adopted (LVC + E-stop + INA226 + MOSFET hard-cutoff). PCB v5.2b → v6 redesign. |
+| 2026-05-15 | BOM v3.3 — Bus master flipped: **Pattern B (Teensy + 74HC125) is v1 default**. Pattern A (FE-URT-1) kept as bench / debug fallback via solder bridge. Teensy firmware becomes Phase 1 critical path. |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 

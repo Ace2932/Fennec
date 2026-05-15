@@ -70,7 +70,7 @@ One-shot consolidated checkout for the BOM v3.2 committed adds (~$343, ISDT 608A
 
 ### 74HC125 quad tri-state buffer (Pattern B half-duplex driver) — ~$1
 - **Primary:** DigiKey / Mouser (SOIC-14, e.g. SN74HC125N)
-- **Why:** Drives the Feetech bus from the Teensy 4.1 UART when the solder bridge selects Pattern B. Single-IC half-duplex driver. Buy 3-5 (cheap, easy to fry).
+- **Why:** v1 critical-path. Drives the Feetech bus from the Teensy 4.1 UART. `JP_BUS_MASTER` solder bridge defaults to Pattern B on PCB v6. Buy 5 (cheap, easy to fry, want spares for bring-up).
 
 ### E-stop button (panel-mount, latching, NC contact) — ~$10
 - **Primary:** Amazon / DigiKey — 22 mm panel mount, mushroom head, twist-to-release

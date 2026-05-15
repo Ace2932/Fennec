@@ -5,7 +5,7 @@ Colcon workspace for ROS 2 Humble packages.
 ## Planned packages
 - `nova_description` — URDF/xacro for quadruped + arm
 - `nova_bringup` — launch files for full stack
-- `nova_servo_bus` — Feetech SCServo SDK ROS 2 wrapper
+- `nova_servo_bus` — micro-ROS bridge node (Jetson side). Topics paired with the Teensy firmware (see [`firmware/teensy/`](../../firmware/teensy/)). v1 uses Pattern B (Teensy is bus master); no direct FE-URT-1 driver path in this package.
 - `nova_gait` — 8-phase walk gait controller
 - `nova_ik` — 3-DOF-per-leg inverse kinematics solver
 - `nova_perception` — RealSense + L2 fusion launch

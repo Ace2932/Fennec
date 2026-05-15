@@ -40,15 +40,23 @@ Module footprints use Pololu's standard 22-pin header pitch so cards can be swap
 - Star ground at FE-URT-1 connector
 - Hip rail injects at chassis floor (4 hips clustered there)
 
-### 4. Pattern A/B bus master selector
+### 4. Bus master — Pattern B default, Pattern A fallback
 
-- FE-URT-1 USB→TTL input header (existing wiring)
-- Teensy 4.1 UART routed through **74HC125 quad tri-state buffer** as half-duplex driver
-- Solder bridge `JP_BUS_MASTER` selects one of:
-  - **A (default):** FE-URT-1 → bus
-  - **B:** Teensy UART → 74HC125 → bus
-- Both paths terminate on the same bus pads — solder bridge is the only state change
-- Footprint cost: ~$1 IC + ~5 cm² PCB area. Zero teardown to migrate.
+**Pattern B is the v1 active path.** Teensy 4.1 hardware UART routed through **74HC125 quad tri-state buffer** as a half-duplex driver to the Feetech TTL bus pads. The 74HC125 must be populated on first build.
+
+- Teensy UART TX → 74HC125 input gate
+- Teensy GPIO → 74HC125 OE pins (TX-enable for write, RX-enable for read; half-duplex direction control)
+- 74HC125 output → bus signal pad
+- FE-URT-1 USB→TTL input header retained for fallback
+
+Solder bridge `JP_BUS_MASTER` selects which path drives the bus pads:
+
+- **B (default — board ships configured this way):** Teensy UART → 74HC125 → bus
+- **A (fallback):** FE-URT-1 → bus directly (used for ID setup, debug, post-mortem)
+
+Both paths terminate on the same bus pads; the bridge is the only state change. No chassis teardown to swap.
+
+Linux jitter rationale: USB-CDC latency on Jetson is 1-10 ms typical, 50 ms+ under CUDA / kworker / journald load. 100 Hz gait + 100 ms stall = robot on floor. Teensy bare-metal UART has hard real-time guarantees by construction.
 
 ### 5. Bus integrity footprints (populate per measured error rate)
 
