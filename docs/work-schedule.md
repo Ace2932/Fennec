@@ -1,6 +1,6 @@
 # Phase 0 → Phase 1 Work Schedule (3 weeks)
 
-Sequencing constraint: one solid week starting **2026-05-29** the user is away from the shop — laptop only, no printing, no hardware. Plan front-loads physical work (leg-joint CAD → prints) and reserves the away-week for laptop-only PCB schematic + layout work.
+Sequencing constraint: one solid week starting **2026-05-29** the user is away from the shop — **laptop + internet only, no printer / no hardware**. Plan front-loads physical work (leg-joint CAD → prints) and reserves the away-week for browser/laptop work that can't proceed if the printer or bench parts are needed.
 
 Constraints recap:
 - ✅ Bambu P1S + PA6-CF / PETG-CF / TPU 95A on hand
@@ -9,7 +9,9 @@ Constraints recap:
 - ✅ Teensy 4.1 on hand
 - ⚠️ FE-URT-1, Arduino Nano: ordered, on-hand-by-then TBD
 - ⚠️ Pololu rails + safety parts + switch: not yet ordered (see [`order-list.md`](./order-list.md))
-- ⚠️ **OnShape requires internet** — confirm internet at away-location, otherwise CAD work blocks during the away-week
+- ✅ Internet available during away-week — OnShape, KiCad downloads, package installs, Git all work normally
+
+Open option for away-week (decide by end of Week 2): leave Jetson running at home with SSH-over-WiFi (Tailscale recommended) so remote ROS 2 / sensor SDK install work is possible during away. Risks: thermal trip if room hot, no physical reset if locked. Default = Jetson off during away.
 
 ---
 
@@ -60,7 +62,7 @@ Constraints recap:
 
 ---
 
-## Week 3 — 2026-05-29 → 2026-06-05 (AWAY WEEK — laptop only)
+## Week 3 — 2026-05-29 → 2026-06-05 (AWAY WEEK — laptop + internet, no shop)
 
 **Primary: PCB v6 schematic + layout in KiCad**
 
@@ -75,15 +77,17 @@ Per [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md):
 
 **Secondary if PCB stalls or finishes early:**
 
-- [ ] Continue Teensy PlatformIO firmware (offline-doable if you cached uROS + SCServo SDK source)
-- [ ] Continue URDF / xacro work on the leg geometry from Week 1
+- [ ] Continue OnShape leg/chassis CAD (browser, fine with internet)
+- [ ] Continue Teensy PlatformIO firmware (compiles + uROS work; no servo test possible without bench)
+- [ ] URDF / xacro work using Week 1 leg dims
 - [ ] ROS 2 package scaffolding for `nova_gait`, `nova_ik`, `nova_servo_bus`
+- [ ] If remote-Jetson option chosen (Tailscale SSH): ROS 2 install + sensor SDK builds + clones
 
-**Hard offline-incompatible work (don't even start during away-week):**
-- ❌ OnShape (browser-required) — only if internet is reliable at the location
-- ❌ Jetson SSH-dependent tasks
-- ❌ Anything needing a 3D printer
-- ❌ Anything needing bench measurement of components
+**Hard-blocked during away (need physical access):**
+- ❌ 3D printing
+- ❌ Bench measurement of new components
+- ❌ Servo bring-up via FE-URT-1 (no servos on bench)
+- ❌ Any soldering / hardware assembly
 
 ---
 
@@ -101,11 +105,11 @@ Back to shop. Resume hardware path:
 
 | Risk | Mitigation |
 |------|------------|
-| Away-week internet flaky → OnShape blocked | KiCad PCB work is offline-capable. Front-load PCB schematic if internet uncertain. |
 | Jetson flash hits firmware update gotcha → bricked/long-recovery | Flash on Week 2 with shop access (USB recovery, second SD). Don't first-attempt during away-week. |
 | Leg-joint first-article doesn't fit servo → respin → behind schedule | Print one early, iterate before queueing all 12 prints. Don't batch-print before fitment validated. |
 | Teensy firmware deeper than 1-2 weeks (Phase 1 critical path) | Start skeleton in Week 2 (parallel work during prints). Bring-up parallelizable with sensor SDK installs. |
 | FE-URT-1 not arrived for ID assignment | Servos can be ID-programmed via any TTL adapter (workstation USB-serial → 5V level shift). Have one as a backup. |
+| Remote-Jetson option chosen but Jetson hangs / overheats / loses WiFi during away | Default to Jetson off. Only enable remote-SSH path if confidence is high (Tailscale set up, thermal verified, room temp stable). Have a remote-reset option (smart plug). |
 
 ---
 

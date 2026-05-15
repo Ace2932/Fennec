@@ -6,9 +6,9 @@ Actionable items to land before Week 2 prints + Week 3 away-week PCB work. Tick 
 
 ---
 
-## 1. Cache reference material for offline (away-week prep)
+## 1. Cache reference material (optional convenience)
 
-Build the offline cache **now** while internet is reliable. Pattern: `~/Downloads/nova-offline-cache/` (or wherever convenient — won't be tracked in this repo, too binary-heavy).
+Internet works during away-week, so this is a convenience-only step (faster lookups, no provider dependency, archive against link-rot). Skip if pressed for time. Pattern: `~/Downloads/nova-offline-cache/` (or wherever convenient — won't be tracked in this repo, too binary-heavy).
 
 ### Datasheets
 - [ ] STS3215 19kg (Feetech)

@@ -22,10 +22,6 @@
 3. Export STL → Bambu Studio slice → P1S print
 4. PA6-CF prints: 24h drier first, Magigoo PA glue stick on textured PEI plate, 0.4 mm hardened hotend
 
-## OnShape internet caveat
-
-OnShape requires internet. For offline work blocks (away weeks), export STEPs to laptop before going offline so the assembly can still be viewed (read-only). Active editing needs connectivity.
-
 ## Files
 
 - Source: OnShape public doc (link here once created)
