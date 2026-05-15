@@ -295,16 +295,34 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 
 ### Phase 0 — Pre-build setup (current)
 
-- [x] Define modified BOM (v3.2: Pololu rails + safety + arm deferred)
+3-week sequenced plan in [`docs/work-schedule.md`](./docs/work-schedule.md). Front-loads leg-joint CAD + prints; reserves 2026-05-29 away-week for laptop-only PCB schematic work in KiCad.
+
+- [x] Define modified BOM (v3.3: Pattern B default, Pololu rails, full safety, arm deferred)
 - [x] Validate component compatibility (Jetson power rail, Feetech bus, L2 ethernet)
 - [x] Pick LiPo charger → **ISDT 608AC**
 - [x] Power rail audit (XL4016 → Pololu D42V110-class)
 - [x] Confirm v1 scope = quadruped only (arm → Phase 4)
-- [ ] Order remaining parts (switch, Pololu bucks ×3, charger bundle, safety parts, accessories) — NVMe deferred
-- [ ] Design PCB v6 — see [`hardware/pcb-mods/README.md`](./hardware/pcb-mods/README.md)
+- [x] Bus master decision → Pattern B (Teensy + 74HC125) v1 default
 - [x] Set up GitHub repo with this README and BOM
+
+**Week 1 (2026-05-15 → 2026-05-22):**
+- [ ] OnShape: import STS3215 + NovaSM3 reference geometry, caliper-measure on-hand servos, first-article leg-joint print
+- [ ] Install KiCad 8.x + Pololu library on laptop; cache datasheets for offline use during away-week
 - [ ] Back up LeRobot Pi SD contents
 - [ ] Create NVIDIA Developer account, download JetPack 6.x image
+
+**Week 2 (2026-05-22 → 2026-05-28):**
+- [ ] Finish leg CAD, queue all 12 prints
+- [ ] During prints: flash Jetson, install ROS 2 Humble + sensor SDKs, smoke-test D456
+- [ ] PlatformIO + TeensyDuino + micro-ROS Teensy firmware skeleton (compile-green, no servo test yet)
+
+**Week 3 — Away (2026-05-29 → 2026-06-05, laptop only):**
+- [ ] PCB v6 schematic + layout in KiCad — see [`hardware/pcb-mods/README.md`](./hardware/pcb-mods/README.md)
+- [ ] Backup: continue Teensy firmware / URDF / ROS 2 scaffolding if PCB stalls or finishes early
+
+**Week 4+ (back to shop):**
+- [ ] Bench-validate prints; submit Gerbers to PCBWay (~$60); continue Phase 1 hardware bring-up
+- [ ] Order remaining parts (switch, Pololu bucks ×3, charger bundle, safety parts, accessories) — NVMe deferred
 
 ### Phase 1 — Hardware bring-up (weeks 1-4)
 
@@ -439,6 +457,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-15 | D24V50F12 → D42V55F12 buck swap (older Pololu family deprecated) |
 | 2026-05-15 | BOM v3.2 — v1 scope narrowed to quadruped only; arm to Phase 4. Power rails redesigned (XL4016 → Pololu D42V110-class). Full safety scope adopted (LVC + E-stop + INA226 + MOSFET hard-cutoff). PCB v5.2b → v6 redesign. |
 | 2026-05-15 | BOM v3.3 — Bus master flipped: **Pattern B (Teensy + 74HC125) is v1 default**. Pattern A (FE-URT-1) kept as bench / debug fallback via solder bridge. Teensy firmware becomes Phase 1 critical path. |
+| 2026-05-15 | 3-week work schedule committed ([`docs/work-schedule.md`](./docs/work-schedule.md)): leg-joint CAD on OnShape now, prints week 2, PCB v6 schematic in KiCad during 2026-05-29 away-week. |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 
