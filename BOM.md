@@ -34,13 +34,13 @@
 | **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — **populated on PCB; v1 default active**. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
 | **E-stop button (panel-mount, latching, NC contact)** | $10 | 🆕 Order |
 | **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.5V, hip 12V, Jetson 12V). Optional 4th on L2 12V rail if telemetry budget allows. I²C to Teensy. |
-| **Comparator + MOSFET parts for hard-cutoff at 12.4V** | $10 | 🆕 Order — autonomous LVC backstop independent of charger alarm |
+| **Comparator + MOSFET parts for hard-cutoff at 12.4V + graceful-shutdown at 13.0V** | $13 | 🆕 Order — two comparator stages. 13.0V: drives Teensy GPIO → Jetson clean shutdown. 12.4V: autonomous battery-feed cutoff if Jetson didn't shut down. ~$3 extra for the second comparator + divider. |
 
 **Feetech bus architecture: Pattern B is v1 default.**
 - **Pattern B (v1 active):** Teensy 4.1 hardware UART → 74HC125 half-duplex driver → 12-servo TTL bus. Bare-metal real-time. Jetson sends joint targets via micro-ROS over USB; Teensy translates to bus writes at 200-500 Hz. Survives Jetson restarts, kernel preemption, CUDA stalls, journald flushes — none of which affect bus servicing. Solder bridge `JP_BUS_MASTER` defaults to B.
 - **Pattern A (bench / debug fallback):** FE-URT-1 → USB → Jetson directly drives the bus. Flip `JP_BUS_MASTER` to A for: initial servo ID assignment from a workstation (before Teensy firmware is ready), debug if Teensy firmware misbehaves, or post-mortem inspection of bus traffic. Not the runtime path.
 
-Why B as default (revised from v3.2): Linux is not a real-time OS. USB-CDC latency on Jetson is 1-10 ms typical, 50 ms+ under load (CUDA kernel preemption, kworker spikes). At 100 Hz gait, a 100 ms stall = robot on the floor. Teensy bare-metal UART has hard real-time guarantees by construction. Defaulting to A would force a measure-then-migrate decision in Phase 1; defaulting to B skips that risk for the cost of populating one IC and writing the firmware in Phase 1.
+Why B as default (revised from v3.2): Linux is not a real-time OS. USB-CDC latency on Jetson is 1-10 ms typical, 50 ms+ under load (CUDA kernel preemption, kworker spikes). What Pattern B actually buys: **bus servicing is isolated from Linux jitter** — the Teensy guarantees its UART transactions complete on time so individual servo writes/reads don't time out and the bus doesn't error-out from late ACKs. The gait controller still runs on Jetson and publishes targets at 100 Hz, so Jetson's command rate is still Linux-bounded; but the Teensy oversamples at 200-500 Hz against the *last received* target, holding it through Jetson stalls. A 100 ms Linux freeze becomes "robot pauses mid-step" not "bus dies and robot falls." Defaulting to A would force a measure-then-migrate decision in Phase 1; defaulting to B skips that for one $1 IC + Phase 1 firmware work.
 
 Cost of Pattern B as default: 74HC125 must be populated (~$1, already in §2 above) + Teensy firmware becomes a Phase 1 critical-path deliverable (was a Phase 2+ stub).
 
@@ -97,12 +97,13 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
                        └── UBEC 5V/5A        → 5V       → Ethernet switch, fans, aux 5V peripherals
 ```
 
-**Power tree safety chain:**
-- 608AC charger LVC alarm: **3.3V/cell = 13.2V** pack (above D42V55F12 dropout knee)
-- MOSFET hard-cutoff: **12.4V pack** (autonomous backstop, comparator-driven, breaks main battery feed)
-- Panel-mount E-stop: NC contact in series with the **servo-rail enable lines only** — kills D42V110F7 + D42V110F12 outputs while Jetson rail stays live for debug
+**Power tree safety chain (ordered by trip point, highest pack voltage first):**
+- 608AC charger LVC alarm: **3.3V/cell = 13.2V** pack (warning beep; user response)
+- Graceful-shutdown comparator: **3.25V/cell = 13.0V** pack → drives Teensy GPIO → publishes `/battery_low` → Jetson runs `systemctl poweroff` (allows clean SD card unmount before the hard cutoff fires). ~30-60 s window between this and the hard cutoff at typical discharge rates.
+- MOSFET hard-cutoff: **3.1V/cell = 12.4V** pack (autonomous backstop, comparator-driven, breaks main battery feed). Drops everything including Jetson — but Jetson should have already shut down cleanly per the 13.0V line above.
+- Panel-mount E-stop: NC contact in series with the **servo-rail + L2-rail enable lines** — kills D42V110F7 + D42V110F12 + D24V22F12 outputs (LiDAR stops spinning); Jetson rail stays live for debug + telemetry post-mortem
 - INA226 per active rail (3-4×): I²C → Teensy → ROS 2 diagnostics topic. Leg, hip, Jetson rails mandatory; L2 buck optional 4th if telemetry budget allows.
-- ANL 30A fuse on battery feed (sized for hip-rail worst case ~15A + headroom)
+- ANL 30A fuse on battery feed (sized for hip-rail peak ~20A + headroom)
 
 ---
 
@@ -257,15 +258,20 @@ Post-Jetson-flash install list (Phase 1):
    - Bench-test Pololu D24V22F12 (L2 12V dedicated): load with L2 LiDAR. Scope output for ripple. LC filter on this rail (not on the hip rail anymore).
    - Bench-test 5V UBEC loaded with Ethernet switch.
    - Verify E-stop physically opens the leg + hip rail enable lines (Jetson rail stays alive).
-   - Verify MOSFET hard-cutoff trips at 12.4V Vin (use bench supply to sweep down; restore battery only after verifying).
+   - Verify 13.0V graceful-shutdown comparator trips and Teensy publishes `/battery_low` (bench-sweep Vin down to 13.0V, watch the topic and verify Jetson initiates `systemctl poweroff`).
+   - Verify MOSFET hard-cutoff trips at 12.4V Vin (bench-supply sweep down; should fire ~30-60 s after the 13.0V graceful trigger at typical discharge rates).
    - Verify INA226 per-rail I²C reads sane current/voltage values under load.
 
 3. **Servo bring-up**
-   - **Bridge in Pattern A** (temporary) for initial ID assignment: power one servo at a time, assign IDs **1-12 for v1** (4 hips, 8 femur/tibia), label each. IDs 13-18 reserved for future arm. Use FE-URT-1 + SCServo SDK Python from workstation — simpler than booting micro-ROS for ID setup.
+   - **ID assignment via Pattern A path** (FE-URT-1 → single servo on bench): can be done pre-PCB (Week 1-2 while waiting for PCB v6) by wiring FE-URT-1 directly to servo, or post-PCB by flipping `JP_BUS_MASTER` to A. Assign IDs **1-12 for v1** (4 hips, 8 femur/tibia), label each. IDs 13-18 reserved for future arm. Use Feetech FD (Windows) or SCServo SDK Python.
    - **Flip `JP_BUS_MASTER` to Pattern B** (v1 default). Teensy firmware running: micro-ROS + half-duplex driver via 74HC125.
    - Single-servo test via Teensy: subscribe to `/joint_commands`, publish `/joint_states`. Verify with `ros2 topic echo` from Jetson.
    - Full 12-servo daisy chain: continuity check unpowered, then ping-all powered via Teensy.
-   - **Verify** gait-loop p99 latency: ROS 2 → Teensy → bus → return at 100 Hz across all 12 servos. **Pass criterion: p99 <2 ms** (well within Teensy bare-metal capability). If p99 misses, debug Teensy firmware before chassis assembly — do not fall back to Pattern A as a workaround.
+   - **Verify Phase 1 acceptance gate.** Two mandatory criteria + one sanity check:
+     1. **Teensy local loop tick jitter p99 <100 µs** over a 60-second window (bare-metal bus servicing — what Pattern B actually guarantees).
+     2. **`/joint_commands` arrival rate ≥99% of 100 Hz target** over a 60-second window (Jetson + uROS healthy, command dropouts <1%).
+     3. *(Sanity)* End-to-end RTT — Jetson publish → Teensy roundtrip → Jetson echo: **median <5 ms, p99 <20 ms**. RTT is Linux-bounded by USB-CDC + uROS, so don't expect bare-metal numbers here; this just confirms nothing pathological.
+   - If (1) misses, debug Teensy firmware. If (2) misses, debug Jetson side (uROS QoS, USB cable, CPU contention). If only (3) is high but (1) + (2) pass, accept — Teensy will hold-last-command under Jetson jitter and the robot stays stable.
 
 4. **Network**
    - Configure Jetson eth0 static 192.168.1.2/24
@@ -293,8 +299,8 @@ Post-Jetson-flash install list (Phase 1):
 | Magigoo PA | $15 |
 | ISDT 608AC + LiPo safe bag + XT60 jumper + XT60 charging lead | $88 |
 | **Pololu D24V22F12 (L2 LiDAR dedicated, v3.4 split)** | **$19** |
-| **74HC125 + E-stop + INA226 ×3 + hard-cutoff parts + bulk caps** | **$34** |
-| **Subtotal** | **~$362** |
+| **74HC125 + E-stop + INA226 ×3 + hard-cutoff + graceful-shutdown parts + bulk caps** | **$37** |
+| **Subtotal** | **~$365** |
 
 Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not refunded. New PCB v6 design cost (PCBWay) absorbs the v5.2b $60 line. Net forward spend ≈ $362.
 
@@ -315,9 +321,9 @@ Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not re
 ### Project total estimate
 
 - **Already-owned/ordered:** ~$2,650 (includes XL4016 ×2 sunk to spares)
-- **Committed net adds (v3.4):** ~$362
-- **Realistic total spend:** **~$3,012**
-- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,765**
+- **Committed net adds (v3.4):** ~$365
+- **Realistic total spend:** **~$3,015**
+- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,770**
 
 ---
 

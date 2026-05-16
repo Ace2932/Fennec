@@ -140,9 +140,14 @@ After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgra
 - **Pattern B (v1 active):** Teensy 4.1 hardware UART → 74HC125 quad tri-state buffer (half-duplex driver) → TTL bus pads. Bare-metal real-time loop at 200-500 Hz. Jetson sends joint targets via micro-ROS over USB; Teensy translates to bus reads/writes. Survives Jetson restarts, kernel preemption, CUDA stalls, journald flushes — none of which affect bus servicing. Solder bridge defaults to B.
 - **Pattern A (bench / debug fallback):** Jetson → USB → FE-URT-1 → TTL bus. Use for: initial servo ID assignment with the Feetech FD / SCServo SDK Python tools from a workstation (simpler than booting micro-ROS for ID setup), debug if Teensy firmware misbehaves, post-mortem inspection of bus traffic. Flip `JP_BUS_MASTER` to A.
 
-**Why B as default (decision history):** Linux is not a real-time OS. USB-CDC latency on Jetson runs 1-10 ms typical, 50 ms+ under load. At 100 Hz gait, a single 100 ms stall puts the robot on the floor. Teensy bare-metal UART has hard real-time guarantees by construction. v3.2 originally defaulted to A with "migrate if measurement forces it" — v3.3 flips to B-default because the migration cost is just populating one $1 IC and writing Phase 1 firmware, and the measurement path risks a Phase 2 surprise. See Open Decisions row 5.
+**Why B as default (decision history):** Linux is not a real-time OS. USB-CDC latency on Jetson runs 1-10 ms typical, 50 ms+ under load. **What Pattern B actually buys:** bus-servicing isolation on the Teensy side — UART transactions to all 12 servos complete on time even when Jetson is jittery, so the bus doesn't time out and servos don't fault. The gait controller still runs on Jetson and publishes targets at 100 Hz, so Jetson's command rate is still Linux-bounded; the Teensy oversamples at 200-500 Hz against the last received target, holding it through Jetson stalls. A 100 ms Linux freeze becomes "robot pauses mid-step," not "bus dies and robot falls." v3.2 originally defaulted to A with "migrate if measurement forces it" — v3.3 flips to B-default because the migration cost is just populating one $1 IC + Phase 1 firmware work, and skipping the measure-then-migrate path eliminates a Phase 2 surprise. See Open Decisions row 5.
 
-**Phase 1 acceptance gate:** ROS 2 → Teensy → bus → return p99 latency <2 ms across the 12-servo bus at 100 Hz polling. If missed, debug Teensy firmware before chassis assembly — Pattern A is not a workaround.
+**Phase 1 acceptance gate (revised):** Pattern B's real guarantee is bus-servicing isolation on the Teensy side, not full RTT through Linux. Two mandatory criteria + one sanity check:
+1. **Teensy local loop tick jitter p99 <100 µs** over 60 seconds (bare-metal — easy if firmware is right)
+2. **`/joint_commands` arrival rate ≥99% of 100 Hz target** over 60 seconds (Jetson + uROS healthy)
+3. *(Sanity)* End-to-end RTT median <5 ms, p99 <20 ms — Linux-bounded, not a hard pass/fail
+
+If (1) misses → debug Teensy firmware (DMA vs ISR, UART config). If (2) misses → debug Jetson uROS / USB cable / CPU contention. If only (3) is high → accept: Teensy holds last command under Jetson jitter, robot stays stable.
 
 ---
 
@@ -230,16 +235,22 @@ After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgra
    └── UBEC 5V/5A ──► 5V rail ──► Ethernet switch, fans, aux 5V peripherals
 
    INA226 ×3 (leg 7.5V, hip 12V, Jetson 12V) ──► I²C ──► Teensy 4.1 ──► ROS 2 diagnostics
+   13.0V comparator ──► Teensy GPIO ──► /battery_low ──► Jetson clean shutdown
+   12.4V comparator ──► MOSFET ──► breaks battery feed (autonomous backstop)
 ```
 
 ### Notes
 
 - All rails share a common ground
-- Jetson MAXN peak power ~25W → ~2.1A at 12V. **Pololu D42V55F12** derates to ~3A continuous at 14.8V Vin (4.5A typ headline is at 42V in) → ~1.4× headroom. Min Vin 12V — set LiPo LVC alarm at 3.3V/cell = 13.2V to stay above dropout.
+- Jetson MAXN peak power ~25W → 2.1A at 12V, plus USB peripherals (D456 streaming ~2-3W, FE-URT-1 ~0.5W) → **~2.5A continuous worst case**. **Pololu D42V55F12** derates to ~3A continuous at 14.8V Vin (4.5A typ headline is at 42V Vin) → **~1.2× headroom**. Modest, not generous; watch thermal under sustained VLA inference + RealSense stream + Nav2 planning. Min Vin 12V — set LiPo LVC alarm at 3.3V/cell = 13.2V to stay above dropout.
 - **Leg rail D42V110F7** (10A typ @ 42V Vin, derates at 14.8V Vin) sized for walking-gait avg 5-8A with bulk caps absorbing 25-40A impact transients near each star injection point. See [`docs/power-budget.md`](./docs/power-budget.md).
 - **Hip rail D42V110F12** (9A typ @ 42V Vin) sized for 4× 30kg hips only — sustained avg ~8A. L2 LiDAR was moved off this rail to a dedicated D24V22F12 buck (v3.4) because combined hip+L2 load was margin-thin under 14.8V Vin derating.
 - **L2 LiDAR rail D24V22F12** (2.6A / 12V / 36V Vin max) — dedicated buck for the LiDAR's 1A draw with LC filter on output. Clean power, no servo transient ringing.
-- **MOSFET hard-cutoff at 12.4V** is the autonomous safety net independent of the charger's LVC alarm. E-stop kills only the leg + hip rail enables — Jetson stays alive for post-mortem debug.
+- **Battery low-voltage chain** (ordered by trip point):
+  1. **13.2V** — 608AC charger LVC alarm beeps (user-facing warning)
+  2. **13.0V** — graceful-shutdown comparator → Teensy `/battery_low` topic → Jetson `systemctl poweroff` (clean SD unmount). ~30-60s window before hard cutoff.
+  3. **12.4V** — autonomous MOSFET hard-cutoff on battery feed (drops everything; Jetson should already be shut down per #2)
+- **E-stop** kills leg + hip + L2 rail enables (LiDAR stops spinning) — Jetson rail stays alive for post-mortem debug + telemetry capture.
 - L2 self-heats below 30°C ambient; ~30-60s delay before point cloud output on cold boots
 - LC filter sits on the D24V22F12 output to clean any switching ripple before the L2 input (UDP packet loss is the failure mode)
 
@@ -284,12 +295,12 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 |----------|------|
 | Compute + perception | ~$1,300 (NVMe deferred — NAND shortage) |
 | Servos | ~$320 active (12-servo v1) + 6 SO-ARM101 carryover on shelf |
-| Power + safety | ~$335 (Pololu rails + INA226 + E-stop + MOSFET hard-cutoff) |
+| Power + safety | ~$338 (Pololu rails + INA226 + E-stop + MOSFET hard-cutoff + graceful-shutdown comparator) |
 | Mechanical + hardware | ~$110 |
 | Sensors (stock Nova) | ~$76 |
 | Filament + Bambu accessories | ~$700 |
 | Wiring + consumables | ~$80 |
-| **Realistic total** | **~$3,012** (v3.4: + dedicated L2 buck split) |
+| **Realistic total** | **~$3,015** (v3.4 + graceful-shutdown comparator) |
 
 ---
 
@@ -340,7 +351,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] **Write Teensy firmware** (Pattern B critical path) — micro-ROS client + SCServo SDK port + 74HC125 TX/RX gating
 - [ ] ID setup pass: flip `JP_BUS_MASTER` to A (FE-URT-1), assign servo IDs **1-12** (v1 active), label each. IDs 13-18 reserved for Phase 4.
 - [ ] Flip `JP_BUS_MASTER` back to B (default). Verify Teensy firmware drives single servo, then full 12-servo chain.
-- [ ] **Acceptance gate: ROS 2 → Teensy → bus p99 latency <2 ms** @ 100 Hz across 12 servos. If missed, debug Teensy firmware (do NOT fall back to Pattern A as a workaround).
+- [ ] **Acceptance gate** (two mandatory + one sanity, see "Bus master pattern" section): Teensy tick jitter p99 <100 µs + `/joint_commands` arrival ≥99% of 100 Hz + RTT median <5 ms / p99 <20 ms. Pattern A is not a workaround if (1) or (2) miss.
 - [ ] Assemble legs (redesigned for STS3215 dimensions)
 - [ ] Assemble chassis, mount L2 on top-center riser
 - [ ] Network setup: eth0 static 192.168.1.2; verify L2 UDP flow
@@ -432,7 +443,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 8 | NVMe SSD purchase | Deferred → NAND shortage | May-2026 NAND flash shortage 2-3x'd 1TB SSD prices ($60→$165-220). Revisit when prices recover (<~$100 for 1TB) or storage becomes a measured bottleneck. Run from 128GB microSD until then. |
 | 9 | v1 scope: arm included vs deferred | Resolved → arm deferred to Phase 4 | 12 active servos (4 hip + 8 femur/tibia). 6 arm servos on shelf. Bus IDs 13-18 + arm-rail buck footprint reserved on PCB v6. |
 | 10 | Power rail strategy | Resolved → 4-buck Pololu split | XL4016 8A cont. inadequate. v3.4 active rails: D42V110F7 (leg 7.5V), D42V110F12 (hip 12V only), D24V22F12 (L2 12V dedicated), D42V55F12 (Jetson 12V). Arm rail D42V55F7 footprint reserved. See [`docs/power-budget.md`](./docs/power-budget.md). |
-| 11 | Safety scope | Resolved → full | 608AC LVC alarm + E-stop on servo rails + INA226 per-rail telemetry + MOSFET hard-cutoff @ 12.4V. ~$30 BOM add. |
+| 11 | Safety scope | Resolved → full | 608AC LVC alarm at 13.2V (warning) + 13.0V graceful-shutdown comparator → Jetson clean poweroff + 12.4V MOSFET hard-cutoff (autonomous backstop) + E-stop on leg/hip/L2 rail enables + INA226 ×3 per-rail telemetry. ~$37 BOM add. |
 | 12 | Phase 4 COM-shift compensation | Open (Phase 4) | Arm extension + payload mass shifts support polygon; gait controller needs arm-state input to stay stable. Design when arm install begins. |
 | 13 | Bus integrity strategy at 12 nodes / 1 Mbps | Open (measure first) | PCB v6 includes footprints for series R + ferrite beads + star ground. Single-ended TTL — **not** RS-485, so 120 Ω differential termination is not the right tool. Populate iteratively based on measured error rate; drop baud if needed. |
 
@@ -461,6 +472,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-15 | BOM v3.3 — Bus master flipped: **Pattern B (Teensy + 74HC125) is v1 default**. Pattern A (FE-URT-1) kept as bench / debug fallback via solder bridge. Teensy firmware becomes Phase 1 critical path. |
 | 2026-05-15 | 3-week work schedule committed ([`docs/work-schedule.md`](./docs/work-schedule.md)): leg-joint CAD on OnShape now, prints week 2, PCB v6 schematic in KiCad during 2026-05-29 away-week. |
 | 2026-05-16 | BOM v3.4 — L2 LiDAR split off hip rail onto dedicated D24V22F12 buck after Pololu datasheet check showed D42V110F12's 9A typ @ 42V Vin derates below combined hip+L2 ~9A load at 14.8V Vin. +$19. |
+| 2026-05-16 | Two-pass internal audit: Pass 1 swept 7.4V/7.5V mismatches + stale version markers + stale L2 references + section numbering; Pass 2 reframed Phase 1 acceptance gate (Teensy tick jitter + uROS arrival rate, not RTT), clarified Pattern B benefit framing, extended E-stop to kill L2 rail too, added 13.0V graceful-shutdown comparator before 12.4V hard cutoff, noted pre-PCB ID-setup path, reconciled Jetson headroom (~1.2× incl. peripherals). +$3 safety, total ~$3,015. |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 

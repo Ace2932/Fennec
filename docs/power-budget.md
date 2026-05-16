@@ -204,8 +204,9 @@ Mapped into BOM §12 step 2:
 - [ ] D42V110F7 ramp load: 1× → 4× → 8× STS3215 19kg walking-stand-in; thermal IR after 10 min sustained
 - [ ] D42V110F12 ramp load: 1× → 4× 30kg hip walking-stand-in (hips only, no L2 on this rail); thermal IR after 10 min
 - [ ] D24V22F12 load test with L2 LiDAR active; scope output ripple before/after LC filter
-- [ ] MOSFET hard-cutoff trip at 12.4V via bench-supply sweep
-- [ ] E-stop kills leg + hip rails only; Jetson + L2 rails stay alive (or kill L2 too — TBD per safety design choice)
+- [ ] 13.0V graceful-shutdown comparator trips → Teensy `/battery_low` topic → Jetson clean shutdown (bench-sweep Vin down to 13.0V)
+- [ ] 12.4V MOSFET hard-cutoff trip via bench-supply sweep (should fire ~30-60 s after the 13.0V graceful trigger at typical discharge rate)
+- [ ] E-stop kills leg + hip + L2 rails (LiDAR stops spinning); Jetson rail stays alive for post-mortem debug
 - [ ] INA226 ×3 sanity reads under nominal and loaded
 
 ---

@@ -80,18 +80,21 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ### E-stop button (panel-mount, latching, NC contact) — ~$10
 - **Primary:** Amazon / DigiKey — 22 mm panel mount, mushroom head, twist-to-release
-- **Wiring:** NC contact in series with the **leg + hip rail enable lines only** (Jetson stays alive for debug)
+- **Wiring:** NC contact in series with the **leg + hip + L2 rail enable lines** (D42V110F7 + D42V110F12 + D24V22F12 EN pins). LiDAR stops spinning; Jetson rail stays alive for debug.
 
 ### INA226 current/voltage monitor × 3 — ~$9
 - **Primary:** Adafruit / Amazon — INA226 breakout (or bare IC if rolling SMD into PCB v6)
 - **Why:** One per active rail (leg 7.5V, hip 12V, Jetson 12V); optional 4th on L2 rail. I²C to Teensy → ROS 2 diagnostics topic.
 - Buy 4× — one spare.
 
-### Comparator + MOSFET parts for hard-cutoff at 12.4V — ~$10
-- 1× TL431 or LM393 comparator (DigiKey)
+### Comparator + MOSFET parts for hard-cutoff at 12.4V + graceful-shutdown at 13.0V — ~$13
+- **Two comparator stages:**
+  - 13.0V trigger → drives Teensy GPIO → `/battery_low` topic → Jetson `systemctl poweroff` (clean SD unmount)
+  - 12.4V trigger → drives MOSFET on battery feed → autonomous hard cutoff
+- 2× LM393 (dual comparator, one stage each) OR 2× TL431 (DigiKey)
 - 1× IRLB3034PBF logic-level N-channel MOSFET (or similar Rds(on) <5 mΩ at Vgs=4.5V, Id ≥30A)
 - 1× P-channel power MOSFET on the high side if doing high-side switching
-- Trim-pot or precision resistor divider to set 12.4V trip point
+- 2× trim-pot or precision resistor divider to set each trip point
 - Bundle with DigiKey order
 
 ### Bulk caps for rail injection points — ~$4
@@ -158,16 +161,16 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 | Pololu D42V110F7 (leg) | 60 |
 | Pololu D42V110F12 (hip only) | 60 |
 | Pololu D24V22F12 (L2 dedicated) | 19 |
-| 74HC125 + INA226 ×3 + comparator + MOSFETs + bulk caps | 30 |
+| 74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps | 33 |
 | E-stop button | 10 |
 | Switch + Cat6 ×2 + LC parts | 26 |
 | Threadlocker + tape | 18 |
 | Magigoo PA | 15 |
 | DP adapter | 10 |
-| **Subtotal (worst case)** | **~$368** |
-| **Subtotal if Ovonic supplied leads** | **~$355** |
+| **Subtotal (worst case)** | **~$371** |
+| **Subtotal if Ovonic supplied leads** | **~$358** |
 
-Plus ~$10 shipping buffer across vendors → matches BOM §13 **~$362** (typical) target. Not included: PCB v6 (~$60), arm servo top-up (~$50).
+Math: worst-case $371 line subtotal minus ~$13 swing from skip-if-Ovonic rows lands ~$358; plus ~$7 shipping rolls into BOM §13 **~$365** typical target. Not included: PCB v6 (~$60), arm servo top-up (~$50).
 
 ---
 
@@ -206,8 +209,9 @@ Plus ~$10 shipping buffer across vendors → matches BOM §13 **~$362** (typical
 - [ ] Bench-load Pololu D42V110F7 → 7.5V under 1× / 4× / 8× STS3215 19kg walking-stand-in. Thermal IR check after 10 min sustained load.
 - [ ] Bench-load Pololu D42V110F12 → 12V under 1× / 4× 30kg hip walking-stand-in (hips only — L2 on dedicated buck). Thermal IR check after 10 min sustained.
 - [ ] Bench-load Pololu D24V22F12 → 12V under L2 LiDAR active. Scope output ripple at buck switch freq (~400 kHz) before/after LC filter.
-- [ ] Verify MOSFET hard-cutoff trip point at 12.4V via bench-supply sweep before connecting battery
-- [ ] Verify E-stop physically opens leg + hip rail enables (Jetson rail stays alive on press)
+- [ ] Verify 13.0V graceful-shutdown comparator → Teensy `/battery_low` topic → Jetson `systemctl poweroff` (sweep bench supply down to 13.0V, watch topic + log)
+- [ ] Verify 12.4V MOSFET hard-cutoff via bench-supply sweep before connecting battery (should fire ~30-60 s after 13.0V trigger at typical discharge rate)
+- [ ] Verify E-stop physically opens leg + hip + L2 rail enables (LiDAR stops; Jetson rail stays alive on press)
 - [ ] Verify INA226 ×3 I²C reads (current + voltage) under nominal and loaded states
 - [ ] Switch power test: 5V UBEC → switch → all 5 ports link-up
 - [ ] LC filter measurement: scope the D24V22F12 output (L2 feed) for ripple at ~400 kHz buck switch frequency, before/after the LC, both at idle and under L2 active load

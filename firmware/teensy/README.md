@@ -9,7 +9,10 @@ Critical-path Phase 1 deliverable. The Teensy owns the Feetech servo bus in v1 �
 - **Bus master:** Hardware UART → 74HC125 half-duplex driver → 12-servo Feetech TTL bus at 1 Mbps (drop to 500k / 250k if bus errors emerge during bring-up)
 - **Direction control:** GPIO drives 74HC125 OE pins for TX/RX gating on the shared half-duplex line
 - **Real-time loop:** 200-500 Hz tick. Read joint states (position, load, temp, voltage), publish `/joint_states`. Apply latest `/joint_commands`. Hard deadline per tick.
-- **Safety monitor:** INA226 ×3 I²C reads (leg / hip / Jetson rails; optional 4th on L2 rail) → `/diagnostics`. E-stop GPIO sense — when pressed, halts servo commands and publishes E-stop event.
+- **Safety monitor:**
+  - INA226 ×3 I²C reads (leg / hip / Jetson rails; optional 4th on L2 rail) → `/diagnostics`
+  - E-stop GPIO sense — when pressed, halts servo commands and publishes E-stop event
+  - **Battery low GPIO sense** — 13.0V comparator output → debounce → publish `/battery_low` (Jetson subscribes, runs `systemctl poweroff` for clean SD unmount before the 12.4V hard cutoff fires)
 - **micro-ROS client over USB** to Jetson
 
 ### Pattern A fallback path
@@ -19,9 +22,15 @@ When `JP_BUS_MASTER` solder bridge is flipped to A, the bus is driven by FE-URT-
 - Debug if Teensy firmware misbehaves
 - Post-mortem bus traffic inspection
 
-### Phase 1 acceptance gate
+### Phase 1 acceptance gate (revised — see BOM §12 step 3)
 
-ROS 2 → Teensy → bus → return **p99 latency <2 ms** at 100 Hz across all 12 servos. Measured via timestamped echo from `/joint_commands` round-trip. Pattern A is not a workaround if this misses — debug Teensy firmware.
+Pattern B guarantees bus-servicing isolation on the Teensy side, not full RTT through Linux. Three criteria:
+
+1. **Mandatory:** Teensy local loop tick jitter **p99 <100 µs** over 60 seconds. This is what bare-metal bus servicing actually buys.
+2. **Mandatory:** `/joint_commands` arrival rate **≥99% of 100 Hz target** over 60 seconds. Jetson + uROS healthy, command dropouts <1%.
+3. *(Sanity)* End-to-end RTT median **<5 ms**, p99 **<20 ms** — Linux-bounded by USB-CDC + uROS; informational, not pass/fail.
+
+If (1) misses → debug Teensy firmware (DMA vs ISR, UART config, ISR priority). If (2) misses → debug Jetson uROS / USB cable / CPU contention. Pattern A is not a workaround.
 
 ## Stack
 
@@ -38,6 +47,7 @@ ROS 2 → Teensy → bus → return **p99 latency <2 ms** at 100 Hz across all 1
 | Pub | `/joint_states` | `sensor_msgs/JointState` | 100 Hz |
 | Pub | `/diagnostics` | `diagnostic_msgs/DiagnosticArray` | 10 Hz (INA226 readings) |
 | Pub | `/estop` | `std_msgs/Bool` | event-driven |
+| Pub | `/battery_low` | `std_msgs/Bool` | event-driven (13.0V trigger) |
 | Sub | `/joint_commands` | `sensor_msgs/JointState` (position field) | 100 Hz target |
 
 ## Open questions for firmware phase

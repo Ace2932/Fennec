@@ -57,7 +57,7 @@ Solder bridge `JP_BUS_MASTER` selects which path drives the bus pads:
 
 Both paths terminate on the same bus pads; the bridge is the only state change. No chassis teardown to swap.
 
-Linux jitter rationale: USB-CDC latency on Jetson is 1-10 ms typical, 50 ms+ under CUDA / kworker / journald load. 100 Hz gait + 100 ms stall = robot on floor. Teensy bare-metal UART has hard real-time guarantees by construction.
+Linux jitter rationale: USB-CDC latency on Jetson is 1-10 ms typical, 50 ms+ under CUDA / kworker / journald load. Pattern B isolates the bus-servicing side (Teensy completes UART transactions to all 12 servos on time even when Jetson stalls); the gait command rate from Jetson is still Linux-bounded but the Teensy holds-last-command at 200-500 Hz, so a 100 ms Jetson freeze becomes a mid-step pause instead of a bus timeout.
 
 ### 5. Bus integrity footprints (populate per measured error rate)
 
@@ -71,9 +71,13 @@ Default v1 build: leave footprints unpopulated. Populate iteratively if bus erro
 
 ### 6. Safety chain
 
-- **Charger LVC alarm:** ISDT 608AC set to **3.3V/cell = 13.2V** (above D42V55F12 dropout knee, well within LiPo safe range)
-- **MOSFET hard-cutoff:** comparator (TL431 or LM393) drives a logic-level N-channel MOSFET on the battery feed. Trips at **12.4V** = 3.1V/cell. Autonomous backstop independent of charger; protects pack if user ignores alarm.
-- **E-stop:** panel-mount latching button, NC contact. Wired in series with the **leg + hip rail enable lines only**. Jetson rail stays alive for post-mortem debug. Twist-to-release.
+Three-stage battery low-voltage chain (highest trip first):
+- **Charger LVC alarm:** ISDT 608AC set to **3.3V/cell = 13.2V** (warning beep, user-facing)
+- **Graceful-shutdown comparator:** **3.25V/cell = 13.0V** pack. Comparator (LM393) + resistor divider → Teensy GPIO input. Teensy debounces + publishes `/battery_low`. Jetson subscribes + runs `systemctl poweroff` to unmount SD cleanly. ~30-60 s window before the hard cutoff trip at typical discharge rates — enough for Jetson to halt.
+- **MOSFET hard-cutoff:** **3.1V/cell = 12.4V** pack. Second comparator stage drives a logic-level MOSFET on the battery feed. Autonomous backstop — fires whether or not Jetson shut down per the 13.0V trigger.
+
+Other safety:
+- **E-stop:** panel-mount latching button, NC contact. Wired in series with the **leg + hip + L2 rail enable lines** (D42V110F7 + D42V110F12 + D24V22F12 EN pins). Killing L2 stops the LiDAR spinning under emergency. Jetson rail stays alive for post-mortem debug + telemetry capture. Twist-to-release.
 - **INA226 ×3 (optional 4th):** one per active rail (leg 7.5V, hip 12V, Jetson 12V); optional 4th on L2 12V if telemetry budget allows. I²C bus to Teensy 4.1 → ROS 2 diagnostics topic. Per-rail current/voltage telemetry.
 
 ### 7. Aux MCU + peripherals (carryover from Nova v5.2b)
