@@ -6,7 +6,7 @@
 **Platform:** Quadruped (12 DOF) — arm (6-DOF, Phase 4 future) on shelf
 **Compute:** NVIDIA Jetson Orin Nano Super 8GB
 **Middleware:** ROS 2 Humble
-**Last updated:** May 15, 2026 (BOM v3.3)
+**Last updated:** May 16, 2026 (BOM v3.4)
 
 ---
 
@@ -61,7 +61,7 @@ The arm is carried over from a prior SO-ARM101 build, also Feetech-based. **v1 b
 | Servo protocol | PWM (one signal per servo) | TTL half-duplex serial bus (daisy-chained) |
 | Perception | None / optional | RealSense D456 + Unitree L2 LiDAR |
 | Middleware | Custom Arduino loops | ROS 2 Humble + micro-ROS |
-| Power | 3S 11.1V LiPo | 4S 14.8V LiPo + Pololu D42V110-class buck rails (7.4V leg, 12V hip+L2, 12V Jetson, 5V aux). XL4016 dropped after capacity audit. |
+| Power | 3S 11.1V LiPo | 4S 14.8V LiPo + Pololu buck rails (7.5V leg / 12V hip / 12V L2 dedicated / 12V Jetson / 5V aux). XL4016 dropped after capacity audit. |
 | Print materials | PLA / PETG | PA6-CF / PETG-CF / TPU 95A |
 
 ### Why we're redesigning the PCB (v5.2b → v6)
@@ -131,7 +131,7 @@ After the v3.1 architecture audit, the stock Nova PCB v5.2b can't host the upgra
 | Arm (shoulder + elbow) | 3 | STS3215 19kg | 7.4V | 13-15 | ⏸ Phase 4 — reserved |
 | Arm (wrist + gripper) | 3 | STS3215 19kg | 7.4V | 16-18 | ⏸ Phase 4 — reserved |
 
-**v1 build = 12 active servos** on a single daisy-chained TTL bus, 2 active voltage rails (7.4V leg, 12V hip+L2). Bus master is the **Teensy 4.1 (Pattern B)** via a 74HC125 half-duplex driver. Bus IDs 13-18 and the 7.4V arm rail (D42V55F7 footprint) reserved on PCB v6 for Phase 4 arm install — populate-and-go.
+**v1 build = 12 active servos** on a single daisy-chained TTL bus, 2 active servo-power voltage levels (7.5V leg, 12V hip) plus dedicated 12V/2.6A L2 LiDAR buck and 12V/3A Jetson buck. Bus master is the **Teensy 4.1 (Pattern B)** via a 74HC125 half-duplex driver. Bus IDs 13-18 and the 7.4V arm rail (D42V55F7 footprint) reserved on PCB v6 for Phase 4 arm install — populate-and-go.
 
 ### Bus master pattern
 
@@ -216,11 +216,12 @@ After the v3.1 architecture audit, the stock Nova PCB v5.2b can't host the upgra
 4S LiPo 14.8V nominal (12.8-16.8V)
    │  ANL 30A fuse · MOSFET reverse-protection · MOSFET hard-cutoff @12.4V · E-stop NC (servo rails only)
    │
-   ├── Pololu D42V110F7  ──► 7.4V/10A+ ──► 8× STS3215 19kg femur/tibia
+   ├── Pololu D42V110F7  ──► 7.5V/10A ──► 8× STS3215 19kg femur/tibia
    │       (star injection at 4 points along chain, bulk caps near point of load)
    │
-   ├── Pololu D42V110F12 ──► 12V/10A+ ──┬── 4× STS3215 30kg hips
-   │                                     └── (LC filter) ──► Unitree L2 LiDAR (12V/1A)
+   ├── Pololu D42V110F12 ──► 12V/9A   ──► 4× STS3215 30kg hips ONLY
+   │
+   ├── Pololu D24V22F12  ──► 12V/2.6A ──► Unitree L2 LiDAR (1A, LC filter on output)
    │
    ├── Pololu D42V55F12  ──► 12V/~3A  ──► Jetson Orin Nano (barrel jack)
    │
@@ -228,18 +229,19 @@ After the v3.1 architecture audit, the stock Nova PCB v5.2b can't host the upgra
    │
    └── UBEC 5V/5A ──► 5V rail ──► Ethernet switch, fans, aux 5V peripherals
 
-   INA226 ×3 (leg 7.4V, hip+L2 12V, Jetson 12V) ──► I²C ──► Teensy 4.1 ──► ROS 2 diagnostics
+   INA226 ×3 (leg 7.5V, hip 12V, Jetson 12V) ──► I²C ──► Teensy 4.1 ──► ROS 2 diagnostics
 ```
 
 ### Notes
 
 - All rails share a common ground
 - Jetson MAXN peak power ~25W → ~2.1A at 12V. **Pololu D42V55F12** derates to ~3A continuous at 14.8V Vin (4.5A typ headline is at 42V in) → ~1.4× headroom. Min Vin 12V — set LiPo LVC alarm at 3.3V/cell = 13.2V to stay above dropout.
-- **Leg rail D42V110F7** (~10A+ cont. at 14.8V Vin) sized for walking-gait avg 5-8A with bulk caps absorbing 25-40A impact transients near each star injection point. See [`docs/power-budget.md`](./docs/power-budget.md).
-- **Hip+L2 rail D42V110F12** (~10A+ cont.) sized for 4× 30kg hips peak ~12A + L2 1A.
+- **Leg rail D42V110F7** (10A typ @ 42V Vin, derates at 14.8V Vin) sized for walking-gait avg 5-8A with bulk caps absorbing 25-40A impact transients near each star injection point. See [`docs/power-budget.md`](./docs/power-budget.md).
+- **Hip rail D42V110F12** (9A typ @ 42V Vin) sized for 4× 30kg hips only — sustained avg ~8A. L2 LiDAR was moved off this rail to a dedicated D24V22F12 buck (v3.4) because combined hip+L2 load was margin-thin under 14.8V Vin derating.
+- **L2 LiDAR rail D24V22F12** (2.6A / 12V / 36V Vin max) — dedicated buck for the LiDAR's 1A draw with LC filter on output. Clean power, no servo transient ringing.
 - **MOSFET hard-cutoff at 12.4V** is the autonomous safety net independent of the charger's LVC alarm. E-stop kills only the leg + hip rail enables — Jetson stays alive for post-mortem debug.
 - L2 self-heats below 30°C ambient; ~30-60s delay before point cloud output on cold boots
-- LC filter on the L2 12V tap is required to prevent hip-servo current noise from causing UDP packet loss
+- LC filter sits on the D24V22F12 output to clean any switching ripple before the L2 input (UDP packet loss is the failure mode)
 
 ### Battery safety
 
@@ -287,7 +289,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 | Sensors (stock Nova) | ~$76 |
 | Filament + Bambu accessories | ~$700 |
 | Wiring + consumables | ~$80 |
-| **Realistic total** | **~$2,993** (v3.2: Pololu rail redesign + full safety scope) |
+| **Realistic total** | **~$3,012** (v3.4: + dedicated L2 buck split) |
 
 ---
 
@@ -422,14 +424,14 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 1 | Charger model | Resolved → ISDT 608AC | ~$60. AC mode ~55W ≈ 75 min for 4S 4000mAh. Charge / discharge / **storage** modes. Bag + XT60 jumper bought separately. |
 | 2 | WiFi on P3766 kit | Resolved → 802.11ac/ab/gn included | Confirmed from NVIDIA P3766 datasheet (Developer Kit Content): "802.11ac/ab/gn wireless network interface controller". WiFi 5, **not** 6E. Antennas implied via product photos; verify-on-unbox. |
 | 2b | Bluetooth presence on P3766 | Open | BT not explicitly listed in NVIDIA datasheet. Third-party teardowns suggest the module is RTL8822CE (WiFi 5 + BT 5.0) but unverified from NVIDIA. Verify on arrival via `hciconfig` / `bluetoothctl list`. |
-| 3 | L2 12V tap: shared with hip rail vs dedicated buck | Open | Bench-test servo noise before deciding |
+| 3 | L2 12V tap: shared with hip rail vs dedicated buck | **Resolved → dedicated D24V22F12** (v3.4) | Combined hip+L2 load was margin-thin on D42V110F12's 9A typ at 14.8V Vin derating. Split L2 to its own buck for $19 extra. Cleaner power, more hip-rail headroom. |
 | 4 | SLAM stack: POINT-LIO vs RTAB-Map | Open | Compare during Phase 2 |
 | 5 | Bus master: Pattern A (FE-URT-1) vs Pattern B (Teensy) | **Resolved → B is v1 default** | Linux jitter (USB-CDC 1-10 ms typical, 50 ms+ under load) is unacceptable at 100 Hz gait. Teensy bare-metal UART gives hard real-time. PCB v6 keeps Pattern A via `JP_BUS_MASTER` bridge for bench / ID setup / debug. Phase 1 acceptance: p99 <2 ms ROS 2 → Teensy → bus. |
 | 6 | L2 mounting position | Resolved → top-center on riser | Symmetric 360° FOV, minimal yaw moment |
 | 7 | Horn spline verification | Resolved → absorbed into leg redesign | |
 | 8 | NVMe SSD purchase | Deferred → NAND shortage | May-2026 NAND flash shortage 2-3x'd 1TB SSD prices ($60→$165-220). Revisit when prices recover (<~$100 for 1TB) or storage becomes a measured bottleneck. Run from 128GB microSD until then. |
 | 9 | v1 scope: arm included vs deferred | Resolved → arm deferred to Phase 4 | 12 active servos (4 hip + 8 femur/tibia). 6 arm servos on shelf. Bus IDs 13-18 + arm-rail buck footprint reserved on PCB v6. |
-| 10 | Power rail strategy | Resolved → Pololu D42V110-class modules | XL4016 8A cont. inadequate for walking-gait + impact transients. Replaced with D42V110F7 (leg) + D42V110F12 (hip+L2) + D42V55F12 (Jetson). Arm rail D42V55F7 footprint reserved. See [`docs/power-budget.md`](./docs/power-budget.md). |
+| 10 | Power rail strategy | Resolved → 4-buck Pololu split | XL4016 8A cont. inadequate. v3.4 active rails: D42V110F7 (leg 7.5V), D42V110F12 (hip 12V only), D24V22F12 (L2 12V dedicated), D42V55F12 (Jetson 12V). Arm rail D42V55F7 footprint reserved. See [`docs/power-budget.md`](./docs/power-budget.md). |
 | 11 | Safety scope | Resolved → full | 608AC LVC alarm + E-stop on servo rails + INA226 per-rail telemetry + MOSFET hard-cutoff @ 12.4V. ~$30 BOM add. |
 | 12 | Phase 4 COM-shift compensation | Open (Phase 4) | Arm extension + payload mass shifts support polygon; gait controller needs arm-state input to stay stable. Design when arm install begins. |
 | 13 | Bus integrity strategy at 12 nodes / 1 Mbps | Open (measure first) | PCB v6 includes footprints for series R + ferrite beads + star ground. Single-ended TTL — **not** RS-485, so 120 Ω differential termination is not the right tool. Populate iteratively based on measured error rate; drop baud if needed. |
@@ -458,6 +460,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-15 | BOM v3.2 — v1 scope narrowed to quadruped only; arm to Phase 4. Power rails redesigned (XL4016 → Pololu D42V110-class). Full safety scope adopted (LVC + E-stop + INA226 + MOSFET hard-cutoff). PCB v5.2b → v6 redesign. |
 | 2026-05-15 | BOM v3.3 — Bus master flipped: **Pattern B (Teensy + 74HC125) is v1 default**. Pattern A (FE-URT-1) kept as bench / debug fallback via solder bridge. Teensy firmware becomes Phase 1 critical path. |
 | 2026-05-15 | 3-week work schedule committed ([`docs/work-schedule.md`](./docs/work-schedule.md)): leg-joint CAD on OnShape now, prints week 2, PCB v6 schematic in KiCad during 2026-05-29 away-week. |
+| 2026-05-16 | BOM v3.4 — L2 LiDAR split off hip rail onto dedicated D24V22F12 buck after Pololu datasheet check showed D42V110F12's 9A typ @ 42V Vin derates below combined hip+L2 ~9A load at 14.8V Vin. +$19. |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 

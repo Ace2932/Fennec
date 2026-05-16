@@ -1,8 +1,8 @@
-# NovaSM3 Quadruped Build — BOM v3.3 (Committed)
+# NovaSM3 Quadruped Build — BOM v3.4 (Committed)
 
-**Last updated:** May 15, 2026
-**Supersedes:** BOM v3.2
-**Status:** v1 scope narrowed to **quadruped only** (12 servos active). Arm (6 STS3215) demoted to Phase 4 future work; bus IDs 13-18 + arm-rail buck footprint reserved on PCB redesign. Power rails redesigned around Pololu modules after XL4016 capacity audit. Full safety scope: LVC alarm + E-stop + INA226 per-rail telemetry + MOSFET hard-cutoff. **Bus master: Pattern B is v1 default** — Teensy 4.1 UART → 74HC125 half-duplex driver → bus. Pattern A (FE-URT-1 → bus) kept as bench/debug fallback via solder bridge.
+**Last updated:** May 16, 2026
+**Supersedes:** BOM v3.3
+**Status:** v1 scope narrowed to **quadruped only** (12 servos active). Arm (6 STS3215) demoted to Phase 4 future work; bus IDs 13-18 + arm-rail buck footprint reserved on PCB redesign. Power rails redesigned around Pololu modules after XL4016 capacity audit. v3.4 split L2 LiDAR off the hip rail onto a dedicated D24V22F12 buck — combined hip+L2 load was margin-thin at the F12's 9A typ @ 42V Vin (derates further at 14.8V). Full safety scope: LVC alarm + E-stop + INA226 per-rail telemetry + MOSFET hard-cutoff. **Bus master: Pattern B is v1 default** — Teensy 4.1 UART → 74HC125 half-duplex driver → bus. Pattern A (FE-URT-1 → bus) kept as bench/debug fallback via solder bridge.
 
 ---
 
@@ -60,9 +60,10 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 | Mini digital voltmeter | $10 | ✅ Ordered |
 | ~~XL4016 12A buck (×2)~~ | $30 | ⚠️ Already ordered — relegated to spares (8A cont. inadequate for servo rails). |
 | XL6009 buck-boost | $10 | ✅ Owned — spare, no allocated role |
-| **Pololu D42V110F7 — 7.4V leg rail (10A+ cont.)** | **$60** | 🆕 Order — drives 8× femur/tibia STS3215 (19kg). 12-60V Vin, headroom for 25-40A impact transients via bulk caps at injection points. |
-| **Pololu D42V110F12 — 12V hip+L2 rail (10A+ cont.)** | **$60** | 🆕 Order — drives 4× hip STS3215 (30kg) + Unitree L2 LiDAR via LC filter tap. |
-| **Pololu D42V55F12 — 12V Jetson rail** | **$32** | 🆕 Order — replaces deprecated D24V50F12. Derates to ~3A cont. at 14.8V Vin → ~1.4× headroom over Jetson MAXN 2.1A. Min Vin 12V → **LVC alarm at 13.2V**. Reverse-polarity protected. |
+| **Pololu D42V110F7 — 7.5V leg rail (10A typ @ 42V Vin)** | **$60** | 🆕 Order. Output 7.5V (within STS3215 6-8.4V range). 12-60V Vin range — actually 7.6V min Vin per page. Drives 8× femur/tibia STS3215 (19kg). Derates at our 14.8V Vin; bulk caps at 4 star injection points absorb 25-40A impact transients. |
+| **Pololu D42V110F12 — 12V hip-only rail (9A typ @ 42V Vin)** | **$60** | 🆕 Order. Drives 4× hip STS3215 (30kg) **only** — L2 LiDAR moved to dedicated buck below to leave headroom (rail margin was sub-1× under combined load at 14.8V Vin). 12-60V Vin. |
+| **Pololu D24V22F12 — 12V dedicated L2 LiDAR rail (2.6A typ)** | **$19** | 🆕 Order. New in v3.4 (Option A split). 12V / 2.6A max / 36V Vin max. L2 draws ~1A → ~2.6× headroom. Clean power for LiDAR — no servo transient ringing. LC filter retained on the L2-buck output. |
+| **Pololu D42V55F12 — 12V Jetson rail** | **$32** | 🆕 Order — replaces deprecated D24V50F12. Derates to ~3A cont. at 14.8V Vin → ~1.4× headroom over Jetson MAXN 2.1A. Min Vin 12V → **LVC alarm at 13.2V**. Reverse-polarity protected. Find via Pololu D42V55Fx family page → 12V variant. |
 | **Pololu D42V55F7 — 7.4V arm rail (future)** | **$0** | ⚠️ **Footprint reserved on PCB v6; don't populate until Phase 4 arm install.** Estimated cost when ordered: ~$32. |
 | UBEC 5V/5A | $15 | ✅ Owned — 5V peripherals (Ethernet switch, fans, aux sensors) |
 | Bulk caps for rail injection points (1000 µF / 25V × 4) | $4 | 🆕 Order with electronics — soaks servo impact transients near point of load |
@@ -78,28 +79,29 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 | **XT60 jumper** | **$5** | ⚠️ Verify Ovonic 4S kit on arrival — likely supplied. Order only if missing. |
 | XT60 charging lead | $8 | ⚠️ Verify Ovonic 4S kit on arrival — likely supplied (XT60 ↔ JST-XH balance). Order only if missing. |
 
-### Final power rail map (v3.2)
+### Final power rail map (v3.4)
 
 ```
-4S LiPo (12.8-16.8V) ──┬── Pololu D42V110F7  → 7.4V/10A+ → 8× femur/tibia STS3215 (19kg)
-                       │                                   ↑ star injection: 4 points across chain
+4S LiPo (12.8-16.8V) ──┬── Pololu D42V110F7  → 7.5V/10A → 8× femur/tibia STS3215 (19kg)
+                       │                                  ↑ star injection: 4 points across chain
                        │
-                       ├── Pololu D42V110F12 → 12V/10A+  ─┬→ 4× hip STS3215 (30kg)
-                       │                                  └→ Unitree L2 LiDAR (LC filter)
+                       ├── Pololu D42V110F12 → 12V/9A   → 4× hip STS3215 (30kg) ONLY
                        │
-                       ├── Pololu D42V55F12  → 12V/~3A   → Jetson barrel jack
+                       ├── Pololu D24V22F12  → 12V/2.6A → Unitree L2 LiDAR (LC filter on output)
                        │
-                       ├── [reserved arm rail]            → 7.4V/3-8A → 6× arm STS3215 (Phase 4)
+                       ├── Pololu D42V55F12  → 12V/~3A  → Jetson barrel jack
+                       │
+                       ├── [reserved arm rail]           → 7.4V/3-8A → 6× arm STS3215 (Phase 4)
                        │   (D42V55F7 footprint, unstuffed)
                        │
-                       └── UBEC 5V/5A        → 5V        → Ethernet switch, fans, aux 5V peripherals
+                       └── UBEC 5V/5A        → 5V       → Ethernet switch, fans, aux 5V peripherals
 ```
 
 **Power tree safety chain:**
 - 608AC charger LVC alarm: **3.3V/cell = 13.2V** pack (above D42V55F12 dropout knee)
 - MOSFET hard-cutoff: **12.4V pack** (autonomous backstop, comparator-driven, breaks main battery feed)
 - Panel-mount E-stop: NC contact in series with the **servo-rail enable lines only** — kills D42V110F7 + D42V110F12 outputs while Jetson rail stays live for debug
-- INA226 per active rail (3×): I²C → Teensy → ROS 2 diagnostics topic
+- INA226 per active rail (3-4×): I²C → Teensy → ROS 2 diagnostics topic. Leg, hip, Jetson rails mandatory; L2 buck optional 4th if telemetry budget allows.
 - ANL 30A fuse on battery feed (sized for hip-rail worst case ~15A + headroom)
 
 ---
@@ -250,8 +252,9 @@ Post-Jetson-flash install list (Phase 1):
 2. **Power rail validation (with one LiPo, second still wrapped)**
    - Charge LiPo to full inside the safe bag
    - Bench-test Pololu D42V55F12 (Jetson 12V): 4S in → 12V out, loaded with Jetson MAXN. **Sweep Vin from 16.8V down to 13.2V** and confirm 12V rail stays clean (no >100 mV droop, no oscillation) — validates dropout-knee setpoint.
-   - Bench-test Pololu D42V110F7 (leg 7.4V): load with 1× then 4× then 8× STS3215 19kg in a walking-gait stand-in (alternating PWM positions @ 2 Hz). Watch for thermal rise, voltage sag, and rail oscillation under transient steps.
-   - Bench-test Pololu D42V110F12 (hip+L2 12V): load with 1× 30kg hip + L2 LiDAR. Verify LC filter cleans the L2 tap (scope before/after).
+   - Bench-test Pololu D42V110F7 (leg 7.5V): load with 1× then 4× then 8× STS3215 19kg in a walking-gait stand-in (alternating PWM positions @ 2 Hz). Watch for thermal rise, voltage sag, and rail oscillation under transient steps.
+   - Bench-test Pololu D42V110F12 (hip 12V, hips only): load with 1×, then 4× 30kg hip STS3215 walking-stand-in. Confirm sustained current stays under derated continuous capacity at 14.8V Vin (~7-9A range). Thermal IR after 10 min.
+   - Bench-test Pololu D24V22F12 (L2 12V dedicated): load with L2 LiDAR. Scope output for ripple. LC filter on this rail (not on the hip rail anymore).
    - Bench-test 5V UBEC loaded with Ethernet switch.
    - Verify E-stop physically opens the leg + hip rail enable lines (Jetson rail stays alive).
    - Verify MOSFET hard-cutoff trips at 12.4V Vin (use bench supply to sweep down; restore battery only after verifying).
@@ -284,15 +287,16 @@ Post-Jetson-flash install list (Phase 1):
 | DP adapter | $10 |
 | Pololu D42V55F12 (Jetson 12V) | $32 |
 | **Pololu D42V110F7 (leg 7.4V)** | **$60** |
-| **Pololu D42V110F12 (hip+L2 12V)** | **$60** |
+| **Pololu D42V110F12 (hip 12V only)** | **$60** |
 | Ethernet switch + Cat6 + LC filter parts | $26 |
 | Threadlocker + tape | $18 |
 | Magigoo PA | $15 |
 | ISDT 608AC + LiPo safe bag + XT60 jumper + XT60 charging lead | $88 |
+| **Pololu D24V22F12 (L2 LiDAR dedicated, v3.4 split)** | **$19** |
 | **74HC125 + E-stop + INA226 ×3 + hard-cutoff parts + bulk caps** | **$34** |
-| **Subtotal** | **~$343** |
+| **Subtotal** | **~$362** |
 
-Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not refunded. New PCB v6 design cost (PCBWay) absorbs the v5.2b $60 line. Net forward spend ≈ $343.
+Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not refunded. New PCB v6 design cost (PCBWay) absorbs the v5.2b $60 line. Net forward spend ≈ $362.
 
 ### Deferred (order when you actually need them)
 
@@ -311,9 +315,9 @@ Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not re
 ### Project total estimate
 
 - **Already-owned/ordered:** ~$2,650 (includes XL4016 ×2 sunk to spares)
-- **Committed net adds (v3.2):** ~$343
-- **Realistic total spend:** **~$2,993**
-- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,740**
+- **Committed net adds (v3.4):** ~$362
+- **Realistic total spend:** **~$3,012**
+- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,765**
 
 ---
 

@@ -9,7 +9,7 @@ Critical-path Phase 1 deliverable. The Teensy owns the Feetech servo bus in v1 �
 - **Bus master:** Hardware UART → 74HC125 half-duplex driver → 12-servo Feetech TTL bus at 1 Mbps (drop to 500k / 250k if bus errors emerge during bring-up)
 - **Direction control:** GPIO drives 74HC125 OE pins for TX/RX gating on the shared half-duplex line
 - **Real-time loop:** 200-500 Hz tick. Read joint states (position, load, temp, voltage), publish `/joint_states`. Apply latest `/joint_commands`. Hard deadline per tick.
-- **Safety monitor:** INA226 ×3 I²C reads (leg / hip+L2 / Jetson rails) → `/diagnostics`. E-stop GPIO sense — when pressed, halts servo commands and publishes E-stop event.
+- **Safety monitor:** INA226 ×3 I²C reads (leg / hip / Jetson rails; optional 4th on L2 rail) → `/diagnostics`. E-stop GPIO sense — when pressed, halts servo commands and publishes E-stop event.
 - **micro-ROS client over USB** to Jetson
 
 ### Pattern A fallback path

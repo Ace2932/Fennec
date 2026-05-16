@@ -52,15 +52,14 @@ Bulk caps at each star injection point (4× 1000 µF / 25V) absorb these — the
 
 ---
 
-## Rail 2 — Hip + L2 12V (4× STS3215 30kg + Unitree L2 LiDAR)
+## Rail 2 — Hip 12V (4× STS3215 30kg ONLY, L2 moved to dedicated buck in v3.4)
 
 ### Walking gait (sustained)
 
 Hips do most of the work during walking — they're the high-torque joints that lift and place the legs.
 
 - All 4 hips active during dynamic walk: 4 × 2.0A = 8.0A average
-- Plus L2 LiDAR: ~1.0A continuous (1A nominal at 12V)
-- **Average:** ~9A continuous
+- **Average:** ~8A continuous (L2 LiDAR moved off this rail)
 
 ### Impact transients
 
@@ -71,16 +70,22 @@ Hip recovery from a stumble or aggressive maneuver: all 4 briefly stall.
 
 ### Buck sizing
 
-- **Need:** ≥9A continuous + transient-tolerant
-- **Pololu D42V110F12 (selected):** ~10A+ continuous at 14.8V Vin. **~1.1× headroom — tighter than the leg rail.** Watch thermal behavior during Phase 1 walk validation; if it runs hot, consider parallel D42V110F12 (Pololu modules can be paralleled with current-share resistors) or upgrade to a higher-rated synchronous buck.
+- **Need:** ≥8A continuous + transient-tolerant
+- **Pololu D42V110F12 (selected):** 9A typ @ 42V Vin (Pololu datasheet headline). De-rates at lower Vin; expect ~7-8A continuous at 14.8V Vin per Pololu's de-rating graph.
+- **Headroom: ~1.0× at 14.8V Vin.** Tight. Bench-validate during Phase 1 before committing to chassis. If sustained pull exceeds derated capacity, options:
+  - Add bulk caps near hip injection point to soak transients (already planned)
+  - Parallel two D42V110F12 with current-share ballast resistors (~+$60)
+  - Upgrade to older D24V150F12 (15A, $80, supply-constrained)
+- This margin tightness drove the v3.4 decision to split L2 onto its own buck — previous combined hip+L2 load (~9A) was over the derated limit.
 
-### LC filter on the L2 tap
+### Why split L2 off (v3.4 decision)
 
-Hip servos inject 200-1000 Hz current ripple into the 12V rail. UDP packet loss on the L2 is the failure mode — the LiDAR's internal regulator can't reject this efficiently.
+v3.2/v3.3 had hip+L2 on the same D42V110F12 with an LC filter on the L2 tap. Pololu datasheet review showed:
+- D42V110F12 headline: 9A typ at 42V Vin
+- Real continuous at 14.8V Vin: ~7-8A
+- Combined hip+L2 load: 8A + 1A = 9A → **over derated capacity**
 
-- LC: 22 µH series choke + 470 µF / 25V electrolytic shunt
-- Tap point: at L2 power connector, **downstream** of the LC
-- Validation: scope before/after LC under hip walking load
+Split to dedicated L2 buck (Rail 6 below) at $19 add. Hip rail then comfortably handles 8A sustained.
 
 ---
 
@@ -107,7 +112,29 @@ D42V55F12 min Vin = 12V (with dropout penalty starting earlier per the datasheet
 
 ---
 
-## Rail 4 — Aux 5V (UBEC, off-board)
+## Rail 4 — L2 LiDAR 12V (Pololu D24V22F12, dedicated, v3.4)
+
+### Sustained
+
+- Unitree L2 LiDAR nominal: 12V / 1A = 12W
+
+### Buck sizing
+
+- **Pololu D24V22F12 selected:** 2.2-2.6A typ @ 12V output, 36V Vin max, ~85-95% efficiency
+- **Headroom:** ~2.6A / 1.0A = **2.6×** — plenty
+- Clean power for the LiDAR — no servo transient ringing on its supply (the original concern that drove the LC filter on the v3.2 shared-rail design)
+
+### LC filter on buck output
+
+Even with a dedicated buck, switching ripple at the buck's switching frequency (~400 kHz typical for this family) can ride into the L2 input.
+
+- LC: 22 µH series choke + 470 µF / 25V electrolytic shunt
+- Tap point: between buck output and L2 power connector
+- Validation: scope output for ripple at buck switch frequency before/after LC, both at idle and under L2 active load
+
+---
+
+## Rail 5 — Aux 5V (UBEC, off-board)
 
 - Ethernet switch (TP-Link LS105G or NETGEAR GS305): ~3W = 0.6A
 - Fans (if any, 2× 40mm): ~0.5A combined
@@ -118,7 +145,7 @@ UBEC 5V/5A handles this with 3× headroom. Already owned, no change.
 
 ---
 
-## Rail 5 — Reserved arm 7.4V (Phase 4 only)
+## Rail 6 — Reserved arm 7.4V (Phase 4 only)
 
 When the arm is installed, the 6× STS3215 19kg servos add to the 7.4V load. **Critically: arm is on its own rail, not shared with legs.**
 
@@ -153,12 +180,13 @@ Cost of splitting: +1 buck module (~$32 for D42V55F7), +1 wire harness, +chassis
 
 4S LiPo 4000mAh / 14.8V nominal.
 
-**Sustained walk (v1 quadruped):**
-- Leg rail: 8A @ 7.4V = 59W → 4.0A @ 14.8V
-- Hip+L2: 9A @ 12V = 108W → 7.3A @ 14.8V
+**Sustained walk (v1 quadruped, v3.4 split rails):**
+- Leg rail: 8A @ 7.5V = 60W → 4.1A @ 14.8V
+- Hip rail: 8A @ 12V = 96W → 6.5A @ 14.8V
+- L2 rail: 1A @ 12V = 12W → 0.8A @ 14.8V
 - Jetson: 2.5A @ 12V = 30W → 2.0A @ 14.8V
 - 5V aux: 1.5A @ 5V = 7.5W → 0.5A @ 14.8V
-- **Total: ~14A @ 14.8V** ≈ 207W sustained
+- **Total: ~14A @ 14.8V** ≈ 205W sustained
 
 **Pack runtime at 14A:** 4000 mAh / 14000 mA = **~17 minutes sustained walking**.
 
@@ -174,9 +202,10 @@ Mapped into BOM §12 step 2:
 
 - [ ] D42V55F12 Vin sweep 16.8V → 13.2V under MAXN — confirm dropout knee setpoint
 - [ ] D42V110F7 ramp load: 1× → 4× → 8× STS3215 19kg walking-stand-in; thermal IR after 10 min sustained
-- [ ] D42V110F12 ramp load: 1× 30kg hip + L2; scope LC filter before/after under hip transients
+- [ ] D42V110F12 ramp load: 1× → 4× 30kg hip walking-stand-in (hips only, no L2 on this rail); thermal IR after 10 min
+- [ ] D24V22F12 load test with L2 LiDAR active; scope output ripple before/after LC filter
 - [ ] MOSFET hard-cutoff trip at 12.4V via bench-supply sweep
-- [ ] E-stop kills leg + hip rails only; Jetson stays alive
+- [ ] E-stop kills leg + hip rails only; Jetson + L2 rails stay alive (or kill L2 too — TBD per safety design choice)
 - [ ] INA226 ×3 sanity reads under nominal and loaded
 
 ---
@@ -192,4 +221,4 @@ Mapped into BOM §12 step 2:
 
 ---
 
-> **Status:** baseline at BOM v3.2 / v0.3.0-arch-revised. Update with measured numbers after Phase 1 bench validation.
+> **Status:** updated at BOM v3.4 / v0.3.2-l2-dedicated. L2 split off hip rail onto dedicated D24V22F12 after datasheet de-rating check. Update with measured numbers after Phase 1 bench validation.

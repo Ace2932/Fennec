@@ -1,9 +1,10 @@
-# Committed Order List — Phase 0 Final Pass (v3.2)
+# Committed Order List — Phase 0 Final Pass (v3.4)
 
-One-shot consolidated checkout for the BOM v3.2 committed adds (~$343, ISDT 608AC charger + Pololu rail redesign + full safety scope). Each item below has primary + backup vendor/SKU options. **Verify in-stock + ship-by date before clicking buy.**
+One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608AC charger + Pololu 4-rail redesign + full safety scope). Each item below has primary + backup vendor/SKU options. **Verify in-stock + ship-by date before clicking buy.**
 
 > NVMe is intentionally NOT on this list — deferred until NAND prices recover (<~$100 for 1TB). See BOM §1 + open decision row 8.
 > Arm-rail buck (D42V55F7) is NOT on this list — Phase 4 future. PCB v6 footprint reserved.
+> v3.4 adds dedicated L2 LiDAR buck (D24V22F12, $19) after datasheet de-rating check on D42V110F12.
 
 ---
 
@@ -29,21 +30,26 @@ One-shot consolidated checkout for the BOM v3.2 committed adds (~$343, ISDT 608A
 - Make sure the JST-XH end matches the LiPo's balance plug (5-pin for 4S)
 
 ### Pololu D42V55F12 (Jetson 12V rail) — ~$32
-- **Primary:** `pololu.com` direct (most reliable for genuine part)
+- **Primary:** `pololu.com` direct — find on D42V55Fx family page (Pololu's search may not return the F12 SKU; navigate the family page and pick 12V from the variant dropdown)
 - **Backup:** DigiKey / Mouser (same part #)
 - **Why:** 12V fixed out, 12-60V in, 4.5A typ @ 42V Vin (derates to ~3A at 14.8V Vin per Pololu's de-rating graph). Reverse-polarity protected.
 - **LVC reminder:** min Vin is 12V, so set LiPo low-voltage alarm at **3.3V/cell = 13.2V**.
 - **Bench validation:** sweep Vin 16.8V → 13.2V under Jetson MAXN load (≈25W). 12V rail should stay flat (no >100 mV droop).
 
-### Pololu D42V110F7 (leg 7.4V rail, 8× STS3215 19kg) — ~$60
-- **Primary:** `pololu.com` direct
-- **Why:** 7.4V fixed out, 12-60V in, 6-16A continuous depending on Vin (~10A+ at 14.8V Vin). Sized for walking-gait avg 5-8A with bulk caps absorbing 25-40A impact transients near point of load.
+### Pololu D42V110F7 (leg 7.5V rail, 8× STS3215 19kg) — ~$60
+- **Primary:** `pololu.com` direct, item #5674
+- **Why:** 7.5V fixed out (within STS3215 6-8.4V spec), 7.6-60V Vin range, 10A typ @ 42V Vin (derates at our 14.8V Vin per Pololu's de-rating graph). Sized for walking-gait avg 5-8A with bulk caps absorbing 25-40A impact transients near point of load.
 - **Bench validation:** load with 1×, 4×, then 8× STS3215 19kg in a walking-gait stand-in (alternating PWM @ 2 Hz). Watch thermal rise, voltage sag, and transient overshoot. Add bulk caps (1000 µF) at each star injection point if observed.
 
-### Pololu D42V110F12 (hip+L2 12V rail) — ~$60
-- **Primary:** `pololu.com` direct
-- **Why:** 12V fixed out, 12-60V in, ~10A+ cont. at 14.8V Vin. Sized for 4× hip STS3215 30kg (peak ~12A) + Unitree L2 LiDAR (1A) via LC filter tap.
-- **Bench validation:** load with 1× 30kg hip + L2 simultaneously. Scope the 12V rail before/after the LC filter — confirm hip servo current spikes don't reach the L2 (UDP packet drops are the failure mode).
+### Pololu D42V110F12 (hip 12V rail, 4× hip STS3215 30kg only) — ~$60
+- **Primary:** `pololu.com` direct, item #5677
+- **Why:** 12V fixed out, 12-60V Vin range, 9A typ @ 42V Vin (derates lower at 14.8V Vin). Sized for 4× hip STS3215 30kg sustained ~8A. **L2 LiDAR moved off this rail** to a dedicated buck (v3.4) — combined hip+L2 load was margin-thin under de-rating.
+- **Bench validation:** load with 1× then 4× 30kg hip walking-stand-in. Thermal IR after 10 min sustained. Confirm derated continuous capacity matches your measured load. If sustained pull >7A and thermal is concerning, plan parallel modules or upgrade to D24V150F12.
+
+### Pololu D24V22F12 (L2 LiDAR 12V dedicated rail, v3.4 split) — ~$19
+- **Primary:** `pololu.com` direct — find on D24V22Fx family page (`pololu.com/category/107/d24v22fx-step-down-voltage-regulators`), pick 12V variant
+- **Why:** 12V fixed out, ~2.2-2.6A max, 36V Vin max, 85-95% efficiency. L2 LiDAR draws ~1A → 2.6× headroom. Dedicated buck = clean power for the LiDAR, no servo transient ringing on its supply.
+- **Bench validation:** load with L2 LiDAR active. Scope output for ripple at buck switching frequency (~400 kHz) before/after LC filter.
 
 ---
 
@@ -78,7 +84,7 @@ One-shot consolidated checkout for the BOM v3.2 committed adds (~$343, ISDT 608A
 
 ### INA226 current/voltage monitor × 3 — ~$9
 - **Primary:** Adafruit / Amazon — INA226 breakout (or bare IC if rolling SMD into PCB v6)
-- **Why:** One per active rail (leg 7.4V, hip+L2 12V, Jetson 12V). I²C to Teensy → ROS 2 diagnostics topic.
+- **Why:** One per active rail (leg 7.5V, hip 12V, Jetson 12V); optional 4th on L2 rail. I²C to Teensy → ROS 2 diagnostics topic.
 - Buy 4× — one spare.
 
 ### Comparator + MOSFET parts for hard-cutoff at 12.4V — ~$10
@@ -150,17 +156,18 @@ One-shot consolidated checkout for the BOM v3.2 committed adds (~$343, ISDT 608A
 | XT60 charging lead | 8 (⚠️ skip if Ovonic kit included one) |
 | Pololu D42V55F12 (Jetson) | 32 |
 | Pololu D42V110F7 (leg) | 60 |
-| Pololu D42V110F12 (hip+L2) | 60 |
+| Pololu D42V110F12 (hip only) | 60 |
+| Pololu D24V22F12 (L2 dedicated) | 19 |
 | 74HC125 + INA226 ×3 + comparator + MOSFETs + bulk caps | 30 |
 | E-stop button | 10 |
 | Switch + Cat6 ×2 + LC parts | 26 |
 | Threadlocker + tape | 18 |
 | Magigoo PA | 15 |
 | DP adapter | 10 |
-| **Subtotal (worst case)** | **~$349** |
-| **Subtotal if Ovonic supplied leads** | **~$336** |
+| **Subtotal (worst case)** | **~$368** |
+| **Subtotal if Ovonic supplied leads** | **~$355** |
 
-Plus ~$10 shipping buffer across vendors → matches BOM §13 **~$343** (typical) target. Not included: PCB v6 (~$60), arm servo top-up (~$50).
+Plus ~$10 shipping buffer across vendors → matches BOM §13 **~$362** (typical) target. Not included: PCB v6 (~$60), arm servo top-up (~$50).
 
 ---
 
@@ -168,7 +175,7 @@ Plus ~$10 shipping buffer across vendors → matches BOM §13 **~$343** (typical
 
 1. **Bundle by vendor** to minimize shipping:
    - **Amazon:** safe bag, threadlocker, tape, DP adapter, Cat6 cables, switch, E-stop button, INA226 breakouts
-   - **Pololu direct:** D42V55F12 + D42V110F7 + D42V110F12 (one shop, free shipping over threshold — bundle a spare USB-serial or multimeter probe to qualify)
+   - **Pololu direct:** D42V55F12 + D42V110F7 + D42V110F12 + D24V22F12 (one shop, free shipping over $100 — bundle qualifies easily)
    - **DigiKey or Mouser:** LC filter parts (inductor + cap), 74HC125, comparator, MOSFETs, bulk caps — single electronics order
    - **HobbyKing / ISDT direct:** 608AC + XT60 leads (one shop)
    - **Feetech / AliExpress:** servo top-up (separate, slow boat)
@@ -196,8 +203,9 @@ Plus ~$10 shipping buffer across vendors → matches BOM §13 **~$343** (typical
 - [ ] Power up 608AC with no battery — verify storage-mode menu works
 - [ ] Set LiPo LVC alarm at 3.3V/cell = 13.2V (above D42V55F12 dropout)
 - [ ] Bench-load Pololu D42V55F12 → 12V out under Jetson MAXN draw. Sweep Vin 16.8V → 13.2V, verify 12V rail stays clean (<100 mV droop, no oscillation)
-- [ ] Bench-load Pololu D42V110F7 → 7.4V under 1× / 4× / 8× STS3215 19kg walking-stand-in. Thermal IR check after 10 min sustained load.
-- [ ] Bench-load Pololu D42V110F12 → 12V under 1× hip + L2. Scope LC filter before/after for L2 feed.
+- [ ] Bench-load Pololu D42V110F7 → 7.5V under 1× / 4× / 8× STS3215 19kg walking-stand-in. Thermal IR check after 10 min sustained load.
+- [ ] Bench-load Pololu D42V110F12 → 12V under 1× / 4× 30kg hip walking-stand-in (hips only — L2 on dedicated buck). Thermal IR check after 10 min sustained.
+- [ ] Bench-load Pololu D24V22F12 → 12V under L2 LiDAR active. Scope output ripple at buck switch freq (~400 kHz) before/after LC filter.
 - [ ] Verify MOSFET hard-cutoff trip point at 12.4V via bench-supply sweep before connecting battery
 - [ ] Verify E-stop physically opens leg + hip rail enables (Jetson rail stays alive on press)
 - [ ] Verify INA226 ×3 I²C reads (current + voltage) under nominal and loaded states

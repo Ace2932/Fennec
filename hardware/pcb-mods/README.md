@@ -20,17 +20,18 @@ Reference: BOM v3.2 §2, §3 · [`docs/power-budget.md`](../../docs/power-budget
 - Power switch (high-current, ≥30A rated)
 - Mini digital voltmeter retained for at-a-glance pack state
 
-### 2. Three active power rails + one reserved
+### 2. Four active power rails + one reserved (v3.4 split)
 
 | Rail | Module | Output | Sized for | Status |
 |------|--------|--------|-----------|--------|
-| Leg | Pololu D42V110F7 | 7.4V / 10A+ | 8× STS3215 19kg | Active v1 |
-| Hip + L2 | Pololu D42V110F12 | 12V / 10A+ | 4× STS3215 30kg + L2 (LC filter) | Active v1 |
+| Leg | Pololu D42V110F7 | 7.5V / 10A typ @ 42V Vin | 8× STS3215 19kg | Active v1 |
+| Hip | Pololu D42V110F12 | 12V / 9A typ @ 42V Vin | 4× STS3215 30kg ONLY | Active v1 |
+| L2 LiDAR | Pololu D24V22F12 | 12V / 2.6A | Unitree L2 (1A, dedicated buck for clean power) | Active v1 (added v3.4) |
 | Jetson | Pololu D42V55F12 | 12V / ~3A cont. | Jetson Orin Nano Super MAXN | Active v1 |
 | Arm | Pololu D42V55F7 | 7.4V / 3-8A | 6× STS3215 arm (Phase 4) | **Footprint reserved — DO NOT populate v1** |
 | Aux 5V | UBEC 5V/5A (off-board) | 5V / 5A | Switch, fans, aux peripherals | Header on board |
 
-Module footprints use Pololu's standard 22-pin header pitch so cards can be swapped without PCB respin.
+Module footprints use Pololu's standard header pitch so cards can be swapped without PCB respin. L2 split from hip rail (v3.4) because D42V110F12's 9A typ @ 42V Vin derates to ~7-8A at our 14.8V Vin, and combined hip+L2 sustained ~9A was over budget.
 
 ### 3. Servo bus distribution (star injection)
 
@@ -73,7 +74,7 @@ Default v1 build: leave footprints unpopulated. Populate iteratively if bus erro
 - **Charger LVC alarm:** ISDT 608AC set to **3.3V/cell = 13.2V** (above D42V55F12 dropout knee, well within LiPo safe range)
 - **MOSFET hard-cutoff:** comparator (TL431 or LM393) drives a logic-level N-channel MOSFET on the battery feed. Trips at **12.4V** = 3.1V/cell. Autonomous backstop independent of charger; protects pack if user ignores alarm.
 - **E-stop:** panel-mount latching button, NC contact. Wired in series with the **leg + hip rail enable lines only**. Jetson rail stays alive for post-mortem debug. Twist-to-release.
-- **INA226 ×3:** one per active rail (leg 7.4V, hip+L2 12V, Jetson 12V). I²C bus to Teensy 4.1 → ROS 2 diagnostics topic. Per-servo-class current/voltage telemetry.
+- **INA226 ×3 (optional 4th):** one per active rail (leg 7.5V, hip 12V, Jetson 12V); optional 4th on L2 12V if telemetry budget allows. I²C bus to Teensy 4.1 → ROS 2 diagnostics topic. Per-rail current/voltage telemetry.
 
 ### 7. Aux MCU + peripherals (carryover from Nova v5.2b)
 
