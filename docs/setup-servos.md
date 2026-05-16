@@ -16,7 +16,7 @@ Bus master in v1 is the **Teensy 4.1 (Pattern B)** via 74HC125 half-duplex drive
 - Feetech FD debug software (Windows) — ID assignment workflow (Pattern A only)
 - Physical labeling convention (IDs 1-4 hips, 5-12 femur/tibia, 13-18 reserved arm)
 - Daisy-chain wiring + continuity check (unpowered)
-- Voltage rail split: 12V hip (×4) on Pololu D42V110F12; 7.4V femur/tibia (×8) on Pololu D42V110F7. Arm rail D42V55F7 reserved.
+- Voltage rail split: 12V hip (×4) on Pololu D42V110F12; femur/tibia (×8) on Pololu D42V110F7 (7.5V output, within STS3215 7.4V-rated 6-8.4V spec). Arm rail D42V55F7 reserved (Phase 4).
 - Per-servo torque/return-delay/temperature limit tuning
 - Failure-mode recovery (lost servo, address collision, overheat)
 - Teensy firmware verification procedure + gait-loop p99 measurement

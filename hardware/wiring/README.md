@@ -3,9 +3,9 @@
 Power rail map and signal/data wiring for the as-built robot.
 
 ## Will contain
-- Full power rail diagram per BOM v3.2 (4S LiPo → Pololu D42V110F7 + D42V110F12 + D42V55F12 + UBEC 5V; arm rail D42V55F7 reserved)
+- Full power rail diagram per BOM v3.4 (4S LiPo → Pololu D42V110F7 + D42V110F12 + D24V22F12 + D42V55F12 + UBEC 5V; arm rail D42V55F7 reserved)
 - Safety chain (ANL 30A fuse, MOSFET reverse-protection, MOSFET hard-cutoff @ 12.4V, E-stop on servo rail enables)
-- LC filter spec on L2 12V tap (22 µH series choke + 470 µF / 25V shunt)
+- LC filter spec on D24V22F12 output (22 µH series choke + 470 µF / 25V shunt) feeding L2
 - Feetech daisy-chain topology (servo IDs 1-12 active, 13-18 reserved; cable lengths; **star injection at 4 points along leg rail**)
 - INA226 ×3 I²C topology (leg / hip / Jetson rails → Teensy; optional 4th on L2 rail)
 - I²C bus map (Arduino Nano aux peripherals separate bus)

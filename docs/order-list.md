@@ -72,7 +72,7 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ---
 
-## 3. Safety + bus-master parts (PCB v6)
+## 3. Safety + bus-master parts (PCB v6 critical-path)
 
 ### 74HC125 quad tri-state buffer (Pattern B half-duplex driver) — ~$1
 - **Primary:** DigiKey / Mouser (SOIC-14, e.g. SN74HC125N)
@@ -96,12 +96,12 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ### Bulk caps for rail injection points — ~$4
 - 4× 1000 µF / 25V electrolytic (Nichicon UPW series or equivalent)
-- One per star injection point on the leg 7.4V rail
+- One per star injection point on the leg 7.5V rail
 - Absorbs servo impact transients near point of load
 
 ---
 
-## 3. Mechanical consumables
+## 4. Mechanical consumables
 
 ### Loctite 243 blue threadlocker — ~$8
 - **Primary:** Amazon / hardware store
@@ -118,7 +118,7 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ---
 
-## 4. Display
+## 5. Display
 
 ### DisplayPort cable OR DP→HDMI adapter — ~$10
 - **Primary:** Amazon — pick based on monitor: DP-to-DP if monitor has DP input, DP-to-HDMI active adapter otherwise
@@ -126,7 +126,7 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ---
 
-## 5. Servo top-up (not in main subtotal — separate spend)
+## 6. Servo top-up (not in main subtotal — separate spend)
 
 ### STS3215 7.4V 19kg × 2 (complete 8-count for legs) — ~$50
 - **Primary:** Feetech AliExpress store (slow but cheapest)
@@ -136,7 +136,7 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ---
 
-## 6. PCB v6 (separate order, after design)
+## 7. PCB v6 (separate order, after design)
 
 ### NovaSM3 PCB v6 — custom redesign (~$60 PCBWay)
 - Design spec lives in [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md)
@@ -186,7 +186,7 @@ Plus ~$10 shipping buffer across vendors → matches BOM §13 **~$362** (typical
    - DP cable matches your actual monitor input
    - JST-XH balance lead is 5-pin (4S, not 3S/6S)
    - Switch SKU explicitly "gigabit" not "fast ethernet 10/100"
-   - Pololu part numbers: F7 = 7.4V output, F12 = 12V output (don't mix up)
+   - Pololu part numbers: F7 = **7.5V output** (within STS3215 6-8.4V spec), F12 = 12V output (don't mix up)
    - MOSFET Rds(on) <5 mΩ at Vgs = 4.5V (logic-level), Id ≥30A (battery dead-short worst case)
    - INA226 shunt rating sized to rail (legs need 10A+ shunt, Jetson can use stock 1Ω)
 
@@ -210,6 +210,6 @@ Plus ~$10 shipping buffer across vendors → matches BOM §13 **~$362** (typical
 - [ ] Verify E-stop physically opens leg + hip rail enables (Jetson rail stays alive on press)
 - [ ] Verify INA226 ×3 I²C reads (current + voltage) under nominal and loaded states
 - [ ] Switch power test: 5V UBEC → switch → all 5 ports link-up
-- [ ] LC filter measurement: scope the 12V hip rail under servo load, before/after the LC tap, for the L2 power feed
+- [ ] LC filter measurement: scope the D24V22F12 output (L2 feed) for ripple at ~400 kHz buck switch frequency, before/after the LC, both at idle and under L2 active load
 
-> Status: updated at BOM v3.2. Update with actual SKUs / order #s as items hit Cart.
+> Status: updated at BOM v3.4. Update with actual SKUs / order #s as items hit Cart.

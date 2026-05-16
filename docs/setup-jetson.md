@@ -7,7 +7,7 @@ Step-by-step bring-up for the Jetson Orin Nano Super 8GB Dev Kit (P3766).
 - JetPack 6.x microSD flash via Balena Etcher
 - First-boot Ubuntu setup
 - Built-in WiFi 5 (802.11ac) verification + BT presence check
-- NVMe install (Crucial P3 Plus 1TB) + rootfs migration to SSD
+- NVMe install + rootfs migration **(deferred — NAND shortage, see BOM §1; run from 128GB microSD until prices recover)**
 - Power mode selection (MAXN for dev, 7W/15W for battery)
 - ROS 2 Humble install (apt + source)
 - librealsense2 ARM64 build + `realsense2_camera` install

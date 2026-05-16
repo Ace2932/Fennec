@@ -28,7 +28,7 @@ Reference: BOM v3.2 §2, §3 · [`docs/power-budget.md`](../../docs/power-budget
 | Hip | Pololu D42V110F12 | 12V / 9A typ @ 42V Vin | 4× STS3215 30kg ONLY | Active v1 |
 | L2 LiDAR | Pololu D24V22F12 | 12V / 2.6A | Unitree L2 (1A, dedicated buck for clean power) | Active v1 (added v3.4) |
 | Jetson | Pololu D42V55F12 | 12V / ~3A cont. | Jetson Orin Nano Super MAXN | Active v1 |
-| Arm | Pololu D42V55F7 | 7.4V / 3-8A | 6× STS3215 arm (Phase 4) | **Footprint reserved — DO NOT populate v1** |
+| Arm | Pololu D42V55F7 | 7.5V / 3-8A | 6× STS3215 arm (Phase 4) | **Footprint reserved — DO NOT populate v1** |
 | Aux 5V | UBEC 5V/5A (off-board) | 5V / 5A | Switch, fans, aux peripherals | Header on board |
 
 Module footprints use Pololu's standard header pitch so cards can be swapped without PCB respin. L2 split from hip rail (v3.4) because D42V110F12's 9A typ @ 42V Vin derates to ~7-8A at our 14.8V Vin, and combined hip+L2 sustained ~9A was over budget.
@@ -36,7 +36,7 @@ Module footprints use Pololu's standard header pitch so cards can be swapped wit
 ### 3. Servo bus distribution (star injection)
 
 - Single signal bus (daisy-chained TTL) — no break
-- **4 power injection points** along the leg 7.4V trunk (one per leg pair)
+- **4 power injection points** along the leg 7.5V trunk (one per leg pair)
 - **Bulk caps (1000 µF / 25V) at each injection point** — soaks impact transients near point of load
 - Star ground at FE-URT-1 connector
 - Hip rail injects at chassis floor (4 hips clustered there)
@@ -102,7 +102,7 @@ Default v1 build: leave footprints unpopulated. Populate iteratively if bus erro
 
 ## Design workflow
 
-1. Schematic in KiCad (or Eagle). Reference designators consistent with BOM v3.2.
+1. Schematic in KiCad (or Eagle). Reference designators consistent with BOM v3.4.
 2. Footprint placement: keep servo connectors on chassis-facing edge, Jetson connectors on top edge.
 3. Power planes: separate 4-layer stackup (top sig, GND, PWR, bottom sig). Star ground at FE-URT-1.
 4. DRC + ERC clean before Gerber export.
@@ -122,5 +122,5 @@ Resolve during schematic review.
 
 ---
 
-> **Status:** design spec drafted at BOM v3.2 / v0.3.0-arch-revised. Schematic + Gerber work pending.
+> **Status:** design spec updated at BOM v3.4 / v0.3.2-l2-dedicated. Schematic + Gerber work pending.
 > **Owner:** Aiden Fox.

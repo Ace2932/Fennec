@@ -68,7 +68,7 @@ Open option for away-week (decide by end of Week 2): leave Jetson running at hom
 
 Per [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md):
 
-- [ ] Schematic capture in KiCad — all 8 sections of the feature set (battery input, 3 rails + reserved 4th, bus distribution, Pattern A/B selector, bus integrity, safety chain, aux MCU, mechanical)
+- [ ] Schematic capture in KiCad — all 8 sections of the feature set (battery input, 4 active rails + reserved 5th, bus distribution, Pattern A/B selector, bus integrity, safety chain, aux MCU, mechanical)
 - [ ] Footprint placement on board outline
 - [ ] Power planes + 4-layer stackup (top sig, GND, PWR, bottom sig)
 - [ ] Star ground at FE-URT-1 connector
@@ -113,4 +113,4 @@ Back to shop. Resume hardware path:
 
 ---
 
-> **Status:** drafted at v0.3.1-pattern-b-default. Update with actual completion dates as work lands.
+> **Status:** updated at v0.3.2-l2-dedicated. Update with actual completion dates as work lands.

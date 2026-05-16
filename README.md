@@ -2,7 +2,7 @@
 
 > A modified [NovaSM3](https://github.com/SovGVD/NovaSM3) quadruped platform rebuilt around a unified Feetech STS3215 TTL servo bus, NVIDIA Jetson Orin Nano Super compute, and ROS 2 Humble — designed as a platform for Vision-Language-Action (VLA) model deployment, 3D SLAM, and autonomous mobile manipulation.
 
-**Status:** 🔧 Phase 1 — Build & Bring-Up
+**Status:** 🔧 Phase 0 — Pre-build setup (CAD + parts ordering)
 **Platform:** Quadruped (12 DOF) — arm (6-DOF, Phase 4 future) on shelf
 **Compute:** NVIDIA Jetson Orin Nano Super 8GB
 **Middleware:** ROS 2 Humble
@@ -36,7 +36,7 @@ This project is a heavily modified fork of the open-source NovaSM3 quadruped, re
 - **The stock perception** with Intel RealSense D456 (depth + RGB + IMU) and Unitree L2 4D LiDAR (360° × 96° FOV, 30m range)
 - **The stock locomotion stack** with ROS 2 Humble (Jetson) + Teensy bus master (Pattern B) + Nav2 + RTAB-Map / POINT-LIO
 
-The arm is carried over from a prior SO-ARM101 build, also Feetech-based. **v1 build scope: quadruped only (12 servos active).** Arm install + integration is Phase 4 future work — bus IDs 13-18 and the 7.4V arm-rail buck footprint are reserved on the PCB v6 redesign so the future install is a populate-and-go.
+The arm is carried over from a prior SO-ARM101 build, also Feetech-based. **v1 build scope: quadruped only (12 servos active).** Arm install + integration is Phase 4 future work — bus IDs 13-18 and the 7.5V arm-rail buck footprint (D42V55F7) are reserved on the PCB v6 redesign so the future install is a populate-and-go.
 
 ### Goals
 
@@ -66,7 +66,7 @@ The arm is carried over from a prior SO-ARM101 build, also Feetech-based. **v1 b
 
 ### Why we're redesigning the PCB (v5.2b → v6)
 
-After the v3.1 architecture audit, the stock Nova PCB v5.2b can't host the upgraded power tree (Pololu modules, INA226 telemetry, hard-cutoff MOSFET, E-stop chain) or the Pattern A/B bus master selector. The redesign retains the spirit of the stock board (Arduino Nano aux slot, battery input geometry) and adds the new safety + power architecture. Full feature set in [`hardware/pcb-mods/README.md`](./hardware/pcb-mods/README.md).
+After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgraded power tree (Pololu modules, INA226 telemetry, hard-cutoff MOSFET, E-stop chain) or the Pattern A/B bus master selector. The redesign retains the spirit of the stock board (Arduino Nano aux slot, battery input geometry) and adds the new safety + power architecture. Full feature set in [`hardware/pcb-mods/README.md`](./hardware/pcb-mods/README.md).
 
 ### What carries over from Nova v5.2b
 
@@ -225,7 +225,7 @@ After the v3.1 architecture audit, the stock Nova PCB v5.2b can't host the upgra
    │
    ├── Pololu D42V55F12  ──► 12V/~3A  ──► Jetson Orin Nano (barrel jack)
    │
-   ├── [reserved D42V55F7] ► 7.4V/3-8A ──► 6× STS3215 arm (Phase 4 — footprint unstuffed)
+   ├── [reserved D42V55F7] ► 7.5V/3-8A ──► 6× STS3215 arm (Phase 4 — footprint unstuffed)
    │
    └── UBEC 5V/5A ──► 5V rail ──► Ethernet switch, fans, aux 5V peripherals
 
@@ -299,7 +299,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 
 3-week sequenced plan in [`docs/work-schedule.md`](./docs/work-schedule.md). Front-loads leg-joint CAD + prints; reserves 2026-05-29 away-week for laptop-only PCB schematic work in KiCad.
 
-- [x] Define modified BOM (v3.3: Pattern B default, Pololu rails, full safety, arm deferred)
+- [x] Define modified BOM (v3.4: Pattern B default, Pololu 4-buck split incl. dedicated L2, full safety, arm deferred)
 - [x] Validate component compatibility (Jetson power rail, Feetech bus, L2 ethernet)
 - [x] Pick LiPo charger → **ISDT 608AC**
 - [x] Power rail audit (XL4016 → Pololu D42V110-class)
@@ -324,7 +324,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 
 **Week 4+ (back to shop):**
 - [ ] Bench-validate prints; submit Gerbers to PCBWay (~$60); continue Phase 1 hardware bring-up
-- [ ] Order remaining parts (switch, Pololu bucks ×3, charger bundle, safety parts, accessories) — NVMe deferred
+- [ ] Order remaining parts (switch, Pololu bucks ×4, charger bundle, safety parts, accessories) — NVMe deferred
 
 ### Phase 1 — Hardware bring-up (weeks 1-4)
 
@@ -335,7 +335,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] D456 standalone test (`realsense-viewer`)
 - [ ] L2 standalone test (included 12V adapter + rviz2)
 - [ ] Print parts: Bambu P1S + PA6-CF (dry 24h before each print)
-- [ ] Bench-validate Pololu D42V55F12 / D42V110F7 / D42V110F12 / UBEC 5V (per BOM §12 step 2)
+- [ ] Bench-validate Pololu D42V55F12 / D42V110F7 / D42V110F12 / D24V22F12 / UBEC 5V (per BOM §12 step 2)
 - [ ] Verify E-stop chain + MOSFET hard-cutoff @ 12.4V + INA226 I²C reads
 - [ ] **Write Teensy firmware** (Pattern B critical path) — micro-ROS client + SCServo SDK port + 74HC125 TX/RX gating
 - [ ] ID setup pass: flip `JP_BUS_MASTER` to A (FE-URT-1), assign servo IDs **1-12** (v1 active), label each. IDs 13-18 reserved for Phase 4.

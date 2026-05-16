@@ -33,7 +33,7 @@
 | FE-URT-1 USB→TTL Feetech interface | $20 | ✅ Ordered |
 | **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — **populated on PCB; v1 default active**. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
 | **E-stop button (panel-mount, latching, NC contact)** | $10 | 🆕 Order |
-| **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.4V, hip 12V, Jetson 12V). I²C to Teensy. |
+| **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.5V, hip 12V, Jetson 12V). Optional 4th on L2 12V rail if telemetry budget allows. I²C to Teensy. |
 | **Comparator + MOSFET parts for hard-cutoff at 12.4V** | $10 | 🆕 Order — autonomous LVC backstop independent of charger alarm |
 
 **Feetech bus architecture: Pattern B is v1 default.**
@@ -48,7 +48,7 @@ Cost of Pattern B as default: 74HC125 must be populated (~$1, already in §2 abo
 
 ## 3. Power
 
-### Main power chain (v3.2 — Pololu redesign)
+### Main power chain (Pololu redesign)
 
 XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating is insufficient for walking-gait current (8-12A avg, 25-40A impact transients per leg-rail load profile). See [`docs/power-budget.md`](../docs/power-budget.md) for math. XL4016 boards stay in spares bin for low-current aux duty.
 
@@ -64,7 +64,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 | **Pololu D42V110F12 — 12V hip-only rail (9A typ @ 42V Vin)** | **$60** | 🆕 Order. Drives 4× hip STS3215 (30kg) **only** — L2 LiDAR moved to dedicated buck below to leave headroom (rail margin was sub-1× under combined load at 14.8V Vin). 12-60V Vin. |
 | **Pololu D24V22F12 — 12V dedicated L2 LiDAR rail (2.6A typ)** | **$19** | 🆕 Order. New in v3.4 (Option A split). 12V / 2.6A max / 36V Vin max. L2 draws ~1A → ~2.6× headroom. Clean power for LiDAR — no servo transient ringing. LC filter retained on the L2-buck output. |
 | **Pololu D42V55F12 — 12V Jetson rail** | **$32** | 🆕 Order — replaces deprecated D24V50F12. Derates to ~3A cont. at 14.8V Vin → ~1.4× headroom over Jetson MAXN 2.1A. Min Vin 12V → **LVC alarm at 13.2V**. Reverse-polarity protected. Find via Pololu D42V55Fx family page → 12V variant. |
-| **Pololu D42V55F7 — 7.4V arm rail (future)** | **$0** | ⚠️ **Footprint reserved on PCB v6; don't populate until Phase 4 arm install.** Estimated cost when ordered: ~$32. |
+| **Pololu D42V55F7 — 7.5V arm rail (future)** | **$0** | ⚠️ **Footprint reserved on PCB v6; don't populate until Phase 4 arm install.** Output 7.5V (within STS3215 6-8.4V range). Estimated cost when ordered: ~$32. |
 | UBEC 5V/5A | $15 | ✅ Owned — 5V peripherals (Ethernet switch, fans, aux sensors) |
 | Bulk caps for rail injection points (1000 µF / 25V × 4) | $4 | 🆕 Order with electronics — soaks servo impact transients near point of load |
 | PCB terminals + misc boards | $8 | ✅ Ordered |
@@ -91,7 +91,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
                        │
                        ├── Pololu D42V55F12  → 12V/~3A  → Jetson barrel jack
                        │
-                       ├── [reserved arm rail]           → 7.4V/3-8A → 6× arm STS3215 (Phase 4)
+                       ├── [reserved arm rail]           → 7.5V/3-8A → 6× arm STS3215 (Phase 4)
                        │   (D42V55F7 footprint, unstuffed)
                        │
                        └── UBEC 5V/5A        → 5V       → Ethernet switch, fans, aux 5V peripherals
@@ -138,7 +138,7 @@ Note: Feetech bus is single-ended half-duplex TTL UART. 120 Ω differential term
 |------|-------|--------|
 | **Gigabit Ethernet switch (5-port)** — TP-Link LS105G or NETGEAR GS305 | **$15** | 🆕 Order |
 | **Short Cat6 cables × 2 (0.5m)** | **$8** | 🆕 Order |
-| Small inductor + capacitor (LC filter for L2 12V) | $3 | 🆕 Order with electronics |
+| Small inductor + capacitor (LC filter on D24V22F12 output to L2) | $3 | 🆕 Order with electronics |
 
 **Topology:**
 ```
@@ -280,13 +280,13 @@ Post-Jetson-flash install list (Phase 1):
 
 ## 13. Cost Summary
 
-### Committed net adds (v3.2 audit)
+### Committed net adds (v3.4 audit)
 
 | Category | Amount |
 |----------|--------|
 | DP adapter | $10 |
 | Pololu D42V55F12 (Jetson 12V) | $32 |
-| **Pololu D42V110F7 (leg 7.4V)** | **$60** |
+| **Pololu D42V110F7 (leg 7.5V)** | **$60** |
 | **Pololu D42V110F12 (hip 12V only)** | **$60** |
 | Ethernet switch + Cat6 + LC filter parts | $26 |
 | Threadlocker + tape | $18 |

@@ -22,7 +22,7 @@ Notes:
 
 ---
 
-## Rail 1 — Leg 7.4V (8× STS3215 19kg, femur + tibia)
+## Rail 1 — Leg 7.5V buck (8× STS3215 19kg femur + tibia; servos rated 7.4V, accept 6-8.4V)
 
 ### Walking gait (sustained)
 
@@ -215,7 +215,7 @@ Mapped into BOM §12 step 2:
 | Trigger | Action |
 |---------|--------|
 | Walking-gait sustained pull >9A on leg rail | Upgrade D42V110F7 → D42V110-class higher-current variant, or parallel two with current-share |
-| L2 UDP loss >1% under walk | Tighten LC filter (bigger inductor) or move L2 to dedicated 12V buck |
+| L2 UDP loss >1% under walk | Tighten LC filter (bigger inductor) on D24V22F12 output; if persists, swap D24V22F12 for higher-spec'd buck |
 | Pack runtime <12 min at sustained walk | Step up to 6S battery + add 3S→4S range buck, OR drop to lower-power gait |
 | Hard-cutoff nuisance trips | Add hysteresis to comparator, or raise trip to 12.6V |
 

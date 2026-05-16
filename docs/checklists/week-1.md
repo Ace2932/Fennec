@@ -14,11 +14,11 @@ Internet works during away-week, so this is a convenience-only step (faster look
 - [ ] STS3215 19kg (Feetech)
 - [ ] STS3215 30kg (Feetech)
 - [ ] Feetech 25T servo horn dims
-- [ ] Pololu D42V110F7 — leg 7.4V rail
+- [ ] Pololu D42V110F7 — leg 7.5V rail (STS3215 7.4V nominal)
 - [ ] Pololu D42V110F12 — hip 12V rail
 - [ ] Pololu D24V22F12 — L2 LiDAR 12V dedicated rail (v3.4 addition)
 - [ ] Pololu D42V55F12 — Jetson 12V rail
-- [ ] Pololu D42V55F7 — arm 7.4V (Phase 4 reserved)
+- [ ] Pololu D42V55F7 — arm 7.5V (Phase 4 reserved)
 - [ ] 74HC125 (TI SN74HC125 SOIC-14)
 - [ ] INA226 (TI)
 - [ ] TL431 OR LM393 (whichever comparator family)
@@ -145,4 +145,4 @@ Record in OnShape as named dimensions (so part variants reference one source). M
 
 ---
 
-> **Status:** drafted at v0.3.1-pattern-b-default. Tick items via commits; close out when ≥80% done and Week 2 prereqs are clear.
+> **Status:** updated at v0.3.2-l2-dedicated. Tick items via commits; close out when ≥80% done and Week 2 prereqs are clear.
