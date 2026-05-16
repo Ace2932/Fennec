@@ -32,7 +32,7 @@
 | ~~NovaSM3 PCB v5.2b~~ → **NovaSM3 PCB v6 (custom redesign)** | $60 (est.) | 🆕 Design + order from PCBWay — see [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md) for feature set |
 | FE-URT-1 USB→TTL Feetech interface | $20 | ✅ Ordered |
 | **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — **populated on PCB; v1 default active**. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
-| **E-stop button (panel-mount, latching, NC contact)** | $10 | 🆕 Order |
+| **E-stop button (Mxuteuk HB2-ES544, 22mm latching, 2× NC)** | $10 | ✅ Ordered |
 | **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.5V, hip 12V, Jetson 12V). Optional 4th on L2 12V rail if telemetry budget allows. I²C to Teensy. |
 | **Comparator + MOSFET parts for hard-cutoff at 12.4V + graceful-shutdown at 13.0V** | $13 | 🆕 Order — two comparator stages. 13.0V: drives Teensy GPIO → Jetson clean shutdown. 12.4V: autonomous battery-feed cutoff if Jetson didn't shut down. ~$3 extra for the second comparator + divider. |
 
@@ -74,10 +74,10 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 
 | Item | Price | Status |
 |------|-------|--------|
-| **ISDT 608AC charger** | **$60** | 🆕 Order — AC mode caps ~55W ≈ 75 min for 4S 4000mAh pack (fine for dev workflow). Includes charge / discharge / **storage** modes (storage critical for keeping unused pack healthy >1 week). |
-| **LiPo safe bag** | **$15** | 🆕 Order separately — 608AC does not include one |
-| **XT60 jumper** | **$5** | ⚠️ Verify Ovonic 4S kit on arrival — likely supplied. Order only if missing. |
-| XT60 charging lead | $8 | ⚠️ Verify Ovonic 4S kit on arrival — likely supplied (XT60 ↔ JST-XH balance). Order only if missing. |
+| **ISDT 608AC charger** | **$60** | ✅ Ordered. AC mode caps ~55W ≈ 75 min for 4S 4000mAh pack. Includes charge / discharge / **storage** modes. |
+| **LiPo safe bag** | **$15** | ✅ Ordered. |
+| ~~XT60 jumper~~ | $0 | ✅ Supplied with Ovonic 4S kit (confirmed) |
+| ~~XT60 charging lead~~ | $0 | ✅ Supplied with Ovonic 4S kit (confirmed, XT60 ↔ JST-XH 5-pin balance) |
 
 ### Final power rail map (v3.4)
 
@@ -188,7 +188,7 @@ Switch can be pulled out of its case to save ~60% volume inside the chassis if n
 | Bambu AMS HF + setup tools | $180 | ✅ Ordered |
 | Bambu P1-series hardened steel hotend | $40 | ✅ Ordered |
 | Creality SpacePi X4 filament dryer | $170 | ✅ Ordered |
-| **Magigoo PA glue stick** | **$15** | 🆕 Order |
+| ~~Magigoo PA glue stick~~ → Bambu Lab Liquid Glue | $0 | ✅ Using existing Bambu liquid glue stash. ⚠️ Bambu's stock liquid glue is generic-purpose, not nylon-specific. Print-test first article before batch committing; fallback to Magigoo PA (~$15) if PA6-CF first layer doesn't bond. |
 
 ---
 
@@ -286,23 +286,28 @@ Post-Jetson-flash install list (Phase 1):
 
 ## 13. Cost Summary
 
-### Committed net adds (v3.4 audit)
+### Committed net adds (v3.4 audit, 2026-05-16 status update)
 
-| Category | Amount |
-|----------|--------|
-| DP adapter | $10 |
-| Pololu D42V55F12 (Jetson 12V) | $32 |
-| **Pololu D42V110F7 (leg 7.5V)** | **$60** |
-| **Pololu D42V110F12 (hip 12V only)** | **$60** |
-| Ethernet switch + Cat6 + LC filter parts | $26 |
-| Threadlocker + tape | $18 |
-| Magigoo PA | $15 |
-| ISDT 608AC + LiPo safe bag + XT60 jumper + XT60 charging lead | $88 |
-| **Pololu D24V22F12 (L2 LiDAR dedicated, v3.4 split)** | **$19** |
-| **74HC125 + E-stop + INA226 ×3 + hard-cutoff + graceful-shutdown parts + bulk caps** | **$37** |
-| **Subtotal** | **~$365** |
+| Item | $ | Status |
+|------|---|--------|
+| DP adapter | $10 | 🆕 |
+| Pololu D42V55F12 (Jetson 12V) | $32 | 🆕 |
+| **Pololu D42V110F7 (leg 7.5V)** | **$60** | 🆕 |
+| **Pololu D42V110F12 (hip 12V only)** | **$60** | 🆕 |
+| **Pololu D24V22F12 (L2 LiDAR dedicated, v3.4)** | **$19** | 🆕 |
+| Ethernet switch + Cat6 + LC filter parts | $26 | 🆕 |
+| Threadlocker + tape | $18 | 🆕 |
+| ~~Magigoo PA~~ → Bambu liquid glue | $0 | ✅ Using existing |
+| ISDT 608AC | $60 | ✅ Ordered |
+| LiPo safe bag | $15 | ✅ Ordered |
+| ~~XT60 jumper + charging lead~~ | $0 | ✅ Supplied with Ovonic kit |
+| E-stop (Mxuteuk HB2-ES544) | $10 | ✅ Ordered |
+| **74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 |
+| **Subtotal — committed** | **~$343** | $85 on order, $258 still to order |
 
-Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not refunded. New PCB v6 design cost (PCBWay) absorbs the v5.2b $60 line. Net forward spend ≈ $362.
+Savings since v3.4: −$13 (XT60 leads via Ovonic kit), −$15 (Magigoo → Bambu liquid glue). Total dropped $365 → $343.
+
+Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not refunded. New PCB v6 design cost (PCBWay) absorbs the v5.2b $60 line.
 
 ### Deferred (order when you actually need them)
 
@@ -320,10 +325,10 @@ Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not re
 
 ### Project total estimate
 
-- **Already-owned/ordered:** ~$2,650 (includes XL4016 ×2 sunk to spares)
-- **Committed net adds (v3.4):** ~$365
-- **Realistic total spend:** **~$3,015**
-- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,770**
+- **Already-owned/ordered:** ~$2,650 (XL4016 sunk) + ~$85 new orders just placed (608AC + bag + E-stop) = ~$2,735
+- **Committed net adds (remaining):** ~$258
+- **Realistic total spend:** **~$2,993**
+- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,740**
 
 ---
 

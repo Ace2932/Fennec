@@ -10,24 +10,18 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ## 1. Power conversion + charging
 
-### ISDT 608AC LiPo charger — ~$60
-- **Primary:** ISDT direct (`isdt.co`) or HobbyKing — confirm "608AC" (AC variant, not 608PD)
-- **Backup:** Amazon (verify it's the authentic ISDT SKU, not a clone)
+### ISDT 608AC LiPo charger — ~$60 ✅ ORDERED
 - Modes needed: balance charge, **storage**, discharge
+- On arrival: power up no-battery, verify storage-mode menu works, set LVC alarm to 3.3V/cell = 13.2V
 
-### LiPo safe bag — ~$15
-- **Primary:** Amazon — fireproof fiberglass bag sized for 4S 4000mAh packs
-- Look for: zipper closure, ≥240×180×65 mm internal
+### LiPo safe bag — ~$15 ✅ ORDERED
+- Fireproof fiberglass bag sized for 4S 4000mAh packs
 
-### XT60 jumper (for 608AC battery input) — ~$5
-- ⚠️ **Likely already have:** Ovonic 4S LiPo packs typically ship with XT60 leads + accessories. **Verify on arrival before ordering.**
-- **Fallback primary:** Amazon / HobbyKing — XT60 female ↔ banana-plug pigtail (or whatever the 608AC input expects — confirm with charger datasheet on arrival)
-- Could also build from leftover 18AWG silicone wire + spare XT60
+### XT60 jumper (for 608AC battery input) — $0 ✅ SUPPLIED WITH OVONIC KIT
+- Confirmed in Ovonic 4S LiPo kit. Skip purchase.
 
-### XT60 charging lead — ~$8
-- ⚠️ **Likely already have:** Ovonic LiPo kit reportedly included the XT60 ↔ JST-XH charging lead. **Verify on arrival before ordering.**
-- **Fallback primary:** HobbyKing — XT60 ↔ 4S JST-XH balance lead
-- Make sure the JST-XH end matches the LiPo's balance plug (5-pin for 4S)
+### XT60 charging lead — $0 ✅ SUPPLIED WITH OVONIC KIT
+- Confirmed in Ovonic kit (XT60 ↔ JST-XH balance, 5-pin for 4S). Skip purchase.
 
 ### Pololu D42V55F12 (Jetson 12V rail) — ~$32
 - **Primary:** `pololu.com` direct — find on D42V55Fx family page (Pololu's search may not return the F12 SKU; navigate the family page and pick 12V from the variant dropdown)
@@ -78,8 +72,8 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 - **Primary:** DigiKey / Mouser (SOIC-14, e.g. SN74HC125N)
 - **Why:** v1 critical-path. Drives the Feetech bus from the Teensy 4.1 UART. `JP_BUS_MASTER` solder bridge defaults to Pattern B on PCB v6. Buy 5 (cheap, easy to fry, want spares for bring-up).
 
-### E-stop button (panel-mount, latching, NC contact) — ~$10
-- **Primary:** Amazon / DigiKey — 22 mm panel mount, mushroom head, twist-to-release
+### E-stop button (panel-mount, latching, NC contact) — ~$10 ✅ ORDERED
+- Mxuteuk HB2-ES544 — 22 mm panel mount, mushroom head, twist-to-release, 2× NC contacts (one each for leg + hip rail enables, or wire all three rails to one contact pair)
 - **Wiring:** NC contact in series with the **leg + hip + L2 rail enable lines** (D42V110F7 + D42V110F12 + D24V22F12 EN pins). LiDAR stops spinning; Jetson rail stays alive for debug.
 
 ### INA226 current/voltage monitor × 3 — ~$9
@@ -114,10 +108,9 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 - 1× 3M Super 33+ electrical tape (NOT generic vinyl)
 - 1× Kapton tape, 10mm wide, for IMU / OLED insulation + LiDAR mast strain points
 
-### Magigoo PA glue stick — ~$15
-- **Primary:** Magigoo direct or Matterhackers
-- Specifically the **PA** (nylon) formula — not generic Magigoo
-- Required for PA6-CF first-layer adhesion on Bambu textured PEI
+### Bambu Lab Liquid Glue — using existing supply
+- Using Bambu's liquid glue on textured PEI for PA6-CF adhesion
+- ⚠️ Bambu's stock liquid glue is generic-purpose, not nylon-specific. **Print-test before committing to batch:** if PA6-CF first layer doesn't bond well, fallback to Magigoo PA (~$15) or similar PA-specific adhesion product.
 
 ---
 
@@ -151,43 +144,45 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ## Total committed-adds spend at checkout
 
-| Line | $ |
-|------|----|
-| ISDT 608AC | 60 |
-| LiPo safe bag | 15 |
-| XT60 jumper | 5 (⚠️ skip if Ovonic kit included one) |
-| XT60 charging lead | 8 (⚠️ skip if Ovonic kit included one) |
-| Pololu D42V55F12 (Jetson) | 32 |
-| Pololu D42V110F7 (leg) | 60 |
-| Pololu D42V110F12 (hip only) | 60 |
-| Pololu D24V22F12 (L2 dedicated) | 19 |
-| 74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps | 33 |
-| E-stop button | 10 |
-| Switch + Cat6 ×2 + LC parts | 26 |
-| Threadlocker + tape | 18 |
-| Magigoo PA | 15 |
-| DP adapter | 10 |
-| **Subtotal (worst case)** | **~$371** |
-| **Subtotal if Ovonic supplied leads** | **~$358** |
+| Line | $ | Status |
+|------|----|--------|
+| ISDT 608AC | 60 | ✅ Ordered |
+| LiPo safe bag | 15 | ✅ Ordered |
+| ~~XT60 jumper~~ | 0 | ✅ Supplied (Ovonic kit) |
+| ~~XT60 charging lead~~ | 0 | ✅ Supplied (Ovonic kit) |
+| Pololu D42V55F12 (Jetson) | 32 | 🆕 To order |
+| Pololu D42V110F7 (leg) | 60 | 🆕 To order |
+| Pololu D42V110F12 (hip only) | 60 | 🆕 To order |
+| Pololu D24V22F12 (L2 dedicated) | 19 | 🆕 To order |
+| 74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps | 33 | 🆕 To order |
+| E-stop button (Mxuteuk HB2-ES544) | 10 | ✅ Ordered |
+| Switch + Cat6 ×2 + LC parts | 26 | 🆕 To order |
+| Threadlocker + tape | 18 | 🆕 To order |
+| ~~Magigoo PA~~ → Bambu liquid glue | 0 | ✅ Using existing |
+| DP adapter | 10 | 🆕 To order |
+| **Subtotal (actual remaining spend)** | **~$268** | |
 
-Math: worst-case $371 line subtotal minus ~$13 swing from skip-if-Ovonic rows lands ~$358; plus ~$7 shipping rolls into BOM §13 **~$365** typical target. Not included: PCB v6 (~$60), arm servo top-up (~$50).
+Updates since v3.4:
+- ISDT 608AC + LiPo bag + E-stop: ordered ✅
+- Ovonic kit confirmed includes XT60 jumper + charging lead → $13 saved
+- Bambu liquid glue substituted for Magigoo PA → $15 saved (with fallback if PA6-CF adhesion fails)
+- $371 worst case → **$268 actually-need-to-order**
+
+Not included: PCB v6 (~$60), arm servo top-up (~$50).
 
 ---
 
 ## Ordering strategy
 
-1. **Bundle by vendor** to minimize shipping:
-   - **Amazon:** safe bag, threadlocker, tape, DP adapter, Cat6 cables, switch, E-stop button, INA226 breakouts
-   - **Pololu direct:** D42V55F12 + D42V110F7 + D42V110F12 + D24V22F12 (one shop, free shipping over $100 — bundle qualifies easily)
+1. **Bundle by vendor** to minimize shipping (✅ ordered items removed):
+   - **Amazon:** threadlocker, tape, DP adapter, Cat6 cables, switch, INA226 breakouts
+   - **Pololu direct:** D42V55F12 + D42V110F7 + D42V110F12 + D24V22F12 (one shop, free shipping over $100 — $171 bundle qualifies easily)
    - **DigiKey or Mouser:** LC filter parts (inductor + cap), 74HC125, comparator, MOSFETs, bulk caps — single electronics order
-   - **HobbyKing / ISDT direct:** 608AC + XT60 leads (one shop)
    - **Feetech / AliExpress:** servo top-up (separate, slow boat)
    - **PCBWay:** PCB v6 (after design freeze)
 
-2. **Verify before pulling trigger:**
-   - 608AC vs 608PD (you want AC)
+2. **Verify before pulling trigger (remaining items):**
    - DP cable matches your actual monitor input
-   - JST-XH balance lead is 5-pin (4S, not 3S/6S)
    - Switch SKU explicitly "gigabit" not "fast ethernet 10/100"
    - Pololu part numbers: F7 = **7.5V output** (within STS3215 6-8.4V spec), F12 = 12V output (don't mix up)
    - MOSFET Rds(on) <5 mΩ at Vgs = 4.5V (logic-level), Id ≥30A (battery dead-short worst case)

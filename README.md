@@ -298,9 +298,9 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 | Power + safety | ~$338 (Pololu rails + INA226 + E-stop + MOSFET hard-cutoff + graceful-shutdown comparator) |
 | Mechanical + hardware | ~$110 |
 | Sensors (stock Nova) | ~$76 |
-| Filament + Bambu accessories | ~$700 |
+| Filament + Bambu accessories | ~$700 (− Magigoo via Bambu liquid glue substitution) |
 | Wiring + consumables | ~$80 |
-| **Realistic total** | **~$3,015** (v3.4 + graceful-shutdown comparator) |
+| **Realistic total** | **~$2,993** (v3.4: XT60 via Ovonic + Bambu glue substitution save $28) |
 
 ---
 
@@ -473,6 +473,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-15 | 3-week work schedule committed ([`docs/work-schedule.md`](./docs/work-schedule.md)): leg-joint CAD on OnShape now, prints week 2, PCB v6 schematic in KiCad during 2026-05-29 away-week. |
 | 2026-05-16 | BOM v3.4 — L2 LiDAR split off hip rail onto dedicated D24V22F12 buck after Pololu datasheet check showed D42V110F12's 9A typ @ 42V Vin derates below combined hip+L2 ~9A load at 14.8V Vin. +$19. |
 | 2026-05-16 | Two-pass internal audit: Pass 1 swept 7.4V/7.5V mismatches + stale version markers + stale L2 references + section numbering; Pass 2 reframed Phase 1 acceptance gate (Teensy tick jitter + uROS arrival rate, not RTT), clarified Pattern B benefit framing, extended E-stop to kill L2 rail too, added 13.0V graceful-shutdown comparator before 12.4V hard cutoff, noted pre-PCB ID-setup path, reconciled Jetson headroom (~1.2× incl. peripherals). +$3 safety, total ~$3,015. |
+| 2026-05-16 | Order status updates: ISDT 608AC + LiPo safe bag + Mxuteuk HB2-ES544 E-stop ordered. Ovonic 4S kit confirmed to include XT60 jumper + charging lead (−$13). Bambu Lab Liquid Glue substituted for Magigoo PA (−$15, with print-test gate to fallback if PA6-CF adhesion fails). Realistic total $3,015 → $2,993. |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 
