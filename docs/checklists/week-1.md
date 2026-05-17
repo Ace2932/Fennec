@@ -59,7 +59,7 @@ Internet works during away-week, so this is a convenience-only step (faster look
 ## 3. Accounts + downloads
 
 - [ ] NVIDIA Developer account (developer.nvidia.com)
-- [ ] JetPack 6.x microSD image → save to `~/Downloads/jetpack-6.x-orin-nano-sd.img.xz`. Verify SHA.
+- [ ] JetPack 6.2.1 microSD image → `jp62-r1-orin-nano-sd-card-image.zip` from `developer.nvidia.com/downloads/embedded/L4T/r36_Release_v4.4/jp62-r1-orin-nano-sd-card-image.zip`. NVIDIA does not publish a 6.2.2 SD image — flash 6.2.1, then `sudo apt full-upgrade` on first boot bridges to 6.2.2.
 - [ ] Feetech FD debug software (Windows-only .exe — stash on USB stick or in a Windows VM/Parallels)
 - [ ] PCBWay account (for Week 4+ PCB submit)
 - [ ] Confirm OnShape free account works for public docs
@@ -114,9 +114,15 @@ Record in OnShape as named dimensions (so part variants reference one source). M
 
 ## 7. Backups before reformatting
 
-- [ ] LeRobot Pi SD card image → `sudo dd if=/dev/diskN of=~/Backups/lerobot-pi-128gb-2026-05-XX.img bs=4M status=progress`
-- [ ] Verify with `shasum -a 256`
+- [x] LeRobot Pi SD card image → compressed with pigz at `/Users/afox/Backups/lerobot-pi-128gb-2026-05-16.img.gz` (2026-05-16)
+- [x] Verify with `shasum -a 256`
+  - SHA256: `39b571261b0cf24e8d55682b97e1932c1f0cfcfc76fa9c50d332c0924928f832`
 - [ ] Confirm restore works on a spare card (optional but recommended)
+
+Restore command (if ever needed):
+```bash
+gunzip -c /Users/afox/Backups/lerobot-pi-128gb-2026-05-16.img.gz | sudo dd of=/dev/rdiskN bs=4m
+```
 
 ---
 
