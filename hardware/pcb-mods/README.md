@@ -16,7 +16,7 @@ Reference: BOM v3.2 §2, §3 · [`docs/power-budget.md`](../../docs/power-budget
 
 - XT60 panel-mount input (matches Ovonic packs)
 - **MOSFET-based reverse-polarity protection** (not a diode — too much Vdrop at 10-15A continuous)
-- **ANL 30A fuse** in main feed (sized for hip-rail worst case ~15A + headroom; interrupt rating must survive LiPo dead-short ~1000-2000A for a few hundred ms)
+- **Class T 30A fuse** in main feed (sized for hip-rail worst case ~20A + headroom). LiPo dead-short can produce 10-20 kA peaks; ANL fuse's 6 kA interrupt rating is insufficient and can "fail to interrupt" (vapor reconducts). Class T provides 20 kA AIC = ~6.7× margin. See [`docs/research/2026-05-17-notes.md`](../../docs/research/2026-05-17-notes.md) §9 for rationale.
 - Power switch (high-current, ≥30A rated)
 - Mini digital voltmeter retained for at-a-glance pack state
 

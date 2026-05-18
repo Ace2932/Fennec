@@ -103,7 +103,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 - MOSFET hard-cutoff: **3.1V/cell = 12.4V** pack (autonomous backstop, comparator-driven, breaks main battery feed). Drops everything including Jetson — but Jetson should have already shut down cleanly per the 13.0V line above.
 - Panel-mount E-stop: NC contact in series with the **servo-rail + L2-rail enable lines** — kills D42V110F7 + D42V110F12 + D24V22F12 outputs (LiDAR stops spinning); Jetson rail stays live for debug + telemetry post-mortem
 - INA226 per active rail (3-4×): I²C → Teensy → ROS 2 diagnostics topic. Leg, hip, Jetson rails mandatory; L2 buck optional 4th if telemetry budget allows.
-- ANL 30A fuse on battery feed (sized for hip-rail peak ~20A + headroom)
+- **Class T 30A fuse on battery feed** (sized for hip-rail peak ~20A + headroom). ANL was originally specced but its 6 kA interrupt rating is insufficient for LiPo dead-short (10-20 kA peaks possible). Class T provides 20 kA interrupt = 6.7× margin. ~$12-18 vs ANL ~$5-8. See [`docs/research/2026-05-17-notes.md`](../docs/research/2026-05-17-notes.md) §9.
 
 ---
 

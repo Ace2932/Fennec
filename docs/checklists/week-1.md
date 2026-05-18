@@ -30,7 +30,7 @@ Internet works during away-week, so this is a convenience-only step (faster look
 - [ ] Intel RealSense D456 spec
 
 ### Reference designs
-- [ ] NovaSM3 v5.2b schematic PDF (SovGVD GitHub)
+- [ ] NovaSM3 v5.2/v5.3 PCB reference — [PCBWay community share](https://www.pcbway.com/project/shareproject/NovaSM3_v5_2.html) (no GitHub schematic — only PCBWay)
 - [ ] NovaSM3 v5.2b PCB source/Gerbers if available
 - [ ] 74HC125 half-duplex bus driver example schematic (any community reference)
 
@@ -38,7 +38,7 @@ Internet works during away-week, so this is a convenience-only step (faster look
 - [ ] STS3215 19kg STEP (GrabCAD or Feetech)
 - [ ] STS3215 30kg STEP
 - [ ] Feetech 25T horn STEP
-- [ ] NovaSM3 v5.2b chassis STEP (SovGVD)
+- [ ] NovaSM3 chassis STLs from `cguweb-com/Arduino-Projects/Nova-SM3/STL Files/` (STEP not available — must re-model)
 
 ---
 

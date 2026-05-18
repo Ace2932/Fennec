@@ -192,7 +192,7 @@ Cost of splitting: +1 buck module (~$32 for D42V55F7), +1 wire harness, +chassis
 
 This is plausible for a dev session; longer runs need either pack swap (you have two) or stationary intervals.
 
-**Worst-case transient:** sustained + impact ≈ 25-30A briefly. ANL 30A fuse should handle without nuisance-tripping; verify fuse selection (slow-blow if needed).
+**Worst-case transient:** sustained + impact ≈ 25-30A briefly. **Class T 30A fuse** (slow-blow) handles without nuisance-tripping AND survives LiPo dead-short (20 kA AIC vs ANL's 6 kA). See [`research/2026-05-17-notes.md`](./research/2026-05-17-notes.md) §9.
 
 ---
 

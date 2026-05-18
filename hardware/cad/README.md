@@ -11,7 +11,7 @@
 ## Reference geometry sources
 
 - **STS3215** (19kg + 30kg variants) — pull STEP from GrabCAD or Feetech site, import to OnShape
-- **NovaSM3 v5.2b reference chassis** — STEP files in SovGVD GitHub repo
+- **NovaSM3 reference chassis** — repo is `cguweb-com/Arduino-Projects/tree/main/Nova-SM3` (the `SovGVD/NovaSM3` URL in old docs was a misattribution; that repo does not exist). **STEP files are NOT in the repo** — only STL. For OnShape import, either: (a) import STL as a static body, (b) re-model from STL + datasheet + caliper measurements, or (c) contact Chris Locke for the original Fusion 360 source. See [`docs/research/2026-05-17-notes.md`](../../docs/research/2026-05-17-notes.md) §8.
 - **Feetech 25T servo horns** — datasheet dims, model in OnShape from scratch
 - **Calipers** for in-hand cross-check (back-shaft length, mounting hole pitch, horn spline)
 

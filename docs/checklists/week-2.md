@@ -14,7 +14,7 @@
 - [ ] Import STS3215 19kg STEP (GrabCAD or Feetech) → tab 1
 - [ ] Import STS3215 30kg STEP → tab 2
 - [ ] Import Feetech 25T horn STEP → tab 3
-- [ ] Import NovaSM3 v5.2b chassis STEP (SovGVD GitHub) → tab 4
+- [ ] Import NovaSM3 chassis STLs from `cguweb-com/Arduino-Projects/Nova-SM3/STL Files/` → tab 4 (STEP not available — STLs are static reference)
 - [ ] Paste OnShape URL into [`../../hardware/cad/README.md`](../../hardware/cad/README.md)
 
 ### Caliper measurement pass
@@ -102,7 +102,7 @@
 - [ ] Teensy 4.1 KiCad symbol/footprint — find a community one
 - [ ] 74HC125 symbol — built into KiCad's `74xx` library
 - [ ] INA226 — in KiCad's standard libs or Adafruit's
-- [ ] Bookmark NVIDIA Orin Nano carrier board reference + SovGVD NovaSM3 v5.2b schematic for later reference
+- [ ] Bookmark NVIDIA Orin Nano carrier board reference + NovaSM3 v5.2/v5.3 PCB on [PCBWay community share](https://www.pcbway.com/project/shareproject/NovaSM3_v5_2.html) for later reference
 
 ---
 

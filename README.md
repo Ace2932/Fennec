@@ -1,6 +1,6 @@
 # NovaSM3 — Modified Quadruped Robot with VLA Integration
 
-> A modified [NovaSM3](https://github.com/SovGVD/NovaSM3) quadruped platform rebuilt around a unified Feetech STS3215 TTL servo bus, NVIDIA Jetson Orin Nano Super compute, and ROS 2 Humble — designed as a platform for Vision-Language-Action (VLA) model deployment, 3D SLAM, and autonomous mobile manipulation.
+> A modified [NovaSM3](https://github.com/cguweb-com/Arduino-Projects/tree/main/Nova-SM3) quadruped platform (by Chris Locke / [novaspotmicro.com](https://novaspotmicro.com/)) rebuilt around a unified Feetech STS3215 TTL servo bus, NVIDIA Jetson Orin Nano Super compute, and ROS 2 Humble — designed as a platform for Vision-Language-Action (VLA) model deployment, 3D SLAM, and autonomous mobile manipulation.
 
 **Status:** 🔧 Phase 0 — Pre-build setup (CAD + parts ordering)
 **Platform:** Quadruped (12 DOF) — arm (6-DOF, Phase 4 future) on shelf
@@ -72,13 +72,13 @@ After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgra
 
 - Arduino Nano slot for aux peripherals (PIR, ultrasonic, OLED, RGB LEDs, MP3, IMU)
 - Battery input + reverse polarity protection geometry (replicated with MOSFET-based reverse protection instead of diode)
-- Power switch, voltmeter, fuse (rating revised to ANL 30A)
+- Power switch, voltmeter, fuse (Class T 30A — LiPo dead-short interrupt rating; ANL was originally specced but 6 kA AIC insufficient vs 20 kA Class T)
 
 ### What changes
 
 - All 12 PWM servo output headers removed (Feetech bus is daisy-chain TTL, doesn't use PWM)
 - XL4016 buck footprints → Pololu D42V110-class module footprints
-- Add: 74HC125 half-duplex driver (Pattern B prep), INA226 ×3, E-stop chain, hard-cutoff MOSFET, ANL fuse holder, bulk caps at injection points, bus-integrity footprints (series R + ferrite beads), reserved arm-rail buck footprint
+- Add: 74HC125 half-duplex driver (Pattern B prep), INA226 ×3, E-stop chain, hard-cutoff MOSFET, **Class T 30A fuse holder** (LiPo-rated), bulk caps at injection points, bus-integrity footprints (series R + ferrite beads), reserved arm-rail buck footprint
 
 ---
 
@@ -219,7 +219,7 @@ If (1) misses → debug Teensy firmware (DMA vs ISR, UART config). If (2) misses
 
 ```
 4S LiPo 14.8V nominal (12.8-16.8V)
-   │  ANL 30A fuse · MOSFET reverse-protection · MOSFET hard-cutoff @12.4V · E-stop NC (servo rails only)
+   │  Class T 30A fuse · MOSFET reverse-protection · MOSFET hard-cutoff @12.4V · E-stop NC (servo rails only)
    │
    ├── Pololu D42V110F7  ──► 7.5V/10A ──► 8× STS3215 19kg femur/tibia
    │       (star injection at 4 points along chain, bulk caps near point of load)
@@ -453,7 +453,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 
 ## References & Credits
 
-- **Original NovaSM3** by SovGVD — [GitHub](https://github.com/SovGVD/NovaSM3) — base platform, PCB design, chassis geometry
+- **Original NovaSM3** by Chris Locke (cguweb) — [GitHub](https://github.com/cguweb-com/Arduino-Projects/tree/main/Nova-SM3) · [novaspotmicro.com](https://novaspotmicro.com/) · [Discord](https://discord.gg/bJWgTMccUx) — base platform, chassis geometry, parts list. PCB v5.2/v5.3 reference via [PCBWay community share](https://www.pcbway.com/project/shareproject/NovaSM3_v5_2.html). Note: repo ships STL only, **no STEP** (re-model from STLs + datasheet + calipers for OnShape).
 - **mogar/spot_micro** — ROS 2 reference for quadruped IK and gait
 - **discodyer/unitree_lidar_ros2** — ROS 2 wrapper for Unitree L2
 - **Feetech SCServo SDK** — TTL bus driver
@@ -482,6 +482,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-17 | Jetson **full persistence verified across reboots**: JetPack 6.2.2, MAXN_SUPER (mode 2), `jetson_clocks.service` (systemd oneshot), DNS chattr-immutable, WiFi profile, BT. 8-point verification block lives in [`docs/setup-jetson.md`](./docs/setup-jetson.md) §11. |
 | 2026-05-17 | **Week 1 substantially closed** — Jetson bring-up overtook the planned CAD-first sequence (no harm). CAD + KiCad + Teensy firmware skeleton carried to Week 2. New checklist at [`docs/checklists/week-2.md`](./docs/checklists/week-2.md). |
 | 2026-05-17 | **ROS 2 Humble installed on Jetson via ros2-apt-source 1.2.0 deb (deb822 format, the new canonical method).** `ros-humble-desktop` + `python3-colcon-common-extensions` + `python3-rosdep` running. Talker/listener verified working over DDS. |
+| 2026-05-17 | **Background research pass committed.** `docs/research/2026-05-17-notes.md` consolidates 14 topics: Unitree L2 SDK (use official, drop discodyer fork), POINT-LIO ROS 2 fork (dfloreaa), librealsense2 via jetsonhacks prebuilt modules, STS3215 libraries for Teensy, 74HC125 wiring, INA226 + LM393 design, MAXN_SUPER clocks verified (1.7 GHz / 1020 MHz), OpenVLA feasibility on 8GB. **Two safety/correctness fixes applied:** (a) **ANL → Class T 30A fuse** (LiPo needs 20 kA AIC, ANL only 6 kA), (b) **NovaSM3 repo URL corrected** to `cguweb-com/Arduino-Projects/Nova-SM3` (the old `SovGVD/NovaSM3` returns 404). |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 

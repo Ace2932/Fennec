@@ -22,7 +22,7 @@ Open option for away-week (decide by end of Week 2): leave Jetson running at hom
 **Primary: leg-joint CAD on OnShape**
 
 - [ ] Pull STS3215 19kg + 30kg STEP from GrabCAD or Feetech site; import to OnShape
-- [ ] Pull NovaSM3 v5.2b reference geometry (SovGVD GitHub) → STEP → OnShape import
+- [ ] Pull NovaSM3 reference geometry from [`cguweb-com/Arduino-Projects/tree/main/Nova-SM3/STL Files`](https://github.com/cguweb-com/Arduino-Projects/tree/main/Nova-SM3) (STL only — no STEP available; import to OnShape as static reference body)
 - [ ] Caliper-measure on-hand servos (back-shaft length, mounting hole pitch, horn spline) and cross-check against datasheet
 - [ ] Sketch leg-joint kinematics: hip pocket, femur U-bracket, tibia, ankle attachment
 - [ ] First-article print of one hip pocket on Bambu P1S (PA6-CF, drier 24h first) → fitment check on real servo
@@ -32,7 +32,7 @@ Open option for away-week (decide by end of Week 2): leave Jetson running at hom
 
 - [ ] Install KiCad 8.x on laptop + Pololu KiCad library
 - [ ] Download datasheet PDFs to offline cache: 74HC125, INA226, TL431/LM393, MOSFET candidates (IRLB3034 etc.), STS3215, Pololu D42V110/D42V55, Jetson Orin Nano carrier board spec
-- [ ] Download SovGVD NovaSM3 v5.2b schematic + PCB to offline cache
+- [ ] Bookmark NovaSM3 v5.2/v5.3 PCB reference at [PCBWay community share](https://www.pcbway.com/project/shareproject/NovaSM3_v5_2.html) (no GitHub schematic available)
 - [ ] Create NVIDIA Developer account + download JetPack 6.x SD image to laptop
 - [ ] Back up LeRobot Pi SD contents to Mac before reformatting
 
