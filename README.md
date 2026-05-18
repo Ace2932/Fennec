@@ -481,6 +481,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-17 | **Open decision 2b resolved:** Bluetooth confirmed present on P3766 — Realtek, BT 5.1, `hci0` up. |
 | 2026-05-17 | Jetson **full persistence verified across reboots**: JetPack 6.2.2, MAXN_SUPER (mode 2), `jetson_clocks.service` (systemd oneshot), DNS chattr-immutable, WiFi profile, BT. 8-point verification block lives in [`docs/setup-jetson.md`](./docs/setup-jetson.md) §11. |
 | 2026-05-17 | **Week 1 substantially closed** — Jetson bring-up overtook the planned CAD-first sequence (no harm). CAD + KiCad + Teensy firmware skeleton carried to Week 2. New checklist at [`docs/checklists/week-2.md`](./docs/checklists/week-2.md). |
+| 2026-05-17 | **ROS 2 Humble installed on Jetson via ros2-apt-source 1.2.0 deb (deb822 format, the new canonical method).** `ros-humble-desktop` + `python3-colcon-common-extensions` + `python3-rosdep` running. Talker/listener verified working over DDS. |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 

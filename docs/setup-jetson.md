@@ -167,10 +167,63 @@ Verified 2026-05-17 on actual hardware — all 8 persist across `sudo reboot`.
 
 ---
 
+## 12. ROS 2 Humble install (done 2026-05-17)
+
+**Heads up:** the legacy `curl ros.key + sources.list` approach is deprecated. Use the new **ros2-apt-source deb package** (deb822 format, auto-handles key rotation).
+
+```bash
+# 1. Locale
+sudo apt update
+sudo apt install -y locales software-properties-common curl gnupg lsb-release
+sudo locale-gen en_US en_US.UTF-8
+sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+sudo add-apt-repository universe -y
+
+# 2. Install ros2-apt-source (check github.com/ros-infrastructure/ros-apt-source/releases for latest tag)
+curl -L -o /tmp/ros2-apt-source.deb https://github.com/ros-infrastructure/ros-apt-source/releases/download/1.2.0/ros2-apt-source_1.2.0.jammy_all.deb
+sudo dpkg -i /tmp/ros2-apt-source.deb
+sudo apt update
+
+# 3. Install ROS 2 Humble Desktop
+sudo apt install -y ros-humble-desktop python3-colcon-common-extensions python3-rosdep python3-argcomplete
+
+# 4. rosdep
+sudo rosdep init
+rosdep update           # no sudo — writes to ~/.ros
+
+# 5. Auto-source
+echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+
+# 6. Sanity
+ros2 --help
+echo $ROS_DISTRO    # humble
+which ros2          # /opt/ros/humble/bin/ros2
+```
+
+### Smoke test (talker/listener)
+
+Two SSH sessions:
+
+```bash
+# session A
+ros2 run demo_nodes_cpp talker
+
+# session B
+ros2 run demo_nodes_py listener
+```
+
+Listener should print `I heard: [Hello World: N]`. Confirms DDS middleware works end-to-end.
+
+### Paste-gotcha (terminal mangling)
+
+Long curl URLs get newline-broken by some terminal pasters. If `curl: no URL specified!` or `bad/illegal format`, write the command to a file via `nano` (or `echo > install.sh`) then `bash install.sh`. See [`docs/setup-network.md`](./setup-network.md) for the heredoc paste-gotcha pattern.
+
+---
+
 ## Next (separate sessions — Phase 1 plan)
 
 - NVMe install + rootfs migration **(deferred — NAND shortage, see BOM §1; run from 128 GB microSD until prices recover)**
-- ROS 2 Humble install
 - librealsense2 ARM64 build + `realsense2_camera`
 - unilidar_sdk2 + `unitree_lidar_ros2` (discodyer fork)
 - POINT-LIO and/or RTAB-Map

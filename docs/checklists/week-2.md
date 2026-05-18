@@ -43,21 +43,21 @@
 
 ## 2. Jetson Phase 1 software install (during prints)
 
-### ROS 2 Humble on Jetson
-- [ ] SSH in: `ssh aiden@nova-jetson.local` (or 10.0.1.135)
-- [ ] Run persistence verification block per [`../setup-jetson.md`](../setup-jetson.md) §11 — confirm baseline state
-- [ ] ROS 2 Humble apt install (Ubuntu 22.04 ARM64)
+### ROS 2 Humble on Jetson ✅ (done 2026-05-17)
+- [x] SSH in: `ssh aiden@nova-jetson.local` (or 10.0.1.135)
+- [x] Run persistence verification block per [`../setup-jetson.md`](../setup-jetson.md) §11 — baseline confirmed
+- [x] ROS 2 Humble apt install via the new **ros2-apt-source deb package** (the legacy `curl ros.key + sources.list` approach is deprecated as of 2024-2025 — ROS docs now point at the deb method):
   ```bash
-  sudo apt install -y software-properties-common curl gnupg
-  sudo add-apt-repository universe -y
-  sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+  # ros2-apt-source 1.2.0 (jammy) installed via:
+  curl -L -o /tmp/ros2-apt-source.deb https://github.com/ros-infrastructure/ros-apt-source/releases/download/1.2.0/ros2-apt-source_1.2.0.jammy_all.deb
+  sudo dpkg -i /tmp/ros2-apt-source.deb
   sudo apt update
-  sudo apt install -y ros-humble-desktop python3-colcon-common-extensions python3-rosdep
+  sudo apt install -y ros-humble-desktop python3-colcon-common-extensions python3-rosdep python3-argcomplete
   ```
-- [ ] `sudo rosdep init && rosdep update`
-- [ ] Add to bashrc: `echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc`
-- [ ] Sanity: `ros2 doctor` clean; `ros2 run demo_nodes_cpp talker` + `ros2 run demo_nodes_py listener` in separate terminals
+- [x] `sudo rosdep init && rosdep update`
+- [x] Source line added to `~/.bashrc`
+- [x] Talker/listener verified working — `demo_nodes_py listener` heard `demo_nodes_cpp talker` end-to-end via DDS
+- [ ] `ros2 doctor` review (run when convenient — warnings about network interfaces are typical, not blockers)
 
 ### Sensor SDKs
 - [ ] `librealsense2` ARM64 build (Intel doesn't ship Jetson binaries; build from source or use the NVIDIA-prepared package)
