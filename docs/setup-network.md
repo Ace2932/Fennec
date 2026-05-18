@@ -49,11 +49,11 @@ If you connected USB-C from Jetson to Mac for serial console access, the Jetson 
   ```
   Lower metric wins. l4tbr0's default is at metric 32766, WiFi default is at 600 from DHCP — both lose to the L4T bridge's lower path until you override.
 
-### Gotcha 3: NetworkManager doesn't respect manually-edited `/etc/resolv.conf`
+### Gotcha 3: NetworkManager doesn't write `/etc/resolv.conf` at all
 
-Editing `/etc/resolv.conf` directly survives until the next `nmcli connection up`, which overwrites it with DHCP-supplied DNS. If the DHCP-supplied DNS is broken (or the network filters port 53 to public DNS like 8.8.8.8), you get `Temporary failure in name resolution` even though routing works.
+Editing `/etc/resolv.conf` directly survives until the next `nmcli connection up`. Worse, even after pinning DNS in the NetworkManager profile, **NetworkManager on JetPack 6.2.x does not write the DNS entries to `/etc/resolv.conf` on reboot.** The file ends up empty (size 0), even though `nmcli connection show` reports the correct DNS servers. Result: `Temporary failure in name resolution` after every reboot.
 
-**Fix — pin DNS in the NetworkManager profile:**
+**Step 1 — pin DNS in the NetworkManager profile** (so the connection profile is correct):
 
 ```bash
 sudo nmcli connection modify "<SSID>" ipv4.dns "8.8.8.8 1.1.1.1"
@@ -62,7 +62,21 @@ sudo nmcli connection down "<SSID>"
 sudo nmcli connection up "<SSID>"
 ```
 
-`ignore-auto-dns yes` is the key — without it, DHCP DNS gets re-merged on every `up`. After this, `/etc/resolv.conf` stays as you set it across reboots.
+`ignore-auto-dns yes` keeps DHCP DNS from re-merging on every `up`.
+
+**Step 2 — write resolv.conf manually + lock immutable** (so NetworkManager can't truncate it):
+
+```bash
+sudo chattr -i /etc/resolv.conf 2>/dev/null || true
+printf "nameserver 8.8.8.8\nnameserver 1.1.1.1\n" | sudo tee /etc/resolv.conf
+sudo chattr +i /etc/resolv.conf
+cat /etc/resolv.conf
+ping -c 2 google.com
+```
+
+`chattr +i` sets the immutable filesystem flag. NetworkManager (or any other agent) cannot modify or truncate the file until you `chattr -i` first. Brute-force durable fix.
+
+**Verify after reboot** — `cat /etc/resolv.conf` should still show the two nameservers. If it ever shows empty, the immutable flag got cleared by an `apt full-upgrade` of `resolvconf`-related packages; just re-apply Step 2.
 
 ### Full recovery sequence (copy-paste)
 

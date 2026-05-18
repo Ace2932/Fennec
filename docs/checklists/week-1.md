@@ -58,8 +58,9 @@ Internet works during away-week, so this is a convenience-only step (faster look
 
 ## 3. Accounts + downloads
 
-- [ ] NVIDIA Developer account (developer.nvidia.com)
-- [ ] JetPack 6.2.1 microSD image → `jp62-r1-orin-nano-sd-card-image.zip` from `developer.nvidia.com/downloads/embedded/L4T/r36_Release_v4.4/jp62-r1-orin-nano-sd-card-image.zip`. NVIDIA does not publish a 6.2.2 SD image — flash 6.2.1, then `sudo apt full-upgrade` on first boot bridges to 6.2.2.
+- [x] NVIDIA Developer account (developer.nvidia.com)
+- [x] JetPack 6.2.1 microSD image downloaded + flashed via Balena Etcher
+- [x] **Bonus done early: JetPack 6.2.1 booted, upgraded apt to 6.2.2 (L4T 36.5), MAXN_SUPER set, BT confirmed (Realtek BT 5.1).** See [`setup-jetson.md`](../setup-jetson.md) for verified procedure.
 - [ ] Feetech FD debug software (Windows-only .exe — stash on USB stick or in a Windows VM/Parallels)
 - [ ] PCBWay account (for Week 4+ PCB submit)
 - [ ] Confirm OnShape free account works for public docs
@@ -136,7 +137,7 @@ gunzip -c /Users/afox/Backups/lerobot-pi-128gb-2026-05-16.img.gz | sudo dd of=/d
 
 ## Out-of-scope for Week 1 (defer to Week 2)
 
-- Jetson flash + first boot (better with full shop access, not laptop-only)
+- ~~Jetson flash + first boot~~ — **DONE early on 2026-05-17** (with the shop, not laptop-only as planned). JetPack 6.2.2, MAXN_SUPER, BT confirmed.
 - ROS 2 / librealsense2 / unilidar_sdk2 installs on Jetson
 - Teensy firmware coding (skeleton in Week 2; needs prereqs from Week 1 cache done)
 - PCB schematic work (Week 3 away-week — Week 1 is just the install + cache pass)
