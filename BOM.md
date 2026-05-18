@@ -137,8 +137,8 @@ Note: Feetech bus is single-ended half-duplex TTL UART. 120 Ω differential term
 
 | Item | Price | Status |
 |------|-------|--------|
-| **Gigabit Ethernet switch (5-port)** — TP-Link LS105G or NETGEAR GS305 | **$15** | 🆕 Order |
-| **Short Cat6 cables × 2 (0.5m)** | **$8** | 🆕 Order |
+| **Gigabit Ethernet switch (5-port)** — TP-Link LS105G or NETGEAR GS305 | **$15** | ✅ Ordered |
+| **Cable Matters 10Gbps Snagless Cat 6 — 1ft × 2-3** | **$8** | ✅ Ordered |
 | Small inductor + capacitor (LC filter on D24V22F12 output to L2) | $3 | 🆕 Order with electronics |
 
 **Topology:**
@@ -295,7 +295,8 @@ Post-Jetson-flash install list (Phase 1):
 | **Pololu D42V110F7 (leg 7.5V)** | **$60** | 🆕 |
 | **Pololu D42V110F12 (hip 12V only)** | **$60** | 🆕 |
 | **Pololu D24V22F12 (L2 LiDAR dedicated, v3.4)** | **$19** | 🆕 |
-| Ethernet switch + Cat6 + LC filter parts | $26 | 🆕 |
+| Gigabit switch + Cable Matters Cat 6 ×2-3 (1ft) | $23 | ✅ Ordered 2026-05-17 |
+| LC filter parts (inductor + cap) | $3 | 🆕 To order (DigiKey bundle) |
 | Threadlocker + tape | $18 | 🆕 |
 | ~~Magigoo PA~~ → Bambu liquid glue | $0 | ✅ Using existing |
 | ISDT 608AC | $60 | ✅ Ordered |

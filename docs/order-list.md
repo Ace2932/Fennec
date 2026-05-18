@@ -49,15 +49,13 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ## 2. Networking
 
-### TP-Link LS105G OR NETGEAR GS305 — ~$15
-- **Primary:** Amazon — 5-port unmanaged gigabit, **must be metal-cased or strip-friendly** (planning to remove case for chassis volume)
-- LS105G is the slimmer of the two
-- Avoid: ports >5 (unnecessary weight), managed switches (overkill, draws more)
+### Gigabit Ethernet switch (5-port) — ~$15 ✅ ORDERED
+- TP-Link LS105G or NETGEAR GS305 (5-port unmanaged gigabit)
+- Plan to remove case for chassis volume (~60% volume savings)
 
-### Short Cat6 patch cables × 2 (0.5m) — ~$8
-- **Primary:** Amazon / Monoprice — Cat6, ≤0.5m, snagless boot
-- Two: one Jetson↔switch, one L2↔switch
-- Avoid: Cat5e (gigabit-marginal under EMI), Cat6a (over-spec'd for this run length)
+### Cable Matters 10Gbps Snagless Cat 6 — 1ft, ×2 minimum (×3 with spare) — ~$8 ✅ ORDERED
+- 30cm length, snagless boot, Cat 6 (gold-flashed per TIA/EIA-568 spec by default), 10 Gbps rated headroom
+- Wiring: Jetson `enP8p1s0` ↔ switch port 1, L2 ↔ switch port 2 (port 3 spare for dev laptop)
 
 ### LC filter parts for L2 12V tap — ~$3
 - 1× inductor: ~22 µH, ≥2A rated (DigiKey series-resonant choke)
@@ -156,17 +154,19 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 | Pololu D24V22F12 (L2 dedicated) | 19 | 🆕 To order |
 | 74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps | 33 | 🆕 To order |
 | E-stop button (Mxuteuk HB2-ES544) | 10 | ✅ Ordered |
-| Switch + Cat6 ×2 + LC parts | 26 | 🆕 To order |
+| Switch + Cat6 ×2 (Cable Matters 1ft) | 23 | ✅ Ordered |
+| LC filter parts (inductor + cap) | 3 | 🆕 To order (DigiKey bundle) |
 | Threadlocker + tape | 18 | 🆕 To order |
 | ~~Magigoo PA~~ → Bambu liquid glue | 0 | ✅ Using existing |
 | DP adapter | 10 | 🆕 To order |
-| **Subtotal (actual remaining spend)** | **~$268** | |
+| **Subtotal (actual remaining spend)** | **~$245** | |
 
 Updates since v3.4:
 - ISDT 608AC + LiPo bag + E-stop: ordered ✅
 - Ovonic kit confirmed includes XT60 jumper + charging lead → $13 saved
 - Bambu liquid glue substituted for Magigoo PA → $15 saved (with fallback if PA6-CF adhesion fails)
-- $371 worst case → **$268 actually-need-to-order**
+- Network bundle (switch + Cable Matters 1ft Cat 6 ×2-3): ordered ✅ 2026-05-17
+- $371 worst case → **$245 actually-need-to-order**
 
 Not included: PCB v6 (~$60), arm servo top-up (~$50).
 
