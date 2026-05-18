@@ -77,7 +77,30 @@ sudo nvpmodel -q       # confirm "MAXN_SUPER"
 sudo jetson_clocks     # peg clocks high (with 's', not 'clock')
 ```
 
-`nvpmodel` persists across reboots; `jetson_clocks` does not. If you want clocks pegged on every boot, systemd-enable a oneshot service that runs it.
+`nvpmodel` persists across reboots; `jetson_clocks` does not. Systemd-enable a oneshot service to peg clocks on every boot:
+
+```bash
+sudo tee /etc/systemd/system/jetson_clocks.service > /dev/null <<'EOF'
+[Unit]
+Description=Set Jetson clocks to max
+After=nvpmodel.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/jetson_clocks
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable jetson_clocks.service
+sudo systemctl start jetson_clocks.service
+systemctl status jetson_clocks.service
+```
+
+Expect `Active: active (exited)`. Heredoc gotcha: paste-mangled `tee` blocks can drop trailing lines and break `RemainAfterExit` parsing — confirm with `cat -A /etc/systemd/system/jetson_clocks.service` that lines end with `$` and there are no stray indented lines after `WantedBy=multi-user.target`.
 
 ## 7. Bluetooth presence check (resolves Open Decision 2b)
 
@@ -114,6 +137,35 @@ sudo reboot
 ```
 
 After reboot: `jtop` runs a TUI showing CPU/GPU/temps/memory/power. Use instead of `htop`.
+
+## 11. Persistence verification (run after any reboot)
+
+Paste this block to confirm everything stuck. Expect 8 green checks:
+
+```bash
+echo "=== JetPack ==="; cat /etc/nv_tegra_release | head -1
+echo "=== Power ==="; sudo nvpmodel -q
+echo "=== jetson_clocks ==="; systemctl is-active jetson_clocks.service
+echo "=== CPU freq ==="; cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+echo "=== DNS ==="; cat /etc/resolv.conf; lsattr /etc/resolv.conf
+echo "=== Route ==="; ip route | grep default
+echo "=== Internet ==="; ping -c 2 google.com | tail -2
+echo "=== BT ==="; hciconfig hci0 | grep "UP"
+```
+
+Expected:
+- JetPack: REVISION 5.0
+- Power: MAXN_SUPER / id 2
+- jetson_clocks: active
+- CPU max freq: 1728000 kHz (1.728 GHz — A78AE peak)
+- DNS: 8.8.8.8 + 1.1.1.1 with `----i---------e-------` (`i` = immutable flag)
+- Route: `default via X.X.X.1 dev wlP1p1s0`
+- Internet: <20 ms RTT to google.com
+- BT: `UP RUNNING`
+
+Verified 2026-05-17 on actual hardware — all 8 persist across `sudo reboot`.
+
+---
 
 ## Next (separate sessions — Phase 1 plan)
 

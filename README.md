@@ -477,6 +477,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-16 | LeRobot Pi SD backed up to `~/Backups/lerobot-pi-128gb-2026-05-16.img.gz` (SHA256 recorded in [`docs/backups.md`](./docs/backups.md)). Card reformatted for Jetson. |
 | 2026-05-17 | Jetson Orin Nano Super: flashed JetPack 6.2.1 SD image → apt full-upgrade → **JetPack 6.2.2 / L4T 36.5 running**. MAXN_SUPER power mode set (mode 2 on this Dev Kit, not 0). Three first-boot networking gotchas hit + documented in [`docs/setup-network.md`](./docs/setup-network.md): (1) oem-config WPA association fails — skip + connect from CLI; (2) l4tbr0 USB-C bridge hijacks default route — unplug or lower WiFi metric; (3) NetworkManager doesn't write `/etc/resolv.conf` on this image — manually populate + `chattr +i` to lock immutable. |
 | 2026-05-17 | **Open decision 2b resolved:** Bluetooth confirmed present on P3766 — Realtek, BT 5.1, `hci0` up. |
+| 2026-05-17 | Jetson **full persistence verified across reboots**: JetPack 6.2.2, MAXN_SUPER (mode 2), `jetson_clocks.service` (systemd oneshot), DNS chattr-immutable, WiFi profile, BT. 8-point verification block lives in [`docs/setup-jetson.md`](./docs/setup-jetson.md) §11. |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 
