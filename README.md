@@ -324,10 +324,12 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] Back up LeRobot Pi SD contents
 - [ ] Create NVIDIA Developer account, download JetPack 6.x image
 
-**Week 2 (2026-05-22 → 2026-05-28):**
-- [ ] Finish leg CAD, queue all 12 prints
-- [ ] During prints: flash Jetson, install ROS 2 Humble + sensor SDKs, smoke-test D456
-- [ ] PlatformIO + TeensyDuino + micro-ROS Teensy firmware skeleton (compile-green, no servo test yet)
+**Week 2 (2026-05-22 → 2026-05-28):** detailed checklist in [`docs/checklists/week-2.md`](./docs/checklists/week-2.md)
+- [ ] Carryover from Week 1: OnShape leg-joint CAD + caliper pass + hip-pocket first article
+- [ ] ROS 2 Humble + librealsense2 + unilidar_sdk2 on Jetson (Jetson already flashed + persistent — Week 1 head-start)
+- [ ] PlatformIO + TeensyDuino + micro-ROS Teensy firmware skeleton (compile-green)
+- [ ] KiCad install + Pololu library (PCB v6 prep for Week 3)
+- [ ] Bambu Studio + PA6-CF drier preheat
 
 **Week 3 — Away (2026-05-29 → 2026-06-05, laptop only):**
 - [ ] PCB v6 schematic + layout in KiCad — see [`hardware/pcb-mods/README.md`](./hardware/pcb-mods/README.md)
@@ -478,6 +480,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-17 | Jetson Orin Nano Super: flashed JetPack 6.2.1 SD image → apt full-upgrade → **JetPack 6.2.2 / L4T 36.5 running**. MAXN_SUPER power mode set (mode 2 on this Dev Kit, not 0). Three first-boot networking gotchas hit + documented in [`docs/setup-network.md`](./docs/setup-network.md): (1) oem-config WPA association fails — skip + connect from CLI; (2) l4tbr0 USB-C bridge hijacks default route — unplug or lower WiFi metric; (3) NetworkManager doesn't write `/etc/resolv.conf` on this image — manually populate + `chattr +i` to lock immutable. |
 | 2026-05-17 | **Open decision 2b resolved:** Bluetooth confirmed present on P3766 — Realtek, BT 5.1, `hci0` up. |
 | 2026-05-17 | Jetson **full persistence verified across reboots**: JetPack 6.2.2, MAXN_SUPER (mode 2), `jetson_clocks.service` (systemd oneshot), DNS chattr-immutable, WiFi profile, BT. 8-point verification block lives in [`docs/setup-jetson.md`](./docs/setup-jetson.md) §11. |
+| 2026-05-17 | **Week 1 substantially closed** — Jetson bring-up overtook the planned CAD-first sequence (no harm). CAD + KiCad + Teensy firmware skeleton carried to Week 2. New checklist at [`docs/checklists/week-2.md`](./docs/checklists/week-2.md). |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 

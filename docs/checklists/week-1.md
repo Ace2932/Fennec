@@ -1,8 +1,8 @@
 # Week 1 Checklist — 2026-05-15 → 2026-05-22
 
-Actionable items to land before Week 2 prints + Week 3 away-week PCB work. Tick as you go; commit progress.
-
-> Parent plan: [`../work-schedule.md`](../work-schedule.md)
+> **Status: substantially done (closed 2026-05-17).** See close-out at bottom for what carried over to Week 2.
+>
+> Parent plan: [`../work-schedule.md`](../work-schedule.md) · Next: [`week-2.md`](./week-2.md)
 
 ---
 
@@ -153,3 +153,30 @@ gunzip -c /Users/afox/Backups/lerobot-pi-128gb-2026-05-16.img.gz | sudo dd of=/d
 ---
 
 > **Status:** updated at v0.3.2-l2-dedicated. Tick items via commits; close out when ≥80% done and Week 2 prereqs are clear.
+
+---
+
+## Close-out (2026-05-17)
+
+### Done
+- ✅ LeRobot Pi SD backed up (`docs/backups.md`)
+- ✅ Jetson Orin Nano: SD flashed, JetPack 6.2.1 → 6.2.2 apt-upgrade, MAXN_SUPER, BT confirmed (resolves Open Decision 2b), DNS chattr-locked, jetson_clocks systemd service running, full persistence verified across reboots (`docs/setup-jetson.md` §11)
+- ✅ Three first-boot networking gotchas documented (`docs/setup-network.md`)
+- ✅ NVIDIA Dev account + JetPack download
+
+### Carried over to Week 2
+Original Week 1 plan front-loaded **OnShape leg-joint CAD + first-article print**. Got displaced by deep-dive Jetson bring-up instead. Carryover:
+- OnShape doc creation + STEP imports (STS3215 19kg + 30kg, 25T horn, NovaSM3 chassis)
+- Caliper measurement pass on on-hand servos + horns
+- Hip pocket first-article CAD → print → fitment iteration
+- KiCad 8.x + Pololu library install on Mac (PCB v6 prep for Week 3 away-week)
+- PlatformIO + TeensyDuino + micro-ROS clone (firmware skeleton prep)
+- Bambu Studio install + PA6-CF drier preheat
+
+Order doesn't matter for the project as long as CAD finishes before Week 2 prints + KiCad install before Week 3 away-week.
+
+### Lessons
+- **Internet + DNS on Jetson is fragile** — three separate gotchas in one bring-up (oem-config WPA bug, l4tbr0 route hijack, NM-not-writing-resolv.conf). Full recovery sequence now in `docs/setup-network.md`.
+- **The "Super" power mode is index 2**, not 0. Mode 0 on the Orin Nano Super is 15W, mode 1 is 25W. MAXN_SUPER (mode 2) is required for the full 67 TOPS.
+- **Heredoc `<<EOF` paste-mangling** breaks systemd unit parsing silently. Always `cat -A` after creating service files to confirm clean line termination.
+- **chattr +i is the durable fix** when NetworkManager won't write resolv.conf. Brute-force but reliable.
