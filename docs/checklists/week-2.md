@@ -63,9 +63,9 @@
 - [ ] `librealsense2` ARM64 build (Intel doesn't ship Jetson binaries; build from source or use the NVIDIA-prepared package)
 - [ ] `ros-humble-realsense2-camera` install
 - [ ] D456 standalone smoke test via `realsense-viewer` (plug D456 in, expect depth + RGB streams)
-- [ ] Clone `unilidar_sdk2` from Unitree GitHub, build per their README
-- [ ] Clone `unitree_lidar_ros2` (discodyer fork), `colcon build`, source the workspace
-- [ ] L2 standalone test (when LiDAR + 12V wall adapter + ethernet ready) → point cloud in rviz2
+- [x] Clone `unilidar_sdk2` from Unitree GitHub (`unitreerobotics/unilidar_sdk2`), build the C++ SDK ✅ 2026-05-17
+- [x] Build bundled `unitree_lidar_ros2` package via `colcon build --packages-select unitree_lidar_ros2` ✅ 2026-05-17. Launch params + topics captured in [`../setup-network.md`](../setup-network.md).
+- [ ] L2 standalone test (when LiDAR + 12V wall adapter + ethernet ready) → `ros2 launch unitree_lidar_ros2 launch.py` → point cloud in rviz2
 
 ### SLAM stack (eval phase)
 - [ ] Clone POINT-LIO (rosbag replay first — no live LiDAR needed)

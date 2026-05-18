@@ -25,6 +25,43 @@ JetPack uses systemd predictable names, not `wlan0`/`eth0`:
 - WiFi 5 module (built into P3766) — connecting + signal verification
 - Optional: mDNS / Avahi for hostname-based access
 
+## Unitree L2 — confirmed launch params (from unitree_lidar_ros2/launch/launch.py)
+
+After building `unilidar_sdk2` on the Jetson (verified 2026-05-17), the bundled ROS 2 wrapper hardcodes these defaults — match the network plan to these:
+
+| Param | Value | Notes |
+|-------|-------|-------|
+| `lidar_ip` | `192.168.1.62` | L2 default per Unitree user manual |
+| `lidar_port` | `6101` | L2 → Jetson UDP |
+| `local_ip` | `192.168.1.2` | Jetson `enP8p1s0` must be set to this |
+| `local_port` | `6201` | Jetson receive UDP |
+| `cloud_topic` | `/unilidar/cloud` | point cloud out |
+| `imu_topic` | `/unilidar/imu` | IMU out (~250 Hz) |
+| `cloud_frame` | `unilidar_lidar` | TF frame for URDF |
+| `imu_frame` | `unilidar_imu` | TF frame for URDF |
+| `cloud_scan_num` | 18 | L2 vertical scan count |
+| `range_min` / `range_max` | 0 / 100 m | L2 working range |
+| `work_mode` | 0 | UDP mode (1 = serial) |
+
+Launch command (once L2 is on the network + Jetson static IP set):
+```bash
+ros2 launch unitree_lidar_ros2 launch.py
+```
+
+Auto-spawns rviz2 with `view.rviz` config.
+
+### POINT-LIO ROS 2 integration
+
+When wiring POINT-LIO (Phase 2), set its YAML to subscribe:
+- `lid_topic: /unilidar/cloud`
+- `imu_topic: /unilidar/imu`
+
+### URDF frame mapping
+
+When `nova_description` URDF is written (Phase 1+), link these frames to the L2 mount point on the chassis:
+- `unilidar_lidar` — point cloud origin
+- `unilidar_imu` — IMU origin (small offset from LiDAR origin per L2 datasheet)
+
 ---
 
 ## First-boot WiFi / DNS gotchas (Jetson Orin Nano + JetPack 6.2.1)
