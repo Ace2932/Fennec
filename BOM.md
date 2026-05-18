@@ -58,7 +58,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 | XT60 plug + high-current switch | $15 | ✅ Ordered |
 | Lighted rocker switch 12V | $5 | ✅ Ordered |
 | Mini digital voltmeter | $10 | ✅ Ordered |
-| ~~XL4016 12A buck (×2)~~ | $30 | ⚠️ Already ordered — relegated to spares (8A cont. inadequate for servo rails). |
+| ~~XL4016 12A buck (×2)~~ | $0 | ↩️ **Returned for refund 2026-05-18** (8A cont. inadequate for walking-gait + impact transients; superseded by Pololu D42V110-class). $30 recovered. |
 | XL6009 buck-boost | $10 | ✅ Owned — spare, no allocated role |
 | **Pololu D42V110F7 — 7.5V leg rail (10A typ @ 42V Vin)** | **$60** | 🆕 Order. Output 7.5V (within STS3215 6-8.4V range). 12-60V Vin range — actually 7.6V min Vin per page. Drives 8× femur/tibia STS3215 (19kg). Derates at our 14.8V Vin; bulk caps at 4 star injection points absorb 25-40A impact transients. |
 | **Pololu D42V110F12 — 12V hip-only rail (9A typ @ 42V Vin)** | **$60** | 🆕 Order. Drives 4× hip STS3215 (30kg) **only** — L2 LiDAR moved to dedicated buck below to leave headroom (rail margin was sub-1× under combined load at 14.8V Vin). 12-60V Vin. |
@@ -306,9 +306,9 @@ Post-Jetson-flash install list (Phase 1):
 | **74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 |
 | **Subtotal — committed** | **~$343** | $85 on order, $258 still to order |
 
-Savings since v3.4: −$13 (XT60 leads via Ovonic kit), −$15 (Magigoo → Bambu liquid glue). Total dropped $365 → $343.
+Savings since v3.4: −$13 (XT60 leads via Ovonic kit), −$15 (Magigoo → Bambu liquid glue), −$30 (**XL4016 ×2 returned for refund 2026-05-18** — no longer sunk). Total dropped $365 → $343 committed + $30 recovered from owned bucket.
 
-Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not refunded. New PCB v6 design cost (PCBWay) absorbs the v5.2b $60 line.
+PCB note: new v6 design cost (PCBWay) absorbs the v5.2b $60 line.
 
 ### Deferred (order when you actually need them)
 
@@ -326,10 +326,10 @@ Sunk cost note: XL4016 ×2 ($30) already ordered — moved to spares bin, not re
 
 ### Project total estimate
 
-- **Already-owned/ordered:** ~$2,650 (XL4016 sunk) + ~$85 new orders just placed (608AC + bag + E-stop) = ~$2,735
-- **Committed net adds (remaining):** ~$258
-- **Realistic total spend:** **~$2,993**
-- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,740**
+- **Already-owned/ordered:** ~$2,620 (XL4016 ×2 returned for $30 refund) + ~$85 new orders (608AC + bag + E-stop) + $23 network bundle = ~$2,728
+- **Committed net adds (remaining to order):** ~$235
+- **Realistic total spend:** **~$2,963** (was $2,993 — saved $30 on XL4016 return)
+- **Grant ask with buffer (~25% for reprints, shipping batches, contingency):** **~$3,705**
 
 ---
 

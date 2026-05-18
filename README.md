@@ -300,7 +300,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 | Sensors (stock Nova) | ~$76 |
 | Filament + Bambu accessories | ~$700 (− Magigoo via Bambu liquid glue substitution) |
 | Wiring + consumables | ~$80 |
-| **Realistic total** | **~$2,993** (v3.4: XT60 via Ovonic + Bambu glue substitution save $28) |
+| **Realistic total** | **~$2,963** (v3.4: XT60 via Ovonic, Bambu glue, XL4016 ×2 return save $58 total) |
 
 ---
 
@@ -485,6 +485,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-17 | **Background research pass committed.** `docs/research/2026-05-17-notes.md` consolidates 14 topics: Unitree L2 SDK (use official, drop discodyer fork), POINT-LIO ROS 2 fork (dfloreaa), librealsense2 via jetsonhacks prebuilt modules, STS3215 libraries for Teensy, 74HC125 wiring, INA226 + LM393 design, MAXN_SUPER clocks verified (1.7 GHz / 1020 MHz), OpenVLA feasibility on 8GB. **Two safety/correctness fixes applied:** (a) **ANL → Class T 30A fuse** (LiPo needs 20 kA AIC, ANL only 6 kA), (b) **NovaSM3 repo URL corrected** to `cguweb-com/Arduino-Projects/Nova-SM3` (the old `SovGVD/NovaSM3` returns 404). |
 | 2026-05-17 | **Unitree L2 stack built green on Jetson.** Cloned `unitreerobotics/unilidar_sdk2`, built C++ SDK + `unitree_lidar_ros2` ROS 2 wrapper. `colcon build` clean. Confirmed launch params + topics: `/unilidar/cloud` (cloud_scan_num: 18), `/unilidar/imu`, default IPs match BOM §5 (LiDAR 192.168.1.62, target 192.168.1.2 port 6101). Topic/frame mapping captured in [`docs/setup-network.md`](./docs/setup-network.md) for POINT-LIO + URDF integration. |
 | 2026-05-17 | Network bundle ordered: gigabit 5-port unmanaged switch (TP-Link LS105G / NETGEAR GS305) + Cable Matters 10 Gbps snagless Cat 6 × 2-3 (1ft). $23 spend. Will unblock L2 standalone test via `ros2 launch unitree_lidar_ros2 launch.py` once delivered (~2 days). |
+| 2026-05-18 | **XL4016 ×2 returned for $30 refund.** Originally specced in v3.0 BOM as the servo-rail buck pair. v3.2 audit caught the 8A continuous limit being inadequate for walking-gait + impact transients on either the 7.5V leg rail or the 12V hip rail — replaced with Pololu D42V110-class modules. XL4016 was kept in spares bin until now; return path cleaner. Realistic total $2,993 → $2,963. |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 
