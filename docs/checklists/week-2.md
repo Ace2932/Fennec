@@ -72,8 +72,8 @@
   - rviz2 in launch.py auto-spawn fails over SSH (no X11) — expected, can run rviz2 separately when display available or skip via launch arg.
 
 ### SLAM stack (eval phase)
-- [ ] Clone POINT-LIO (rosbag replay first — no live LiDAR needed)
-- [ ] Clone RTAB-Map (apt install or build from source)
+- [x] Clone POINT-LIO ROS 2 fork (`dfloreaa/point_lio_ros2`) — ✅ 2026-05-19. `colcon build --symlink-install --packages-select point_lio` finished green in 1:42 (warnings only, no errors). Executable: `pointlio_mapping`. L2-specific launch: `mapping_unilidar_l2.launch.py` + config `unilidar_l2.yaml` (lid_topic `/unilidar/cloud`, imu_topic `/unilidar/imu`, scan_line 18, imu_time_inte 0.004 = 250 Hz). **Runtime gotcha:** `/unilidar/imu` not publishing due to unitree_lidar_ros2 wrapper bug (per earlier finding). For first runtime test, set `imu_en: false` in `unilidar_l2.yaml` for LiDAR-only mode, OR fix the wrapper bridge, OR route D456 IMU (needs extrinsic calibration).
+- [ ] Clone RTAB-Map (apt install: `sudo apt install -y ros-humble-rtabmap-ros`)
 - [ ] Pull example `unitree_lidar_ros2` rosbags from upstream for replay testing
 
 ---
