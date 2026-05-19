@@ -2,14 +2,30 @@
 
 PlatformIO project for the Teensy 4.1 bus master (Pattern B per BOM v3.3).
 
-## Compile-green target
+## Compile-green target ✅ verified 2026-05-19
 
 ```bash
 cd firmware/teensy/firmware
-pio run
+~/.platformio/penv/bin/pio run
 ```
 
-On first build, PlatformIO will fetch `micro_ros_platformio` (~2-3 min). Subsequent builds are fast.
+Mac build path uses `~/.platformio/penv/bin/pio` (canonical pip-installed location). The brew `platformio` binary works for Arduino-only builds but micro-ROS in lib_deps breaks on Mac due to missing ROS dev libs + Python 3.14 strictness. **micro-ROS lib_deps is commented out** in `platformio.ini` and gated behind `#ifdef NOVA_USE_MICRO_ROS` in `src/main.cpp` — reinstate both when building on the Jetson where ROS 2 Humble's dev libs are already in place.
+
+### First Mac build (one-time)
+
+```bash
+brew install cmake               # micro-ROS needs cmake even in pure-Arduino mode for some deps
+python3 -m venv ~/.platformio/penv
+~/.platformio/penv/bin/pip install --upgrade platformio
+```
+
+After that, `pio run` works.
+
+### Build size baseline (2026-05-19 skeleton)
+
+- Flash: 12.8 KB code + 4 KB data → ~8.1 MB free (of 8 MB total)
+- RAM1: 4.9 KB vars + 10.3 KB code → 487 KB free
+- RAM2: 12.4 KB → 512 KB free
 
 ## Upload
 

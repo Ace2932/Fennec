@@ -80,20 +80,20 @@
 
 ## 3. Teensy firmware skeleton (compile-green target)
 
-- [ ] On Mac: install PlatformIO VS Code extension
-- [ ] Clone `micro-ROS/micro_ros_platformio` to `~/code/`
-- [ ] Create new PlatformIO project: `~/code/nova-teensy-firmware`
-  - Board: `teensy41`
-  - Framework: `arduino`
-  - Library deps: micro-ROS for Teensy
-- [ ] Write firmware skeleton per [`../../firmware/teensy/README.md`](../../firmware/teensy/README.md):
-  - micro-ROS client setup over USB-CDC
-  - Topic publishers: `/joint_states`, `/diagnostics`, `/estop`, `/battery_low`
-  - Topic subscriber: `/joint_commands`
-  - Real-time loop scaffold @ 200 Hz (no actual servo I/O yet)
-  - 74HC125 OE pin GPIO scaffolding (no actual bus reads/writes yet)
-- [ ] Compile-green (no servo hardware to test against yet)
-- [ ] Flash to Teensy 4.1 over USB, verify it enumerates as `/dev/cu.usbmodem*` from Mac
+- [x] PlatformIO VS Code extension + brew CLI installed ✅
+- [x] Project scaffolded at `firmware/teensy/firmware/` inside the main repo ✅ 2026-05-19
+  - Board: `teensy41`, framework: `arduino`
+  - Pin map matches `firmware/teensy/README.md` + `hardware/pcb-mods/README.md`
+  - 74HC125 OE GPIO scaffolding (TX=6, RX=5)
+  - Bus UART: Serial2 (RX=7, TX=8 — avoid Serial1's known half-duplex issue)
+  - INA226 I²C: SDA=18, SCL=19 (placeholder)
+  - E-stop NC sense: pin 2 INPUT_PULLUP
+  - Battery-low (13.0V comparator): pin 3 INPUT_PULLDOWN
+  - 1 Hz LED heartbeat + USB-CDC log line
+- [x] **Compile-green ✅ 9.58 s** — Flash 12.8 KB / 8 MB free, RAM1 487 KB free, RAM2 512 KB free. Plenty of headroom for adding micro-ROS + INA226 + SCServo SDK port.
+- [x] micro-ROS lib_deps **gated behind `NOVA_USE_MICRO_ROS`** — Mac build path breaks on Python 3.14 + missing ROS dev libs. Reinstate on Jetson when wiring up live tests. Documented in `firmware/teensy/firmware/README.md`.
+- [ ] Flash to Teensy 4.1 over USB, verify it enumerates as `/dev/cu.usbmodem*` from Mac, observe USB-CDC heartbeat
+- [ ] (Future session) Move build to Jetson + enable `NOVA_USE_MICRO_ROS` + run micro-ROS agent + verify topic plumbing
 
 ---
 
