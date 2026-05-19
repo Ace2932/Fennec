@@ -1,6 +1,6 @@
 # NovaSM3 Quadruped Build — BOM v3.4 (Committed)
 
-**Last updated:** May 16, 2026
+**Last updated:** May 19, 2026
 **Supersedes:** BOM v3.3
 **Status:** v1 scope narrowed to **quadruped only** (12 servos active). Arm (6 STS3215) demoted to Phase 4 future work; bus IDs 13-18 + arm-rail buck footprint reserved on PCB redesign. Power rails redesigned around Pololu modules after XL4016 capacity audit. v3.4 split L2 LiDAR off the hip rail onto a dedicated D24V22F12 buck — combined hip+L2 load was margin-thin at the F12's 9A typ @ 42V Vin (derates further at 14.8V). Full safety scope: LVC alarm + E-stop + INA226 per-rail telemetry + MOSFET hard-cutoff. **Bus master: Pattern B is v1 default** — Teensy 4.1 UART → 74HC125 half-duplex driver → bus. Pattern A (FE-URT-1 → bus) kept as bench/debug fallback via solder bridge.
 
@@ -159,8 +159,8 @@ Switch can be pulled out of its case to save ~60% volume inside the chassis if n
 | M3/M4/M5/M6 stainless hex screw kit | $35 | ✅ Ordered |
 | 8x16x5mm ball bearings × 8 | $15 | ✅ Ordered |
 | Standoffs, zip ties, heat shrink (assorted) | $30 | ✅ Ordered |
-| **Threadlocker (Loctite 243 blue)** | **$8** | 🆕 Order |
-| **Electrical tape + Kapton tape** | **$10** | 🆕 Order |
+| Threadlocker (Loctite 243 blue) | $8 | ✅ Ordered |
+| Electrical tape + Kapton tape | $10 | ✅ Ordered |
 
 ---
 
@@ -297,14 +297,14 @@ Post-Jetson-flash install list (Phase 1):
 | **Pololu D24V22F12 (L2 LiDAR dedicated, v3.4)** | **$19** | 🆕 |
 | Gigabit switch + Cable Matters Cat 6 ×2-3 (1ft) | $23 | ✅ Ordered 2026-05-17 |
 | LC filter parts (inductor + cap) | $3 | 🆕 To order (DigiKey bundle) |
-| Threadlocker + tape | $18 | 🆕 |
+| Threadlocker + tape | $18 | ✅ Ordered |
 | ~~Magigoo PA~~ → Bambu liquid glue | $0 | ✅ Using existing |
 | ISDT 608AC | $60 | ✅ Ordered |
 | LiPo safe bag | $15 | ✅ Ordered |
 | ~~XT60 jumper + charging lead~~ | $0 | ✅ Supplied with Ovonic kit |
 | E-stop (Mxuteuk HB2-ES544) | $10 | ✅ Ordered |
 | **74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 |
-| **Subtotal — committed** | **~$343** | $85 on order, $258 still to order |
+| **Subtotal — committed** | **~$343** | $103 on order, $240 still to order |
 
 Savings since v3.4: −$13 (XT60 leads via Ovonic kit), −$15 (Magigoo → Bambu liquid glue), −$30 (**XL4016 ×2 returned for refund 2026-05-18** — no longer sunk). Total dropped $365 → $343 committed + $30 recovered from owned bucket.
 
