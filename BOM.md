@@ -33,7 +33,7 @@
 | FE-URT-1 USB→TTL Feetech interface | $20 | ✅ Ordered |
 | **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order (DigiKey bundle) — **populated on PCB; v1 default active**. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
 | **E-stop button (Mxuteuk HB2-ES544, 22mm latching, 2× NC)** | $10 | ✅ Ordered |
-| **INA226 current/voltage monitor × 3** | $9 | 🆕 Order (DigiKey bundle) — one per active rail (leg 7.5V, hip 12V, Jetson 12V). Optional 4th on L2 12V rail if telemetry budget allows. I²C to Teensy. |
+| **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.5V, hip 12V, Jetson 12V). Optional 4th on L2 12V rail if telemetry budget allows. I²C to Teensy. **Sourcing TBD** — $9/3 = $3/each implies Amazon/AliExpress breakout modules. DigiKey bare IC is ~$3 each but requires supporting passives + shunt populated on PCB v6 (~$5/each loaded); Adafruit breakout via DigiKey is ~$10/each (~$30 for 3). Decide once PCB v6 schematic locks in: footprint the IC → DigiKey bundle; header-mount the breakout → Amazon. |
 | **Comparator + MOSFET parts for hard-cutoff at 12.4V + graceful-shutdown at 13.0V** | $13 | 🆕 Order (DigiKey bundle) — two comparator stages. 13.0V: drives Teensy GPIO → Jetson clean shutdown. 12.4V: autonomous battery-feed cutoff if Jetson didn't shut down. ~$3 extra for the second comparator + divider. |
 
 **Feetech bus architecture: Pattern B is v1 default.**
@@ -303,7 +303,7 @@ Post-Jetson-flash install list (Phase 1):
 | LiPo safe bag | $15 | ✅ Ordered |
 | ~~XT60 jumper + charging lead~~ | $0 | ✅ Supplied with Ovonic kit |
 | E-stop (Mxuteuk HB2-ES544) | $10 | ✅ Ordered |
-| **74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 DigiKey bundle |
+| **74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 DigiKey bundle (INA226 source TBD — see §2 note) |
 | **Subtotal — committed** | **~$343** | $103 on order, $240 still to order |
 
 Savings since v3.4: −$13 (XT60 leads via Ovonic kit), −$15 (Magigoo → Bambu liquid glue), −$30 (**XL4016 ×2 returned for refund 2026-05-18** — no longer sunk). Total dropped $365 → $343 committed + $30 recovered from owned bucket.
