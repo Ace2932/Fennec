@@ -14,9 +14,9 @@
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
-#include <sensor_msgs/msg/joint_state.h>
-#include <std_msgs/msg/bool.h>
-#include <diagnostic_msgs/msg/diagnostic_array.h>
+#include <std_msgs/msg/int32.h>
+// Full topic contract (joint_state, estop, battery, diagnostics) deferred —
+// heartbeat-only bring-up to validate USB transport + agent round-trip.
 #endif
 
 // ---------------- Pinout ----------------
@@ -66,6 +66,17 @@ elapsedMillis heartbeat_ms;
 const uint32_t TICK_PERIOD_MS = 1000 / NOVA_LOOP_HZ;
 const uint32_t HEARTBEAT_PERIOD_MS = 1000;
 
+#ifdef NOVA_USE_MICRO_ROS
+rcl_publisher_t heartbeat_pub;
+std_msgs__msg__Int32 heartbeat_msg;
+rclc_support_t support;
+rcl_allocator_t allocator;
+rcl_node_t node;
+
+#define RCCHECK(fn) { rcl_ret_t rc = fn; if (rc != RCL_RET_OK) { /* hold LED on to flag init fail */ digitalWrite(LED_PIN, HIGH); while(1) { delay(100); } } }
+#define RCSOFTCHECK(fn) { rcl_ret_t rc = fn; (void)rc; }
+#endif
+
 void setup() {
   // GPIO directions
   pinMode(BUS_OE_TX_PIN, OUTPUT);
@@ -82,23 +93,28 @@ void setup() {
   Serial.begin(115200);
 
 #ifdef NOVA_USE_MICRO_ROS
-  // TODO: micro-ROS node + publishers + subscribers + executor + timer setup.
-  // See firmware/teensy/README.md for the topic contract.
-  // set_microros_serial_transports(Serial);
+  set_microros_serial_transports(Serial);
+  delay(2000);  // give agent time to attach
+
+  allocator = rcl_get_default_allocator();
+  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  RCCHECK(rclc_node_init_default(&node, "nova_teensy", "", &support));
+  RCCHECK(rclc_publisher_init_default(
+      &heartbeat_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "heartbeat"));
+  heartbeat_msg.data = 0;
 #endif
 
-  // First-boot info to USB-CDC
+#ifndef NOVA_USE_MICRO_ROS
+  // First-boot info to USB-CDC (only when not micro-ROS — agent owns USB)
   delay(500);
   Serial.println("[nova-teensy] boot");
   Serial.print("  loop hz: ");      Serial.println(NOVA_LOOP_HZ);
   Serial.print("  bus baud: ");     Serial.println(NOVA_BUS_BAUD);
-  Serial.println("  micro-ROS: "
-#ifdef NOVA_USE_MICRO_ROS
-                 "ENABLED"
-#else
-                 "disabled (build with -D NOVA_USE_MICRO_ROS on Jetson)"
+  Serial.println("  micro-ROS: disabled (build with -D NOVA_USE_MICRO_ROS on Jetson)");
 #endif
-                 );
 }
 
 void loop() {
@@ -126,7 +142,12 @@ void loop() {
   if (heartbeat_ms >= HEARTBEAT_PERIOD_MS) {
     heartbeat_ms = 0;
     digitalWrite(LED_PIN, !digitalRead(LED_PIN));   // 1 Hz LED
+#ifdef NOVA_USE_MICRO_ROS
+    heartbeat_msg.data++;
+    RCSOFTCHECK(rcl_publish(&heartbeat_pub, &heartbeat_msg, NULL));
+#else
     Serial.print("[nova-teensy] alive t=");
     Serial.println(millis());
+#endif
   }
 }
