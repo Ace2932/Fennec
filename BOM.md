@@ -31,10 +31,10 @@
 | Arduino Nano (ELEGOO 3-pack, CH340) | $15 | ✅ Ordered |
 | ~~NovaSM3 PCB v5.2b~~ → **NovaSM3 PCB v6 (custom redesign)** | $60 (est.) | 🆕 Design + order from PCBWay — see [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md) for feature set |
 | FE-URT-1 USB→TTL Feetech interface | $20 | ✅ Ordered |
-| **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — **populated on PCB; v1 default active**. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
+| **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order (DigiKey bundle) — **populated on PCB; v1 default active**. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
 | **E-stop button (Mxuteuk HB2-ES544, 22mm latching, 2× NC)** | $10 | ✅ Ordered |
-| **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.5V, hip 12V, Jetson 12V). Optional 4th on L2 12V rail if telemetry budget allows. I²C to Teensy. |
-| **Comparator + MOSFET parts for hard-cutoff at 12.4V + graceful-shutdown at 13.0V** | $13 | 🆕 Order — two comparator stages. 13.0V: drives Teensy GPIO → Jetson clean shutdown. 12.4V: autonomous battery-feed cutoff if Jetson didn't shut down. ~$3 extra for the second comparator + divider. |
+| **INA226 current/voltage monitor × 3** | $9 | 🆕 Order (DigiKey bundle) — one per active rail (leg 7.5V, hip 12V, Jetson 12V). Optional 4th on L2 12V rail if telemetry budget allows. I²C to Teensy. |
+| **Comparator + MOSFET parts for hard-cutoff at 12.4V + graceful-shutdown at 13.0V** | $13 | 🆕 Order (DigiKey bundle) — two comparator stages. 13.0V: drives Teensy GPIO → Jetson clean shutdown. 12.4V: autonomous battery-feed cutoff if Jetson didn't shut down. ~$3 extra for the second comparator + divider. |
 
 **Feetech bus architecture: Pattern B is v1 default.**
 - **Pattern B (v1 active):** Teensy 4.1 hardware UART → 74HC125 half-duplex driver → 12-servo TTL bus. Bare-metal real-time. Jetson sends joint targets via micro-ROS over USB; Teensy translates to bus writes at 200-500 Hz. Survives Jetson restarts, kernel preemption, CUDA stalls, journald flushes — none of which affect bus servicing. Solder bridge `JP_BUS_MASTER` defaults to B.
@@ -66,7 +66,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 | **Pololu D42V55F12 — 12V Jetson rail** | **$32** | 🆕 Order — replaces deprecated D24V50F12. Derates to ~3A cont. at 14.8V Vin → ~1.4× headroom over Jetson MAXN 2.1A. Min Vin 12V → **LVC alarm at 13.2V**. Reverse-polarity protected. Find via Pololu D42V55Fx family page → 12V variant. |
 | **Pololu D42V55F7 — 7.5V arm rail (future)** | **$0** | ⚠️ **Footprint reserved on PCB v6; don't populate until Phase 4 arm install.** Output 7.5V (within STS3215 6-8.4V range). Estimated cost when ordered: ~$32. |
 | UBEC 5V/5A | $15 | ✅ Owned — 5V peripherals (Ethernet switch, fans, aux sensors) |
-| Bulk caps for rail injection points (1000 µF / 25V × 4) | $4 | 🆕 Order with electronics — soaks servo impact transients near point of load |
+| Bulk caps for rail injection points (1000 µF / 25V × 4) | $4 | 🆕 Order (DigiKey bundle) — soaks servo impact transients near point of load |
 | PCB terminals + misc boards | $8 | ✅ Ordered |
 | Dip switches + resistors + buttons | $8 | ✅ Ordered |
 
@@ -139,7 +139,7 @@ Note: Feetech bus is single-ended half-duplex TTL UART. 120 Ω differential term
 |------|-------|--------|
 | **Gigabit Ethernet switch (5-port)** — TP-Link LS105G or NETGEAR GS305 | **$15** | ✅ Ordered |
 | **Cable Matters 10Gbps Snagless Cat 6 — 1ft × 2-3** | **$8** | ✅ Ordered |
-| Small inductor + capacitor (LC filter on D24V22F12 output to L2) | $3 | 🆕 Order with electronics |
+| Small inductor + capacitor (LC filter on D24V22F12 output to L2) | $3 | 🆕 Order (DigiKey bundle) |
 
 **Topology:**
 ```
@@ -303,7 +303,7 @@ Post-Jetson-flash install list (Phase 1):
 | LiPo safe bag | $15 | ✅ Ordered |
 | ~~XT60 jumper + charging lead~~ | $0 | ✅ Supplied with Ovonic kit |
 | E-stop (Mxuteuk HB2-ES544) | $10 | ✅ Ordered |
-| **74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 |
+| **74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 DigiKey bundle |
 | **Subtotal — committed** | **~$343** | $103 on order, $240 still to order |
 
 Savings since v3.4: −$13 (XT60 leads via Ovonic kit), −$15 (Magigoo → Bambu liquid glue), −$30 (**XL4016 ×2 returned for refund 2026-05-18** — no longer sunk). Total dropped $365 → $343 committed + $30 recovered from owned bucket.
