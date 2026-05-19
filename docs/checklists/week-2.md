@@ -66,7 +66,7 @@
 - [x] D456 standalone smoke test ✅ 2026-05-18 — `rs-enumerate-devices` lists all 3 modules (Stereo, RGB, Motion). Motion Module shows Accel @ 400/200/100 Hz + Gyro @ 400/200 Hz.
 - [x] Clone `unilidar_sdk2` from Unitree GitHub (`unitreerobotics/unilidar_sdk2`), build the C++ SDK ✅ 2026-05-17
 - [x] Build bundled `unitree_lidar_ros2` package via `colcon build --packages-select unitree_lidar_ros2` ✅ 2026-05-17. Launch params + topics captured in [`../setup-network.md`](../setup-network.md).
-- [ ] L2 standalone test (when LiDAR + 12V wall adapter + ethernet ready) → `ros2 launch unitree_lidar_ros2 launch.py` → point cloud in rviz2
+- [x] L2 standalone test ✅ 2026-05-18: `ros2 launch unitree_lidar_ros2 launch.py` → `/unilidar/cloud` streaming at 12 Hz (5042 points/scan, frame_id `unilidar_lidar`). Wiring: L2 ↔ Cable Matters Cat 6 ↔ switch port ↔ Cat 6 ↔ Jetson `enP8p1s0` (192.168.1.2/24 static via `nmcli connection nova-lan`). 0.1 ms ping. L2 powered via included 12V wall adapter for this test. **Open followup:** `/unilidar/imu` topic advertised but no IMU UDP frames received from L2 — driver `initialize_type: 2` may need adjustment, or L2 firmware needs IMU enable. D456 IMU at 200 Hz covers EKF needs, so non-blocking. rviz2 in launch.py auto-spawn fails over SSH (no X11) — expected, can run rviz2 separately when display available.
 
 ### SLAM stack (eval phase)
 - [ ] Clone POINT-LIO (rosbag replay first — no live LiDAR needed)
