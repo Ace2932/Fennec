@@ -221,13 +221,135 @@ Long curl URLs get newline-broken by some terminal pasters. If `curl: no URL spe
 
 ---
 
+## 13. Intel RealSense D456 install (done 2026-05-18)
+
+Intel ships ARM64 binaries via their apt repo. Stock JetPack 6.2.2 kernel modules expose Color + Depth but **not the IMU streams** — must rebuild 3 in-tree driver modules with RealSense patches.
+
+### Step A — librealsense2 apt install
+
+```bash
+sudo apt install -y curl gnupg
+
+# Add Intel repo. Their signing key rotates — fetch current one direct from keyserver.
+sudo mkdir -p /etc/apt/keyrings
+sudo gpg --no-default-keyring --keyring /etc/apt/keyrings/librealsense.gpg --keyserver keyserver.ubuntu.com --recv-keys FB0B24895113F120
+sudo chmod 644 /etc/apt/keyrings/librealsense.gpg
+
+echo "deb [signed-by=/etc/apt/keyrings/librealsense.gpg] https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/librealsense.list
+
+sudo apt update
+sudo apt install -y librealsense2-utils librealsense2-dev
+```
+
+Verify D456 plugs in clean:
+```bash
+rs-enumerate-devices | head -20
+```
+
+At this point Color + Depth + Infrared streams work. **No IMU yet.**
+
+### Step B — IMU enablement via kernel module patch
+
+Two repos clone to `~/code/`:
+
+```bash
+mkdir -p ~/code && cd ~/code
+git clone https://github.com/jetsonhacks/jetson-orin-librealsense.git
+git clone https://github.com/jetsonhacks/jetson-orin-kernel-builder.git
+```
+
+#### B.1 Fetch kernel sources
+
+```bash
+cd ~/code/jetson-orin-kernel-builder
+./scripts/get_kernel_sources.sh
+```
+
+Downloads NVIDIA L4T BSP matching your running kernel (5.15.185-tegra for JP 6.2.2) → `/usr/src/kernel/kernel-jammy-src/`. Copies current `/boot/config-$(uname -r)` as `.config` baseline. ~5-10 min.
+
+#### B.2 Apply RealSense patches
+
+```bash
+cd ~/code/jetson-orin-librealsense/build
+./patch-for-realsense.sh
+```
+
+Applies 2 of 3 patches (the 3rd HID patch is intentionally skipped — already in-tree since L4T 5.15.148).
+
+#### B.3 Enable HID sensor modules in config
+
+```bash
+cd ~/code/jetson-orin-kernel-builder
+./scripts/edit_config_cli.sh    # opens make menuconfig
+```
+
+Use `/` (search) to find + jump to each. Press `M` to toggle to module:
+- `HID_SENSOR_HUB` (Device Drivers → HID support → Special HID drivers)
+- `HID_SENSOR_ACCEL_3D` (Device Drivers → Industrial I/O support → Accelerometers)
+- `HID_SENSOR_GYRO_3D` (Device Drivers → Industrial I/O support → Digital gyroscope sensors)
+
+Save → exit. Confirm:
+
+```bash
+grep -E "HID_SENSOR_HUB|HID_SENSOR_ACCEL_3D|HID_SENSOR_GYRO_3D" /usr/src/kernel/kernel-jammy-src/.config
+```
+
+All three should be `=m`.
+
+#### B.4 Compile modules
+
+```bash
+./scripts/make_kernel_modules.sh
+```
+
+~20-30 min on Orin Nano 6-core. Script auto-runs `make modules_install` + `depmod` at the end.
+
+#### B.5 Unplug D456, reboot, plug back in
+
+```bash
+sudo reboot
+# 90 sec wait
+ssh aiden@<ip>
+# plug D456 back into USB 3 (blue port)
+lsmod | grep hid_sensor
+rs-enumerate-devices | grep -A 5 "Motion Module"
+```
+
+Expected:
+- `lsmod` shows `hid_sensor_hub`, `hid_sensor_accel_3d`, `hid_sensor_gyro_3d`, `hid_sensor_iio_common`, `hid_sensor_trigger`, `uvcvideo`
+- `rs-enumerate-devices` Motion Module section shows Accel @ 400/200/100 Hz + Gyro @ 400/200 Hz
+
+### Step C — ROS 2 wrapper
+
+```bash
+sudo apt install -y ros-humble-realsense2-camera
+ros2 launch realsense2_camera rs_launch.py enable_color:=true enable_depth:=true enable_gyro:=true enable_accel:=true
+```
+
+Other session:
+```bash
+ros2 topic list | grep camera
+ros2 topic hz /camera/camera/color/image_raw       # ~30 Hz
+ros2 topic hz /camera/camera/depth/image_rect_raw  # ~30 Hz
+ros2 topic hz /camera/camera/accel/sample          # ~100 Hz default (settable to 400)
+ros2 topic hz /camera/camera/gyro/sample           # ~200 Hz default (settable to 400)
+```
+
+For unified IMU topic (single `/camera/camera/imu` at the higher of the two rates), add `unite_imu_method:=2` to the launch line. Most SLAM packages handle separate accel + gyro fine, so the unified topic is optional.
+
+### Verified 2026-05-18
+
+D456 firmware 5.15.0.2 / recommended 5.17.0.10 (firmware update deferred). All streams green at the rates above. Cost: ~$0 (kernel patch path is free, just CPU time).
+
+---
+
 ## Next (separate sessions — Phase 1 plan)
 
 - NVMe install + rootfs migration **(deferred — NAND shortage, see BOM §1; run from 128 GB microSD until prices recover)**
-- librealsense2 ARM64 build + `realsense2_camera`
-- unilidar_sdk2 + `unitree_lidar_ros2` (discodyer fork)
-- POINT-LIO and/or RTAB-Map
-- Sensor smoke tests via `realsense-viewer` + rviz2 with L2 cloud
+- unilidar_sdk2 + `unitree_lidar_ros2` (done 2026-05-17 — see status log)
+- POINT-LIO ROS 2 (dfloreaa fork) + RTAB-Map eval
+- Combined D456 + L2 + ROS 2 sensor stream test once switch + Cat6 arrive
+- D456 firmware update to 5.17.0.10 via `rs-fw-update` (low priority)
 
 ---
 

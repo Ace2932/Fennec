@@ -60,9 +60,10 @@
 - [ ] `ros2 doctor` review (run when convenient — warnings about network interfaces are typical, not blockers)
 
 ### Sensor SDKs
-- [ ] `librealsense2` ARM64 build (Intel doesn't ship Jetson binaries; build from source or use the NVIDIA-prepared package)
-- [ ] `ros-humble-realsense2-camera` install
-- [ ] D456 standalone smoke test via `realsense-viewer` (plug D456 in, expect depth + RGB streams)
+- [x] `librealsense2` ARM64 via Intel apt repo ✅ 2026-05-18 (Intel does ship ARM64 binaries via `librealsense.intel.com/Debian/apt-repo` — no source build needed). Key gotcha: Intel rotated the apt signing key (FB0B24895113F120), fetch from keyserver.ubuntu.com.
+- [x] **Kernel HID-sensor module patch path** for D456 IMU ✅ 2026-05-18. Stock JetPack 6.2.2 modules don't expose accel/gyro streams. Patched 3 in-tree drivers (uvc, IIO accel, IIO gyro) via [`jetson-orin-librealsense/build/patch-for-realsense.sh`](https://github.com/jetsonhacks/jetson-orin-librealsense) + rebuilt against L4T 36.5 sources via [`jetson-orin-kernel-builder`](https://github.com/jetsonhacks/jetson-orin-kernel-builder). Set `HID_SENSOR_HUB`, `HID_SENSOR_ACCEL_3D`, `HID_SENSOR_GYRO_3D` to `=m`. Full procedure in [`../setup-jetson.md`](../setup-jetson.md) §13.
+- [x] `ros-humble-realsense2-camera` install ✅ 2026-05-18
+- [x] D456 standalone smoke test ✅ 2026-05-18 — `rs-enumerate-devices` lists all 3 modules (Stereo, RGB, Motion). Motion Module shows Accel @ 400/200/100 Hz + Gyro @ 400/200 Hz.
 - [x] Clone `unilidar_sdk2` from Unitree GitHub (`unitreerobotics/unilidar_sdk2`), build the C++ SDK ✅ 2026-05-17
 - [x] Build bundled `unitree_lidar_ros2` package via `colcon build --packages-select unitree_lidar_ros2` ✅ 2026-05-17. Launch params + topics captured in [`../setup-network.md`](../setup-network.md).
 - [ ] L2 standalone test (when LiDAR + 12V wall adapter + ethernet ready) → `ros2 launch unitree_lidar_ros2 launch.py` → point cloud in rviz2
