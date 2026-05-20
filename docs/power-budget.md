@@ -211,6 +211,41 @@ Mapped into BOM §12 step 2:
 
 ---
 
+## Bench mobile setup (Phase 1 lidar-walk, pre-PCB-v6)
+
+For carrying the L2 + Jetson off-wall to record a real SLAM map before the PCB v6 onboard rails exist. Single-buck setup, **no servos involved**.
+
+```
+4S LiPo Ovonic 14.8V/6000 mAh  →  XL4016 buck (set Vout = 12.0 V)
+                                      ├── 5.5×2.5 mm barrel → Jetson
+                                      └── 5.5×2.1 mm barrel → L2 LiDAR
+```
+
+Load math:
+
+| Device | @ 12 V | Notes |
+|---|---|---|
+| Unitree L2 LiDAR | ~1.0 A (12 W) | motor + electronics + Ethernet |
+| Jetson Orin Nano Super (MAXN) | 2.0–2.5 A (24–30 W) | typical SLAM workload — wrapper + POINT-LIO + ROS 2 |
+| **Total at buck Vout** | **~3.0–3.5 A** | ~42 W |
+
+Buck input draw from LiPo @ 14.8 V nominal, ~90 % efficiency: **3.0 A average**.
+
+**Runtime estimate:** 6000 mAh / 3000 mA = **~2 hours** continuous. Way over the 30–60 s actually needed for a walking-map session.
+
+XL4016 8 A continuous rating vs ~3 A draw = 2.7× headroom; the buck's inductor stays cool, no thermal derating risk. Walking-gait transients (the original reason the XL4016 was dropped from BOM) are absent here — no servos. Fine for bench duty.
+
+Safety in this mode:
+
+- No 13.0 V / 12.4 V comparator chain — pack monitored by 608AC charger's LVC beep only. Watch the multimeter occasionally during the walk; pull at ≤14.0 V (≈3.5 V/cell, 20 % remaining).
+- No INA226 telemetry on these rails.
+- No MOSFET hard-cutoff — if a cell crashes, just unplug the XT60.
+- LiPo stays in the LiPo bag during the walk (carried as part of the rig). Never set the rig down on carpet.
+
+This setup is throwaway scaffolding for sensor bringup, **not the v1 power architecture**. Replace with PCB v6 onboard rails when boards arrive.
+
+---
+
 ## Future revisits
 
 | Trigger | Action |

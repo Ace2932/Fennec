@@ -1,0 +1,58 @@
+name: firmware-compile
+
+# Compile-only smoke check for the Teensy 4.1 firmware on every PR + push to
+# main. Uses PlatformIO with NOVA_USE_MICRO_ROS disabled — micro_ros_platformio
+# only builds cleanly on Python 3.10 + ROS dev libs, which the Mac dev path
+# doesn't have. The Arduino-only build still exercises all device-side code
+# (feetech protocol/bus skeletons, INA226 wiring, ISR tick) — only the ROS 2
+# pub/sub stubs are gated out, which is fine for catching real regressions
+# (typos, header-include breakage, ABI shifts in lib_deps).
+#
+# Jetson is where we run the full micro-ROS build before flashing. This CI
+# job is a fast (~3 min) pre-merge filter, not a substitute for the Jetson
+# build.
+
+on:
+  pull_request:
+    paths:
+      - 'firmware/teensy/firmware/**'
+      - '.github/workflows/firmware-compile.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'firmware/teensy/firmware/**'
+      - '.github/workflows/firmware-compile.yml'
+
+jobs:
+  arduino-only-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache PlatformIO core + packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/teensy/firmware/platformio.ini') }}
+          restore-keys: |
+            pio-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Build (Arduino-only CI env)
+        working-directory: firmware/teensy/firmware
+        run: pio run -e teensy41_ci
+
+      - name: Report size
+        working-directory: firmware/teensy/firmware
+        if: success()
+        run: pio run -e teensy41_ci --target size
