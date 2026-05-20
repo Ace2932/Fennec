@@ -19,6 +19,7 @@
 #include <rclc/executor.h>
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/bool.h>
+#include <std_msgs/msg/float32_multi_array.h>
 #include <sensor_msgs/msg/joint_state.h>
 // Joint count = 12 (4 legs × 3 joints). Names/frame_id intentionally empty
 // in skeleton — Nova URDF wiring lands once gait controller is on Jetson.
@@ -90,9 +91,11 @@ void read_ina226_stub() {
 // ---------------- Real-time loop ----------------
 elapsedMillis heartbeat_ms;
 elapsedMillis stats_ms;
+elapsedMillis power_rails_ms;
 const uint32_t TICK_PERIOD_US = 1000000UL / NOVA_LOOP_HZ;
 const uint32_t HEARTBEAT_PERIOD_MS = 1000;
 const uint32_t STATS_PERIOD_MS = 1000;
+const uint32_t POWER_RAILS_PERIOD_MS = 100;    // 10 Hz — matches Phase 1 spec
 
 // IntervalTimer ISR drives the tick. Handler in loop() measures
 // ISR-fire → handler-entry latency = pure scheduling jitter (target: a
@@ -135,6 +138,7 @@ rcl_publisher_t joint_states_pub;
 rcl_publisher_t estop_pub;
 rcl_publisher_t battery_low_pub;
 rcl_publisher_t safety_state_pub;
+rcl_publisher_t power_rails_pub;
 rcl_publisher_t joint_cmd_rx_pub;
 rcl_subscription_t joint_cmd_sub;
 rcl_subscription_t safety_clear_sub;
@@ -148,6 +152,7 @@ std_msgs__msg__Int32 tick_missed_msg;
 std_msgs__msg__Int32 safety_state_msg;
 std_msgs__msg__Int32 joint_cmd_rx_msg;
 std_msgs__msg__Bool  safety_clear_msg;
+std_msgs__msg__Float32MultiArray power_rails_msg;
 std_msgs__msg__Bool  estop_msg;
 std_msgs__msg__Bool  battery_low_msg;
 sensor_msgs__msg__JointState joint_states_msg;
@@ -201,6 +206,12 @@ inline void joint_state_bind(sensor_msgs__msg__JointState* m,
 // logic against the real GPIO reads.
 nova::SafetyFSM safety_fsm;
 volatile bool safety_clear_request = false;
+
+// Power-rails snapshot buffer — 9 floats (V, A, W per rail × leg/hip/jetson).
+// Filled every POWER_RAILS_PERIOD_MS from INA226 Rail samples regardless of
+// micro-ROS build; the Float32MultiArray publish itself is ifdef'd.
+constexpr size_t POWER_RAILS_FIELDS = 9;
+float power_rails_data[POWER_RAILS_FIELDS];
 
 #ifdef NOVA_USE_MICRO_ROS
 void safety_clear_callback(const void* msgin) {
@@ -305,6 +316,23 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
       "safety_clear"));
+  RCCHECK(rclc_publisher_init_default(
+      &power_rails_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+      "power_rails"));
+  // Bind the Float32MultiArray data sequence to our static buffer. Layout
+  // dim sequence stays empty (consumers read by index per the documented
+  // order: leg_v, leg_a, leg_w, hip_v, hip_a, hip_w, jetson_v, jetson_a,
+  // jetson_w).
+  power_rails_msg.data.data     = power_rails_data;
+  power_rails_msg.data.size     = POWER_RAILS_FIELDS;
+  power_rails_msg.data.capacity = POWER_RAILS_FIELDS;
+  power_rails_msg.layout.dim.data     = NULL;
+  power_rails_msg.layout.dim.size     = 0;
+  power_rails_msg.layout.dim.capacity = 0;
+  power_rails_msg.layout.data_offset  = 0;
+  for (size_t i = 0; i < POWER_RAILS_FIELDS; i++) power_rails_data[i] = 0.0f;
   RCCHECK(rclc_publisher_init_default(
       &joint_cmd_rx_pub,
       &node,
@@ -442,6 +470,29 @@ void loop() {
 #else
     Serial.print("[nova-teensy] alive t=");
     Serial.println(millis());
+#endif
+  }
+
+  if (power_rails_ms >= POWER_RAILS_PERIOD_MS) {
+    power_rails_ms = 0;
+    // Pull the latest per-rail samples into the Float32MultiArray buffer.
+    // Order: leg_v leg_a leg_w hip_v hip_a hip_w jetson_v jetson_a jetson_w
+    // (4th L2 rail intentionally omitted from this msg even when
+    // NOVA_INA226_L2 is defined — host-side consumers expect 9-float layout).
+    const nova::RailSample& s_leg    = rail_leg.sample();
+    const nova::RailSample& s_hip    = rail_hip.sample();
+    const nova::RailSample& s_jetson = rail_jetson.sample();
+    power_rails_data[0] = s_leg.bus_voltage_v;
+    power_rails_data[1] = s_leg.current_a;
+    power_rails_data[2] = s_leg.power_w;
+    power_rails_data[3] = s_hip.bus_voltage_v;
+    power_rails_data[4] = s_hip.current_a;
+    power_rails_data[5] = s_hip.power_w;
+    power_rails_data[6] = s_jetson.bus_voltage_v;
+    power_rails_data[7] = s_jetson.current_a;
+    power_rails_data[8] = s_jetson.power_w;
+#ifdef NOVA_USE_MICRO_ROS
+    RCSOFTCHECK(rcl_publish(&power_rails_pub, &power_rails_msg, NULL));
 #endif
   }
 
