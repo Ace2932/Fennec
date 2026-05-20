@@ -69,14 +69,27 @@ elapsedMillis stats_ms;
 const uint32_t TICK_PERIOD_US = 1000000UL / NOVA_LOOP_HZ;
 const uint32_t HEARTBEAT_PERIOD_MS = 1000;
 const uint32_t STATS_PERIOD_MS = 1000;
-uint32_t prev_tick_us = 0;
 
-// Tick-jitter histogram. Bucket width 100 us, 100 buckets = 0..10 ms,
-// last bucket = overflow. Used for per-window p99 — reset each report.
-constexpr int      HIST_BUCKETS    = 101;
-constexpr uint32_t HIST_BUCKET_US  = 100;
+// IntervalTimer ISR drives the tick. Handler in loop() measures
+// ISR-fire → handler-entry latency = pure scheduling jitter (target: a
+// few µs, far under the <100 µs p99 acceptance gate).
+IntervalTimer tick_timer;
+volatile bool     tick_pending = false;
+volatile uint32_t tick_isr_us  = 0;     // micros() captured in ISR
+volatile uint32_t tick_missed  = 0;     // count of ISR fires that found tick_pending already set
+
+void tick_isr() {
+  if (tick_pending) tick_missed++;
+  tick_pending = true;
+  tick_isr_us  = micros();
+}
+
+// Histogram is per response-latency in microseconds. Bucket width 2 µs,
+// 64 buckets = 0..128 µs, last bucket = overflow. Reset each report.
+constexpr int      HIST_BUCKETS    = 64;
+constexpr uint32_t HIST_BUCKET_US  = 2;
 uint32_t hist[HIST_BUCKETS];
-uint32_t max_period_us = 0;
+uint32_t max_latency_us  = 0;
 uint32_t tick_count_window = 0;
 
 #ifdef NOVA_USE_MICRO_ROS
@@ -139,7 +152,7 @@ inline void joint_state_bind(sensor_msgs__msg__JointState* m,
 
 // Walk histogram cumulatively, return bucket-midpoint us where cumulative
 // count first exceeds 99% of total. Overflow bucket reports HIST_BUCKETS *
-// HIST_BUCKET_US (i.e. >= 10 ms).
+// HIST_BUCKET_US (i.e. >= 128 µs).
 uint32_t compute_p99_us() {
   if (tick_count_window == 0) return 0;
   uint32_t target = (tick_count_window * 99 + 99) / 100;  // ceil(0.99 * n)
@@ -241,22 +254,31 @@ void setup() {
   Serial.print("  bus baud: ");     Serial.println(NOVA_BUS_BAUD);
   Serial.println("  micro-ROS: disabled (build with -D NOVA_USE_MICRO_ROS on Jetson)");
 #endif
+
+  // Start hardware-driven tick. Must come after all init so the ISR
+  // doesn't fire into half-built state. Teensy 4.x IntervalTimer takes
+  // microseconds; uses one of the 4 free GPT/PIT timer channels.
+  tick_timer.begin(tick_isr, TICK_PERIOD_US);
 }
 
 void loop() {
-  uint32_t now_us = micros();
-  if (prev_tick_us == 0) prev_tick_us = now_us;
+  // Atomic snapshot of ISR flag + timestamp
+  noInterrupts();
+  bool     pending = tick_pending;
+  uint32_t fire_us = tick_isr_us;
+  tick_pending = false;
+  interrupts();
 
-  // Signed compare handles micros() wraparound at ~71 min.
-  if ((int32_t)(now_us - prev_tick_us) >= (int32_t)TICK_PERIOD_US) {
-    uint32_t actual_period = now_us - prev_tick_us;
-    prev_tick_us += TICK_PERIOD_US;   // nominal stride — no drift from exec time
+  if (pending) {
+    // Response latency = elapsed time from ISR firing to handler entry.
+    // Bare metric is "how late are we to service the tick" — sub-µs is
+    // possible on M7 when no contending ISR/spin work blocks the loop().
+    uint32_t latency_us = micros() - fire_us;
 
-    // Jitter accounting
-    uint32_t b = actual_period / HIST_BUCKET_US;
+    uint32_t b = latency_us / HIST_BUCKET_US;
     if (b >= (uint32_t)HIST_BUCKETS) b = HIST_BUCKETS - 1;
     hist[b]++;
-    if (actual_period > max_period_us) max_period_us = actual_period;
+    if (latency_us > max_latency_us) max_latency_us = latency_us;
     tick_count_window++;
 
     // Servo bus servicing (stub)
@@ -311,12 +333,12 @@ void loop() {
   if (stats_ms >= STATS_PERIOD_MS) {
     stats_ms = 0;
 #ifdef NOVA_USE_MICRO_ROS
-    loop_max_msg.data = (int32_t)max_period_us;
+    loop_max_msg.data = (int32_t)max_latency_us;
     loop_p99_msg.data = (int32_t)compute_p99_us();
     RCSOFTCHECK(rcl_publish(&loop_max_pub, &loop_max_msg, NULL));
     RCSOFTCHECK(rcl_publish(&loop_p99_pub, &loop_p99_msg, NULL));
 #endif
-    max_period_us = 0;
+    max_latency_us = 0;
     tick_count_window = 0;
     for (int i = 0; i < HIST_BUCKETS; i++) hist[i] = 0;
   }
