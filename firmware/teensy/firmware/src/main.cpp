@@ -115,10 +115,21 @@ uint32_t hist[HIST_BUCKETS];
 uint32_t max_latency_us  = 0;
 uint32_t tick_count_window = 0;
 
+// Per-tick handler execution time histogram — separate from response-latency.
+// Bucket width 10 µs, 64 buckets = 0..640 µs, last = overflow. Captures the
+// cost of the work inside the tick (bus, INA226 poll, micro-ROS pubs).
+constexpr int      EXEC_HIST_BUCKETS   = 64;
+constexpr uint32_t EXEC_HIST_BUCKET_US = 10;
+uint32_t exec_hist[EXEC_HIST_BUCKETS];
+uint32_t max_exec_us = 0;
+
 #ifdef NOVA_USE_MICRO_ROS
 rcl_publisher_t heartbeat_pub;
 rcl_publisher_t loop_max_pub;
 rcl_publisher_t loop_p99_pub;
+rcl_publisher_t loop_exec_max_pub;
+rcl_publisher_t loop_exec_p99_pub;
+rcl_publisher_t tick_missed_pub;
 rcl_publisher_t joint_states_pub;
 rcl_publisher_t estop_pub;
 rcl_publisher_t battery_low_pub;
@@ -128,6 +139,9 @@ rcl_subscription_t joint_cmd_sub;
 std_msgs__msg__Int32 heartbeat_msg;
 std_msgs__msg__Int32 loop_max_msg;
 std_msgs__msg__Int32 loop_p99_msg;
+std_msgs__msg__Int32 loop_exec_max_msg;
+std_msgs__msg__Int32 loop_exec_p99_msg;
+std_msgs__msg__Int32 tick_missed_msg;
 std_msgs__msg__Int32 joint_cmd_rx_msg;
 std_msgs__msg__Bool  estop_msg;
 std_msgs__msg__Bool  battery_low_msg;
@@ -173,20 +187,20 @@ inline void joint_state_bind(sensor_msgs__msg__JointState* m,
 }
 #endif
 
-// Walk histogram cumulatively, return bucket-midpoint us where cumulative
-// count first exceeds 99% of total. Overflow bucket reports HIST_BUCKETS *
-// HIST_BUCKET_US (i.e. >= 128 µs).
-uint32_t compute_p99_us() {
-  if (tick_count_window == 0) return 0;
-  uint32_t target = (tick_count_window * 99 + 99) / 100;  // ceil(0.99 * n)
+// Walk histogram cumulatively, return bucket-midpoint µs where cumulative
+// count first exceeds 99 % of total. Overflow bucket reports n_buckets *
+// bucket_us. Used for both response-latency (hist, 2 µs buckets) and
+// exec-time (exec_hist, 10 µs buckets) histograms.
+uint32_t compute_p99_us(const uint32_t* h, int n_buckets, uint32_t bucket_us,
+                        uint32_t total_count) {
+  if (total_count == 0) return 0;
+  uint32_t target = (total_count * 99 + 99) / 100;   // ceil(0.99 * n)
   uint32_t cum = 0;
-  for (int i = 0; i < HIST_BUCKETS; i++) {
-    cum += hist[i];
-    if (cum >= target) {
-      return i * HIST_BUCKET_US + HIST_BUCKET_US / 2;
-    }
+  for (int i = 0; i < n_buckets; i++) {
+    cum += h[i];
+    if (cum >= target) return i * bucket_us + bucket_us / 2;
   }
-  return HIST_BUCKETS * HIST_BUCKET_US;
+  return n_buckets * bucket_us;
 }
 
 void setup() {
@@ -229,6 +243,21 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "loop_p99_us"));
+  RCCHECK(rclc_publisher_init_default(
+      &loop_exec_max_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "loop_exec_max_us"));
+  RCCHECK(rclc_publisher_init_default(
+      &loop_exec_p99_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "loop_exec_p99_us"));
+  RCCHECK(rclc_publisher_init_default(
+      &tick_missed_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "tick_missed_count"));
   RCCHECK(rclc_publisher_init_default(
       &joint_states_pub,
       &node,
@@ -299,7 +328,8 @@ void loop() {
     // Response latency = elapsed time from ISR firing to handler entry.
     // Bare metric is "how late are we to service the tick" — sub-µs is
     // possible on M7 when no contending ISR/spin work blocks the loop().
-    uint32_t latency_us = micros() - fire_us;
+    uint32_t handler_start_us = micros();
+    uint32_t latency_us = handler_start_us - fire_us;
 
     uint32_t b = latency_us / HIST_BUCKET_US;
     if (b >= (uint32_t)HIST_BUCKETS) b = HIST_BUCKETS - 1;
@@ -340,6 +370,15 @@ void loop() {
     (void)estop_now;
     (void)batt_low_now;
 #endif
+
+    // Exec-time accounting — measure end of handler vs start. Captures the
+    // real work cost (bus + I²C + publishes + executor spin) separately
+    // from scheduling jitter.
+    uint32_t exec_us = micros() - handler_start_us;
+    uint32_t eb = exec_us / EXEC_HIST_BUCKET_US;
+    if (eb >= (uint32_t)EXEC_HIST_BUCKETS) eb = EXEC_HIST_BUCKETS - 1;
+    exec_hist[eb]++;
+    if (exec_us > max_exec_us) max_exec_us = exec_us;
   }
 
   if (heartbeat_ms >= HEARTBEAT_PERIOD_MS) {
@@ -360,12 +399,24 @@ void loop() {
     stats_ms = 0;
 #ifdef NOVA_USE_MICRO_ROS
     loop_max_msg.data = (int32_t)max_latency_us;
-    loop_p99_msg.data = (int32_t)compute_p99_us();
-    RCSOFTCHECK(rcl_publish(&loop_max_pub, &loop_max_msg, NULL));
-    RCSOFTCHECK(rcl_publish(&loop_p99_pub, &loop_p99_msg, NULL));
+    loop_p99_msg.data = (int32_t)compute_p99_us(
+        hist, HIST_BUCKETS, HIST_BUCKET_US, tick_count_window);
+    loop_exec_max_msg.data = (int32_t)max_exec_us;
+    loop_exec_p99_msg.data = (int32_t)compute_p99_us(
+        exec_hist, EXEC_HIST_BUCKETS, EXEC_HIST_BUCKET_US, tick_count_window);
+    tick_missed_msg.data = (int32_t)tick_missed;
+    RCSOFTCHECK(rcl_publish(&loop_max_pub,      &loop_max_msg,      NULL));
+    RCSOFTCHECK(rcl_publish(&loop_p99_pub,      &loop_p99_msg,      NULL));
+    RCSOFTCHECK(rcl_publish(&loop_exec_max_pub, &loop_exec_max_msg, NULL));
+    RCSOFTCHECK(rcl_publish(&loop_exec_p99_pub, &loop_exec_p99_msg, NULL));
+    RCSOFTCHECK(rcl_publish(&tick_missed_pub,   &tick_missed_msg,   NULL));
 #endif
     max_latency_us = 0;
+    max_exec_us = 0;
     tick_count_window = 0;
-    for (int i = 0; i < HIST_BUCKETS; i++) hist[i] = 0;
+    for (int i = 0; i < HIST_BUCKETS; i++)      hist[i]      = 0;
+    for (int i = 0; i < EXEC_HIST_BUCKETS; i++) exec_hist[i] = 0;
+    // tick_missed is a monotonic counter, NOT reset — let it accumulate so
+    // host-side dashboards can spot a long-term regression.
   }
 }
