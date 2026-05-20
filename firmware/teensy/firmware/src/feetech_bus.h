@@ -131,6 +131,50 @@ class Bus {
     return err ? ERR_SERVO : OK;
   }
 
+  // Torque enable / disable. ACKed by servo.
+  Result torque_enable(uint8_t id, bool on, uint32_t timeout_us = 1500) {
+    uint8_t val = on ? 1 : 0;
+    return write_byte(id, REG_TORQUE_ENABLE, val, timeout_us);
+  }
+
+  // Generic single-byte write — pings the EEPROM/RAM and waits for ACK.
+  Result write_byte(uint8_t id, uint8_t reg, uint8_t val, uint32_t timeout_us = 1500) {
+    uint8_t frame[MAX_FRAME_LEN];
+    uint8_t n = build_write(id, reg, &val, 1, frame);
+    if (!transmit_blocking(frame, n)) return ERR_TX_BUSY;
+    uint8_t resp[MAX_RESPONSE_LEN];
+    uint8_t got = read_response(resp, 6, timeout_us);
+    if (got < 6) return ERR_TIMEOUT;
+    uint8_t resp_id, err, params[MAX_PARAM_BYTES], plen;
+    if (!parse_response(resp, got, &resp_id, &err, params, &plen)) return ERR_BAD_FRAME;
+    if (resp_id != id) return ERR_BAD_FRAME;
+    return err ? ERR_SERVO : OK;
+  }
+
+  // Generic single-byte read.
+  Result read_byte(uint8_t id, uint8_t reg, uint8_t* out, uint32_t timeout_us = 1500) {
+    uint8_t frame[MAX_FRAME_LEN];
+    uint8_t n = build_read(id, reg, 1, frame);
+    if (!transmit_blocking(frame, n)) return ERR_TX_BUSY;
+    uint8_t resp[MAX_RESPONSE_LEN];
+    uint8_t got = read_response(resp, 7, timeout_us);
+    if (got < 7) return ERR_TIMEOUT;
+    uint8_t resp_id, err, params[MAX_PARAM_BYTES], plen;
+    if (!parse_response(resp, got, &resp_id, &err, params, &plen)) return ERR_BAD_FRAME;
+    if (resp_id != id || plen < 1) return ERR_BAD_FRAME;
+    if (err) return ERR_SERVO;
+    *out = params[0];
+    return OK;
+  }
+
+  // EEPROM ID change. Use Pattern A (USB-to-TTL one-at-a-time) for the
+  // initial fleet assignment — running this with multiple servos on the
+  // bus simultaneously will cause ID collisions immediately.
+  Result set_id(uint8_t current_id, uint8_t new_id, uint32_t timeout_us = 2000) {
+    if (new_id == BROADCAST_ID) return ERR_BAD_FRAME;   // never write the broadcast value
+    return write_byte(current_id, REG_ID, new_id, timeout_us);
+  }
+
   // SYNC_WRITE goal positions to a list of servo IDs. Broadcast, no ACK
   // returned — caller follows up with reads if confirmation matters.
   Result sync_write_goal_positions(const uint8_t* ids, const uint16_t* goals, uint8_t n) {

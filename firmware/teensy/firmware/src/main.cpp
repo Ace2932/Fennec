@@ -10,6 +10,7 @@
 #include <Arduino.h>
 #include "feetech_bus.h"
 #include "ina226_telemetry.h"
+#include "safety_state.h"
 
 #ifdef NOVA_USE_MICRO_ROS
 #include <micro_ros_platformio.h>
@@ -133,8 +134,10 @@ rcl_publisher_t tick_missed_pub;
 rcl_publisher_t joint_states_pub;
 rcl_publisher_t estop_pub;
 rcl_publisher_t battery_low_pub;
+rcl_publisher_t safety_state_pub;
 rcl_publisher_t joint_cmd_rx_pub;
 rcl_subscription_t joint_cmd_sub;
+rcl_subscription_t safety_clear_sub;
 
 std_msgs__msg__Int32 heartbeat_msg;
 std_msgs__msg__Int32 loop_max_msg;
@@ -142,7 +145,9 @@ std_msgs__msg__Int32 loop_p99_msg;
 std_msgs__msg__Int32 loop_exec_max_msg;
 std_msgs__msg__Int32 loop_exec_p99_msg;
 std_msgs__msg__Int32 tick_missed_msg;
+std_msgs__msg__Int32 safety_state_msg;
 std_msgs__msg__Int32 joint_cmd_rx_msg;
+std_msgs__msg__Bool  safety_clear_msg;
 std_msgs__msg__Bool  estop_msg;
 std_msgs__msg__Bool  battery_low_msg;
 sensor_msgs__msg__JointState joint_states_msg;
@@ -176,6 +181,10 @@ void joint_cmd_callback(const void* msgin) {
   joint_cmd_rx_count++;
 }
 
+// /safety_clear sub callback — Bool; data=true requests a latch clear.
+// Body defined after the FSM globals (below the #endif).
+void safety_clear_callback(const void* msgin);
+
 inline void joint_state_bind(sensor_msgs__msg__JointState* m,
                              double* pos, double* vel, double* eff) {
   m->name.data = NULL;        m->name.size = 0;        m->name.capacity = 0;
@@ -184,6 +193,19 @@ inline void joint_state_bind(sensor_msgs__msg__JointState* m,
   m->effort.data   = eff;     m->effort.size   = NOVA_JOINT_COUNT; m->effort.capacity   = NOVA_JOINT_COUNT;
   m->header.frame_id.data = NULL; m->header.frame_id.size = 0; m->header.frame_id.capacity = 0;
   m->header.stamp.sec = 0;        m->header.stamp.nanosec = 0;
+}
+#endif
+
+// Safety state machine — instance + clear-request flag live outside the
+// micro-ROS ifdef so the Arduino-only CI build still exercises the latch
+// logic against the real GPIO reads.
+nova::SafetyFSM safety_fsm;
+volatile bool safety_clear_request = false;
+
+#ifdef NOVA_USE_MICRO_ROS
+void safety_clear_callback(const void* msgin) {
+  const std_msgs__msg__Bool* m = (const std_msgs__msg__Bool*)msgin;
+  if (m->data) safety_clear_request = true;
 }
 #endif
 
@@ -274,6 +296,16 @@ void setup() {
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
       "battery_low"));
   RCCHECK(rclc_publisher_init_default(
+      &safety_state_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "safety_state"));
+  RCCHECK(rclc_subscription_init_default(
+      &safety_clear_sub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+      "safety_clear"));
+  RCCHECK(rclc_publisher_init_default(
       &joint_cmd_rx_pub,
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
@@ -291,10 +323,14 @@ void setup() {
     latched_cmd_position[i] = 0.0;
   }
 
-  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
+  // Executor sized for 2 subs: joint_commands + safety_clear.
+  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
   RCCHECK(rclc_executor_add_subscription(
       &executor, &joint_cmd_sub, &joint_cmd_msg,
       &joint_cmd_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(
+      &executor, &safety_clear_sub, &safety_clear_msg,
+      &safety_clear_callback, ON_NEW_DATA));
 
   heartbeat_msg.data = 0;
   estop_msg.data = false;
@@ -343,12 +379,19 @@ void loop() {
     // Telemetry sample (stub)
     read_ina226_stub();
 
-    // Safety GPIO sense
+    // Safety GPIO sense + state-machine update
     bool estop_now = (digitalRead(ESTOP_PIN) == LOW);
     bool batt_low_now = (digitalRead(BATTERY_LOW_PIN) == HIGH);
+    nova::SafetyState prev_safety = safety_fsm.state();
+    safety_fsm.update(estop_now, batt_low_now);
+    if (safety_clear_request) {
+      safety_fsm.clear();
+      safety_clear_request = false;
+    }
+    nova::SafetyState curr_safety = safety_fsm.state();
 
 #ifdef NOVA_USE_MICRO_ROS
-    // Edge-change publish for safety signals
+    // Edge-change publish for raw safety signals (host sees the source)
     if (estop_now != estop_msg.data) {
       estop_msg.data = estop_now;
       RCSOFTCHECK(rcl_publish(&estop_pub, &estop_msg, NULL));
@@ -357,6 +400,11 @@ void loop() {
       battery_low_msg.data = batt_low_now;
       RCSOFTCHECK(rcl_publish(&battery_low_pub, &battery_low_msg, NULL));
     }
+    // Edge-change publish for the latched FSM state
+    if (curr_safety != prev_safety) {
+      safety_state_msg.data = (int32_t)curr_safety;
+      RCSOFTCHECK(rcl_publish(&safety_state_pub, &safety_state_msg, NULL));
+    }
 
     // Stamp + publish joint_states (zeros until servo reads land)
     uint32_t ms = millis();
@@ -364,11 +412,13 @@ void loop() {
     joint_states_msg.header.stamp.nanosec = (ms % 1000) * 1000000UL;
     RCSOFTCHECK(rcl_publish(&joint_states_pub, &joint_states_msg, NULL));
 
-    // Service incoming /joint_commands subscription
+    // Service incoming subscriptions (joint_commands, safety_clear)
     RCSOFTCHECK(rclc_executor_spin_some(&executor, 0));
 #else
     (void)estop_now;
     (void)batt_low_now;
+    (void)prev_safety;
+    (void)curr_safety;
 #endif
 
     // Exec-time accounting — measure end of handler vs start. Captures the
