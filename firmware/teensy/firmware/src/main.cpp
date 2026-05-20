@@ -15,8 +15,11 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 #include <std_msgs/msg/int32.h>
-// Full topic contract (joint_state, estop, battery, diagnostics) deferred —
-// heartbeat-only bring-up to validate USB transport + agent round-trip.
+#include <std_msgs/msg/bool.h>
+#include <sensor_msgs/msg/joint_state.h>
+// Joint count = 12 (4 legs × 3 joints). Names/frame_id intentionally empty
+// in skeleton — Nova URDF wiring lands once gait controller is on Jetson.
+constexpr size_t NOVA_JOINT_COUNT = 12;
 #endif
 
 // ---------------- Pinout ----------------
@@ -80,15 +83,58 @@ uint32_t tick_count_window = 0;
 rcl_publisher_t heartbeat_pub;
 rcl_publisher_t loop_max_pub;
 rcl_publisher_t loop_p99_pub;
+rcl_publisher_t joint_states_pub;
+rcl_publisher_t estop_pub;
+rcl_publisher_t battery_low_pub;
+rcl_publisher_t joint_cmd_rx_pub;
+rcl_subscription_t joint_cmd_sub;
+
 std_msgs__msg__Int32 heartbeat_msg;
 std_msgs__msg__Int32 loop_max_msg;
 std_msgs__msg__Int32 loop_p99_msg;
+std_msgs__msg__Int32 joint_cmd_rx_msg;
+std_msgs__msg__Bool  estop_msg;
+std_msgs__msg__Bool  battery_low_msg;
+sensor_msgs__msg__JointState joint_states_msg;
+sensor_msgs__msg__JointState joint_cmd_msg;
+
+// Backing storage for JointState arrays (pub + sub). Names + frame_id stay
+// empty for now — see header note.
+double js_position[NOVA_JOINT_COUNT];
+double js_velocity[NOVA_JOINT_COUNT];
+double js_effort  [NOVA_JOINT_COUNT];
+double cmd_position[NOVA_JOINT_COUNT];
+double cmd_velocity[NOVA_JOINT_COUNT];
+double cmd_effort  [NOVA_JOINT_COUNT];
+
+// Latched command state — for the gait/servo layer to consume later.
+volatile uint32_t joint_cmd_rx_count = 0;
+double latched_cmd_position[NOVA_JOINT_COUNT];
+
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
+rclc_executor_t executor;
 
 #define RCCHECK(fn) { rcl_ret_t rc = fn; if (rc != RCL_RET_OK) { /* hold LED on to flag init fail */ digitalWrite(LED_PIN, HIGH); while(1) { delay(100); } } }
 #define RCSOFTCHECK(fn) { rcl_ret_t rc = fn; (void)rc; }
+
+void joint_cmd_callback(const void* msgin) {
+  const sensor_msgs__msg__JointState* m = (const sensor_msgs__msg__JointState*)msgin;
+  size_t n = m->position.size < NOVA_JOINT_COUNT ? m->position.size : NOVA_JOINT_COUNT;
+  for (size_t i = 0; i < n; i++) latched_cmd_position[i] = m->position.data[i];
+  joint_cmd_rx_count++;
+}
+
+inline void joint_state_bind(sensor_msgs__msg__JointState* m,
+                             double* pos, double* vel, double* eff) {
+  m->name.data = NULL;        m->name.size = 0;        m->name.capacity = 0;
+  m->position.data = pos;     m->position.size = NOVA_JOINT_COUNT; m->position.capacity = NOVA_JOINT_COUNT;
+  m->velocity.data = vel;     m->velocity.size = NOVA_JOINT_COUNT; m->velocity.capacity = NOVA_JOINT_COUNT;
+  m->effort.data   = eff;     m->effort.size   = NOVA_JOINT_COUNT; m->effort.capacity   = NOVA_JOINT_COUNT;
+  m->header.frame_id.data = NULL; m->header.frame_id.size = 0; m->header.frame_id.capacity = 0;
+  m->header.stamp.sec = 0;        m->header.stamp.nanosec = 0;
+}
 #endif
 
 // Walk histogram cumulatively, return bucket-midpoint us where cumulative
@@ -144,7 +190,47 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "loop_p99_us"));
+  RCCHECK(rclc_publisher_init_default(
+      &joint_states_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState),
+      "joint_states"));
+  RCCHECK(rclc_publisher_init_default(
+      &estop_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+      "estop"));
+  RCCHECK(rclc_publisher_init_default(
+      &battery_low_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+      "battery_low"));
+  RCCHECK(rclc_publisher_init_default(
+      &joint_cmd_rx_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "joint_cmd_rx_count"));
+  RCCHECK(rclc_subscription_init_default(
+      &joint_cmd_sub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState),
+      "joint_commands"));
+
+  joint_state_bind(&joint_states_msg, js_position, js_velocity, js_effort);
+  joint_state_bind(&joint_cmd_msg,    cmd_position, cmd_velocity, cmd_effort);
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    js_position[i] = 0.0; js_velocity[i] = 0.0; js_effort[i] = 0.0;
+    latched_cmd_position[i] = 0.0;
+  }
+
+  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
+  RCCHECK(rclc_executor_add_subscription(
+      &executor, &joint_cmd_sub, &joint_cmd_msg,
+      &joint_cmd_callback, ON_NEW_DATA));
+
   heartbeat_msg.data = 0;
+  estop_msg.data = false;
+  battery_low_msg.data = false;
 #endif
 
 #ifndef NOVA_USE_MICRO_ROS
@@ -182,12 +268,29 @@ void loop() {
     // Safety GPIO sense
     bool estop_now = (digitalRead(ESTOP_PIN) == LOW);
     bool batt_low_now = (digitalRead(BATTERY_LOW_PIN) == HIGH);
-    (void)estop_now;
-    (void)batt_low_now;
 
 #ifdef NOVA_USE_MICRO_ROS
-    // TODO: publish /estop + /battery_low on edge change.
-    // TODO: rclc_executor_spin_some(...) for /joint_commands callback.
+    // Edge-change publish for safety signals
+    if (estop_now != estop_msg.data) {
+      estop_msg.data = estop_now;
+      RCSOFTCHECK(rcl_publish(&estop_pub, &estop_msg, NULL));
+    }
+    if (batt_low_now != battery_low_msg.data) {
+      battery_low_msg.data = batt_low_now;
+      RCSOFTCHECK(rcl_publish(&battery_low_pub, &battery_low_msg, NULL));
+    }
+
+    // Stamp + publish joint_states (zeros until servo reads land)
+    uint32_t ms = millis();
+    joint_states_msg.header.stamp.sec = ms / 1000;
+    joint_states_msg.header.stamp.nanosec = (ms % 1000) * 1000000UL;
+    RCSOFTCHECK(rcl_publish(&joint_states_pub, &joint_states_msg, NULL));
+
+    // Service incoming /joint_commands subscription
+    RCSOFTCHECK(rclc_executor_spin_some(&executor, 0));
+#else
+    (void)estop_now;
+    (void)batt_low_now;
 #endif
   }
 
@@ -197,6 +300,8 @@ void loop() {
 #ifdef NOVA_USE_MICRO_ROS
     heartbeat_msg.data++;
     RCSOFTCHECK(rcl_publish(&heartbeat_pub, &heartbeat_msg, NULL));
+    joint_cmd_rx_msg.data = (int32_t)joint_cmd_rx_count;
+    RCSOFTCHECK(rcl_publish(&joint_cmd_rx_pub, &joint_cmd_rx_msg, NULL));
 #else
     Serial.print("[nova-teensy] alive t=");
     Serial.println(millis());
