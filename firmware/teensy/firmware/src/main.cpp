@@ -31,6 +31,19 @@ double latched_cmd_position[NOVA_JOINT_COUNT] = {0};
 nova::SafetyFSM safety_fsm;
 volatile bool safety_clear_request = false;
 
+// Boot self-test result bitmap — set in setup() after GPIO pinMode but
+// before the tick timer starts. Bits:
+//   0 = ESTOP_PIN read LOW at boot (button pressed at startup — operator
+//       fault, refuse to arm)
+//   1 = BATTERY_LOW_PIN read HIGH at boot (pack already under 13.0V —
+//       refuse to arm)
+// Non-zero result means safety_fsm pre-seeded to a latched fault.
+uint8_t boot_self_test_flags = 0;
+
+#ifndef NOVA_BUILD_GIT_SHA
+#define NOVA_BUILD_GIT_SHA "unknown"
+#endif
+
 #ifdef NOVA_USE_MICRO_ROS
 #include <micro_ros_platformio.h>
 #include <rcl/rcl.h>
@@ -39,6 +52,7 @@ volatile bool safety_clear_request = false;
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/bool.h>
 #include <std_msgs/msg/float32_multi_array.h>
+#include <std_msgs/msg/string.h>
 #include <sensor_msgs/msg/joint_state.h>
 #endif
 
@@ -219,6 +233,7 @@ rcl_publisher_t power_rails_pub;
 rcl_publisher_t joint_cmd_rx_pub;
 rcl_publisher_t servo_present_pub;
 rcl_publisher_t servo_read_err_pub;
+rcl_publisher_t firmware_version_pub;
 rcl_subscription_t joint_cmd_sub;
 rcl_subscription_t safety_clear_sub;
 
@@ -234,6 +249,11 @@ std_msgs__msg__Int32 servo_present_msg;
 std_msgs__msg__Int32 servo_read_err_msg;
 std_msgs__msg__Bool  safety_clear_msg;
 std_msgs__msg__Float32MultiArray power_rails_msg;
+std_msgs__msg__String firmware_version_msg;
+// Static backing for firmware version string — built once at startup, never
+// reallocated. Includes git SHA from build flag.
+constexpr size_t FIRMWARE_VERSION_MAX_LEN = 64;
+char firmware_version_buf[FIRMWARE_VERSION_MAX_LEN];
 std_msgs__msg__Bool  estop_msg;
 std_msgs__msg__Bool  battery_low_msg;
 sensor_msgs__msg__JointState joint_states_msg;
@@ -324,6 +344,21 @@ void setup() {
   Wire.begin();
   Wire.setClock(400000);
   for (uint8_t i = 0; i < INA226_RAIL_COUNT; i++) rails[i]->begin();
+
+  // Boot self-test: sanity-check safety GPIO before arming. If E-stop is
+  // already pressed, or battery-low comparator already asserted, pre-seed
+  // the safety FSM into the matching latched state — the operator must
+  // resolve and clear before any servo writes can fire.
+  bool estop_boot   = (digitalRead(ESTOP_PIN) == LOW);
+  bool batt_low_boot = (digitalRead(BATTERY_LOW_PIN) == HIGH);
+  if (estop_boot)   boot_self_test_flags |= 0x01;
+  if (batt_low_boot) boot_self_test_flags |= 0x02;
+  if (boot_self_test_flags) {
+    // Force a few update() ticks so the FSM debounce reaches latch.
+    for (uint8_t i = 0; i < nova::SafetyFSM::BATT_LOW_DEBOUNCE_TICKS + 1; i++) {
+      safety_fsm.update(estop_boot, batt_low_boot);
+    }
+  }
 
 #ifdef NOVA_USE_MICRO_ROS
   set_microros_serial_transports(Serial);
@@ -419,6 +454,17 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "servo_read_err_count"));
+  RCCHECK(rclc_publisher_init_default(
+      &firmware_version_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
+      "firmware_version"));
+  // Bind firmware version buffer + write the version once at startup.
+  snprintf(firmware_version_buf, FIRMWARE_VERSION_MAX_LEN,
+           "nova-teensy %s loop=%dHz", NOVA_BUILD_GIT_SHA, (int)NOVA_LOOP_HZ);
+  firmware_version_msg.data.data     = firmware_version_buf;
+  firmware_version_msg.data.size     = strlen(firmware_version_buf);
+  firmware_version_msg.data.capacity = FIRMWARE_VERSION_MAX_LEN;
   RCCHECK(rclc_subscription_init_default(
       &joint_cmd_sub,
       &node,
@@ -565,6 +611,12 @@ void loop() {
     RCSOFTCHECK(rcl_publish(&servo_present_pub, &servo_present_msg, NULL));
     servo_read_err_msg.data = (int32_t)servo_read_err_count;
     RCSOFTCHECK(rcl_publish(&servo_read_err_pub, &servo_read_err_msg, NULL));
+    // Firmware version — publish every 10 s (1 Hz heartbeat / 10), low-rate
+    // identity ping so reconnecting hosts can pick it up without restart.
+    static uint32_t fw_pub_count = 0;
+    if ((fw_pub_count++ % 10) == 0) {
+      RCSOFTCHECK(rcl_publish(&firmware_version_pub, &firmware_version_msg, NULL));
+    }
 #else
     Serial.print("[nova-teensy] alive t=");
     Serial.println(millis());
