@@ -126,24 +126,49 @@ void read_ina226_stub() {
 // convention; ID 0 is unused (reserved), ID 0xFE is broadcast.
 constexpr uint8_t SERVO_ID_BASE = 1;
 uint8_t servo_rr_idx = 0;     // 0..NOVA_JOINT_COUNT-1 → servo ID = SERVO_ID_BASE + idx
-// Raw 0..4095 from STS3215 encoder. Converted to radians by the gait layer
-// on the Jetson; firmware stays unit-agnostic.
+// Per-servo telemetry. All raw — gait layer on the Jetson converts to
+// radians + Newton-metres using URDF + servo calibration.
+//   position: 0..4095 (12-bit encoder)
+//   velocity: int16 sign-magnitude (STS3215 convention)
+//   load:     int16 sign-magnitude (0..1000 raw, % of stall torque)
 volatile uint16_t servo_position_raw[NOVA_JOINT_COUNT] = {0};
+volatile int16_t  servo_velocity_raw[NOVA_JOINT_COUNT] = {0};
+volatile int16_t  servo_load_raw    [NOVA_JOINT_COUNT] = {0};
+
 // Last-read success bitmask — bit i set ⇒ servo (SERVO_ID_BASE + i) has
 // answered at least once since boot. Exposed as /servo_present_mask for
 // host-side fleet inventory.
 volatile uint16_t servo_present_mask = 0;
+
+// Categorised bus-error counters (monotonic). All start zero; a non-zero
+// value on a host dashboard means something went wrong in that category
+// since boot. /servo_read_err_count = sum of these three for backward compat.
+volatile uint32_t servo_err_timeout   = 0;
+volatile uint32_t servo_err_bad_frame = 0;
+volatile uint32_t servo_err_servo     = 0;
 volatile uint32_t servo_read_err_count = 0;
 
 void poll_one_servo() {
   uint8_t id = SERVO_ID_BASE + servo_rr_idx;
-  uint16_t pos = 0;
-  feetech::Bus::Result rc = servo_bus.read_position(id, &pos, /*timeout_us=*/1500);
+  uint8_t buf[6];
+  // Read PRESENT_POSITION (2) + PRESENT_VELOCITY (2) + PRESENT_LOAD (2) =
+  // 6 bytes from REG_PRESENT_POSITION_L = 0x38 in one frame. Voltage +
+  // temperature live at 0x3E/0x3F — separate sweep later if needed.
+  feetech::Bus::Result rc = servo_bus.read_block(
+      id, feetech::REG_PRESENT_POSITION_L, 6, buf, /*timeout_us=*/2000);
   if (rc == feetech::Bus::OK) {
-    servo_position_raw[servo_rr_idx] = pos;
+    servo_position_raw[servo_rr_idx] = feetech::pack_u16_le(buf[0], buf[1]);
+    servo_velocity_raw[servo_rr_idx] = feetech::pack_s16_le(buf[2], buf[3]);
+    servo_load_raw    [servo_rr_idx] = feetech::pack_s16_le(buf[4], buf[5]);
     servo_present_mask |= (uint16_t)(1u << servo_rr_idx);
   } else {
     servo_read_err_count++;
+    switch (rc) {
+      case feetech::Bus::ERR_TIMEOUT:   servo_err_timeout++;   break;
+      case feetech::Bus::ERR_BAD_FRAME: servo_err_bad_frame++; break;
+      case feetech::Bus::ERR_SERVO:     servo_err_servo++;     break;
+      default: break;
+    }
   }
   servo_rr_idx = (servo_rr_idx + 1) % NOVA_JOINT_COUNT;
 }
@@ -233,6 +258,9 @@ rcl_publisher_t power_rails_pub;
 rcl_publisher_t joint_cmd_rx_pub;
 rcl_publisher_t servo_present_pub;
 rcl_publisher_t servo_read_err_pub;
+rcl_publisher_t servo_err_timeout_pub;
+rcl_publisher_t servo_err_bad_frame_pub;
+rcl_publisher_t servo_err_servo_pub;
 rcl_publisher_t firmware_version_pub;
 rcl_subscription_t joint_cmd_sub;
 rcl_subscription_t safety_clear_sub;
@@ -247,6 +275,9 @@ std_msgs__msg__Int32 safety_state_msg;
 std_msgs__msg__Int32 joint_cmd_rx_msg;
 std_msgs__msg__Int32 servo_present_msg;
 std_msgs__msg__Int32 servo_read_err_msg;
+std_msgs__msg__Int32 servo_err_timeout_msg;
+std_msgs__msg__Int32 servo_err_bad_frame_msg;
+std_msgs__msg__Int32 servo_err_servo_msg;
 std_msgs__msg__Bool  safety_clear_msg;
 std_msgs__msg__Float32MultiArray power_rails_msg;
 std_msgs__msg__String firmware_version_msg;
@@ -455,6 +486,21 @@ void setup() {
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "servo_read_err_count"));
   RCCHECK(rclc_publisher_init_default(
+      &servo_err_timeout_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "servo_err_timeout"));
+  RCCHECK(rclc_publisher_init_default(
+      &servo_err_bad_frame_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "servo_err_bad_frame"));
+  RCCHECK(rclc_publisher_init_default(
+      &servo_err_servo_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "servo_err_servo"));
+  RCCHECK(rclc_publisher_init_default(
       &firmware_version_pub,
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
@@ -568,12 +614,13 @@ void loop() {
       RCSOFTCHECK(rcl_publish(&safety_state_pub, &safety_state_msg, NULL));
     }
 
-    // Copy latest servo position reads into JointState (raw 0..4095 → double).
-    // Gait layer on the Jetson converts to radians using URDF joint limits;
-    // firmware stays unit-agnostic. Servos that haven't answered yet keep
-    // their previous value (default 0.0).
+    // Copy latest servo telemetry into JointState (raw → double). Gait layer
+    // on the Jetson converts to radians/rad-per-s/Nm. Servos that haven't
+    // answered yet keep their previous value (default 0.0).
     for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
       js_position[i] = (double)servo_position_raw[i];
+      js_velocity[i] = (double)servo_velocity_raw[i];
+      js_effort  [i] = (double)servo_load_raw    [i];
     }
     uint32_t ms = millis();
     joint_states_msg.header.stamp.sec = ms / 1000;
@@ -611,6 +658,12 @@ void loop() {
     RCSOFTCHECK(rcl_publish(&servo_present_pub, &servo_present_msg, NULL));
     servo_read_err_msg.data = (int32_t)servo_read_err_count;
     RCSOFTCHECK(rcl_publish(&servo_read_err_pub, &servo_read_err_msg, NULL));
+    servo_err_timeout_msg.data   = (int32_t)servo_err_timeout;
+    servo_err_bad_frame_msg.data = (int32_t)servo_err_bad_frame;
+    servo_err_servo_msg.data     = (int32_t)servo_err_servo;
+    RCSOFTCHECK(rcl_publish(&servo_err_timeout_pub,   &servo_err_timeout_msg,   NULL));
+    RCSOFTCHECK(rcl_publish(&servo_err_bad_frame_pub, &servo_err_bad_frame_msg, NULL));
+    RCSOFTCHECK(rcl_publish(&servo_err_servo_pub,     &servo_err_servo_msg,     NULL));
     // Firmware version — publish every 10 s (1 Hz heartbeat / 10), low-rate
     // identity ping so reconnecting hosts can pick it up without restart.
     static uint32_t fw_pub_count = 0;

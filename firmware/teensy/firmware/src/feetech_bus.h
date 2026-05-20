@@ -115,6 +115,27 @@ class Bus {
     return OK;
   }
 
+  // READ multi-byte block. Pulls `len` consecutive bytes starting at `reg`
+  // into `out` (caller-supplied, must hold >= len bytes). Used for the
+  // per-servo telemetry sweep (position + velocity + load in one frame).
+  Result read_block(uint8_t id, uint8_t reg, uint8_t len, uint8_t* out,
+                    uint32_t timeout_us = 2000) {
+    if (len > MAX_PARAM_BYTES) return ERR_BAD_FRAME;
+    uint8_t frame[MAX_FRAME_LEN];
+    uint8_t n = build_read(id, reg, len, frame);
+    if (!transmit_blocking(frame, n)) return ERR_TX_BUSY;
+    uint8_t resp[MAX_RESPONSE_LEN];
+    uint8_t expected = 6 + len;     // FF FF id LEN err params... checksum
+    uint8_t got = read_response(resp, expected, timeout_us);
+    if (got < expected) return ERR_TIMEOUT;
+    uint8_t resp_id, err, params[MAX_PARAM_BYTES], plen;
+    if (!parse_response(resp, got, &resp_id, &err, params, &plen)) return ERR_BAD_FRAME;
+    if (resp_id != id || plen < len) return ERR_BAD_FRAME;
+    if (err) return ERR_SERVO;
+    for (uint8_t i = 0; i < len; i++) out[i] = params[i];
+    return OK;
+  }
+
   // WRITE goal position (raw 0..4095). Returns OK if servo ACKs with no err.
   Result write_goal_position(uint8_t id, uint16_t goal, uint32_t timeout_us = 1500) {
     uint8_t data[2];
