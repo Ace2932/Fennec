@@ -12,6 +12,25 @@
 #include "ina226_telemetry.h"
 #include "safety_state.h"
 
+// Joint count = 12 (4 legs × 3 joints). Names/frame_id stay empty in
+// skeleton — Nova URDF wiring lands once gait controller is on the Jetson.
+// Declared outside the micro-ROS ifdef so bus / servo polling code in the
+// Arduino-only CI build can size its buffers consistently.
+constexpr size_t NOVA_JOINT_COUNT = 12;
+
+// Latched joint-command state — written by the micro-ROS subscriber
+// callback (when present) and consumed by broadcast_servo_commands().
+// Lives outside the micro-ROS ifdef so the CI build still links against
+// the bus driver. In CI / Arduino-only mode this array stays zeroed.
+volatile uint32_t joint_cmd_rx_count = 0;
+double latched_cmd_position[NOVA_JOINT_COUNT] = {0};
+
+// Safety state machine — instance + clear-request flag declared up here so
+// the bus-write gate (broadcast_servo_commands()) can refuse to fire when a
+// latch is active. Definition body lives in safety_state.h.
+nova::SafetyFSM safety_fsm;
+volatile bool safety_clear_request = false;
+
 #ifdef NOVA_USE_MICRO_ROS
 #include <micro_ros_platformio.h>
 #include <rcl/rcl.h>
@@ -21,9 +40,6 @@
 #include <std_msgs/msg/bool.h>
 #include <std_msgs/msg/float32_multi_array.h>
 #include <sensor_msgs/msg/joint_state.h>
-// Joint count = 12 (4 legs × 3 joints). Names/frame_id intentionally empty
-// in skeleton — Nova URDF wiring lands once gait controller is on Jetson.
-constexpr size_t NOVA_JOINT_COUNT = 12;
 #endif
 
 // ---------------- Pinout ----------------
@@ -88,6 +104,67 @@ void read_ina226_stub() {
   ina226_rr_idx = (ina226_rr_idx + 1) % INA226_RAIL_COUNT;
 }
 
+// ---------------- Servo round-robin telemetry ----------------
+// One servo read per tick (5 ms budget at 200 Hz). Bus read costs ~80 µs TX
+// + ~1.5 ms response (or full timeout if servo absent). At 12 joints,
+// full-fleet refresh = 60 ms = ~17 Hz per joint — adequate for /joint_states
+// at the planned 100 Hz aggregate. Servo IDs are 1..NOVA_JOINT_COUNT by
+// convention; ID 0 is unused (reserved), ID 0xFE is broadcast.
+constexpr uint8_t SERVO_ID_BASE = 1;
+uint8_t servo_rr_idx = 0;     // 0..NOVA_JOINT_COUNT-1 → servo ID = SERVO_ID_BASE + idx
+// Raw 0..4095 from STS3215 encoder. Converted to radians by the gait layer
+// on the Jetson; firmware stays unit-agnostic.
+volatile uint16_t servo_position_raw[NOVA_JOINT_COUNT] = {0};
+// Last-read success bitmask — bit i set ⇒ servo (SERVO_ID_BASE + i) has
+// answered at least once since boot. Exposed as /servo_present_mask for
+// host-side fleet inventory.
+volatile uint16_t servo_present_mask = 0;
+volatile uint32_t servo_read_err_count = 0;
+
+void poll_one_servo() {
+  uint8_t id = SERVO_ID_BASE + servo_rr_idx;
+  uint16_t pos = 0;
+  feetech::Bus::Result rc = servo_bus.read_position(id, &pos, /*timeout_us=*/1500);
+  if (rc == feetech::Bus::OK) {
+    servo_position_raw[servo_rr_idx] = pos;
+    servo_present_mask |= (uint16_t)(1u << servo_rr_idx);
+  } else {
+    servo_read_err_count++;
+  }
+  servo_rr_idx = (servo_rr_idx + 1) % NOVA_JOINT_COUNT;
+}
+
+// ---------------- Servo command broadcast ----------------
+// Every CMD_BROADCAST_DECIMATE ticks (= 40 Hz at 200 Hz tick) send a
+// SYNC_WRITE goal-position frame to all 12 servos with the latest latched
+// commands. Decimation keeps bus utilization sane and matches typical gait
+// command rate. Gated on safety_fsm.motion_enabled() — never writes while
+// E-stop or battery-low are latched.
+constexpr uint8_t CMD_BROADCAST_DECIMATE = 5;   // 200 Hz / 5 = 40 Hz
+uint8_t cmd_decimate_count = 0;
+
+void broadcast_servo_commands() {
+  if (!safety_fsm.motion_enabled()) return;
+  cmd_decimate_count++;
+  if (cmd_decimate_count < CMD_BROADCAST_DECIMATE) return;
+  cmd_decimate_count = 0;
+
+  uint8_t ids[NOVA_JOINT_COUNT];
+  uint16_t goals[NOVA_JOINT_COUNT];
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    ids[i] = SERVO_ID_BASE + i;
+    // Clamp latched command (radians) to 0..4095 here would be cleaner once
+    // the gait controller settles a calibration mapping. For now treat the
+    // command as already-raw (gait layer will normalize on the Jetson) and
+    // clip to the valid range.
+    double v = latched_cmd_position[i];
+    if (v < 0.0)    v = 0.0;
+    if (v > 4095.0) v = 4095.0;
+    goals[i] = (uint16_t)v;
+  }
+  servo_bus.sync_write_goal_positions(ids, goals, NOVA_JOINT_COUNT);
+}
+
 // ---------------- Real-time loop ----------------
 elapsedMillis heartbeat_ms;
 elapsedMillis stats_ms;
@@ -140,6 +217,8 @@ rcl_publisher_t battery_low_pub;
 rcl_publisher_t safety_state_pub;
 rcl_publisher_t power_rails_pub;
 rcl_publisher_t joint_cmd_rx_pub;
+rcl_publisher_t servo_present_pub;
+rcl_publisher_t servo_read_err_pub;
 rcl_subscription_t joint_cmd_sub;
 rcl_subscription_t safety_clear_sub;
 
@@ -151,6 +230,8 @@ std_msgs__msg__Int32 loop_exec_p99_msg;
 std_msgs__msg__Int32 tick_missed_msg;
 std_msgs__msg__Int32 safety_state_msg;
 std_msgs__msg__Int32 joint_cmd_rx_msg;
+std_msgs__msg__Int32 servo_present_msg;
+std_msgs__msg__Int32 servo_read_err_msg;
 std_msgs__msg__Bool  safety_clear_msg;
 std_msgs__msg__Float32MultiArray power_rails_msg;
 std_msgs__msg__Bool  estop_msg;
@@ -166,10 +247,6 @@ double js_effort  [NOVA_JOINT_COUNT];
 double cmd_position[NOVA_JOINT_COUNT];
 double cmd_velocity[NOVA_JOINT_COUNT];
 double cmd_effort  [NOVA_JOINT_COUNT];
-
-// Latched command state — for the gait/servo layer to consume later.
-volatile uint32_t joint_cmd_rx_count = 0;
-double latched_cmd_position[NOVA_JOINT_COUNT];
 
 rclc_support_t support;
 rcl_allocator_t allocator;
@@ -200,12 +277,6 @@ inline void joint_state_bind(sensor_msgs__msg__JointState* m,
   m->header.stamp.sec = 0;        m->header.stamp.nanosec = 0;
 }
 #endif
-
-// Safety state machine — instance + clear-request flag live outside the
-// micro-ROS ifdef so the Arduino-only CI build still exercises the latch
-// logic against the real GPIO reads.
-nova::SafetyFSM safety_fsm;
-volatile bool safety_clear_request = false;
 
 // Power-rails snapshot buffer — 9 floats (V, A, W per rail × leg/hip/jetson).
 // Filled every POWER_RAILS_PERIOD_MS from INA226 Rail samples regardless of
@@ -338,6 +409,16 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "joint_cmd_rx_count"));
+  RCCHECK(rclc_publisher_init_default(
+      &servo_present_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "servo_present_mask"));
+  RCCHECK(rclc_publisher_init_default(
+      &servo_read_err_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "servo_read_err_count"));
   RCCHECK(rclc_subscription_init_default(
       &joint_cmd_sub,
       &node,
@@ -401,10 +482,17 @@ void loop() {
     if (latency_us > max_latency_us) max_latency_us = latency_us;
     tick_count_window++;
 
-    // Servo bus servicing (stub)
-    service_bus_stub();
+    // Servo bus — one read per tick (round-robin) + decimated SYNC_WRITE
+    // broadcast of the latest joint_commands. Both no-ops at the wire level
+    // until a real STS3215 is on the bench: poll_one_servo() times out and
+    // increments servo_read_err_count; broadcast_servo_commands() sends the
+    // sync-write frame but no servo will ACK (broadcast doesn't expect
+    // ACK anyway). The OE pin toggle in service_bus_stub() is no longer
+    // needed — Bus::transmit_blocking() handles direction switching.
+    poll_one_servo();
+    broadcast_servo_commands();
 
-    // Telemetry sample (stub)
+    // Telemetry sample
     read_ina226_stub();
 
     // Safety GPIO sense + state-machine update
@@ -434,7 +522,13 @@ void loop() {
       RCSOFTCHECK(rcl_publish(&safety_state_pub, &safety_state_msg, NULL));
     }
 
-    // Stamp + publish joint_states (zeros until servo reads land)
+    // Copy latest servo position reads into JointState (raw 0..4095 → double).
+    // Gait layer on the Jetson converts to radians using URDF joint limits;
+    // firmware stays unit-agnostic. Servos that haven't answered yet keep
+    // their previous value (default 0.0).
+    for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+      js_position[i] = (double)servo_position_raw[i];
+    }
     uint32_t ms = millis();
     joint_states_msg.header.stamp.sec = ms / 1000;
     joint_states_msg.header.stamp.nanosec = (ms % 1000) * 1000000UL;
@@ -467,6 +561,10 @@ void loop() {
     RCSOFTCHECK(rcl_publish(&heartbeat_pub, &heartbeat_msg, NULL));
     joint_cmd_rx_msg.data = (int32_t)joint_cmd_rx_count;
     RCSOFTCHECK(rcl_publish(&joint_cmd_rx_pub, &joint_cmd_rx_msg, NULL));
+    servo_present_msg.data = (int32_t)servo_present_mask;
+    RCSOFTCHECK(rcl_publish(&servo_present_pub, &servo_present_msg, NULL));
+    servo_read_err_msg.data = (int32_t)servo_read_err_count;
+    RCSOFTCHECK(rcl_publish(&servo_read_err_pub, &servo_read_err_msg, NULL));
 #else
     Serial.print("[nova-teensy] alive t=");
     Serial.println(millis());
