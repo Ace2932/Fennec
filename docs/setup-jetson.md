@@ -464,6 +464,84 @@ Baseline 2026-05-19 (stubs only, no executor spin in tick body): `/loop_p99_us` 
 
 ---
 
+## 15. Unitree L2 lidar + POINT-LIO SLAM (done 2026-05-19)
+
+Brings up the full L2 → ROS 2 → POINT-LIO pipeline on the Jetson. Builds `/unilidar/cloud` + `/unilidar/imu` from the L2 (via a forked `unilidar_sdk2` that fixes the IMU bridge bug), then feeds both into `point_lio_ros2` (dfloreaa Humble fork) which publishes `/cloud_registered` and saves an accumulated PCD on shutdown.
+
+### 15.1 Wiring + IPs
+
+L2 ↔ Cat 6 ↔ switch ↔ Cat 6 ↔ Jetson `enP8p1s0`. Static IPs via `nmcli connection nova-lan`:
+- Jetson `enP8p1s0`: `192.168.1.2/24`
+- L2: `192.168.1.62` (factory default for this batch — confirm with `ping 192.168.1.62`)
+- L2 UDP cloud + IMU port: `6101` (lidar→Jetson). Jetson local port: `6201`.
+
+### 15.2 IMU bridge fix — point ws at the fork
+
+Upstream `unitreerobotics/unilidar_sdk2` has a bug where `unitree_lidar_ros2` calls `getImuData()` twice in `timer_callback()`, draining the SDK queue before publish. `/unilidar/imu` is advertised but never carries data. Our fork [Ace2932/unilidar_sdk2 branch `fix/imu-bridge-double-call`](https://github.com/Ace2932/unilidar_sdk2/tree/fix/imu-bridge-double-call) removes the redundant call.
+
+```bash
+cd ~/ros2_ws/src/unilidar_sdk2
+git remote rename origin upstream
+git remote add origin https://github.com/Ace2932/unilidar_sdk2.git
+git fetch origin
+git checkout fix/imu-bridge-double-call
+cd ~/ros2_ws
+colcon build --packages-select unitree_lidar_ros2
+source install/local_setup.bash
+```
+
+### 15.3 Launch lidar wrapper + POINT-LIO
+
+Launch the wrapper (publishes `/unilidar/cloud` + `/unilidar/imu`). `setsid` keeps it alive after SSH disconnect; rviz inside the launch file will fail under SSH with no `$DISPLAY` — that's expected, the wrapper itself stays up.
+
+```bash
+setsid bash -c "source /opt/ros/humble/setup.bash && \
+  source ~/ros2_ws/install/local_setup.bash && \
+  exec ros2 launch unitree_lidar_ros2 launch.py \
+    > /tmp/unilidar.log 2>&1 < /dev/null" </dev/null >/dev/null 2>&1 & disown
+```
+
+Then POINT-LIO:
+
+```bash
+setsid bash -c "source /opt/ros/humble/setup.bash && \
+  source ~/ros2_ws/install/local_setup.bash && \
+  exec ros2 launch point_lio mapping_unilidar_l2.launch.py \
+    > /tmp/point_lio.log 2>&1 < /dev/null" </dev/null >/dev/null 2>&1 & disown
+```
+
+Watch `/tmp/point_lio.log` — IMU initialization should walk 1 % → 100 % within ~250 ms. If it never reaches 100 %, the IMU topic isn't carrying data — re-check that the wrapper is on the `fix/imu-bridge-double-call` branch.
+
+### 15.4 Verify
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/ros2_ws/install/local_setup.bash
+ros2 topic hz /unilidar/cloud       # ~12 Hz, 5042 pts/scan
+ros2 topic hz /unilidar/imu         # ~250 Hz  ← was empty before the fix
+ros2 topic hz /cloud_registered     # ~12 Hz, accumulated map in world frame
+ros2 topic hz /aft_mapped_to_init   # ~3.5 kHz, IMU-rate odometry
+```
+
+### 15.5 Capture a map
+
+Per `unilidar_l2.yaml`, POINT-LIO writes the accumulated map to `~/ros2_ws/src/point_lio_ros2/PCD/scans.pcd` on a clean shutdown (`SIGINT` from `Ctrl-C` or `kill -INT <pid>`).
+
+Stationary L2 = only the 18-line spoke pattern is visible — walls are sparsely sampled and lost in artefacts. For a real room reconstruction, **carry the L2 through the space** during the run (slow, smooth motion, no fast spins — keeps IMU continuity). Walk through doorways to capture connected rooms. ~30–60 s typically.
+
+### 15.6 Pull PCD off-box
+
+For PCDs in the 50+ MB range, gzip on the Jetson first — typical 60 % size reduction:
+
+```bash
+gzip -k -f ~/ros2_ws/src/point_lio_ros2/PCD/scans.pcd
+scp aiden@<jetson>:/home/aiden/ros2_ws/src/point_lio_ros2/PCD/scans.pcd.gz ./
+```
+
+If wifi to the Jetson is flaky (USB-side carrier or weak wlP1p1s0 signal), upload as a GitHub release asset instead — `gh release create <tag> <file> --repo Ace2932/LE_NOVA` from the Jetson, then `gh release download` from the Mac. Resumable, doesn't break mid-transfer.
+
+---
+
 ## Next (separate sessions — Phase 1 plan)
 
 - NVMe install + rootfs migration **(deferred — NAND shortage, see BOM §1; run from 128 GB microSD until prices recover)**
