@@ -8,6 +8,8 @@
 // USB-CDC at NOVA_LOOP_HZ for now.
 
 #include <Arduino.h>
+#include "feetech_bus.h"
+#include "ina226_telemetry.h"
 
 #ifdef NOVA_USE_MICRO_ROS
 #include <micro_ros_platformio.h>
@@ -36,19 +38,19 @@ constexpr uint8_t ESTOP_PIN       = 2;   // input from E-stop NC contact (LOW = 
 constexpr uint8_t BATTERY_LOW_PIN = 3;   // input from 13.0V comparator (HIGH = below 13.0V)
 constexpr uint8_t LED_PIN         = LED_BUILTIN;
 
-// ---------------- Bus direction control (74HC125) ----------------
-inline void bus_set_tx() {
-  digitalWrite(BUS_OE_TX_PIN, HIGH);  // drive TX onto bus
-  digitalWrite(BUS_OE_RX_PIN, HIGH);  // mute RX gate
-}
+// ---------------- Feetech bus (Pattern B half-duplex via 74HC125) ----------------
+// Bus class owns the OE pins + Serial2; service_bus_stub still just toggles
+// direction until 74HC125 + a real servo are on the bench. Once hardware
+// lands, replace the toggle with a round-robin ping/read cycle — the Bus
+// instance already has ping(), read_position(), write_goal_position(), and
+// sync_write_goal_positions() ready to go.
+feetech::Bus servo_bus(BUS_OE_TX_PIN, BUS_OE_RX_PIN, NOVA_BUS_BAUD);
 
-inline void bus_set_rx() {
-  digitalWrite(BUS_OE_TX_PIN, LOW);   // mute TX gate
-  digitalWrite(BUS_OE_RX_PIN, LOW);   // enable RX from bus
-}
+inline void bus_set_tx() { servo_bus.set_tx(); }
+inline void bus_set_rx() { servo_bus.set_rx(); }
 
 // ---------------- Stubs (TODO list) ----------------
-// service_bus_stub: port SCServo SDK to TeensyDuino, integrate STS3215 read/write
+// service_bus_stub: replace with round-robin ping/read when servos on bench
 // read_ina226_stub: integrate Rob Tillaart's INA226 library, 3 rails
 // publish_topics:   wire micro-ROS publishers when NOVA_USE_MICRO_ROS defined
 
@@ -59,8 +61,29 @@ void service_bus_stub() {
   bus_set_rx();
 }
 
+// ---------------- INA226 power-rail telemetry ----------------
+// 3 mandatory rails per BOM v3.4. Optional 4th (L2 LiDAR) gated by
+// NOVA_INA226_L2. Round-robin one rail per tick so each chip refreshes at
+// LOOP_HZ / N_RAILS (≈ 66 Hz for 3 rails @ 200 Hz tick) — well above the
+// 10 Hz /diagnostics publish rate.
+nova::Rail rail_leg   (nova::INA226_ADDR_LEG,    "leg_7v5");
+nova::Rail rail_hip   (nova::INA226_ADDR_HIP,    "hip_12v");
+nova::Rail rail_jetson(nova::INA226_ADDR_JETSON, "jetson_12v");
+#ifdef NOVA_INA226_L2
+nova::Rail rail_l2    (nova::INA226_ADDR_L2,     "l2_12v");
+constexpr uint8_t INA226_RAIL_COUNT = 4;
+nova::Rail* rails[INA226_RAIL_COUNT] = {&rail_leg, &rail_hip, &rail_jetson, &rail_l2};
+#else
+constexpr uint8_t INA226_RAIL_COUNT = 3;
+nova::Rail* rails[INA226_RAIL_COUNT] = {&rail_leg, &rail_hip, &rail_jetson};
+#endif
+uint8_t ina226_rr_idx = 0;
+
 void read_ina226_stub() {
-  // No I2C traffic yet — placeholder for INA226 reads
+  // Round-robin sample. Single chip per tick keeps the I²C bus + main loop
+  // budget tight; full set refreshes every INA226_RAIL_COUNT ticks.
+  rails[ina226_rr_idx]->poll();
+  ina226_rr_idx = (ina226_rr_idx + 1) % INA226_RAIL_COUNT;
 }
 
 // ---------------- Real-time loop ----------------
@@ -168,18 +191,21 @@ uint32_t compute_p99_us() {
 
 void setup() {
   // GPIO directions
-  pinMode(BUS_OE_TX_PIN, OUTPUT);
-  pinMode(BUS_OE_RX_PIN, OUTPUT);
   pinMode(ESTOP_PIN, INPUT_PULLUP);
   pinMode(BATTERY_LOW_PIN, INPUT_PULLDOWN);
   pinMode(LED_PIN, OUTPUT);
-  bus_set_rx();   // default to RX so the bus is free for other masters
 
-  // UART for Feetech bus
-  Serial2.begin(NOVA_BUS_BAUD);
+  // Feetech bus init (OE pinModes + Serial2.begin + default to RX).
+  servo_bus.begin();
 
   // USB-CDC for host logging (will become micro-ROS transport once enabled)
   Serial.begin(115200);
+
+  // I²C bus for INA226s. Teensy 4.1 Wire = SDA pin 18, SCL pin 19 (matches
+  // pin constants above). 400 kHz keeps per-read I²C cost ≲ 200 µs.
+  Wire.begin();
+  Wire.setClock(400000);
+  for (uint8_t i = 0; i < INA226_RAIL_COUNT; i++) rails[i]->begin();
 
 #ifdef NOVA_USE_MICRO_ROS
   set_microros_serial_transports(Serial);
