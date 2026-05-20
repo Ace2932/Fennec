@@ -343,6 +343,127 @@ D456 firmware 5.15.0.2 / recommended 5.17.0.10 (firmware update deferred). All s
 
 ---
 
+## 14. Teensy firmware build + micro-ROS agent (done 2026-05-19)
+
+Builds + flashes the Teensy 4.1 from the Jetson, and runs the micro-ROS agent that bridges Teensy XRCE-DDS over USB-CDC into ROS 2 Humble. Mac builds are blocked by `micro_ros_platformio` on Python 3.14; Jetson Python 3.10 is the supported build path.
+
+### 14.1 Apt packages (sudo required)
+
+```bash
+sudo apt update
+sudo apt install -y \
+  pipx python3-pip python3-venv python3-vcstool \
+  teensy-loader-cli
+```
+
+### 14.2 Permissions for Teensy USB
+
+```bash
+sudo usermod -a -G dialout aiden
+sudo curl -fsSL https://www.pjrc.com/teensy/00-teensy.rules \
+  -o /etc/udev/rules.d/00-teensy.rules
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+**Log out and back in** (or close + reopen SSH session) for the `dialout` group to take effect. Without it, `pio` cannot open `/dev/ttyACM0` to trigger the USB-CDC reboot into HalfKay before flashing.
+
+### 14.3 PlatformIO via pipx
+
+```bash
+python3 -m pipx install platformio
+python3 -m pipx ensurepath
+```
+
+Open a fresh shell so `~/.local/bin` is on `PATH`. Verify with `which pio`.
+
+**Symlink workaround** — `micro_ros_platformio`'s extra script hard-codes `~/.platformio/penv/bin/activate`. pipx installs to `~/.local/pipx/venvs/platformio/` instead, so symlink the two:
+
+```bash
+ln -s ~/.local/pipx/venvs/platformio ~/.platformio/penv
+```
+
+### 14.4 Clone repo
+
+```bash
+mkdir -p ~/code && cd ~/code
+git clone https://github.com/Ace2932/LE_NOVA.git
+```
+
+### 14.5 First firmware build
+
+```bash
+cd ~/code/LE_NOVA/firmware/teensy/firmware
+pio run
+```
+
+First build downloads + builds `micro_ros_platformio` dev workspace (~3-4 min on Orin Nano). One transient failure on `rmw_test_fixture` is normal — drop a `COLCON_IGNORE` marker and re-run:
+
+```bash
+touch .pio/libdeps/teensy41/micro_ros_platformio/build/dev/src/ament_cmake_ros/rmw_test_fixture/COLCON_IGNORE
+pio run
+```
+
+Build green ≈ 7 s on incremental, ≈ 3.5 min on cold cache. Output: `.pio/build/teensy41/firmware.{elf,hex}`. Currently sits at ~136 KB flash (1.7% of 7.75 MB).
+
+### 14.6 Build micro_ros_agent from source
+
+```bash
+cd ~/ros2_ws/src
+git clone -b humble https://github.com/micro-ROS/micro_ros_setup.git
+cd ~/ros2_ws
+source /opt/ros/humble/setup.bash
+rosdep install --from-paths src --ignore-src -y   # ignore unitree_lidar_* rosdep noise
+colcon build --packages-select micro_ros_setup
+source install/local_setup.bash
+ros2 run micro_ros_setup create_agent_ws.sh
+ros2 run micro_ros_setup build_agent.sh
+source install/local_setup.bash
+```
+
+Total ≈ 1.5 min on Orin Nano. Agent binary lands in `~/ros2_ws/install/micro_ros_agent/lib/micro_ros_agent/micro_ros_agent`.
+
+### 14.7 Flash + run workflow
+
+Agent holds `/dev/ttyACM0` exclusively — **kill it before each flash**, restart after:
+
+```bash
+# Kill agent (if running)
+pkill -f micro_ros_agent
+
+# Flash
+cd ~/code/LE_NOVA/firmware/teensy/firmware
+pio run -t upload
+
+# Restart agent (detached so it survives SSH disconnect)
+setsid bash -c "source /opt/ros/humble/setup.bash && \
+  source ~/ros2_ws/install/local_setup.bash && \
+  exec ros2 run micro_ros_agent micro_ros_agent serial \
+    --dev /dev/ttyACM0 -b 115200 > /tmp/uros_agent.log 2>&1 < /dev/null" \
+  </dev/null >/dev/null 2>&1 & disown
+```
+
+**Bootstrap order matters:** if the Teensy boots before the agent attaches, the XRCE-DDS handshake never completes (firmware sits in `rclc_support_init` after its 2-second grace delay). To recover, start the agent first then flash — or just re-flash to force a Teensy reboot while the agent is listening.
+
+### 14.8 Smoke test
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/ros2_ws/install/local_setup.bash
+ros2 topic list
+# Expect: /heartbeat /loop_max_us /loop_p99_us /joint_states /joint_commands
+#         /joint_cmd_rx_count /estop /battery_low /parameter_events /rosout
+
+ros2 topic echo /heartbeat            # 1 Hz Int32, increments
+ros2 topic echo /loop_p99_us --once   # 200 Hz loop p99 in microseconds
+ros2 topic pub --once /joint_commands sensor_msgs/msg/JointState \
+  '{position: [0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}'
+ros2 topic echo /joint_cmd_rx_count --once   # increments by 1 per cmd
+```
+
+Baseline 2026-05-19 (stubs only, no executor spin in tick body): `/loop_p99_us` = 5050 (= 50 µs late at 99th pct of 5000 µs nominal period). Real numbers grow once Feetech bus reads + INA226 I²C land.
+
+---
+
 ## Next (separate sessions — Phase 1 plan)
 
 - NVMe install + rootfs migration **(deferred — NAND shortage, see BOM §1; run from 128 GB microSD until prices recover)**

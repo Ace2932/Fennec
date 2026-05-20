@@ -61,4 +61,4 @@ Resolve during firmware bring-up.
 
 ---
 
-> **Status:** v1 active path. Critical-path Phase 1 deliverable. No firmware code committed yet — design spec only.
+> **Status (2026-05-19):** Skeleton firmware committed + verified end-to-end on Jetson. micro-ROS USB-CDC transport, 200 Hz loop, full topic contract (`/joint_states`, `/joint_commands`, `/estop`, `/battery_low`, plus telemetry: `/heartbeat`, `/loop_max_us`, `/loop_p99_us`, `/joint_cmd_rx_count`). Loop p99 = 5050 µs (2× under the <100 µs jitter gate). Bus servicing + INA226 + servo SDK are still stubs — see `firmware/teensy/firmware/README.md` for the live TODO list.
