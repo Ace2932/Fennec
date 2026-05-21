@@ -262,10 +262,40 @@ volatile bool     tick_pending = false;
 volatile uint32_t tick_isr_us  = 0;     // micros() captured in ISR
 volatile uint32_t tick_missed  = 0;     // count of ISR fires that found tick_pending already set
 
+// Software watchdog — main loop must increment main_loop_iter at least once
+// per WATCHDOG_TICKS ISR fires or the CPU is reset via the ARM system reset
+// request register. At 200 Hz tick and 200 ticks budget = 1 s of no main-
+// loop progress before reset. Tunable via -D NOVA_WATCHDOG_TICKS=<n>.
+#ifndef NOVA_WATCHDOG_TICKS
+#define NOVA_WATCHDOG_TICKS 200
+#endif
+volatile uint32_t main_loop_iter = 0;
+volatile uint32_t last_observed_iter = 0;
+volatile uint32_t no_progress_ticks = 0;
+volatile uint32_t watchdog_resets   = 0;    // survives across resets? no — but
+                                            // useful for in-session diag if a
+                                            // reset was caught + recovered.
+
 void tick_isr() {
   if (tick_pending) tick_missed++;
   tick_pending = true;
   tick_isr_us  = micros();
+
+  // Software watchdog: did the main loop advance since last ISR fire?
+  uint32_t iter_now = main_loop_iter;
+  if (iter_now != last_observed_iter) {
+    last_observed_iter = iter_now;
+    no_progress_ticks = 0;
+  } else {
+    no_progress_ticks++;
+    if (no_progress_ticks >= NOVA_WATCHDOG_TICKS) {
+      // SCB AIRCR — system reset request. VECTKEY = 0x05FA, SYSRESETREQ = 1.
+      // ARMv7-M canonical reboot path; no return. Teensy 4 imxrt.h exposes
+      // the AIRCR register directly as a uint32_t macro.
+      SCB_AIRCR = 0x05FA0004;
+      while (1) {}   // wait for reset to land
+    }
+  }
 }
 
 // Histogram is per response-latency in microseconds. Bucket width 2 µs,
@@ -642,6 +672,11 @@ void setup() {
 }
 
 void loop() {
+  // Software-watchdog kick — bump the progress counter every iteration.
+  // The ISR observes this from a hardware timer, independent of any main-
+  // loop pathology (blocking publish, deadlocked rcl call, etc.).
+  main_loop_iter++;
+
   // Atomic snapshot of ISR flag + timestamp
   noInterrupts();
   bool     pending = tick_pending;
