@@ -465,6 +465,18 @@ void setup() {
   // from a previous boot's residual value).
   slew_init_all();
 
+  // Boot servo ping sweep — one-shot inventory of the bus. Populates
+  // servo_present_mask before the tick loop starts so the first
+  // /servo_present_mask publish reports actual fleet presence rather than
+  // waiting for the round-robin reader to discover each joint over the
+  // first ~720 ms. ~1 ms per missing servo × 12 worst case = ~12 ms total
+  // delay in setup() — fine, before tick_timer.begin().
+  for (uint8_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    if (servo_bus.ping(SERVO_ID_BASE + i, /*timeout_us=*/1000) == feetech::Bus::OK) {
+      servo_present_mask |= (uint16_t)(1u << i);
+    }
+  }
+
   // Boot self-test: sanity-check safety GPIO before arming. If E-stop is
   // already pressed, or battery-low comparator already asserted, pre-seed
   // the safety FSM into the matching latched state — the operator must
