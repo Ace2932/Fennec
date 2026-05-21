@@ -128,12 +128,16 @@ constexpr uint8_t SERVO_ID_BASE = 1;
 uint8_t servo_rr_idx = 0;     // 0..NOVA_JOINT_COUNT-1 → servo ID = SERVO_ID_BASE + idx
 // Per-servo telemetry. All raw — gait layer on the Jetson converts to
 // radians + Newton-metres using URDF + servo calibration.
-//   position: 0..4095 (12-bit encoder)
-//   velocity: int16 sign-magnitude (STS3215 convention)
-//   load:     int16 sign-magnitude (0..1000 raw, % of stall torque)
+//   position:    0..4095 (12-bit encoder)
+//   velocity:    int16 sign-magnitude (STS3215 convention)
+//   load:        int16 sign-magnitude (0..1000 raw, % of stall torque)
+//   voltage:     u8 in 0.1 V units (e.g. 74 = 7.4 V)
+//   temperature: u8 in °C (raw, 0..100 typical operating range)
 volatile uint16_t servo_position_raw[NOVA_JOINT_COUNT] = {0};
 volatile int16_t  servo_velocity_raw[NOVA_JOINT_COUNT] = {0};
 volatile int16_t  servo_load_raw    [NOVA_JOINT_COUNT] = {0};
+volatile uint8_t  servo_voltage_raw [NOVA_JOINT_COUNT] = {0};
+volatile uint8_t  servo_temp_c      [NOVA_JOINT_COUNT] = {0};
 
 // Last-read success bitmask — bit i set ⇒ servo (SERVO_ID_BASE + i) has
 // answered at least once since boot. Exposed as /servo_present_mask for
@@ -150,16 +154,24 @@ volatile uint32_t servo_read_err_count = 0;
 
 void poll_one_servo() {
   uint8_t id = SERVO_ID_BASE + servo_rr_idx;
-  uint8_t buf[6];
-  // Read PRESENT_POSITION (2) + PRESENT_VELOCITY (2) + PRESENT_LOAD (2) =
-  // 6 bytes from REG_PRESENT_POSITION_L = 0x38 in one frame. Voltage +
-  // temperature live at 0x3E/0x3F — separate sweep later if needed.
+  // 8-byte sweep: REG_PRESENT_POSITION_L (0x38) through
+  // REG_PRESENT_TEMPERATURE (0x3F). Layout:
+  //   [0..1] = PRESENT_POSITION_L/H   (u16 LE)
+  //   [2..3] = PRESENT_VELOCITY_L/H   (s16 LE sign-magnitude)
+  //   [4..5] = PRESENT_LOAD_L/H       (s16 LE sign-magnitude)
+  //   [6]    = PRESENT_VOLTAGE        (u8, 0.1 V units)
+  //   [7]    = PRESENT_TEMPERATURE    (u8, °C)
+  // One frame, full per-joint snapshot. Wire cost ~80 µs TX + ~150 µs
+  // servo turnaround + 14-byte response = ~370 µs at 1 Mbaud.
+  uint8_t buf[8];
   feetech::Bus::Result rc = servo_bus.read_block(
-      id, feetech::REG_PRESENT_POSITION_L, 6, buf, /*timeout_us=*/2000);
+      id, feetech::REG_PRESENT_POSITION_L, 8, buf, /*timeout_us=*/2500);
   if (rc == feetech::Bus::OK) {
     servo_position_raw[servo_rr_idx] = feetech::pack_u16_le(buf[0], buf[1]);
     servo_velocity_raw[servo_rr_idx] = feetech::pack_s16_le(buf[2], buf[3]);
     servo_load_raw    [servo_rr_idx] = feetech::pack_s16_le(buf[4], buf[5]);
+    servo_voltage_raw [servo_rr_idx] = buf[6];
+    servo_temp_c      [servo_rr_idx] = buf[7];
     servo_present_mask |= (uint16_t)(1u << servo_rr_idx);
   } else {
     servo_read_err_count++;
@@ -208,10 +220,12 @@ void broadcast_servo_commands() {
 elapsedMillis heartbeat_ms;
 elapsedMillis stats_ms;
 elapsedMillis power_rails_ms;
+elapsedMillis servo_health_ms;
 const uint32_t TICK_PERIOD_US = 1000000UL / NOVA_LOOP_HZ;
 const uint32_t HEARTBEAT_PERIOD_MS = 1000;
 const uint32_t STATS_PERIOD_MS = 1000;
 const uint32_t POWER_RAILS_PERIOD_MS = 100;    // 10 Hz — matches Phase 1 spec
+const uint32_t SERVO_HEALTH_PERIOD_MS = 200;   // 5 Hz — voltage + temperature
 
 // IntervalTimer ISR drives the tick. Handler in loop() measures
 // ISR-fire → handler-entry latency = pure scheduling jitter (target: a
@@ -262,6 +276,8 @@ rcl_publisher_t servo_err_timeout_pub;
 rcl_publisher_t servo_err_bad_frame_pub;
 rcl_publisher_t servo_err_servo_pub;
 rcl_publisher_t firmware_version_pub;
+rcl_publisher_t servo_voltage_pub;
+rcl_publisher_t servo_temperature_pub;
 rcl_subscription_t joint_cmd_sub;
 rcl_subscription_t safety_clear_sub;
 
@@ -285,6 +301,11 @@ std_msgs__msg__String firmware_version_msg;
 // reallocated. Includes git SHA from build flag.
 constexpr size_t FIRMWARE_VERSION_MAX_LEN = 64;
 char firmware_version_buf[FIRMWARE_VERSION_MAX_LEN];
+
+// Per-joint voltage + temperature MultiArrays — 12 floats each, published
+// at 5 Hz (every 5th heartbeat sub-tick).
+std_msgs__msg__Float32MultiArray servo_voltage_msg;
+std_msgs__msg__Float32MultiArray servo_temperature_msg;
 std_msgs__msg__Bool  estop_msg;
 std_msgs__msg__Bool  battery_low_msg;
 sensor_msgs__msg__JointState joint_states_msg;
@@ -334,6 +355,12 @@ inline void joint_state_bind(sensor_msgs__msg__JointState* m,
 // micro-ROS build; the Float32MultiArray publish itself is ifdef'd.
 constexpr size_t POWER_RAILS_FIELDS = 9;
 float power_rails_data[POWER_RAILS_FIELDS];
+
+// Per-joint voltage + temperature buffers — see servo_voltage_msg /
+// servo_temperature_msg in the micro-ROS block. Lives outside the ifdef so
+// the 5 Hz conversion loop runs in both build envs.
+float servo_voltage_data    [NOVA_JOINT_COUNT] = {0};
+float servo_temperature_data[NOVA_JOINT_COUNT] = {0};
 
 #ifdef NOVA_USE_MICRO_ROS
 void safety_clear_callback(const void* msgin) {
@@ -505,6 +532,35 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, String),
       "firmware_version"));
+  RCCHECK(rclc_publisher_init_default(
+      &servo_voltage_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+      "servo_voltage"));
+  RCCHECK(rclc_publisher_init_default(
+      &servo_temperature_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+      "servo_temperature"));
+  // Bind voltage + temperature data buffers; layout dim sequences empty.
+  servo_voltage_msg.data.data         = servo_voltage_data;
+  servo_voltage_msg.data.size         = NOVA_JOINT_COUNT;
+  servo_voltage_msg.data.capacity     = NOVA_JOINT_COUNT;
+  servo_voltage_msg.layout.dim.data     = NULL;
+  servo_voltage_msg.layout.dim.size     = 0;
+  servo_voltage_msg.layout.dim.capacity = 0;
+  servo_voltage_msg.layout.data_offset  = 0;
+  servo_temperature_msg.data.data     = servo_temperature_data;
+  servo_temperature_msg.data.size     = NOVA_JOINT_COUNT;
+  servo_temperature_msg.data.capacity = NOVA_JOINT_COUNT;
+  servo_temperature_msg.layout.dim.data     = NULL;
+  servo_temperature_msg.layout.dim.size     = 0;
+  servo_temperature_msg.layout.dim.capacity = 0;
+  servo_temperature_msg.layout.data_offset  = 0;
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    servo_voltage_data[i] = 0.0f;
+    servo_temperature_data[i] = 0.0f;
+  }
   // Bind firmware version buffer + write the version once at startup.
   snprintf(firmware_version_buf, FIRMWARE_VERSION_MAX_LEN,
            "nova-teensy %s loop=%dHz", NOVA_BUILD_GIT_SHA, (int)NOVA_LOOP_HZ);
@@ -673,6 +729,21 @@ void loop() {
 #else
     Serial.print("[nova-teensy] alive t=");
     Serial.println(millis());
+#endif
+  }
+
+  if (servo_health_ms >= SERVO_HEALTH_PERIOD_MS) {
+    servo_health_ms = 0;
+    // Convert raw voltage (0.1 V units) + temperature (°C, already cooked)
+    // into float arrays. Conversion math stays here — host-side consumers
+    // see scaled values, not raw bytes.
+    for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+      servo_voltage_data[i]     = servo_voltage_raw[i] * 0.1f;
+      servo_temperature_data[i] = (float)servo_temp_c[i];
+    }
+#ifdef NOVA_USE_MICRO_ROS
+    RCSOFTCHECK(rcl_publish(&servo_voltage_pub,     &servo_voltage_msg,     NULL));
+    RCSOFTCHECK(rcl_publish(&servo_temperature_pub, &servo_temperature_msg, NULL));
 #endif
   }
 
