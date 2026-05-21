@@ -98,13 +98,12 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ## 4. Mechanical consumables
 
-### Loctite 243 blue threadlocker — ~$8
-- **Primary:** Amazon / hardware store
-- Get the **bottle** not single-use vials (you'll re-use it on every servo bracket)
+### Loctite 243 blue threadlocker — ~$8 ✅ ORDERED
+- Bottle (re-used on every servo bracket)
 
-### Electrical tape + Kapton tape — ~$10
-- 1× 3M Super 33+ electrical tape (NOT generic vinyl)
-- 1× Kapton tape, 10mm wide, for IMU / OLED insulation + LiDAR mast strain points
+### Electrical tape + Kapton tape — ~$10 ✅ ORDERED
+- 3M Super 33+ electrical tape (NOT generic vinyl)
+- Kapton tape, 10mm wide, for IMU / OLED insulation + LiDAR mast strain points
 
 ### Bambu Lab Liquid Glue — using existing supply
 - Using Bambu's liquid glue on textured PEI for PA6-CF adhesion
@@ -114,9 +113,9 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ## 5. Display
 
-### DisplayPort cable OR DP→HDMI adapter — ~$10
-- **Primary:** Amazon — pick based on monitor: DP-to-DP if monitor has DP input, DP-to-HDMI active adapter otherwise
-- **Note:** Jetson Orin Nano Dev Kit has DP only (no HDMI). Passive adapters work for HDMI 1.4-class monitors; if monitor is 4K@60Hz you need an active adapter.
+### ~~DisplayPort cable / DP→HDMI adapter~~ — $0 ❌ NOT NEEDED
+- Jetson initial setup completed headless (SSH from Mac), no direct console required.
+- If a recovery scenario ever needs a console: borrow / order a DP→HDMI active adapter then. Not pre-emptive.
 
 ---
 
@@ -156,17 +155,19 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 | E-stop button (Mxuteuk HB2-ES544) | 10 | ✅ Ordered |
 | Switch + Cat6 ×2 (Cable Matters 1ft) | 23 | ✅ Ordered |
 | LC filter parts (inductor + cap) | 3 | 🆕 To order (DigiKey bundle) |
-| Threadlocker + tape | 18 | 🆕 To order |
+| Threadlocker + tape | 18 | ✅ Ordered |
 | ~~Magigoo PA~~ → Bambu liquid glue | 0 | ✅ Using existing |
-| DP adapter | 10 | 🆕 To order |
-| **Subtotal (actual remaining spend)** | **~$245** | |
+| ~~DP adapter~~ | 0 | ❌ Not needed (headless Jetson) |
+| **Subtotal (actual remaining spend)** | **~$217** | |
 
 Updates since v3.4:
 - ISDT 608AC + LiPo bag + E-stop: ordered ✅
 - Ovonic kit confirmed includes XT60 jumper + charging lead → $13 saved
 - Bambu liquid glue substituted for Magigoo PA → $15 saved (with fallback if PA6-CF adhesion fails)
 - Network bundle (switch + Cable Matters 1ft Cat 6 ×2-3): ordered ✅ 2026-05-17
-- $371 worst case → **$245 actually-need-to-order**
+- Threadlocker + tape: ordered ✅ 2026-05-21
+- DP adapter dropped — Jetson set up headless via SSH; revisit only if a console-required recovery scenario hits → $10 saved
+- $371 worst case → **$217 actually-need-to-order**
 
 Not included: PCB v6 (~$60), arm servo top-up (~$50).
 
@@ -175,7 +176,7 @@ Not included: PCB v6 (~$60), arm servo top-up (~$50).
 ## Ordering strategy
 
 1. **Bundle by vendor** to minimize shipping (✅ ordered items removed):
-   - **Amazon:** threadlocker, tape, DP adapter, Cat6 cables, switch, INA226 breakouts
+   - **Amazon:** INA226 breakouts (if not on DigiKey)
    - **Pololu direct:** D42V55F12 + D42V110F7 + D42V110F12 + D24V22F12 (one shop, free shipping over $100 — $171 bundle qualifies easily)
    - **DigiKey or Mouser:** LC filter parts (inductor + cap), 74HC125, comparator, MOSFETs, bulk caps — single electronics order
    - **Feetech / AliExpress:** servo top-up (separate, slow boat)

@@ -14,7 +14,7 @@
 | NVIDIA Jetson Orin Nano Super Dev Kit 8GB | $249 | ✅ Owned |
 | Intel RealSense D456 | $584 | ✅ Ordered (#000187781) |
 | WiFi/BT module | $0 | ✅ Included — Jetson Orin Nano Super Dev Kit (P3766) ships with 802.11ac/abgn WiFi pre-installed per official spec. WiFi 5 (ac), **not** WiFi 6E. BT not explicitly listed in spec — verify on arrival. If somehow missing, order AX210NGW + U.FL antennas separately (~$30). |
-| **DisplayPort cable OR DP→HDMI adapter** | **$10** | 🆕 Order |
+| ~~DisplayPort cable / DP→HDMI adapter~~ | ~~$10~~ | ❌ Not needed — Jetson set up headless via SSH 2026-05-21 |
 | LeRobot Pi's 128GB Amazon Basics microSD | $0 | ✅ Reuse — back up LeRobot configs first. **128GB enough for Phase 1-2.** NVMe migration deferred until NAND prices recover or storage becomes a measured bottleneck. |
 
 **Compute subtotal of new adds: $10**
@@ -290,23 +290,23 @@ Post-Jetson-flash install list (Phase 1):
 
 | Item | $ | Status |
 |------|---|--------|
-| DP adapter | $10 | 🆕 |
+| ~~DP adapter~~ | ~~$10~~ | ❌ Not needed (headless SSH) |
 | Pololu D42V55F12 (Jetson 12V) | $32 | 🆕 |
 | **Pololu D42V110F7 (leg 7.5V)** | **$60** | 🆕 |
 | **Pololu D42V110F12 (hip 12V only)** | **$60** | 🆕 |
 | **Pololu D24V22F12 (L2 LiDAR dedicated, v3.4)** | **$19** | 🆕 |
 | Gigabit switch + Cable Matters Cat 6 ×2-3 (1ft) | $23 | ✅ Ordered 2026-05-17 |
 | LC filter parts (inductor + cap) | $3 | 🆕 To order (DigiKey bundle) |
-| Threadlocker + tape | $18 | 🆕 |
+| Threadlocker + tape | $18 | ✅ Ordered 2026-05-21 |
 | ~~Magigoo PA~~ → Bambu liquid glue | $0 | ✅ Using existing |
 | ISDT 608AC | $60 | ✅ Ordered |
 | LiPo safe bag | $15 | ✅ Ordered |
 | ~~XT60 jumper + charging lead~~ | $0 | ✅ Supplied with Ovonic kit |
 | E-stop (Mxuteuk HB2-ES544) | $10 | ✅ Ordered |
 | **74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 |
-| **Subtotal — committed** | **~$343** | $85 on order, $258 still to order |
+| **Subtotal — committed** | **~$333** | $103 on order, $230 still to order |
 
-Savings since v3.4: −$13 (XT60 leads via Ovonic kit), −$15 (Magigoo → Bambu liquid glue), −$30 (**XL4016 ×2 returned for refund 2026-05-18** — no longer sunk). Total dropped $365 → $343 committed + $30 recovered from owned bucket.
+Savings since v3.4: −$13 (XT60 leads via Ovonic kit), −$15 (Magigoo → Bambu liquid glue), −$30 (**XL4016 ×2 returned for refund 2026-05-18** — no longer sunk), −$10 (DP adapter dropped 2026-05-21, headless SSH). Total dropped $375 → $333 committed + $30 recovered.
 
 PCB note: new v6 design cost (PCBWay) absorbs the v5.2b $60 line.
 
