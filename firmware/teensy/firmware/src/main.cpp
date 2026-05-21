@@ -194,6 +194,25 @@ void poll_one_servo() {
 constexpr uint8_t CMD_BROADCAST_DECIMATE = 5;   // 200 Hz / 5 = 40 Hz
 uint8_t cmd_decimate_count = 0;
 
+// Slew limit — max raw-units change per broadcast (= per 25 ms at 40 Hz).
+// STS3215 full travel 0..4095 = 360°. At 50 raw units / 25 ms = 4.4°/25ms
+// ≈ 176°/s, well under the servo's mechanical capability but slow enough
+// that a step-jump command (e.g. host crash → restart at a far pose) ramps
+// in instead of slamming. Tune in `NOVA_SLEW_MAX_DELTA` build flag.
+#ifndef NOVA_SLEW_MAX_DELTA
+#define NOVA_SLEW_MAX_DELTA 50
+#endif
+
+// Per-joint last-commanded raw goal, used to compute the slew-limited
+// next value. Initialized to "no command yet" sentinel; on first broadcast
+// after boot, ramp is bypassed (first write = current latched target).
+constexpr uint16_t SLEW_UNINIT = 0xFFFF;
+uint16_t last_cmd_goal[NOVA_JOINT_COUNT];
+
+inline void slew_init_all() {
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) last_cmd_goal[i] = SLEW_UNINIT;
+}
+
 void broadcast_servo_commands() {
   if (!safety_fsm.motion_enabled()) return;
   cmd_decimate_count++;
@@ -204,14 +223,22 @@ void broadcast_servo_commands() {
   uint16_t goals[NOVA_JOINT_COUNT];
   for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
     ids[i] = SERVO_ID_BASE + i;
-    // Clamp latched command (radians) to 0..4095 here would be cleaner once
-    // the gait controller settles a calibration mapping. For now treat the
-    // command as already-raw (gait layer will normalize on the Jetson) and
-    // clip to the valid range.
     double v = latched_cmd_position[i];
     if (v < 0.0)    v = 0.0;
     if (v > 4095.0) v = 4095.0;
-    goals[i] = (uint16_t)v;
+    uint16_t target = (uint16_t)v;
+
+    uint16_t out;
+    if (last_cmd_goal[i] == SLEW_UNINIT) {
+      out = target;                 // first write — accept as-is
+    } else {
+      int32_t delta = (int32_t)target - (int32_t)last_cmd_goal[i];
+      if (delta >  (int32_t)NOVA_SLEW_MAX_DELTA) delta =  (int32_t)NOVA_SLEW_MAX_DELTA;
+      if (delta < -(int32_t)NOVA_SLEW_MAX_DELTA) delta = -(int32_t)NOVA_SLEW_MAX_DELTA;
+      out = (uint16_t)((int32_t)last_cmd_goal[i] + delta);
+    }
+    last_cmd_goal[i] = out;
+    goals[i] = out;
   }
   servo_bus.sync_write_goal_positions(ids, goals, NOVA_JOINT_COUNT);
 }
@@ -402,6 +429,11 @@ void setup() {
   Wire.begin();
   Wire.setClock(400000);
   for (uint8_t i = 0; i < INA226_RAIL_COUNT; i++) rails[i]->begin();
+
+  // Slew limiter — initialize per-joint history to UNINIT so the first
+  // broadcast after boot accepts the latched goal verbatim (no false ramp
+  // from a previous boot's residual value).
+  slew_init_all();
 
   // Boot self-test: sanity-check safety GPIO before arming. If E-stop is
   // already pressed, or battery-low comparator already asserted, pre-seed
@@ -653,6 +685,12 @@ void loop() {
       safety_clear_request = false;
     }
     nova::SafetyState curr_safety = safety_fsm.state();
+    // On any transition back to NORMAL (clear succeeded), reset the slew
+    // history so the next broadcast accepts the current target verbatim
+    // rather than ramping from the stale pre-fault goal.
+    if (curr_safety == nova::SAFETY_NORMAL && prev_safety != nova::SAFETY_NORMAL) {
+      slew_init_all();
+    }
 
 #ifdef NOVA_USE_MICRO_ROS
     // Edge-change publish for raw safety signals (host sees the source)
