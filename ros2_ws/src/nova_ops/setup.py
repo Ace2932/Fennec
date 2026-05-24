@@ -33,6 +33,8 @@ setup(
             'dashcam_node = nova_ops.dashcam.node:main',
             # `ros2 run nova_ops safety_counters` — placeholder /safety_envelope_counters publisher
             'safety_counters = nova_ops.safety_envelope.counters_node:main',
+            # `ros2 run nova_ops oled_status` — STUB OLED + LED status bridge to Arduino Nano via USB-serial
+            'oled_status = nova_ops.oled_status.node:main',
         ],
     },
 )

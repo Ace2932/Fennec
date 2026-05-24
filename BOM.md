@@ -164,16 +164,31 @@ Switch can be pulled out of its case to save ~60% volume inside the chassis if n
 
 ---
 
-## 7. Stock NovaSM3 Sensors
+## 7. Stock NovaSM3 Sensors (v3.5 cut — most are vestigial vs new perception stack)
 
-| Item | Price | Status |
-|------|-------|--------|
-| GY-521 MPU-6050 IMU | $8 | ✅ Ordered |
-| DFPlayer Mini Pro + 4Ω speaker | $20 | ✅ Ordered |
-| WS2812B RGB LEDs × 4 | $8 | ✅ Ordered |
-| SSD1331 96×64 OLED | $18 | ✅ Ordered |
-| HC-SR04 ultrasonic × 2 | $10 | ✅ Ordered |
-| MH-SR602 PIR motion sensor × 3 | $12 | ✅ Ordered |
+**Cut justification (2026-05-24):** D456 + L2 LiDAR (with their own IMUs)
+replace the stock IMU + ultrasonic stack. PIR is wrong sensor class for
+a mobile robot. Audio is novelty. Kept: status display + LEDs only.
+
+### Active (v3.5)
+
+| Item | Price | Status | Role |
+|------|-------|--------|------|
+| WS2812B RGB LEDs × 4 | $8 | ✅ Ordered | At-a-glance robot state (per `docs/notes-qol-features.md` §8) |
+| SSD1331 96×64 OLED | $18 | ✅ Ordered | On-board display: battery %, IP, gait state |
+
+### Cut from v1 — owned + on shelf
+
+| Item | Price | Why cut |
+|------|-------|---------|
+| ~~GY-521 MPU-6050 IMU~~ | ~~$8~~ | Redundant: D456 IMU @ 200-400 Hz + L2 IMU @ 250 Hz are both higher-quality |
+| ~~DFPlayer Mini Pro + 4Ω speaker~~ | ~~$20~~ | Novelty; defer to Phase 4 polish |
+| ~~HC-SR04 ultrasonic × 2~~ | ~~$10~~ | D456 depth + L2 LiDAR are vastly superior obstacle perception |
+| ~~MH-SR602 PIR motion sensor × 3~~ | ~~$12~~ | Wrong sensor class for mobile robot — PIR is for stationary monitors |
+
+**Savings vs original §7: $50** (parts already owned — stay on shelf, no refund attempt)
+
+**Arduino Nano kept** with reduced role: drives OLED (SPI) + WS2812B LEDs (1 GPIO) only. No I²C aux bus. Receives data from Jetson via USB-serial.
 
 ---
 
@@ -279,8 +294,8 @@ Post-Jetson-flash install list (Phase 1):
    - Verify SSH-over-WiFi still works while LiDAR streams
 
 5. **Sensor smoke test**
-   - MPU-6050 on Arduino Nano I2C
-   - PIRs, ultrasonics, OLED, RGB LEDs, DFPlayer — one at a time
+   - OLED + WS2812B LEDs (driven by Arduino Nano via USB-serial from Jetson)
+   - Cut sensors (MPU-6050, PIR, ultrasonic, DFPlayer) stay on shelf — skip smoke test
 
 ---
 

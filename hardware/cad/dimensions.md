@@ -387,9 +387,17 @@ Standard Cat 6 patch cable. 6.0 mm OD with snagless boot. ✅
 
 ---
 
-## 9. Stock NovaSM3 sensors
+## 9. Stock NovaSM3 sensors (v3.5 BOM cut — only OLED + WS2812B remain active)
 
-### MPU-6050 on GY-521 breakout
+**Cut for v1 (2026-05-24):** MPU-6050, HC-SR04, MH-SR602 PIR, DFPlayer +
+speaker. Already owned — stay on shelf, no chassis cutouts or active
+mounts. Dims kept here only for future re-introduction reference.
+
+### Active
+
+### ⏸ Cut from v1 (on shelf)
+
+### MPU-6050 on GY-521 breakout (CUT v1)
 **Source:** common GY-521 module specs
 
 | Dim | Value | Status |
@@ -399,7 +407,9 @@ Standard Cat 6 patch cable. 6.0 mm OD with snagless boot. ✅
 | Header pitch | 2.54 (8-pin or 9-pin) | ✅ |
 | I²C addr | 0x68 (or 0x69 with ADO bridged) | ✅ |
 
-### SSD1331 OLED 0.95" 96 × 64 color
+### ✅ Active in v1
+
+### SSD1331 OLED 0.95" 96 × 64 color (ACTIVE)
 **Source:** common SSD1331 module
 
 | Dim | Value | Status |
@@ -410,7 +420,7 @@ Standard Cat 6 patch cable. 6.0 mm OD with snagless boot. ✅
 | Active display area | 21.7 × 14.5 (0.95") | ✅ |
 | Pin header | 7-pin SPI, 2.54 mm pitch | ✅ |
 
-### HC-SR04 ultrasonic distance
+### HC-SR04 ultrasonic distance (CUT v1)
 **Source:** common HC-SR04 datasheet
 
 | Dim | Value | Status |
@@ -421,7 +431,7 @@ Standard Cat 6 patch cable. 6.0 mm OD with snagless boot. ✅
 | Pin header | 4-pin (VCC/Trig/Echo/GND), 2.54 mm | ✅ |
 | Mount holes | not standardized; some modules have 2× M2 in corners | ⚠️ REVIEW |
 
-### MH-SR602 PIR motion sensor
+### MH-SR602 PIR motion sensor (CUT v1)
 **Source:** common MH-SR602 module
 
 | Dim | Value | Status |
@@ -431,7 +441,7 @@ Standard Cat 6 patch cable. 6.0 mm OD with snagless boot. ✅
 | Pin header | 3-pin (VCC/Signal/GND), 2.54 mm | ✅ |
 | Detection range | ~3 m | ✅ |
 
-### DFPlayer Mini Pro
+### DFPlayer Mini Pro (CUT v1)
 **Source:** DFRobot DFR0299 + various clones (Pro is the newer DFRobot rev)
 
 | Dim | Value | Status |
@@ -441,7 +451,7 @@ Standard Cat 6 patch cable. 6.0 mm OD with snagless boot. ✅
 | Pin header | 2× 8-pin, 2.54 mm pitch | ✅ |
 | micro-SD slot | standard | ✅ |
 
-### WS2812B addressable RGB LED
+### WS2812B addressable RGB LED (ACTIVE)
 **Source:** WorldSemi WS2812B datasheet
 
 | Dim | Value | Status |

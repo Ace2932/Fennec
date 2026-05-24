@@ -299,7 +299,7 @@ Use `jtop` (the `jetson-stats` Python package) rather than parsing `tegrastats` 
 
 **Priority rule:** highest-severity state wins. E-stop > preflight fail > error > safety latch > warn > recording > nominal. Single visible color at any time, no rainbow chaos.
 
-**Prerequisite acknowledged:** Nano firmware today is *aux peripherals only* (PIR / OLED / ultrasonic / MPU-6050). Adding a status-LED protocol means new Nano sketch code — not zero work.
+**Prerequisite acknowledged:** Nano firmware today is *aux peripherals only*. Per BOM v3.5 (2026-05-24) cut: PIR / ultrasonic / MPU-6050 / DFPlayer removed; Nano's role is now SSD1331 OLED (SPI) + WS2812B LED (1 GPIO) + USB-serial bridge to Jetson. Simpler sketch than original Nova.
 
 **Open questions:**
 
