@@ -382,21 +382,27 @@ def d456_bracket_face(workplane):
             .hole(RUTHEX["M3"]["bore"]))
 
 # Unitree L2 LiDAR top-mount riser
+# Source: L2 User Manual 2024.10 v1.1 (verified — see dimensions.md §2)
 L2_LIDAR = {
-    "base_od": 60.0,      # cylindrical base diameter (verify on part)
-    "bolt_circle_d": 50.0,  # M3 mounting bolt circle (verify)
-    "n_bolts": 4,
+    "body_w":          75.0,  # body W (square) per Unitree manual
+    "body_d":          75.0,  # body D
+    "body_h":          65.0,  # body H
+    "weight_g":        230,
+    # 4x M3 on a 22.5 mm SQUARE pattern (NOT bolt circle — square,
+    # corners spaced 22.5 mm apart along X and Y)
+    "mount_pitch_x":   22.5,
+    "mount_pitch_y":   22.5,
+    "mount_thread_depth": 6.0,
+    "n_bolts":         4,
     "riser_h_default": 80.0,  # 5-10 cm above chassis
 }
 
 def l2_riser_top(workplane):
-    """Top face of L2 LiDAR riser: 4x M3 on a 50 mm bolt circle."""
-    import math
-    pts = []
-    r = L2_LIDAR["bolt_circle_d"] / 2
-    for i in range(L2_LIDAR["n_bolts"]):
-        a = 2 * math.pi * i / L2_LIDAR["n_bolts"]
-        pts.append((r * math.cos(a), r * math.sin(a)))
+    """Top face of L2 LiDAR riser: 4x M3 on a 22.5 mm SQUARE pattern."""
+    half_x = L2_LIDAR["mount_pitch_x"] / 2
+    half_y = L2_LIDAR["mount_pitch_y"] / 2
+    pts = [( half_x,  half_y), ( half_x, -half_y),
+           (-half_x,  half_y), (-half_x, -half_y)]
     return (workplane
             .pushPoints(pts)
             .circle(RUTHEX["M3"]["boss_od"]/2).extrude(8.0)
