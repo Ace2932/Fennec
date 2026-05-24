@@ -82,16 +82,15 @@ BEAR_688_W      = 5.0
 
 # Wire pass-through — Feetech TTL daisy-chain.
 # JST 3-pin XH connector body: ~7.5 mm wide × 5.9 mm tall × 10 mm long.
-# 14 mm DIAMETER round hole fits the connector + cable through during
-# assembly, plus 2 cables side-by-side for daisy chain in+out.
-# Round holes preferred over rectangular slots: easier to print clean,
-# no sharp stress risers, more visible at preview-render scale.
-WIRE_HOLE_DIA   = 14.0   # cable + connector + slack pass-through
-
-# Legacy rectangular slot dims (kept for any old code that imports these,
-# but new builds should prefer WIRE_HOLE_DIA + a circle).
-WIRE_SLOT_W     = WIRE_HOLE_DIA
-WIRE_SLOT_H     = WIRE_HOLE_DIA
+# Bare cable cross-section: ~3-4 mm × 2-3 mm per cable.
+# 16 × 9 mm RECTANGULAR slot:
+#   - fits 2 cables side-by-side at the cable section (~14 mm × 3 mm)
+#   - fits 1 JST connector with slack during install (7.5 × 5.9 + room)
+#   - fits 2 connectors side-by-side snug (~15 × 6 mm)
+# Slot orientation: wide axis (W=16) along the face's long direction.
+WIRE_SLOT_W     = 16.0
+WIRE_SLOT_H     = 9.0
+WIRE_HOLE_DIA   = max(WIRE_SLOT_W, WIRE_SLOT_H)  # legacy alias
 
 # Derived: total servo footprint Z including both horn discs +
 # clearance (this is how tall a body-shell pocket needs to be along Z)

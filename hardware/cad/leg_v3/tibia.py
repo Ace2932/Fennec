@@ -115,20 +115,19 @@ def build_tibia():
             .extrude(RUTHEX_M3_DEPTH + 0.1)
         )
 
-    # TTL daisy-chain pass-throughs: round 14 mm holes on -X and +X faces
-    from leg_common import WIRE_HOLE_DIA
+    # TTL daisy-chain pass-throughs: 16x9 rect slots on -X and +X faces
     tibia = tibia.cut(
         cq.Workplane("YZ")
         .workplane(offset=BODY_CX - BODY_X/2 - 0.5)
-        .center(0, BODY_Z - WIRE_HOLE_DIA/2 - 3.0)
-        .circle(WIRE_HOLE_DIA / 2)
+        .center(0, BODY_Z - WIRE_SLOT_H/2 - 3.0)
+        .rect(WIRE_SLOT_W, WIRE_SLOT_H)
         .extrude(WALL_T + 1.0)
     )
     tibia = tibia.cut(
         cq.Workplane("YZ")
         .workplane(offset=BODY_CX + BODY_X/2 - WALL_T - 0.5)
-        .center(0, BODY_Z - WIRE_HOLE_DIA/2 - 3.0)
-        .circle(WIRE_HOLE_DIA / 2)
+        .center(0, BODY_Z - WIRE_SLOT_H/2 - 3.0)
+        .rect(WIRE_SLOT_W, WIRE_SLOT_H)
         .extrude(WALL_T + 1.0)
     )
 

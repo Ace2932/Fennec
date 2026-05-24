@@ -140,14 +140,13 @@ def build_body_shell():
             .extrude(RUTHEX_M3_DEPTH + 0.1)
         )
 
-    # ---- Wire pass-through (round hole) on -X face ----
-    # 14 mm circle fits JST 3-pin XH connector + 2 cables side-by-side
-    from leg_common import WIRE_HOLE_DIA
+    # ---- Wire pass-through 16x9 mm rect slot on -X face ----
+    # Fits 2 TTL cables side-by-side, or 1 JST connector with slack
     shell = shell.cut(
         cq.Workplane("YZ")
         .workplane(offset=-BODY_X/2 - 0.5)
-        .center(0, BODY_Z - WIRE_HOLE_DIA/2 - 3.0)
-        .circle(WIRE_HOLE_DIA / 2)
+        .center(0, BODY_Z - WIRE_SLOT_H/2 - 3.0)
+        .rect(WIRE_SLOT_W, WIRE_SLOT_H)
         .extrude(WALL_T + 1.0)
     )
 
