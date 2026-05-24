@@ -13,6 +13,7 @@ setup(
         ('share/' + package_name + '/launch', [
             'launch/preflight.launch.py',
             'launch/dashcam.launch.py',
+            'launch/bringup.launch.py',
         ]),
     ],
     install_requires=['setuptools'],
@@ -30,6 +31,8 @@ setup(
             'preflight = nova_ops.preflight.cli:main',
             # `ros2 run nova_ops dashcam_node` — long-running rosbag MCAP recorder + freeze service
             'dashcam_node = nova_ops.dashcam.node:main',
+            # `ros2 run nova_ops safety_counters` — placeholder /safety_envelope_counters publisher
+            'safety_counters = nova_ops.safety_envelope.counters_node:main',
         ],
     },
 )

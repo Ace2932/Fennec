@@ -13,8 +13,8 @@ Roadmap + feature specs: [`docs/notes-qol-features.md`](../../../docs/notes-qol-
 |---------|--------|
 | §1 Preflight check (v1: bus ping + E-stop + battery latch) | ✅ implemented |
 | §2 Always-on MCAP dashcam (v1: 20 topics + freeze on safety + janitor) | ✅ implemented |
-| §3 Per-joint safety envelope | 📋 stub |
-| §4 nova bringup launcher with profiles | 📋 stub |
+| §3 Per-joint safety envelope (position+velocity+load) | ✅ library shipped |
+| §4 nova bringup launcher with profiles | ✅ implemented |
 | §5 make deploy (Teensy over Jetson USB) | ✅ implemented (in `firmware/teensy/firmware/Makefile`) |
 | §6 Bag replay harness | 📋 stub |
 | §7 Telemetry → CSV / Grafana | 📋 stub |
@@ -113,6 +113,66 @@ Override via parameter `bag_dir`.
   rolling cutoff but more file churn.
 - `topics` — passed as a list parameter; replace with `PERCEPTION_TOPICS`
   for high-bandwidth runs (still under buffer cap).
+
+## nova bringup launcher (v1)
+
+Per `notes-qol-features.md` §4. Profile-based composition; profiles
+defined as a Python dict in `nova_ops/bringup/__init__.py` (v1).
+v2 moves them to YAML.
+
+Profiles:
+
+| Profile | Description |
+|---------|-------------|
+| `bench` | Teensy uROS bridge + preflight — desk firmware iteration |
+| `sensors` | RealSense + L2 + dashcam — sensor smoke / data collection |
+| `slam` | sensors + POINT-LIO + robot_state_publisher |
+| `walk` | preflight + dashcam + (gait controller — TODO) |
+| `full` | walk + slam + Nav2 + Foxglove (TODO) |
+| `vla` | full + VLA inference (Phase 4) |
+
+```bash
+ros2 launch nova_ops bringup.launch.py profile:=walk
+ros2 launch nova_ops bringup.launch.py profile:=sensors dry_run:=true
+ros2 launch nova_ops bringup.launch.py profile:=walk no_preflight:=true
+```
+
+`include_profile` lets one profile compose another. Missing packages
+(gait_controller, nav2, etc.) are skipped with a log line instead of
+crashing the launch.
+
+## Per-joint safety envelope (v1)
+
+In-process wrapper library per `notes-qol-features.md` §3 option (a).
+The gait controller imports
+`nova_ops.safety_envelope.SafeJointCommandPublisher` and calls
+`.publish(joint_state)` instead of touching the raw `/joint_commands`
+publisher directly.
+
+Checks (v1):
+- **Position** — clamp to URDF limits with a 2° soft margin
+- **Velocity** — numerical diff vs last command; replace with
+  `last + sign * v_max * dt` if over limit
+- **Load** — 3-sample mean of `/joint_states.effort[]` above 70%
+  refuses goals that would increase joint displacement
+- **Temperature** — ⏳ gated on firmware `REG_PRESENT_TEMPERATURE`
+
+Joint limits live in `nova_ops/safety_envelope/limits.py`. Currently
+hand-tuned conservative defaults for hip abduction / thigh / knee;
+replace with URDF-derived values when the URDF lands.
+
+Counters publish at 1 Hz on `/safety_envelope_counters` (Int32MultiArray
+layout: `position_1..12, velocity_1..12, load_1..12`).
+
+For now a placeholder publisher node is provided (publishes all
+zeros until the gait controller wires up):
+
+```bash
+ros2 run nova_ops safety_counters
+```
+
+Unit tests live in `test/test_safety_envelope.py` — pure-Python
+mock-rclpy tests covering clamp, velocity, load, counters.
 
 ## make deploy (Teensy over Jetson USB)
 
