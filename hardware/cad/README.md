@@ -5,7 +5,7 @@ Two tools, deliberately split:
 - **OnShape** (browser, free public doc tier) — leg-joint kinematics, hip + femur + tibia multi-body assemblies, anything with mate relationships, chassis structural geometry. Source of truth for the kinematic stack.
 - **parametric-3d-printing skill** (`~/.claude/skills/parametric-3d-printing/`, CadQuery-based) — utility parts: cable guides, sensor adapters, mount brackets, panel cutouts, foot pads, strain reliefs, PCB carriers, riser towers, connector pockets, print-test coupons. Anything single-body or single-assembly.
 
-Project-specific macros live in `nova_sm3_patterns.md` inside the skill — Bambu P1S + PA6-CF tolerances, STS3215 dual-shaft mount, LiPo pocket, XT60 / XT30 / E-stop / RJ-45 cutouts, RealSense D456 + L2 LiDAR + Teensy + INA226 mounts, leg-rail star injection, TPU foot pads + strain reliefs. Read it before generating new utility parts.
+Project-specific macros live in [`hardware/cad/patterns.md`](./patterns.md) (version-controlled with this repo). Project-scoped skill at `.claude/skills/nova-sm3-cad/SKILL.md` auto-loads when working in this project — wraps the patterns file + delegates CadQuery code generation + STL export to the upstream `parametric-3d-printing` skill. Covers Bambu P1S + PA6-CF tolerances, STS3215 dual-shaft mount, LiPo pocket, XT60 / XT30 / E-stop / RJ-45 / USB / barrel cutouts, RealSense D456 + L2 LiDAR riser + Teensy + Arduino Nano + INA226 mounts, Pololu buck carriers + LC filter pocket, P3766 antenna mount, WS2812B status LED, leg-rail star injection, TPU foot pads + strain reliefs, servo zero-position calibration jig. Read it before generating new utility parts.
 
 ## Will contain (in this directory)
 
@@ -19,7 +19,7 @@ Project-specific macros live in `nova_sm3_patterns.md` inside the skill — Bamb
 - **STS3215** (19kg + 30kg variants) — pull STEP from GrabCAD or Feetech site, import to OnShape
 - **NovaSM3 reference chassis** — `cguweb-com/Arduino-Projects/tree/main/Nova-SM3` (the `SovGVD/NovaSM3` URL in old docs was a misattribution; that repo does not exist). **STEP files NOT in repo — only STL.** For OnShape import: (a) import STL as static body, (b) re-model from STL + datasheet + caliper, or (c) contact Chris Locke for original Fusion source. See [`docs/research/2026-05-17-notes.md`](../../docs/research/2026-05-17-notes.md) §8.
 - **Feetech 25T servo horns** — datasheet dims, model in OnShape from scratch
-- **688ZZ ball bearings** (8 × 16 × 5 mm) — generic deep-groove, no STEP needed; press-fit pocket geometry is in `nova_sm3_patterns.md`
+- **688ZZ ball bearings** (8 × 16 × 5 mm) — generic deep-groove, no STEP needed; press-fit pocket geometry is in [`patterns.md`](./patterns.md) §6
 - **Calipers** for in-hand cross-check — STS3215 body tolerance is ±0.1 mm batch-to-batch, never trust a single datasheet number for press-fit work
 
 ## Print workflow

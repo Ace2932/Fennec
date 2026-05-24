@@ -160,7 +160,7 @@ Switch can be pulled from its case to save ~60 % volume inside the chassis.
 ## Strain relief + routing notes
 
 - Feetech daisy chain follows the opposite chassis edge from the high-current servo power (reduces capacitive coupling)
-- L2 Ethernet cable routes through a TPU strain-relief grommet at chassis pass-through (printed pattern in `~/.claude/skills/parametric-3d-printing/nova_sm3_patterns.md` §8b)
+- L2 Ethernet cable routes through a TPU strain-relief grommet at chassis pass-through (printed pattern in [`../cad/patterns.md`](../cad/patterns.md) §8b)
 - Servo wire entry at each leg gets a TPU strain relief (same source)
 - Battery leads: short + thick (18 AWG silicone), routed inside a Kapton-wrapped channel near the LiPo pocket
 - E-stop button on chassis side panel, kept clear of moving leg envelope
