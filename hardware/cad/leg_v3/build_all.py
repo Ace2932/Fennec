@@ -50,19 +50,21 @@ def main():
     tibia = build_tibia()
     tibia_cover = build_tibia_cover()
 
-    # Export individual STLs
+    # Export individual STLs + STEP (STEP for OnShape import — preserves
+    # parametric BREP geometry; STL for slicer/printer).
     parts = [
-        ("shoulder_v31.stl",        shoulder),
-        ("coax_v31_shell.stl",      coax_shell),
-        ("coax_v31_cover.stl",      coax_cover),
-        ("femur_v31_shell.stl",     femur),
-        ("femur_v31_cover.stl",     femur_cover),
-        ("tibia_v31_shell.stl",     tibia),
-        ("tibia_v31_cover.stl",     tibia_cover),
+        ("shoulder_v31",        shoulder),
+        ("coax_v31_shell",      coax_shell),
+        ("coax_v31_cover",      coax_cover),
+        ("femur_v31_shell",     femur),
+        ("femur_v31_cover",     femur_cover),
+        ("tibia_v31_shell",     tibia),
+        ("tibia_v31_cover",     tibia_cover),
     ]
     for name, obj in parts:
-        cq.exporters.export(obj, name,
+        cq.exporters.export(obj, f"{name}.stl",
                             tolerance=0.01, angularTolerance=0.1)
+        cq.exporters.export(obj, f"{name}.step")
 
     # ---- Posed assembly (preview only, not printable as one piece) ----
     # Mate each link by sharing the servo axis with the upstream piece.
