@@ -381,6 +381,23 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] Stair climbing test (gait variation)
 - [ ] Telemetry dashboard
 
+### Forward-looking backlog (opportunistic, not scheduled)
+
+Quality-of-life software + operational features captured in [`docs/notes-qol-features.md`](./docs/notes-qol-features.md) and [`docs/notes-virtual-view-autocal.md`](./docs/notes-virtual-view-autocal.md). Pick up during Phase 1/2 idle time or batch into a "QoL sprint" once v1 walk gait is stable. Suggested rollout order (per `notes-qol-features.md`):
+
+1. **Preflight health check** (`nova_ops`) — bus ping sweep, E-stop, battery latch. v1 ships 3 checks; rest land opportunistically. Highest payback during Phase 1 servo bring-up.
+2. **`make deploy` for Teensy** — build on laptop, flash over Jetson USB, no chassis open. Needed by mid-Phase-1 firmware iteration.
+3. **Always-on MCAP dashcam** with incident freeze on E-stop / fault / manual trigger. Required before first walk attempt.
+4. **`nova bringup` launcher with profiles** (`bench` / `sensors` / `slam` / `walk` / `full` / `vla`) — pay back at ~6 launch files.
+5. **Per-joint safety envelope** in the gait controller — position/velocity/load/temp clamping. Paired with first Phase 2 gait controller commit.
+6. **Battery SoC widget** — gated on adding a 4th INA226 on battery feed (PCB v6 footprint already supports it).
+7. **RGB status LED** on Arduino Nano — Phase 2 polish.
+8. **Telemetry CSV writer** → optional Grafana later (resist Docker on Jetson).
+9. **Bag replay harness** — Phase 3 when SLAM/Nav iteration is the bottleneck.
+10. **Gazebo Fortress digital twin** — Phase 4 prep for VLA dev without HIL.
+
+Plus auto-calibration routines (`nova_calibration` package): IMU bias zero on boot, servo zero-position auto-detect via jig, camera↔IMU + LiDAR↔IMU + LiDAR↔camera extrinsics. Foxglove bridge over Tailscale for remote browser viewing of URDF + sensors + plots.
+
 ### Phase 4 — Arm install + Manipulation + VLA (future, after Phase 3 stable)
 
 Split into two sub-phases since hardware-arm-install precedes any manipulation software.
@@ -497,6 +514,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-23 | **L2 IMU bridge fixed** via Ace2932/unilidar_sdk2 fork — `/unilidar/imu` now publishes @ 250 Hz, POINT-LIO green end-to-end (init walks 1% → 100% within 250 ms). Per-room PCD capture procedure documented in `setup-jetson.md` §15. |
 | 2026-05-23 | **AMS HF bypassed for PA6-CF print workflow** — feed direct from Creality SpacePi X4 → 4 mm PTFE Bowden → P1S. PA6-CF re-absorbs ambient moisture in AMS chamber within hours, defeating the 24 h pre-dry. SpacePi X4 keeps filament heated through the entire print. |
 | 2026-05-23 | **Magigoo PA reinstated** in BOM. Bambu Lab liquid glue is not rated for PA / PA-CF per their product page; Bambu wiki PA6-CF guide explicitly calls for PA-specific glue stick. The −$15 substitution was a false economy vs the cost of a 10 h first-layer detachment. |
+| 2026-05-24 | **Forward-looking feature notes committed** (PR #1, merge `8cb8b1e`): [`docs/notes-qol-features.md`](./docs/notes-qol-features.md) (preflight check, always-on MCAP dashcam with incident freeze, per-joint safety envelope, `nova bringup` launcher with profiles, `make deploy` for Teensy, bag replay harness, telemetry → CSV/Grafana, RGB status LED, battery SoC widget, Gazebo digital twin) and [`docs/notes-virtual-view-autocal.md`](./docs/notes-virtual-view-autocal.md) (Foxglove bridge over Tailscale, IMU bias zero on boot, servo zero-position auto-detect, camera/LiDAR/IMU extrinsic auto-cal). Notes only — opportunistic pickup during Phase 1/2 idle time. New packages proposed: `nova_ops` + `nova_calibration`. |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 
