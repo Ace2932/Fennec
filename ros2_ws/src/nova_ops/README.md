@@ -12,10 +12,10 @@ Roadmap + feature specs: [`docs/notes-qol-features.md`](../../../docs/notes-qol-
 | Feature | Status |
 |---------|--------|
 | §1 Preflight check (v1: bus ping + E-stop + battery latch) | ✅ implemented |
-| §2 Always-on MCAP dashcam | 📋 stub |
+| §2 Always-on MCAP dashcam (v1: 20 topics + freeze on safety + janitor) | ✅ implemented |
 | §3 Per-joint safety envelope | 📋 stub |
 | §4 nova bringup launcher with profiles | 📋 stub |
-| §5 make deploy (Teensy over Jetson USB) | 📋 stub |
+| §5 make deploy (Teensy over Jetson USB) | ✅ implemented (in `firmware/teensy/firmware/Makefile`) |
 | §6 Bag replay harness | 📋 stub |
 | §7 Telemetry → CSV / Grafana | 📋 stub |
 | §8 RGB status LED on Arduino Nano | 📋 stub |
@@ -65,6 +65,74 @@ on each run) and pretty-prints per-check status before exiting with
 
 Set `critical = False` on the instance if a FAIL should warn but not
 block bringup.
+
+## Dashcam (v1)
+
+Always-on MCAP rosbag with rolling 2 GB buffer + incident freeze on
+safety triggers per `notes-qol-features.md` §2.
+
+**Recorded topics** (v1 set, cameras + lidar deliberately omitted):
+joint I/O, bus diagnostics, loop quality, power telemetry, safety
+state, identity (`/firmware_version`), `/cmd_vel`, `/tf`. Full list in
+`nova_ops/dashcam/topics.py::V1_TOPICS`.
+
+**Triggers** (any of these fires an incident bundle):
+- `/estop` goes True
+- `/safety_state` goes non-zero (E-stop latch, battery latch, fault)
+- `/battery_low` goes True
+- Manual: `ros2 service call /dashcam/freeze std_srvs/srv/Trigger`
+
+**Incident bundle** (`/var/log/nova/incidents/<iso-timestamp>/`):
+- `bags/<rosbag-dir>/...` — full current rolling buffer copied at trigger
+- `metadata.yaml` — trigger reason, free disk, Jetson uptime, git SHA
+- `dmesg.tail` — last 50 lines of kernel log
+
+**Janitor:** background thread sweeps every 10 s, deletes oldest bag
+when total `retention_mb` exceeded (default 2 GB → ~5 min at mid-
+bandwidth).
+
+**Run:**
+
+```bash
+sudo apt install ros-humble-rosbag2-storage-mcap   # one-time
+ros2 launch nova_ops dashcam.launch.py
+# or with custom retention:
+ros2 launch nova_ops dashcam.launch.py retention_mb:=10240
+# manual freeze from another terminal:
+ros2 service call /dashcam/freeze std_srvs/srv/Trigger
+```
+
+Default bag buffer location: `~/.nova/dashcam/buffer/`.
+Override via parameter `bag_dir`.
+
+### Tuning
+
+- `retention_mb` — default 2048. Longer = more incident context but
+  more SD wear (each 60 s bag rolls a new file).
+- `max_bag_seconds` — default 60. Shorter splits = finer-grained
+  rolling cutoff but more file churn.
+- `topics` — passed as a list parameter; replace with `PERCEPTION_TOPICS`
+  for high-bandwidth runs (still under buffer cap).
+
+## make deploy (Teensy over Jetson USB)
+
+Per `notes-qol-features.md` §5: build firmware on laptop, flash over the
+Jetson's USB connection so the Teensy stays in the chassis.
+
+See `firmware/teensy/firmware/Makefile`:
+
+```bash
+cd firmware/teensy/firmware
+make deploy            # build + hash-check + scp + remote flash + verify
+make deploy-force      # skip hash check
+make verify            # check /firmware_version on the Jetson
+JETSON_HOST=user@host make deploy   # override SSH target
+```
+
+Implementation: `scripts/deploy-firmware.sh`. Handles agent stop/start,
+hash caching (`~/.nova/last-deployed.sha`), USB re-enumeration wait,
+post-flash `/firmware_version` verification. Refuses to deploy if
+`gait_controller` is running on the Jetson unless `DEPLOY_FORCE=1`.
 
 ### v2 checks (not yet implemented)
 

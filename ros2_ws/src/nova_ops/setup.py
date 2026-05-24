@@ -10,7 +10,10 @@ setup(
         ('share/ament_index/resource_index/packages',
          ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', ['launch/preflight.launch.py']),
+        ('share/' + package_name + '/launch', [
+            'launch/preflight.launch.py',
+            'launch/dashcam.launch.py',
+        ]),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -25,6 +28,8 @@ setup(
             'preflight_node = nova_ops.preflight.node:main',
             # `ros2 run nova_ops preflight` — CLI wrapper, calls service + exits non-zero on fail
             'preflight = nova_ops.preflight.cli:main',
+            # `ros2 run nova_ops dashcam_node` — long-running rosbag MCAP recorder + freeze service
+            'dashcam_node = nova_ops.dashcam.node:main',
         ],
     },
 )
