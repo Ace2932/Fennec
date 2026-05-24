@@ -140,13 +140,15 @@ def build_body_shell():
             .extrude(RUTHEX_M3_DEPTH + 0.1)
         )
 
-    # ---- Wire slot on -X face ----
+    # ---- Wire pass-through (round hole) on -X face ----
+    # 14 mm circle fits JST 3-pin XH connector + 2 cables side-by-side
+    from leg_common import WIRE_HOLE_DIA
     shell = shell.cut(
-        cq.Workplane("XY")
-        .workplane(offset=BODY_Z - WIRE_SLOT_H - 2.0)
-        .center(-BODY_X/2 + WALL_T/2, 0)
-        .box(WALL_T + 1.0, WIRE_SLOT_W, WIRE_SLOT_H,
-             centered=(True, True, False))
+        cq.Workplane("YZ")
+        .workplane(offset=-BODY_X/2 - 0.5)
+        .center(0, BODY_Z - WIRE_HOLE_DIA/2 - 3.0)
+        .circle(WIRE_HOLE_DIA / 2)
+        .extrude(WALL_T + 1.0)
     )
 
     # ---- Carve the gap between yoke arms (where femur body sits) ----

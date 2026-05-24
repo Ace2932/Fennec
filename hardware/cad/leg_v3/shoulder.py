@@ -172,13 +172,14 @@ def build_shoulder():
         .extrude(-(YOKE_ARM_T + 0.5))
     )
 
-    # ---- TTL daisy-chain pass-through through slab (cable from chassis to coax) ----
-    from leg_common import WIRE_SLOT_W as _WS_W, WIRE_SLOT_H as _WS_H
+    # ---- TTL daisy-chain pass-through through slab (round 14 mm hole) ----
+    from leg_common import WIRE_HOLE_DIA
     shoulder = shoulder.cut(
         cq.Workplane("XZ")
         .workplane(offset=-0.1)
         .center(0, 0)
-        .box(_WS_W, _WS_H, SLAB_Y + 0.5, centered=(True, True, False))
+        .circle(WIRE_HOLE_DIA / 2)
+        .extrude(SLAB_Y + 0.5)
     )
 
     # ---- Chassis-mount bolt clearance holes through slab (along Y axis) ----

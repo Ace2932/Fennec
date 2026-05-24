@@ -158,41 +158,42 @@ def build_femur():
             .extrude(RUTHEX_M3_DEPTH + 0.1)
         )
 
-    # ---- TTL daisy-chain pass-throughs ----
-    # Slot 1: -X face of body shell (cable IN from coax/upstream)
+    # ---- TTL daisy-chain pass-throughs (round 14 mm holes) ----
+    from leg_common import WIRE_HOLE_DIA
+    # Hole on -X face of body shell (cable IN from coax/upstream)
     femur = femur.cut(
-        cq.Workplane("XY")
-        .workplane(offset=BODY_Z - WIRE_SLOT_H - 2.0)
-        .center(BODY_CX - BODY_X/2 + WALL_T/2, 0)
-        .box(WALL_T + 1.0, WIRE_SLOT_W, WIRE_SLOT_H,
-             centered=(True, True, False))
+        cq.Workplane("YZ")
+        .workplane(offset=BODY_CX - BODY_X/2 - 0.5)
+        .center(0, BODY_Z - WIRE_HOLE_DIA/2 - 3.0)
+        .circle(WIRE_HOLE_DIA / 2)
+        .extrude(WALL_T + 1.0)
     )
-    # Slot 2: +X face of body shell (cable OUT toward knee/tibia)
+    # Hole on +X face of body shell (cable OUT toward knee/tibia)
     femur = femur.cut(
-        cq.Workplane("XY")
-        .workplane(offset=BODY_Z - WIRE_SLOT_H - 2.0)
-        .center(BODY_CX + BODY_X/2 - WALL_T/2, 0)
-        .box(WALL_T + 1.0, WIRE_SLOT_W, WIRE_SLOT_H,
-             centered=(True, True, False))
+        cq.Workplane("YZ")
+        .workplane(offset=BODY_CX + BODY_X/2 - WALL_T - 0.5)
+        .center(0, BODY_Z - WIRE_HOLE_DIA/2 - 3.0)
+        .circle(WIRE_HOLE_DIA / 2)
+        .extrude(WALL_T + 1.0)
     )
-    # Mid-link cable channel along beam (carved from beam top so cover later)
+    # Mid-link cable channel along beam (open trough on top)
     if beam_len > 0:
         femur = femur.cut(
             cq.Workplane("XY")
-            .workplane(offset=BEAM_Z - WIRE_SLOT_H - 1.0)
+            .workplane(offset=BEAM_Z - WIRE_HOLE_DIA - 1.0)
             .center((beam_x0 + beam_x1)/2, 0)
-            .box(beam_len + 0.5, WIRE_SLOT_W, WIRE_SLOT_H + 0.5,
+            .box(beam_len + 0.5, WIRE_HOLE_DIA, WIRE_HOLE_DIA + 0.5,
                  centered=(True, True, False))
         )
-    # Notch in yoke arms (inner faces) so cable can exit toward tibia
+    # Hole on yoke arms (inner face) so cable can exit to tibia
     for sign in (-1, 1):
-        notch_y = sign * (S3_GAP_Y/2)
+        notch_y = sign * (S3_GAP_Y/2 + S3_ARM_T/2)
         femur = femur.cut(
-            cq.Workplane("XY")
-            .workplane(offset=S3_ARM_Z - WIRE_SLOT_H - 1.0)
-            .center(S3_AXIS_X - S3_ARM_X/2 + WALL_T/2, notch_y - sign*S3_ARM_T/2)
-            .box(WALL_T + 1.0, WIRE_SLOT_W, WIRE_SLOT_H,
-                 centered=(True, True, False))
+            cq.Workplane("XZ")
+            .workplane(offset=notch_y - sign * (S3_ARM_T/2 + 0.5))
+            .center(S3_AXIS_X - S3_ARM_X/2 + WIRE_HOLE_DIA, S3_ARM_Z/2)
+            .circle(WIRE_HOLE_DIA / 2)
+            .extrude(sign * (S3_ARM_T + 1.0))
         )
 
     # ---- Open gap between yoke arms (tibia body sits here) ----
