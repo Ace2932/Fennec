@@ -18,23 +18,26 @@ Ordering is roughly highest-payoff-per-hour first within each group. All paths a
 - Provide a CLI wrapper `ros2 run nova_ops preflight` that just calls the service, pretty-prints to terminal, and exits non-zero on fail (so it can gate the bringup launch file).
 - Each check is a small Python class implementing `name()`, `run() -> (Status, message)` so adding a new check is one file and one entry in the registry.
 
-**Initial check set:**
+**v1 check set** (ship exactly these, add more only when a failure makes you wish you had):
 
 | Check | What it does | Fail mode |
 |-------|--------------|-----------|
-| Bus ping sweep | Ask Teensy via existing `/servo_present_mask` topic — verify all 12 expected IDs report present | Missing IDs listed |
-| Servo voltage/temp | Read latest `/servo_telemetry` — flag any cell <6.8V (leg) / 11.0V (hip) or temp >55°C | Per-joint table of offenders |
-| Battery pack | Read INA226 main-rail topic — flag <13.5V (under load) | "low" with current voltage |
-| Topic liveness | For each expected topic (12 from BOM §5 + 4 from sensor stack), check publisher count >0 and last message age <2× expected period | List of stale topics |
-| Network | Ping L2 at 192.168.1.62 (single ping, 100 ms timeout) | "L2 unreachable" |
-| Disk space | `/` and `/var/log` >2 GB free | Avoids mid-walk rosbag write failure |
-| Firmware version | Compare Teensy's reported `/firmware_version` topic against expected hash committed in repo | Mismatch with both versions |
-| Time sync | Verify Jetson clock and last bag timestamp drift <500 ms (proxy for "is chrony alive") | Otherwise rosbags get wrong stamps |
-| E-stop | Read latest E-stop GPIO state topic — must read "released" | "E-stop engaged" — refuse to bring up gait |
+| Bus ping sweep | Read `/servo_present_mask` (Int32 bitmask, see firmware README) — verify all 12 expected IDs report present | Missing IDs listed |
+| E-stop | Read latest `/estop` topic — must be `false` (released) | "E-stop engaged" — refuse to bring up gait |
+| Battery latch | Read latest `/battery_low` topic — must be `false`. (Continuous voltage isn't measured today; see §9.) | "Battery comparator tripped (≤13.0 V)" |
+
+**v2 check set** (add as needs surface):
+
+- **Per-joint voltage / temperature** — depends on the ⏳ `REG_PRESENT_VOLTAGE` / `REG_PRESENT_TEMPERATURE` work landing in `feetech_bus.h::poll_one_servo()` (firmware README §"Stubs to fill in"). Until then there's no per-joint V/temp topic to read; don't code the check yet.
+- **Topic liveness** for each expected topic (count of pubs ≥1, last message age <2× expected period). Easy to add once the topic list is stable.
+- **Network** — ping L2 at 192.168.1.62, 100 ms timeout.
+- **Disk space** — `/` and `/var/log` >2 GB free; avoids mid-walk rosbag write failure.
+- **Firmware version match** — `/firmware_version` reports `nova-teensy <git-sha> loop=<hz>Hz`. Compare the SHA against the value written by `make deploy` (see §5) to `~/.nova/last-deployed.sha`. **Don't** compare against repo `HEAD` directly — any uncommitted WIP would false-mismatch.
+- **Time sync** — drift between Jetson `CLOCK_REALTIME` and last bag stamp <500 ms. Jetson L4T ships systemd-timesyncd by default; don't assume chrony.
 
 **Integration:**
 
-- Bringup launch file (see [§4](#4-single-nova-bringup-launcher-with-profiles)) calls the service after all nodes settle (3 s sleep), refuses to enable the gait controller if any **critical** check fails (servo presence, E-stop, battery). Warnings (temp, disk) print but don't block.
+- Bringup launch file (see [§4](#4-single-nova-bringup-launcher-with-profiles)) calls the service after all nodes settle (3 s sleep), refuses to enable the gait controller if any **critical** check fails (servo presence, E-stop, battery). Warnings print but don't block.
 - A `--quick` flag skips the network ping and topic-liveness wait, so it can run pre-power-on in <500 ms.
 
 **Open questions:**
@@ -51,29 +54,40 @@ Ordering is roughly highest-payoff-per-hour first within each group. All paths a
 **Scope:**
 
 - Dedicated `nova_ops/dashcam` node wrapping `rosbag2`'s recorder API.
-- Records to a **circular buffer on disk**: rosbag2 has `--max-bag-duration` to roll bag files at fixed intervals (e.g. 60 s), plus `--max-bag-size`; combine with a janitor goroutine that deletes the oldest bag once total directory exceeds `--retention-bytes` (default 2 GB → ~5 min of mid-bandwidth recording).
-- Format: **MCAP** (not sqlite3) — better tooling, faster random access, Foxglove can play it directly.
+- Records to a **circular buffer on disk**: rosbag2 has `--max-bag-duration` to roll bag files at fixed intervals (e.g. 60 s), plus `--max-bag-size`; combine with a background janitor task that deletes the oldest bag once total directory exceeds a configured retention (default 2 GB → ~5 min of mid-bandwidth recording). `rosbag2` has no built-in total-bytes cap, so the janitor is unavoidable.
+- Format: **MCAP** (`storage-id: mcap`) — better tooling than sqlite3, faster random access, Foxglove plays it directly. Available in Humble via `ros-humble-rosbag2-storage-mcap`.
 
-**Topic set (start narrow, expand as warranted):**
+**Topic set (start narrow, expand as warranted) — names match the firmware contract in `firmware/teensy/firmware/README.md`:**
 
 ```
-/joint_states                       # 100 Hz from Teensy
-/joint_commands                     # 100 Hz from gait controller
-/diagnostics                        # 1 Hz aggregated
-/servo_telemetry                    # 5 Hz per-joint V/temp/load
-/battery_voltage                    # 1 Hz INA226 main rail
-/imu/data (D456)                    # 200 Hz
-/imu/data (MPU-6050)                # 100 Hz
+/joint_states                       # 200 Hz from Teensy (sensor_msgs/JointState — pos/vel/load in effort[])
+/joint_commands                     # 100 Hz from gait controller (sensor_msgs/JointState)
+/joint_cmd_rx_count                 # 1 Hz — sub-callback ack counter
+/servo_present_mask                 # 1 Hz — bit i = joint i answered since boot
+/servo_read_err_count               # 1 Hz — aggregate bus error counter
+/servo_err_timeout                  # 1 Hz
+/servo_err_bad_frame                # 1 Hz
+/servo_err_servo                    # 1 Hz
+/power_rails                        # 10 Hz Float32MultiArray (9 floats — leg/hip/jetson V/A/W)
+/estop                              # edge — Bool, raw GPIO
+/battery_low                        # edge — Bool, raw GPIO
+/safety_state                       # edge — Int32, latched FSM (0=NORMAL 1=ESTOP 2=BATT_LOW 3=FAULT)
+/loop_max_us, /loop_p99_us          # 1 Hz — ISR response latency
+/loop_exec_max_us, /loop_exec_p99_us, /tick_missed_count  # 1 Hz — exec quality
+/firmware_version                   # 0.1 Hz — pinned for incident reconstruction
+/imu/d456/data                      # 200 Hz once realsense2_camera launches with imu enabled
+/imu/mpu6050/data                   # 100 Hz once Nano-side IMU node lands
 /cmd_vel                            # whatever the controller pubs
 /tf, /tf_static                     # for replay-time URDF reconstruction
-/estop_state                        # GPIO sense from Teensy
 # Cameras + lidar deliberately omitted — too much bandwidth for always-on.
 # Spin up a second recorder profile (`nova_ops/dashcam_perception`) for runs where you want them.
 ```
 
+Per-joint voltage + temperature are *not* yet on a topic (firmware ⏳); add them to this list when the stub lands.
+
 **Trigger / freeze:**
 
-- Subscribe to `/estop_state` and `/node_diagnostics_aggregator`. On E-stop engage or any node status going to ERROR, **stop rotation** (so the buffer at fault time is preserved) and copy the current bag set into `/var/log/nova/incidents/<iso-timestamp>/`.
+- Subscribe to `/estop`, `/safety_state`, and `/diagnostics` (once an aggregator is running). On E-stop engage, `safety_state` going non-zero, or any diagnostic going to ERROR: **stop rotation** (so the buffer at fault time is preserved) and copy the current bag set into `/var/log/nova/incidents/<iso-timestamp>/`.
 - Include a `metadata.yaml` in the incident dir capturing: free disk at trigger, Jetson uptime, recent kernel log tail (`dmesg | tail -50`), git SHA of running code (read from a file written by bringup).
 - Provide a `ros2 service call /dashcam/freeze "{}"` for manual capture — when you saw something weird but no fault tripped.
 
@@ -91,17 +105,21 @@ Ordering is roughly highest-payoff-per-hour first within each group. All paths a
 
 **Scope:**
 
-- Lives in the **Jetson-side gait controller**, not the Teensy. Teensy gets to assume commands are pre-validated (so the 200-500 Hz bus loop stays tight). Treat the validator as a wrapper around the publisher: gait code calls `safe_publish(joint_commands)`, wrapper either publishes or rejects+logs.
+- Lives in the **Jetson-side gait controller**, not the Teensy. Teensy gets to assume commands are pre-validated (so the 200-500 Hz bus loop stays tight).
+- Two implementation shapes — pick one, don't do both:
+  - **(a) In-process wrapper** — gait code calls `safe_publish(joint_commands)`, wrapper either publishes or clamps+logs. Lowest latency. Risk: any other publisher to `/joint_commands` bypasses the check. Acceptable if the gait controller is the only publisher (enforce via package layout / lint, not at runtime).
+  - **(b) Standalone filter node** — subscribes `/joint_commands_raw`, publishes `/joint_commands`. Topology-enforced. Costs one extra hop (~sub-ms typically) and a topic rename in the gait controller. Robust against future publishers.
+  - Lean (a) for v1 + a comment in `joint_commands` publishers reminding them to go through the wrapper; revisit (b) if a second publisher ever materializes.
 - Pulls limits from the URDF (`<limit lower upper effort velocity>` tags on each `<joint>`). Single source of truth — URDF already needs to be right for IK/sim/viewers anyway.
 
-**Per-joint checks on every command:**
+**Per-joint checks on every command** (rows marked ⏳ depend on per-joint V/temp telemetry landing in firmware — see firmware README "Stubs to fill in"):
 
 | Check | Rule | Action on violation |
 |-------|------|---------------------|
 | Position | `lower ≤ goal ≤ upper`, with 2° margin inside URDF limits | Clamp to limit, log warn (first 10 occurrences per joint, then throttle) |
 | Velocity | Numerically diff goal vs last command vs Δt; reject if > URDF velocity limit | Replace goal with last + sign × v_max × Δt |
-| Load | Read latest `/servo_telemetry` load value; if last 3 samples >70% sustained, refuse new goals that increase it (allow ones that reduce) | "Joint overloaded — backing off" + log |
-| Temperature | Servo temp >60°C → derate by 20% (slew rate halved); >70°C → reject all goals for that joint | Trigger a `/safety_event` topic so other nodes know |
+| Load | STS3215 load is in `effort[]` of `/joint_states` (firmware contract). 3 samples >70% sustained → refuse new goals that increase load, allow ones that reduce | "Joint overloaded — backing off" + log |
+| Temperature ⏳ | Per-joint temp not yet published — gated on firmware stub. Once available: >60°C → derate by 20% (slew rate halved); >70°C → reject all goals for that joint | Trigger a `/safety_event` topic so other nodes know |
 
 **Failure visibility:**
 
@@ -191,21 +209,23 @@ A bash wrapper that just calls 6 launch files in sequence would mostly work, but
 
 **Scope:**
 
-- `ros2 run nova_ops replay <bag-path>` wraps `ros2 bag play` with a few important defaults:
-  - `--clock` enabled, all consumers set `use_sim_time: true` (every package's launch file needs to honor a `use_sim_time` arg).
-  - `--rate 0.5` default for first pass (lets a stressed laptop keep up).
-  - **Topic remap to mask hardware-side nodes**: if the bag contains `/joint_states`, the live Teensy driver should not be running — replay should refuse to start if it detects the bridge node is up.
-- Profiles mirroring the bringup profiles, but consuming-from-bag:
+**v1 (cheap, ships in an afternoon):**
 
-| Replay profile | Plays | Runs live |
-|---------------|-------|-----------|
-| `slam` | sensors + IMU + tf | POINT-LIO, robot_state_publisher |
-| `nav` | sensors + tf + map | Nav2, planner |
-| `gait` | IMU + joint_states + joint_commands | Gait controller in *shadow* mode (publishes to `/joint_commands_replay`, not the bus) |
+- A thin wrapper `ros2 run nova_ops replay <bag-path>` that calls `ros2 bag play --clock --rate 0.5 <bag>`, and sets `use_sim_time:=true` on a fixed list of launch files for the perception stack (POINT-LIO + robot_state_publisher).
+- Hard prereq: every package whose launch is invoked must accept and propagate a `use_sim_time` arg. POINT-LIO + robot_state_publisher already do; per-package launch files we write need to.
 
-**Visibility:**
+**v2 (only if v1 is the bottleneck):**
 
-- During replay, run the dashcam *in replay mode* — record the outputs of the live nodes (e.g., POINT-LIO's `/Odometry`) to a new bag stamped with the SHA of the code under test. Lets you compare runs over time.
+- Profile system mirroring `nova bringup`:
+
+| Replay profile | Plays | Runs live | Status |
+|---------------|-------|-----------|--------|
+| `slam` | sensors + IMU + tf | POINT-LIO, robot_state_publisher | feasible today |
+| `nav` | sensors + tf + map | Nav2, planner | feasible once Nav2 is up |
+| `gait` | IMU + joint_states + joint_commands | Gait controller, output remapped to `/joint_commands_shadow` so nothing hits the bus | **prereq: gait controller has to support a shadow-output mode; not free** |
+
+- Refuse to start if the live Teensy bridge is publishing `/joint_states` (else the bag-played and live messages collide).
+- Optional: record live-node outputs (POINT-LIO's `/Odometry`, etc.) to a new bag stamped with the SHA of the code under test for run-over-run comparison.
 
 **Open questions:**
 
@@ -220,39 +240,39 @@ A bash wrapper that just calls 6 launch files in sequence would mostly work, but
 
 **Goal:** the INA226s, servo telemetry, IMU, and battery are all already on ROS 2 topics — they're ephemeral. Logging to a time-series DB unlocks "why did the pack die faster on Tuesday" and "did that gait change reduce hip current draw" without re-instrumenting each time.
 
-**Scope (light-touch v1):**
+**Scope (v1 — start cheap, no daemons):**
 
-- **Stack:** InfluxDB 2.x + Grafana, both running in Docker on the Jetson. InfluxDB native ARM64 images exist; resource cost ~150 MB RAM idle, manageable on 8 GB.
-- **Bridge:** small ROS 2 node `nova_ops/telemetry_writer` that subscribes to the topics below and writes line-protocol to InfluxDB. One node, ~150 lines of Python.
+- Roll a rotating CSV writer first: `nova_ops/telemetry_csv` node subscribes to the topic set below, appends to `/var/log/nova/telemetry/<date>.csv.gz` (one file per day, gzipped on rotation). Plot with `pandas` + `matplotlib` ad-hoc.
+- This costs <50 MB RAM, no Docker, no schema migration. Most "why did the pack die faster" questions answer from CSV + a notebook.
 
-**Topics + measurements:**
+**Scope (v2 — only if the ad-hoc plotting is the actual bottleneck):**
+
+- InfluxDB 2.x + Grafana, both in Docker on the Jetson. **Realistic resource cost is closer to 300-500 MB RAM combined under live ingest, not the 150 MB headline** — non-trivial on an 8 GB box also running ROS 2 + SLAM + (eventually) VLA. Probably belongs on a desktop machine with the Jetson just running the writer, not on-Jetson. Re-evaluate when v1 stops being enough.
+
+**Topics + measurements (names match the firmware contract):**
 
 | Topic | Measurement | Tags | Fields |
 |-------|-------------|------|--------|
 | `/diagnostics` (per status) | `diagnostic` | name, hardware_id, level | message |
-| `/servo_telemetry` | `servo` | joint_id (1-12), name | voltage, temp_c, load_pct, position, velocity |
-| `/ina226/leg_7v5` | `rail` | rail="leg" | volts, amps, watts |
-| `/ina226/hip_12v` | `rail` | rail="hip" | volts, amps, watts |
-| `/ina226/jetson_12v` | `rail` | rail="jetson" | volts, amps, watts |
-| `/battery_voltage` | `battery` | (none) | volts, est_soc_pct |
-| `/imu/data` (D456) | `imu` | sensor="d456" | accel_{x,y,z}, gyro_{x,y,z}, temp_c |
-| Jetson `tegrastats` (via shell exporter) | `jetson` | (none) | gpu_load, cpu_load, ram_used_mb, soc_temp_c, power_mw |
+| `/joint_states` | `joint` | joint_id (0-11) | position, velocity, effort (load) |
+| `/power_rails` (parse 9-float array) | `rail` | rail ∈ {leg, hip, jetson} | volts, amps, watts |
+| `/servo_read_err_count`, `/servo_err_*` | `bus` | err_kind ∈ {timeout, bad_frame, servo, total} | count |
+| `/loop_p99_us`, `/loop_exec_p99_us`, `/tick_missed_count` | `firmware_loop` | (none) | p99_us, exec_p99_us, missed |
+| `/battery_low`, `/estop`, `/safety_state` | `safety` | (none) | low (bool), estop (bool), state_id |
+| (future, ⏳) per-joint voltage + temp | `servo_health` | joint_id | voltage, temp_c |
+| `/imu/d456/data` (when realsense2_camera launches with IMU) | `imu` | sensor="d456" | accel_{x,y,z}, gyro_{x,y,z} |
+| `jtop` exporter (jetson-stats) | `jetson` | (none) | gpu_load, cpu_load, ram_used_mb, soc_temp_c, power_mw |
 
-**Retention:**
+Use `jtop` (the `jetson-stats` Python package) rather than parsing `tegrastats` text — cleaner API, official, designed for L4T.
 
-- Raw resolution: 7 days.
-- Downsampled (1-minute mean): 90 days, then dropped. InfluxDB has built-in tasks for this — set up via Flux script in version control under `ops/influx/`.
+**Grafana dashboards (only built if v2 happens):**
 
-**Grafana dashboards** (committed JSON in `ops/grafana/`):
-
-1. **Power overview** — battery, three INA226 rails, Jetson SoC power, all on one timescale. Annotated with bag-trigger events.
-2. **Servo health** — per-joint temperature heatmap (joint_id × time), load %, position vs command error.
+1. **Power overview** — three INA226 rails + Jetson SoC power on one timescale. Annotated with incident-bundle triggers. Battery rail itself isn't measured (see §9) — overlay the binary `/battery_low` as a state band instead.
+2. **Servo health** — per-joint load heatmap (joint_id × time), position vs command error. Add temperature once firmware publishes it.
 3. **Compute health** — Jetson CPU/GPU/RAM/temp, ROS 2 node CPU+RSS.
-4. **Session view** — picks a single bag time window and shows everything for that window.
 
 **Open questions:**
 
-- Whether to run InfluxDB on the Jetson or punt it to a desktop machine. Jetson keeps the data local + survives WiFi outage, but costs ~150 MB RAM you may want for VLA. Lean Jetson now, migrate if memory pressure shows up.
 - Whether to alert (Grafana alerting) on, e.g., hip rail current >7A sustained, or just log. Lean **log only** for v1; alerting is a tar pit and the safety envelope ([§3](#3-per-joint-safety-envelope-in-the-gait-controller)) covers actual emergencies.
 
 ---
@@ -263,22 +283,28 @@ A bash wrapper that just calls 6 launch files in sequence would mostly work, but
 
 **Scope:**
 
-- Nano already in the aux-peripheral role per [`README.md`](../README.md) hardware architecture. WS2812 strip (or single RGB LED) connected to one Nano digital pin.
-- Add a topic `/status_color` (uint8 r, g, b, optional `pattern`: solid / blink_slow / blink_fast / pulse) published by a `nova_ops/status_led` node on the Jetson, bridged to the Nano via the existing I²C path (Nano already on the aux I²C bus).
-- State machine in the Jetson node consumes:
-  - `/preflight_status` → red if last preflight failed
-  - `/estop_state` → solid red if engaged
-  - `/battery_voltage` → amber if <13.5V, blinking amber if <13.0V
+- Nano already in the aux-peripheral role per [`README.md`](../README.md) hardware architecture, with its own I²C bus (Nano is *master* of that bus, not a slave on a Jetson-shared bus). WS2812 strip (or single RGB LED) connected to one Nano digital pin.
+- **Jetson↔Nano transport — pick one, then commit:**
+  - **USB-serial** (Nano shows up as `/dev/ttyUSB*` on Jetson). Simplest, most common Nano setup, no new bus wiring. Lean this.
+  - **GPIO bit-bang** for a single status pin on the Nano. Lighter still but only carries one signal.
+  - I²C-slave on the Nano is technically possible (Wire library slave mode) but turns the Nano's bus into a multi-master arrangement with the existing peripherals — avoid.
+- Add a topic `/status_color` (uint8 r, g, b, optional `pattern`: solid / blink_slow / blink_fast / pulse) published by a `nova_ops/status_led` node on the Jetson; the node owns the serial port and writes a small framed protocol to the Nano.
+- State machine in the Jetson node consumes (topic names match firmware contract):
+  - `/preflight_status` (from §1) → red if last preflight failed
+  - `/estop` → solid red if `true`
+  - `/safety_state` → red if 2 (battery latch) or 3 (fault), amber if non-zero in a recoverable way
   - `/diagnostics` aggregated → red if any ERROR, amber if any WARN
   - Gait controller state → green if walking, blue if standing-by, off if uninitialized
   - Dashcam state → small blue blip every 10 s if recording, "freeze flash" magenta when bag is frozen for an incident
 
-**Priority rule:** highest-severity state wins. E-stop > preflight fail > error > battery critical > warn > recording > nominal. Single visible color at any time, no rainbow chaos.
+**Priority rule:** highest-severity state wins. E-stop > preflight fail > error > safety latch > warn > recording > nominal. Single visible color at any time, no rainbow chaos.
+
+**Prerequisite acknowledged:** Nano firmware today is *aux peripherals only* (PIR / OLED / ultrasonic / MPU-6050). Adding a status-LED protocol means new Nano sketch code — not zero work.
 
 **Open questions:**
 
 - WS2812 vs simple common-cathode RGB. WS2812 lets you do a 5-pixel strip with one wire and show multiple states; common RGB is 3 wires and 3 PWM channels. Lean WS2812.
-- Whether the LED logic should fail-safe if the Jetson is dead — Nano could blink red at 2 Hz if it hasn't received a `/status_color` update in >2 seconds. Yes, do this — covers the "Jetson crashed and you can't tell" case.
+- Whether the LED logic should fail-safe if the Jetson is dead — Nano blinks red at 2 Hz if it hasn't received a frame in >2 seconds. Yes — covers the "Jetson crashed and you can't tell" case.
 
 ---
 
@@ -286,20 +312,29 @@ A bash wrapper that just calls 6 launch files in sequence would mostly work, but
 
 **Goal:** "12 minutes remaining" beats "14.1 V" when you're deciding whether to start a 10-minute walk test.
 
-**Scope (v1 — simple, surprisingly useful):**
+**Hardware reality check:** there is **no INA226 on the battery feed** today. The three INA226 chips sit on the output side of the leg / hip / Jetson bucks (`README.md` "Power System" + `firmware/teensy/firmware/src/ina226_telemetry.h`). Battery state surfaces only as the LM393 comparator's binary `/battery_low` GPIO @ 13.0 V. That constrains every implementation option below.
 
-- Coulomb-count: INA226 on the battery feed already gives you amps at 1 Hz. Integrate to get Ah consumed. Subtract from pack nominal (4S 4000 mAh × derate-to-nominal-from-fullycharged = ~3600 mAh usable to LVC).
-- Time remaining: rolling-mean current draw (last 60 s) → `remaining_Ah / mean_A * 60 = minutes_left`. Recompute every second.
-- Calibration on each charge: bringup checks battery voltage at rest; if >16.6V, assume 100% full. If <13.5V at rest, refuse to set the counter and warn user to charge first.
+**Option A — sum-of-rails proxy (cheapest, ships with current hardware):**
 
-**Scope (v2 — if v1 is wrong too often):**
+- Approximate battery input current as `(leg_w + hip_w + jetson_w) / V_batt_assumed`, where `V_batt_assumed` is a static 14.8 V (nominal). Sources for the three rails: `/power_rails` `Float32MultiArray` indices 2 / 5 / 8 at 10 Hz.
+- Integrate to Ah consumed. Subtract from usable capacity (`4000 mAh × 0.9 = 3600 mAh` to LVC).
+- **Accuracy caveats:** doesn't include buck losses (5-15% depending on load), doesn't include the 5V UBEC + L2 dedicated buck, doesn't react to actual pack voltage sag. Expect ±15-20% error on "minutes remaining." Good enough for "should I start this 10-min test on a 5-min-remaining estimate?" — not good enough for precise telemetry.
+- Reset point: bringup assumes 100% if user confirms a freshly-charged pack (no way to measure rest voltage). Add a `--soc=NN` flag to override on bringup.
 
-- Replace linear assumption with a per-cell discharge curve (LiPo cells have a known V→SoC mapping). Look up SoC from voltage during a "rest" window (current draw <0.2 A for >5 s), use that as the integrator reset point.
-- Account for temperature derating (cold pack delivers less capacity). MPU-6050 or D456 ambient is close enough to pack-side temperature for a first cut.
+**Option B — add a 4th INA226 on the battery feed (clean fix, ~$5 + bench time):**
+
+- The firmware already has `NOVA_INA226_L2` as a 4th-rail opt-in build flag. Same pattern: define `NOVA_INA226_BATTERY`, hook one more chip onto the existing I²C bus (address 0x45 or 0x46), wire its shunt before the Class T fuse. PCB v6 has the bus footprint; a bench-wired add-on works for v1.
+- Once present: actual battery current + voltage. Coulomb counting becomes meaningful (±3-5% with a few cycles of cal). Reset point becomes "voltage at rest >16.6 V → 100%."
+- **Recommend B before investing in v2 below.** Without it, every refinement is layered on top of a ±20% proxy.
+
+**Scope (v2 — assumes Option B is done):**
+
+- Per-cell LiPo discharge curve (V→SoC mapping). Look up SoC from voltage during a "rest" window (current <0.2 A for >5 s), use that as the integrator reset point.
+- Temperature derating (cold pack delivers less capacity). MPU-6050 ambient is close enough to pack-side temperature for a first cut.
 
 **Surface:**
 
-- `/battery_soc` topic (`percent`, `minutes_remaining`, `quality: ESTIMATED|CALIBRATED|UNRELIABLE`).
+- `/battery_soc` topic (`percent`, `minutes_remaining`, `quality: PROXY|MEASURED|UNRELIABLE`). `PROXY` = Option A, `MEASURED` = Option B.
 - Foxglove panel from [`notes-virtual-view-autocal.md`](./notes-virtual-view-autocal.md) §1 shows a big number + a runtime graph.
 - LED state machine in [§8](#8-rgb-led-status-pattern-on-the-arduino-nano) consumes this for the amber thresholds.
 
@@ -318,18 +353,18 @@ A bash wrapper that just calls 6 launch files in sequence would mostly work, but
 
 **Scope (Gazebo first, since it's lighter and Humble-native):**
 
-- New package `nova_sim` with a Gazebo (Ignition / `gz-sim 8.x`) world containing the URDF as a controllable model, plus a simple terrain mesh.
-- Plugins:
-  - `gz_ros2_control` to expose simulated joint actuators on `/joint_commands` and publish `/joint_states` — *same names, same QoS as the real Teensy bridge*. This is the whole point: every consumer (gait, viz, dashcam) works unchanged.
-  - `gz_sim_sensors_system` for camera + depth + IMU; topic-remapped to match the real RealSense and L2 topic names.
+- New package `nova_sim` with a **Gazebo Fortress** (`gz-sim 6.x`) world — Fortress is the Tier 1 binding for Humble per the ROS REPs. Harmonic (`gz-sim 8`) on Humble is possible but unsupported and a known time sink; defer until a Humble→Jazzy migration is on the table.
+- Plugins (verify exact package name against the Fortress release you install — naming has churned between `gazebo_ros2_control` (Gazebo Classic), `ign_ros2_control`, and `gz_ros2_control` across releases):
+  - A `ros2_control` plugin to expose simulated joint actuators on `/joint_commands` and publish `/joint_states` — *same names, same QoS as the real Teensy bridge*. This is the whole point: every consumer (gait, viz, dashcam) works unchanged.
+  - Sensor plugins for camera + depth + IMU; topic-remapped to match the real RealSense and L2 topic names.
 - Time: `use_sim_time: true` everywhere. Same flag as bag replay ([§6](#6-bag-replay-harness)) — share the plumbing.
-- No L2 LiDAR plugin in Gazebo Humble currently; substitute a 64-line LiDAR plugin or import POINT-LIO test bags for LiDAR-only iteration. (Or invest in Isaac Sim if VLA work demands photoreal RGB — but that's a different machine.)
+- **LiDAR is the hard part.** Fortress's GPU LiDAR plugin emits a single-line or fan pattern, not the L2's 16384-pt non-repeating prism scan. Two ways out: (a) use the plugin with a coarse 32- or 64-channel approximation, accept that POINT-LIO outputs in sim won't match real-world ones; (b) skip sim LiDAR entirely, drive POINT-LIO from recorded bags ([§6](#6-bag-replay-harness)) for the SLAM-in-sim case. Lean (b) — cheaper and more faithful.
 
-**Mock hardware nodes** to absorb topics that the sim doesn't natively produce:
+**Mock hardware nodes** to absorb topics the sim doesn't natively produce:
 
-- `mock_servo_telemetry`: publishes synthetic load/temp from sim joint efforts.
-- `mock_ina226`: publishes per-rail current as `f(sum of joint efforts × voltage)` — rough but enough to develop the dashboard against.
-- `mock_battery`: starts at user-specified SoC, drains by integrating the mock INA226. Lets you exercise [§9](#9-battery-state-of-charge-widget) without waiting for real packs to drain.
+- `mock_servo_load_temp`: publishes synthetic load/temp from sim joint efforts. (Stand-in for the ⏳ firmware per-joint telemetry topics.)
+- `mock_power_rails`: publishes `/power_rails` `Float32MultiArray` (9 floats) computed as `f(sum of joint efforts × voltage)` per rail — rough but exercises §7 telemetry + the §9 sum-of-rails SoC proxy.
+- `mock_battery`: starts at user-specified SoC, drains by integrating the mock power rails. Lets you exercise [§9](#9-battery-state-of-charge-widget) without waiting for real packs to drain.
 
 **Bringup integration:**
 
@@ -345,7 +380,7 @@ A bash wrapper that just calls 6 launch files in sequence would mostly work, but
 
 ## Cross-cutting: where this lives in the repo
 
-These features collectively need a new package `nova_ops` (sibling of `nova_description`, `nova_gait`, etc. as planned in [`work-schedule.md`](./work-schedule.md) Week 2). Suggested layout:
+These features collectively need a new package `nova_ops` (sibling of `nova_description`, `nova_gait`, etc. as planned in [`work-schedule.md`](./work-schedule.md) Week 2, and sibling of the `nova_calibration` package proposed in [`notes-virtual-view-autocal.md`](./notes-virtual-view-autocal.md) — keep them separate, don't fold). Suggested layout:
 
 ```
 ros2_ws/src/nova_ops/
@@ -378,15 +413,16 @@ Top-of-package README in `nova_ops/` explains "this package is the operations la
 
 Pick from the top of this list during Phase 1 idle time. Rough ordering by "pays back the implementation cost soonest":
 
-1. **§1 preflight** — solid value during Phase 1 servo bring-up itself. Build it first because each subsequent feature wants a check entry.
-2. **§4 nova bringup** — Phase 1 will have enough launches to make this hurt; ride that pain into building the launcher.
-3. **§5 make deploy** — second-week-of-Phase-1 firmware iteration will demand this.
-4. **§2 dashcam** — needed before the first walk attempt.
-5. **§3 safety envelope** — paired with the first gait controller commit in Phase 2.
-6. **§8 LED + §9 SoC** — Phase 2 polish, low effort, high "feels solid" payoff.
-7. **§7 telemetry** — Phase 2-3 once there's enough behavior to study.
-8. **§6 bag replay** — Phase 3 when SLAM/Nav iteration is the bottleneck.
-9. **§10 sim** — Phase 4 prep, or earlier if hardware downtime stretches.
+1. **§1 preflight (v1 only, 3 checks)** — solid value during Phase 1 servo bring-up itself. Build it first because each subsequent feature wants a check entry. v2 checks land opportunistically.
+2. **§5 make deploy** — second-week-of-Phase-1 firmware iteration will demand this. Ship without the dirty-tree / E-stop guards; add them only after a real near-miss.
+3. **§2 dashcam** — needed before the first walk attempt. v1 = topic list above + janitor + freeze-on-E-stop. Incident bundle nice-to-haves can wait.
+4. **§4 nova bringup** — Phase 1 only has 3-4 launch files in play (Teensy bridge, sensors, SLAM); the launcher pays back later. Build it when the launch count crosses ~6 (Phase 2 mid).
+5. **§3 safety envelope** — paired with the first gait controller commit in Phase 2. Position + velocity clamping only; load/temp gated on firmware ⏳ work.
+6. **§9 SoC** — only after §9 Option B (add 4th INA226 to battery feed). Without it the v1 proxy gives ±15-20% — useful but not "12 minutes remaining" precise.
+7. **§8 LED** — Phase 2 polish. Requires new Nano firmware work; only worth it once §9 SoC is feeding it real thresholds.
+8. **§7 telemetry** — Phase 2-3, **CSV writer (v1) only** until Grafana value is proven; resist the InfluxDB+Docker path until the Jetson has memory to spare.
+9. **§6 bag replay** — Phase 3 when SLAM/Nav iteration is the bottleneck. v1 = the thin wrapper; profile system only if v1 stops being enough.
+10. **§10 sim** — Phase 4 prep. Significant multi-week effort once you start; descope to "kinematic joints + IMU stub" first, defer sensors/terrain.
 
 ---
 
