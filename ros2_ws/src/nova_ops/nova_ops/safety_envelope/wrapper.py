@@ -39,6 +39,7 @@ Usage in gait controller:
     self.safe_pub.publish(joint_state)
 """
 import collections
+import copy
 import math
 from typing import Deque, Dict, List, Optional, Sequence
 
@@ -46,10 +47,17 @@ from .limits import JointLimits
 from .counters import EnvelopeCounters
 
 
-# How many recent /joint_states samples to average for the load check
-_LOAD_WINDOW = 3
-# Sustained-load threshold above which we refuse load-increasing goals
+# Load check uses a time-window mean of /joint_states.effort[] per
+# joint. The firmware publishes joint round-robin (~17 Hz per joint),
+# so 3 samples ≠ 3 fresh reads of one joint. Window by time, not count:
+_LOAD_WINDOW_SEC = 0.30
 _LOAD_REFUSE_THRESHOLD = 0.70
+
+# If we haven't seen a command for this long, treat the next command as
+# the first sample (velocity check should not compare against ancient
+# `last`).
+_LAST_CMD_STALE_SEC = 0.5
+
 # Throttle logging per joint per failure mode (1st 10 then 1-in-100)
 _LOG_FIRST_N = 10
 _LOG_THROTTLE = 100
@@ -72,8 +80,10 @@ class SafeJointCommandPublisher:
         # Per-joint state
         self._last_cmd: Dict[int, float] = {}
         self._last_cmd_time_ns: Dict[int, int] = {}
-        self._load_window: Dict[int, Deque[float]] = collections.defaultdict(
-            lambda: collections.deque(maxlen=_LOAD_WINDOW))
+        # Load samples are (timestamp_ns, abs_effort) tuples; we trim to
+        # _LOAD_WINDOW_SEC on each read.
+        self._load_samples: Dict[int, Deque[tuple]] = collections.defaultdict(
+            lambda: collections.deque(maxlen=100))
         self._log_counts: Dict[str, Dict[int, int]] = {
             'position': {}, 'velocity': {}, 'load': {}}
 
@@ -81,22 +91,49 @@ class SafeJointCommandPublisher:
 
     def on_joint_states(self, msg) -> None:
         """Wire this as the gait controller's /joint_states subscriber
-        callback. Updates the load window used by the load check."""
-        # msg.effort[] holds the STS3215 load value (firmware contract).
-        # JointState may use msg.name[] to identify joints; we assume
-        # bus IDs in order 1..N as the firmware publishes them.
+        callback. Updates the load window used by the load check.
+
+        TODO: when the URDF lands and firmware fills msg.name[], switch
+        from index-based to name-based binding. Today msg.name[] is
+        intentionally empty (firmware/teensy/firmware/README.md), so we
+        treat effort[i] as joint id i+1.
+        """
+        # Use msg.header.stamp if present, else current ROS time.
+        try:
+            stamp_ns = (msg.header.stamp.sec * 1_000_000_000
+                        + msg.header.stamp.nanosec)
+            if stamp_ns == 0:
+                stamp_ns = self.node.get_clock().now().nanoseconds
+        except AttributeError:
+            stamp_ns = self.node.get_clock().now().nanoseconds
+
         for idx, eff in enumerate(msg.effort):
             joint_id = idx + 1
-            self._load_window[joint_id].append(abs(eff))
+            self._load_samples[joint_id].append((stamp_ns, abs(eff)))
+
+    def _load_window_mean(self, joint_id: int, now_ns: int) -> Optional[float]:
+        """Mean of effort samples within _LOAD_WINDOW_SEC of now_ns.
+        Returns None if no in-window samples."""
+        window_start = now_ns - int(_LOAD_WINDOW_SEC * 1e9)
+        samples = self._load_samples.get(joint_id)
+        if not samples:
+            return None
+        in_window = [v for (ts, v) in samples if ts >= window_start]
+        if not in_window:
+            return None
+        return sum(in_window) / len(in_window)
 
     # ---- The hot path -------------------------------------------------
 
     def publish(self, cmd_msg) -> None:
-        """Clamp + filter + publish. Mutates cmd_msg.position[] in place.
+        """Clamp + filter + publish.
 
-        cmd_msg is a sensor_msgs/JointState. position[i] is interpreted
-        as the goal for bus ID (i+1).
+        NOTE: clamping mutates a deep copy of the caller's message so
+        the caller's downstream logging of the ORIGINAL goal still sees
+        the original value. cmd_msg is a sensor_msgs/JointState.
+        position[i] is interpreted as the goal for bus ID (i+1).
         """
+        cmd_msg = copy.deepcopy(cmd_msg)
         now_ns = self.node.get_clock().now().nanoseconds
 
         for idx in range(len(cmd_msg.position)):
@@ -122,6 +159,13 @@ class SafeJointCommandPublisher:
             # ---- Velocity clamp ----
             last = self._last_cmd.get(joint_id)
             last_t = self._last_cmd_time_ns.get(joint_id)
+            # If `last` is older than _LAST_CMD_STALE_SEC, invalidate it
+            # — treat this publish as the first sample again. Otherwise
+            # a long pause would let arbitrary jumps through as low-vel.
+            if last_t is not None:
+                if (now_ns - last_t) / 1e9 > _LAST_CMD_STALE_SEC:
+                    last = None
+                    last_t = None
             if last is not None and last_t is not None:
                 dt = (now_ns - last_t) / 1e9
                 if dt > 0:
@@ -140,9 +184,8 @@ class SafeJointCommandPublisher:
                         cmd_msg.position[idx] = goal
 
             # ---- Load refusal ----
-            window = self._load_window.get(joint_id)
-            if window and len(window) >= _LOAD_WINDOW:
-                mean_load = sum(window) / len(window)
+            mean_load = self._load_window_mean(joint_id, now_ns)
+            if mean_load is not None:
                 if mean_load > _LOAD_REFUSE_THRESHOLD:
                     # Refuse goals that would INCREASE load magnitude.
                     # Heuristic: if new goal is further from `last` than

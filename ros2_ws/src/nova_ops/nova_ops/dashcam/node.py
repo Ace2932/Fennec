@@ -30,6 +30,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 from std_msgs.msg import Bool, Int32
 from std_srvs.srv import Trigger
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus
 
 from .topics import V1_TOPICS
 from .recorder import Recorder
@@ -64,9 +65,13 @@ class DashcamNode(Node):
             max_bag_duration=max_bag_seconds)
         if not Recorder.available():
             self.get_logger().error(
-                'ros2 bag CLI not on PATH; dashcam will not record')
+                'ros2 bag + MCAP storage not available; dashcam will not '
+                'record. Install:  sudo apt install ros-humble-rosbag2-'
+                'storage-mcap')
         else:
             self.recorder.start()
+            # Verify the recorder actually stayed up (fast-fail catch).
+            self.create_timer(1.0, self._verify_recorder_once)
             self.get_logger().info(
                 f'dashcam recorder started: {len(topics)} topic(s) -> {bag_dir}')
 
@@ -81,11 +86,14 @@ class DashcamNode(Node):
         self.incident_dir = incident_dir
         self.bag_dir = bag_dir
 
-        # Subscriptions: edge-driven safety topics
+        # Subscriptions: edge-driven safety topics.
+        # VOLATILE to match micro-ROS publisher defaults. TRANSIENT_LOCAL
+        # would QoS-mismatch and never receive — see preflight/checks/estop.py
+        # for the long version.
         edge_qos = QoSProfile(
             depth=1,
             reliability=ReliabilityPolicy.RELIABLE,
-            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            durability=DurabilityPolicy.VOLATILE,
         )
         self.create_subscription(Bool, '/estop',
                                   self._on_estop, edge_qos)
@@ -93,28 +101,50 @@ class DashcamNode(Node):
                                   self._on_safety_state, edge_qos)
         self.create_subscription(Bool, '/battery_low',
                                   self._on_battery_low, edge_qos)
+        # /diagnostics ERROR also triggers a freeze (per spec).
+        # DiagnosticArray defaults to a 10-depth volatile QoS for the
+        # standard aggregator; matching here.
+        self.create_subscription(DiagnosticArray, '/diagnostics',
+                                  self._on_diagnostics, 10)
 
         # Service for manual freeze
         self.create_service(Trigger, '~/freeze', self._on_freeze)
 
-        # Debounce — don't fire multiple incidents on the same fault
-        # within debounce_sec.
-        self._last_incident_ns = 0
+        # Per-trigger-source debounce — don't fire multiple incidents
+        # from the SAME source within debounce_sec, but a different
+        # source firing during that window still triggers its own
+        # incident (we want both reasons captured).
+        self._last_incident_ns: dict = {}
         self._debounce_ns = 5 * 1_000_000_000  # 5 s
 
         self.get_logger().info(
             f'dashcam node up. incidents -> {incident_dir}. '
             f'manual freeze: ros2 service call /dashcam/freeze')
 
+    # ------- Recorder health -------
+
+    _verified_recorder = False
+
+    def _verify_recorder_once(self):
+        if self._verified_recorder:
+            return
+        self._verified_recorder = True
+        if not self.recorder.healthy():
+            self.get_logger().error(
+                'recorder subprocess exited within 1 s — likely MCAP '
+                'storage plugin missing or topic list rejected. Install:  '
+                'sudo apt install ros-humble-rosbag2-storage-mcap')
+
     # ------- Triggers -------
 
     def _maybe_freeze(self, trigger: str, detail: str) -> None:
         now = self.get_clock().now().nanoseconds
-        if now - self._last_incident_ns < self._debounce_ns:
+        last = self._last_incident_ns.get(trigger, 0)
+        if now - last < self._debounce_ns:
             self.get_logger().info(
-                f'incident trigger {trigger!r} suppressed (debounce)')
+                f'incident trigger {trigger!r} suppressed (per-source debounce)')
             return
-        self._last_incident_ns = now
+        self._last_incident_ns[trigger] = now
         self.get_logger().warn(f'FREEZE on {trigger}: {detail}')
         self._freeze_now(trigger=trigger, detail=detail)
 
@@ -136,6 +166,14 @@ class DashcamNode(Node):
                 'battery_low',
                 'battery comparator latched (≤ 13.0 V)')
 
+    def _on_diagnostics(self, msg: DiagnosticArray) -> None:
+        for st in msg.status:
+            if st.level == DiagnosticStatus.ERROR:
+                self._maybe_freeze(
+                    f'diagnostics:{st.name}',
+                    f'{st.name}: {st.message}')
+                return  # one trigger per array
+
     def _on_freeze(self, request, response):
         try:
             out = self._freeze_now(trigger='manual',
@@ -151,27 +189,34 @@ class DashcamNode(Node):
     # ------- Freeze impl -------
 
     def _freeze_now(self, trigger: str, detail: str) -> Path:
-        # Stop the recorder so the active bag is flushed and copyable.
-        # The recorder restarts immediately after, beginning a new rolling
-        # window for any subsequent triggers.
-        self.get_logger().info('stopping recorder for incident copy...')
-        self.recorder.stop()
+        # Don't stop the recorder — let it keep writing the current bag.
+        # The COPY of the rolling buffer may include a final bag that's
+        # still being written (i.e., truncated at copy time). That's
+        # acceptable: the trigger time itself is captured in the older
+        # complete bags; the current bag at trigger gets cut off after
+        # the trigger by however long the copytree takes (~hundreds of ms
+        # for 2 GB local copy). We mark this in metadata.
+        #
+        # Pause the janitor first so it doesn't delete out from under us.
+        self.janitor.stop()
         try:
             out = write_bundle(
                 bag_root=self.bag_dir,
                 incident_root=self.incident_dir,
                 trigger=trigger,
-                extra_metadata={'detail': detail},
+                extra_metadata={
+                    'detail': detail,
+                    'recorder_running_during_copy': self.recorder.running,
+                },
             )
             self.get_logger().info(f'incident bundle written: {out}')
             return out
         finally:
-            # Restart recorder
+            # Resume janitor
             try:
-                self.recorder.start()
-                self.get_logger().info('recorder restarted')
+                self.janitor.start()
             except Exception as e:
-                self.get_logger().error(f'recorder restart failed: {e}')
+                self.get_logger().error(f'janitor restart failed: {e}')
 
     # ------- Shutdown -------
 

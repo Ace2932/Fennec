@@ -14,6 +14,8 @@ Usage:
     ros2 launch nova_ops preflight.launch.py
 """
 import rclpy
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_srvs.srv import Trigger
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
@@ -39,7 +41,14 @@ class PreflightNode(Node):
         # Subclasses or future versions can override via parameter list.
         self.checks = list(V1_CHECKS)
 
-        self.create_service(Trigger, '~/run', self._on_run)
+        # Service callback MUST be in a reentrant group: each check's
+        # run() spins the node to wait for one message, and that spin
+        # re-enters the executor. With the default mutex-cb group the
+        # service callback would deadlock its own executor.
+        # The MultiThreadedExecutor + ReentrantCallbackGroup combo
+        # is the supported pattern for "service does spin-blocking work".
+        cb_group = ReentrantCallbackGroup()
+        self.create_service(Trigger, '~/run', self._on_run, callback_group=cb_group)
         self.status_pub = self.create_publisher(
             DiagnosticArray, '~/status', 10)
 
@@ -95,11 +104,16 @@ class PreflightNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = PreflightNode()
+    # MultiThreadedExecutor required so each check's spin doesn't
+    # deadlock the service callback (see ReentrantCallbackGroup above).
+    executor = MultiThreadedExecutor(num_threads=2)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
+        executor.shutdown()
         node.destroy_node()
         rclpy.shutdown()
 

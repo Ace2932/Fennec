@@ -27,10 +27,11 @@ class BatteryLatchCheck(Check):
         def cb(msg):
             latest['val'] = msg.data
 
+        # VOLATILE to match micro-ROS publisher defaults (see estop.py).
         qos = QoSProfile(
             depth=1,
             reliability=ReliabilityPolicy.RELIABLE,
-            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            durability=DurabilityPolicy.VOLATILE,
         )
         sub = node.create_subscription(Bool, '/battery_low', cb, qos)
 

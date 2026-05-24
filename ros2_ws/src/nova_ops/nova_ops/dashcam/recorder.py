@@ -72,12 +72,13 @@ class Recorder:
         self._proc = None
 
     def _build_cmd(self) -> List[str]:
+        # NOTE: --node-name was dropped (not portable across Humble patch
+        # versions). The default rosbag2 recorder node name is fine.
+        # Output directory is cwd; ros2 bag creates a timestamped subdir.
         cmd = [
             'ros2', 'bag', 'record',
             '--storage', self.storage,
             '--max-bag-duration', str(self.max_bag_duration),
-            '--node-name', self.node_name,
-            # Output directory is cwd; ros2 bag creates a timestamped subdir.
         ]
         if self.compression_mode != 'none':
             cmd += ['--compression-mode', self.compression_mode]
@@ -85,7 +86,34 @@ class Recorder:
         cmd += list(self.topics)
         return cmd
 
+    def healthy(self) -> bool:
+        """After start(), check that the subprocess is still running.
+
+        Call this ~1 s after start() to catch fast failures (e.g., MCAP
+        storage plugin missing). Returns False if the process exited
+        early.
+        """
+        if self._proc is None:
+            return False
+        return self._proc.poll() is None
+
     @staticmethod
     def available() -> bool:
-        """True iff `ros2 bag record` + MCAP storage are installed."""
-        return shutil.which('ros2') is not None
+        """True iff `ros2 bag record` is on PATH AND the MCAP storage
+        plugin reports as installed via dpkg (best-effort)."""
+        if shutil.which('ros2') is None:
+            return False
+        # Best-effort check for the MCAP storage plugin. On non-apt
+        # systems (or if dpkg-query is unavailable) we return True and
+        # let the runtime fail loudly via healthy() instead.
+        if shutil.which('dpkg-query') is None:
+            return True
+        import subprocess as _sp
+        try:
+            r = _sp.run(
+                ['dpkg-query', '-W', '-f=${Status}',
+                 'ros-humble-rosbag2-storage-mcap'],
+                capture_output=True, text=True, timeout=2.0)
+            return 'install ok installed' in (r.stdout or '')
+        except (OSError, _sp.SubprocessError):
+            return True   # don't gate on this — fall through to runtime check

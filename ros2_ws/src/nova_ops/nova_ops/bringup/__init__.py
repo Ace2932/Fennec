@@ -93,16 +93,48 @@ PROFILES = {
 }
 
 
-def resolve_actions(profile_name: str) -> list:
-    """Recursively expand `include_profile` references into a flat list."""
+def resolve_actions(profile_name: str, _seen=None) -> list:
+    """Recursively expand `include_profile` references into a flat list.
+
+    De-duplicates identical actions (so `full` = `walk` + `slam` doesn't
+    spawn dashcam twice because both contained it). Guards against
+    profile cycles via the _seen set.
+    """
+    if _seen is None:
+        _seen = set()
+    if profile_name in _seen:
+        raise ValueError(
+            f'profile cycle detected: {profile_name} already in {_seen}')
     if profile_name not in PROFILES:
         raise ValueError(
             f'unknown profile {profile_name!r}; '
             f'available: {sorted(PROFILES.keys())}')
+
+    _seen = _seen | {profile_name}
     out = []
+    seen_actions = set()
     for action in PROFILES[profile_name]['actions']:
         if action[0] == 'include_profile':
-            out.extend(resolve_actions(action[1]))
+            for sub_action in resolve_actions(action[1], _seen=_seen):
+                key = _action_key(sub_action)
+                if key not in seen_actions:
+                    seen_actions.add(key)
+                    out.append(sub_action)
         else:
-            out.append(action)
+            key = _action_key(action)
+            if key not in seen_actions:
+                seen_actions.add(key)
+                out.append(action)
     return out
+
+
+def _action_key(action) -> tuple:
+    """Hashable identity for an action — used for dedup across includes."""
+    kind = action[0]
+    if kind in ('launch', 'node'):
+        # (kind, package, file_or_executable) — args/params not in key
+        # so two identical includes with the same args are deduped, but
+        # two launches of the same file with DIFFERENT args remain
+        # distinct (caller passes them as a list of tuples).
+        return (kind, action[1], action[2], tuple(sorted(action[3].items())))
+    return (kind,) + action[1:]

@@ -23,12 +23,20 @@ class EstopCheck(Check):
         def cb(msg):
             latest['val'] = msg.data
 
-        # /estop is edge-published; use transient_local so we catch the
-        # last value even if no edge has fired since the subscriber started.
+        # /estop is published by micro-ROS Teensy. micro-ROS publishers
+        # default to VOLATILE durability and have patchy TRANSIENT_LOCAL
+        # support on Humble. Using TRANSIENT_LOCAL here would cause QoS
+        # incompatibility and silent STALE results. Use VOLATILE so we
+        # match the publisher; the trade-off is that we need an edge to
+        # arrive within the 5 s window. Firmware publishes /estop on
+        # boot self-test AND on every edge change, so 5 s of wait is OK
+        # in practice; for the corner case where the user runs preflight
+        # before the Teensy comes up, we report STALE which is the right
+        # answer.
         qos = QoSProfile(
             depth=1,
             reliability=ReliabilityPolicy.RELIABLE,
-            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            durability=DurabilityPolicy.VOLATILE,
         )
         sub = node.create_subscription(Bool, '/estop', cb, qos)
 

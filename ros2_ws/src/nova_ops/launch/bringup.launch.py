@@ -83,11 +83,15 @@ def _compose(context, *args, **kwargs):
             out.append(LogInfo(msg=f'  [unknown] {action}'))
 
     # Preflight gate — but we don't BLOCK launch, just log a reminder.
-    # Real gating happens at the gait-controller level via the CLI exit code.
+    # Real gating happens at the gait-controller level via the CLI exit
+    # code (the gait controller's startup script should run
+    # `ros2 run nova_ops preflight` and refuse to spawn the gait loop on
+    # non-zero exit). Mention this loudly.
     if profile.get('preflight') and not no_preflight and not dry_run:
         out.append(LogInfo(
-            msg='[bringup] reminder: gate gait controller on '
-                '`ros2 run nova_ops preflight` exit code'))
+            msg='[bringup] gate: gait controller MUST run '
+                '`ros2 run nova_ops preflight` and check exit code before '
+                'enabling motion. Bringup does not enforce this.'))
 
     return out
 
@@ -104,5 +108,9 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'no_preflight', default_value='false',
             description='skip the preflight reminder (intentional degraded test)'),
+        DeclareLaunchArgument(
+            'record', default_value='false',
+            description='extend dashcam to record cameras + lidar for this run '
+                        '(NOT yet wired — reserved; see notes-qol-features.md §4)'),
         OpaqueFunction(function=_compose),
     ])
