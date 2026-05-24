@@ -82,8 +82,10 @@ def build_femur():
     )
 
     # 2. Mid-link beam: from body shell +X face to yoke -X face
-    beam_x0 = BODY_CX + BODY_X/2 - 1.0   # overlap into body
-    beam_x1 = S3_AXIS_X - S3_ARM_X/2 + 1.0
+    # Use generous overlap to ensure boolean fusion (CadQuery booleans get
+    # fragile with sub-1mm overlaps).
+    beam_x0 = BODY_CX + BODY_X/2 - 5.0   # 5 mm overlap into body
+    beam_x1 = S3_AXIS_X - S3_ARM_X/2 + 5.0   # 5 mm overlap into yoke
     beam_len = beam_x1 - beam_x0
     if beam_len > 0:
         beam = (
@@ -194,11 +196,15 @@ def build_femur():
         )
 
     # ---- Open gap between yoke arms (tibia body sits here) ----
+    # CRITICAL: only carve the LATERAL gap (between the two Y arms),
+    # and only at the yoke X position. Do NOT extend into the beam region
+    # along X (would sever beam-to-yoke connection) or above the beam
+    # (would slice the beam vertically).
     femur = femur.cut(
         cq.Workplane("XY")
         .workplane(offset=-0.1)
         .center(S3_AXIS_X, 0)
-        .box(S3_ARM_X + 1.0, S3_GAP_Y, S3_ARM_Z + 0.5,
+        .box(S3_ARM_X - 4.0, S3_GAP_Y, S3_ARM_Z + 0.5,
              centered=(True, True, False))
     )
 

@@ -47,6 +47,50 @@ from this repo (`hardware/cad/patterns.md`) and the upstream parametric-
 - Print recipes + filament feed: see "3D Printing" section in the Notion
   page or `BOM.md` §8
 
+## Mandatory Validation Gates (after every export)
+
+The upstream `run_cadquery_model.py --strict` only checks watertight,
+which is NOT enough — a mesh with two disconnected closed surfaces is
+still watertight. Run both checks before claiming an STL is ready:
+
+```python
+import trimesh
+m = trimesh.load("part.stl", force="mesh")
+assert m.is_watertight, "non-watertight"
+parts = m.split(only_watertight=False)
+assert len(parts) == 1, f"BUG: {len(parts)} disconnected pieces"
+```
+
+If `parts > 1`, the part has floating geometry (yoke arms, heatset
+bosses, link beams) that won't print as a single piece. Common cause:
+sub-1 mm boolean overlap. Fix: use **≥ 5 mm overlap on every structural
+union**.
+
+See `hardware/cad/patterns.md` "Connectivity Validation (MANDATORY)"
+for the full convention.
+
+## TTL Daisy-Chain Wire Routing
+
+Servo bodies are wrapped by shells, but the Feetech daisy-chain cable
+must pass IN + OUT of every shell. Defaults:
+
+- `WIRE_SLOT_W = 14 mm` (fits 2 × JST 3-pin XH cables side-by-side)
+- `WIRE_SLOT_H = 5 mm`
+- Place IN slot on one end face, OUT slot on the opposite end face
+- For yoke joints: notch the yoke arm inner face so the cable can pass
+  out toward the downstream link
+- For shoulder chassis-mount slabs: pass-through through the slab from
+  chassis side to coax side
+
+## Original NovaSM3 STL References (for proportions only)
+
+The original NovaSM3 STLs at `~/codebases/NOVA/original_body_files/` are
+sized for SMALL PWM hobby servos (~20 mm body width), NOT Feetech STS3215
+(~25 mm body width × 45 mm length). When designing STS3215-native parts,
+match the **leg LENGTH proportions** from the originals but expect the
+cavity dimensions to be ~2× larger. Do not blindly clone original
+bounding boxes — they were dimensioned for a smaller servo class.
+
 ## Key Constraints (NovaSM3 v1)
 
 - **Printer:** Bambu Lab P1S, hardened steel hotend (CF eats brass), AMS

@@ -150,14 +150,15 @@ def build_body_shell():
     )
 
     # ---- Carve the gap between yoke arms (where femur body sits) ----
-    # The yoke region is solid Y=YOKE_Y wide. Cut a slot down the middle
-    # along Y of width S2_GAP_Y, leaving S2_ARM_T thick walls on each Y side.
-    # The slot is open through +X and -X (so femur can pivot freely around
-    # servo 2 axis = Y).
+    # CRITICAL: Z extent is YOKE_BOT to 0 ONLY (do NOT cut into body shell
+    # above, would sever upper body from yoke). Width along Y is S2_GAP_Y;
+    # body shell BODY_Y must be > S2_GAP_Y so the upper region survives.
+    yoke_carve_z_top = -1.0  # stay 1 mm below body shell floor
+    yoke_carve_z_bot = YOKE_BOT - 0.5
     shell = shell.cut(
         cq.Workplane("XY")
-        .workplane(offset=YOKE_BOT - 0.1)
-        .box(BODY_X + 1.0, S2_GAP_Y, S2_ARM_Z + 0.5,
+        .workplane(offset=yoke_carve_z_bot)
+        .box(BODY_X + 1.0, S2_GAP_Y, yoke_carve_z_top - yoke_carve_z_bot,
              centered=(True, True, False))
     )
 
