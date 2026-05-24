@@ -832,6 +832,57 @@ assert bb.xlen <= build_x and bb.ylen <= build_y and bb.zlen <= build_z, \
 
 ---
 
+## Connectivity Validation (MANDATORY)
+
+**Watertight ≠ connected.** A mesh of two disconnected closed surfaces is
+still watertight per `trimesh.is_watertight` — both surfaces individually
+have consistent normals + sealed boundaries. The parametric-3d-printing
+skill's `run_cadquery_model.py --strict` only checks watertight, so it can
+pass even when the part is structurally broken (yoke arms floating, lid
+bosses detached, mid-link beams not fused to the end blocks).
+
+**Always run a connected-component check after export:**
+
+```python
+import trimesh
+m = trimesh.load("part.stl", force="mesh")
+parts = m.split(only_watertight=False)
+assert len(parts) == 1, f"BUG: {len(parts)} disconnected pieces"
+```
+
+Bake this into every build script. Passing watertight + 1 component is
+the real "geometry will print as expected" gate. See
+`leg_v3/check_connectivity.py` for a ready-to-run validator.
+
+### Common disconnected-component causes
+
+1. **Sub-millimeter boolean overlap.** CadQuery booleans get fragile when
+   two unioned solids overlap by <1 mm. The boolean "succeeds" (no
+   exception) but the result is two surfaces that touch, not one solid.
+   **Use ≥ 5 mm overlap on every structural union.** 3 mm minimum.
+2. **Carving across a connection.** A `.cut()` extending through the neck
+   region between two regions slices them apart. Limit Z extent of any
+   "gap carve" to stay strictly inside the region it opens — use explicit
+   `z_top` and `z_bot`, never "carve everything below this Y line".
+3. **Lid bosses extruded without body overlap.** If a heatset insert boss
+   sits just inside the body footprint but the circle does not intersect
+   the body wall, the union is numerically empty. Position bosses to
+   overlap the body by at least the boss radius.
+
+### Lessons learned from V3.1 coax + femur bugs
+
+- **coax v3.1 first pass:** the gap-between-yoke-arms carve extended
+  from Z=YOKE_BOT up to Z=YOKE_BOT+S2_ARM_Z+0.5, which crossed Z=0
+  (the body shell floor). The carve sliced through the body shell,
+  leaving the upper body disconnected from the yoke. Fix: clamp the
+  carve Z range strictly below the body shell.
+- **femur v3.1 first pass:** beam overlapped body + yoke by 1 mm each
+  side. Booleans technically succeeded but produced disconnected
+  surfaces. Fix: bump overlaps to 5 mm.
+
+Both bugs were watertight-passing — the only catch was running
+`trimesh.split()`.
+
 ## Bearing-Fit Field Tips
 
 Stock pattern in §3 uses +0.05 mm clearance. Real-world calibration on
