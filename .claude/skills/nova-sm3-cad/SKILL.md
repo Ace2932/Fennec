@@ -30,17 +30,28 @@ from this repo (`hardware/cad/patterns.md`) and the upstream parametric-
    - Use the CadQuery + preview-iterate loop from the upstream skill's
      `SKILL.md` for the actual code generation + STL export.
 
-2. **For the leg-joint kinematic stack** (hip + femur + tibia multi-body
-   assemblies, anything where mate relationships drive geometry, anything
-   that needs IK / joint-limit verification before printing):
-   - Do NOT use this skill. Use OnShape.
-   - WIP source: `~/codebases/NOVA/nova_sts3215_redesign/` (OpenSCAD) +
-     OnShape workspace.
+2. **For the leg-joint kinematic stack OR chassis + multi-body assemblies**
+   (hip + femur + tibia mates, chassis-to-shoulder bolt patterns, sensor
+   mount-to-chassis interfaces, anything where mate relationships drive
+   geometry, anything that needs IK / joint-limit verification or
+   imports a reference STEP like the Jetson):
+   - Do NOT use this skill. Use **OnShape via Jarvis OnShape MCP**
+     (Claude Code plugin: `/plugin install github:ReshefElisha/jarvis-onshape-mcp`).
+     ~60 MCP tools, FeatureScript escape hatch, multi-view renders.
+   - Full setup + boundary documented in
+     `docs/cad-tooling.md` (Jarvis install + API keys + reference-STEP catalog).
+   - WIP sources: `~/codebases/NOVA/nova_sts3215_redesign/` (OpenSCAD,
+     historical) + the OnShape workspace where the Jetson STEP and
+     leg V3.1 STEPs are imported.
 
 ## Reference
 
+- **CAD tooling setup:** `docs/cad-tooling.md` (Jarvis OnShape MCP +
+  CadQuery dual-track workflow + reference STEP catalog)
 - Canonical macros: `hardware/cad/patterns.md` (in this repo, version-
   controlled, source of truth)
+- Canonical part dimensions: `hardware/cad/dimensions.md`
+  (✅ VERIFIED / ⚠️ REVIEW / ❌ MISSING)
 - Upstream CadQuery skill: `~/.claude/skills/parametric-3d-printing/`
 - Project CAD workflow notes: `hardware/cad/README.md`
 - BOM ground truth: `BOM.md`

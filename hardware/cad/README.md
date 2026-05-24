@@ -1,8 +1,8 @@
 # CAD
 
-Two tools, deliberately split:
+Two tools, deliberately split. **Full setup guide:** [`docs/cad-tooling.md`](../../docs/cad-tooling.md).
 
-- **OnShape** (browser, free public doc tier) — leg-joint kinematics, hip + femur + tibia multi-body assemblies, anything with mate relationships, chassis structural geometry. Source of truth for the kinematic stack.
+- **OnShape via [Jarvis OnShape MCP](https://github.com/ReshefElisha/jarvis-onshape-mcp)** (Claude Code plugin, ~60 tools + FeatureScript) — chassis, leg-joint kinematics, multi-body assemblies, anything with mate relationships, anything that imports reference STEPs (Jetson, L2, D456, leg V3.1 pieces). Source of truth for the kinematic + structural stack.
 - **parametric-3d-printing skill** (`~/.claude/skills/parametric-3d-printing/`, CadQuery-based) — utility parts: cable guides, sensor adapters, mount brackets, panel cutouts, foot pads, strain reliefs, PCB carriers, riser towers, connector pockets, print-test coupons. Anything single-body or single-assembly.
 
 Project-specific macros live in [`hardware/cad/patterns.md`](./patterns.md) (version-controlled with this repo). Project-scoped skill at `.claude/skills/nova-sm3-cad/SKILL.md` auto-loads when working in this project — wraps the patterns file + delegates CadQuery code generation + STL export to the upstream `parametric-3d-printing` skill. Covers Bambu P1S + PA6-CF tolerances, STS3215 dual-shaft mount, LiPo pocket, XT60 / XT30 / E-stop / RJ-45 / USB / barrel cutouts, RealSense D456 + L2 LiDAR riser + Teensy + Arduino Nano + INA226 mounts, Pololu buck carriers + LC filter pocket, P3766 antenna mount, WS2812B status LED, leg-rail star injection, TPU foot pads + strain reliefs, servo zero-position calibration jig. Read it before generating new utility parts.
