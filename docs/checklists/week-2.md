@@ -29,7 +29,7 @@
 - [ ] Export hip pocket STL
 - [ ] Slice in Bambu Studio: PA6-CF, 100% infill on load-bearing zones, fiber-aware orientation
 - [ ] Pre-dry PA6-CF 24h before printing
-- [ ] Magigoo PA or Bambu liquid glue on textured PEI plate (gate per BOM §8 fallback note)
+- [ ] **Magigoo PA** on textured PEI plate (Bambu liquid glue NOT rated for PA — see BOM §8). 100 °C bed soak 15 min before first layer.
 - [ ] Print one hip pocket
 - [ ] Fit-check on real STS3215 30kg with calipers — clearance, M3 hole alignment, horn-spline depth
 - [ ] Iterate 2-3 times until clean
@@ -113,10 +113,11 @@
 ## 5. Bambu Studio + filament prep
 
 - [ ] Download + install Bambu Studio (latest)
-- [ ] Confirm AMS HF profile matches your spool loadout
-- [ ] Run PA6-CF in Creality SpacePi X4 drier 24h before first print
-- [ ] Confirm hardened steel hotend installed in P1S (PA6-CF requires it)
-- [ ] First-article print test: pre-existing benchy STL in PA6-CF to confirm hotend + drier + Magigoo/Bambu glue combo holds
+- [ ] **AMS HF bypassed for PA6-CF.** Configure Bambu Studio for **external single-spool feed**: SpacePi X4 → 4 mm PTFE Bowden tube → P1S top-side input. PA stays in heated dryer chamber the entire print; AMS holds nothing.
+- [ ] Run PA6-CF in Creality SpacePi X4 dryer **24 h @ 70 °C** before first print. Keep dryer running at 60-70 °C during print (chamber stays sealed).
+- [ ] Confirm hardened steel hotend installed in P1S (PA6-CF mandatory — brass dies in <1 spool)
+- [ ] Add **Magigoo PA** to next order (Bambu liquid glue not rated for PA per Bambu wiki — PA6-CF first-layer detachment likely with stock glue)
+- [ ] First-article print test: small fit-test coupon in PA6-CF (NOT a benchy — too generic). Print a hip-pocket fragment with bearing seat + servo cutout to validate Bowden feed tension, bed adhesion, and dimensional accuracy in one print.
 
 ---
 

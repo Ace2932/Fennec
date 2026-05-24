@@ -185,10 +185,10 @@ Switch can be pulled out of its case to save ~60% volume inside the chassis if n
 | PETG-CF × 1 spool (brick red) | $40 | ✅ Ordered |
 | TPU 95A × 1 spool (yellow) | $45 | ✅ Ordered |
 | PETG accent × 1 spool (white) | $30 | ✅ Ordered |
-| Bambu AMS HF + setup tools | $180 | ✅ Ordered |
-| Bambu P1-series hardened steel hotend | $40 | ✅ Ordered |
-| Creality SpacePi X4 filament dryer | $170 | ✅ Ordered |
-| ~~Magigoo PA glue stick~~ → Bambu Lab Liquid Glue | $0 | ✅ Using existing Bambu liquid glue stash. ⚠️ Bambu's stock liquid glue is generic-purpose, not nylon-specific. Print-test first article before batch committing; fallback to Magigoo PA (~$15) if PA6-CF first layer doesn't bond. |
+| ~~Bambu AMS HF + setup tools~~ | ~~$180~~ | ⚠️ **Owned but bypassed for v1 print workflow.** PA6-CF is hygroscopic and re-absorbs moisture in the AMS chamber within hours, defeating the 24 h pre-drying. v1 prints feed **directly from Creality SpacePi X4 → 4 mm PTFE Bowden tube → P1S extruder** so the filament stays in the heated dryer the entire print. AMS HF reserved for future PLA/PETG accent multicolor work where moisture isn't an issue. Spool retention + auto-cut bypassed; single-spool active at a time. |
+| Bambu P1-series hardened steel hotend | $40 | ✅ Ordered — **mandatory** for CF-filled filaments; brass nozzle dies in <1 spool of PA6-CF |
+| **Creality SpacePi X4 filament dryer + Bowden feed kit** | $170 | ✅ Ordered + active. Dual-chamber, 45-85 °C, 1-48 h timer, 4 mm PTFE Bowden outlets (top + rear). PA6-CF runs 24 h @ 70 °C pre-print then **stays in the chamber during the print** with Bowden tube routed to the P1S top-side filament input (replaces AMS feed path). |
+| **Magigoo PA glue stick** | $15 | ⚠️ **Add back to order** — Bambu Lab liquid glue product page explicitly lists PLA / ABS / PETG / ASA / TPU / PET only; **not rated for PA / PA-CF / PC / PC-CF**. Per Bambu wiki PA6-CF guide, PA6-CF on textured PEI needs a PA-specific glue stick (Magigoo PA recommended) for first-layer adhesion. The "use existing Bambu glue" plan was a $15 false economy — first-layer detachment on a 10 h PA6-CF print costs more than the glue stick. Order with next batch. |
 
 ---
 
@@ -339,7 +339,7 @@ PCB note: new v6 design cost (PCBWay) absorbs the v5.2b $60 line.
 - [ ] Order remaining STS3215 19kg servos to complete 8-count for legs (v1 = 12 active total)
 - [ ] Design PCB v6 — see [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md)
 - [ ] Write Teensy firmware (Pattern B bus driver + micro-ROS) — see [`firmware/teensy/README.md`](../firmware/teensy/README.md). **Critical path for Phase 1.**
-- [ ] Verify Pattern B gait-loop p99 <2 ms across 12-servo bus (Phase 1 acceptance gate)
+- [ ] Verify Phase 1 acceptance gate: Teensy loop p99 **<100 µs** (NOT <2 ms RTT) + `/joint_commands` arrival ≥99% of 100 Hz + RTT median <5 ms / p99 <20 ms (sanity)
 
 ---
 

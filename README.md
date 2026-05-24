@@ -62,7 +62,8 @@ The arm is carried over from a prior SO-ARM101 build, also Feetech-based. **v1 b
 | Perception | None / optional | RealSense D456 + Unitree L2 LiDAR |
 | Middleware | Custom Arduino loops | ROS 2 Humble + micro-ROS |
 | Power | 3S 11.1V LiPo | 4S 14.8V LiPo + Pololu buck rails (7.5V leg / 12V hip / 12V L2 dedicated / 12V Jetson / 5V aux). XL4016 dropped after capacity audit. |
-| Print materials | PLA / PETG | PA6-CF / PETG-CF / TPU 95A |
+| Print materials | PLA / PETG | PA6-CF (structural) / PETG-CF (secondary) / TPU 95A (foot pads + strain relief) |
+| Print feed | Direct from spool | **Creality SpacePi X4 dryer → 4 mm PTFE Bowden → P1S** (AMS HF bypassed for PA6-CF — re-absorbs moisture in AMS chamber, defeats pre-drying) |
 
 ### Why we're redesigning the PCB (v5.2b → v6)
 
@@ -202,8 +203,8 @@ If (1) misses → debug Teensy firmware (DMA vs ISR, UART config). If (2) misses
 | ROS 2 Humble | Middleware | 📋 Install on Jetson |
 | `librealsense2` | RealSense SDK | 📋 ARM64 build |
 | `realsense2_camera` | ROS 2 wrapper for D456 | 📋 apt install |
-| `unilidar_sdk2` | Unitree L2 SDK | 📋 Clone from GitHub |
-| `unitree_lidar_ros2` (discodyer) | ROS 2 wrapper for L2 | 📋 Clone + build |
+| `unilidar_sdk2` | Unitree L2 SDK | ✅ Built green on Jetson (official `unitreerobotics/unilidar_sdk2`, **not discodyer fork** — official now bundles ROS 2 wrapper) |
+| `unitree_lidar_ros2` | ROS 2 wrapper for L2 | ✅ Built + streaming. Use **Ace2932/unilidar_sdk2 `fix/imu-bridge-double-call` branch** — fixes upstream IMU bridge bug where `getImuData()` is called twice in `timer_callback()`, draining the SDK queue before publish. |
 | POINT-LIO | LiDAR-inertial SLAM | 📋 Eval first |
 | RTAB-Map | Visual-LiDAR SLAM | 📋 Compare with POINT-LIO |
 | Nav2 | Autonomous navigation | 📋 Phase 3 |
@@ -439,7 +440,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2b | Bluetooth presence on P3766 | **Resolved → BT 5.1 confirmed (Realtek)** | Verified 2026-05-17 on hardware: `hciconfig -a` shows `hci0` UP RUNNING, Manufacturer "Realtek Semiconductor Corporation", HCI Version 5.1, BD Address 9C:C7:D3:F6:AC:5C. `bluetoothctl list` confirms controller present. |
 | 3 | L2 12V tap: shared with hip rail vs dedicated buck | **Resolved → dedicated D24V22F12** (v3.4) | Combined hip+L2 load was margin-thin on D42V110F12's 9A typ at 14.8V Vin derating. Split L2 to its own buck for $19 extra. Cleaner power, more hip-rail headroom. |
 | 4 | SLAM stack: POINT-LIO vs RTAB-Map | Open | Compare during Phase 2 |
-| 5 | Bus master: Pattern A (FE-URT-1) vs Pattern B (Teensy) | **Resolved → B is v1 default** | Linux jitter (USB-CDC 1-10 ms typical, 50 ms+ under load) is unacceptable at 100 Hz gait. Teensy bare-metal UART gives hard real-time. PCB v6 keeps Pattern A via `JP_BUS_MASTER` bridge for bench / ID setup / debug. Phase 1 acceptance: p99 <2 ms ROS 2 → Teensy → bus. |
+| 5 | Bus master: Pattern A (FE-URT-1) vs Pattern B (Teensy) | **Resolved → B is v1 default** | Linux jitter (USB-CDC 1-10 ms typical, 50 ms+ under load) is unacceptable at 100 Hz gait. Teensy bare-metal UART gives hard real-time. PCB v6 keeps Pattern A via `JP_BUS_MASTER` bridge for bench / ID setup / debug. Phase 1 acceptance gate (revised): Teensy loop p99 **<100 µs** + `/joint_commands` arrival ≥99% of 100 Hz + RTT sanity (median <5 ms, p99 <20 ms). |
 | 6 | L2 mounting position | Resolved → top-center on riser | Symmetric 360° FOV, minimal yaw moment |
 | 7 | Horn spline verification | Resolved → absorbed into leg redesign | |
 | 8 | NVMe SSD purchase | Deferred → NAND shortage | May-2026 NAND flash shortage 2-3x'd 1TB SSD prices ($60→$165-220). Revisit when prices recover (<~$100 for 1TB) or storage becomes a measured bottleneck. Run from 128GB microSD until then. |
@@ -490,6 +491,12 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-18 | **Unitree L2 LiDAR streaming end-to-end.** Wired L2 ↔ Cat 6 ↔ gigabit switch ↔ Cat 6 ↔ Jetson `enP8p1s0` (192.168.1.2/24 static via `nmcli connection nova-lan`). Ping to L2 (192.168.1.62) at 0.1 ms. `ros2 launch unitree_lidar_ros2 launch.py` brings up `/unilidar/cloud` at **12 Hz, 5042 points/scan, frame_id `unilidar_lidar`**. Followup: `/unilidar/imu` topic advertised but no UDP frames arriving — driver `initialize_type` config may need tuning (non-blocking since D456 IMU at 200 Hz covers EKF). **Full v1 perception stack online:** RGB + depth + 2 IMUs + 3D LiDAR all in ROS 2. |
 | 2026-05-19 | **POINT-LIO ROS 2 (dfloreaa fork) built green on Jetson** in 1:42 colcon. Phase 2 SLAM toolchain compile-ready. L2-specific config at `unilidar_l2.yaml` (scan_line 18, imu_time_inte 0.004 = 250 Hz). Runtime tests deferred until L2 IMU ROS bridge bug fixed OR `imu_en: false` LiDAR-only mode set. |
 | 2026-05-19 | **Teensy 4.1 PlatformIO firmware skeleton compile-green on Mac** in 9.58 s (Flash 12.8 KB / 8 MB free; RAM1 487 KB / RAM2 512 KB free). Pin map + 74HC125 OE GPIO scaffolding + INA226 I²C placeholder + safety GPIO sense + 1 Hz LED heartbeat + USB-CDC log lines. micro-ROS lib_deps gated behind `NOVA_USE_MICRO_ROS` — Mac build path breaks on Python 3.14 + missing ROS dev libs; reinstate on Jetson for runtime testing. Repo path: `firmware/teensy/firmware/`. |
+| 2026-05-19 | **Teensy firmware end-to-end on Jetson.** IntervalTimer ISR-driven 200 Hz tick → loop p99 = **1 µs** (50× under <100 µs acceptance gate). micro-ROS over USB-CDC + 20-topic contract live. `feetech::Bus` driver code-complete (untested on wire). |
+| 2026-05-20 | **Firmware safety + telemetry batch:** safety FSM (E-stop + battery-low latch + `/safety_clear`), full STS3215 telemetry (pos+vel+load + voltage + temp @ 5 Hz), per-joint slew limiter on SYNC_WRITE broadcast, software watchdog (ISR-checked main-loop progress + AIRCR reset), boot-time servo ping sweep → first real `/servo_present_mask`, INA226 → `/power_rails` Float32MultiArray @ 10 Hz, `/firmware_version` + boot self-test for safety GPIOs, categorised bus errors (`/servo_err_timeout` + `/servo_err_bad_frame` + `/servo_err_servo`). CI green on every PR. |
+| 2026-05-21 | Threadlocker (Loctite 243) + tape ordered. DP adapter dropped (headless SSH path validated). |
+| 2026-05-23 | **L2 IMU bridge fixed** via Ace2932/unilidar_sdk2 fork — `/unilidar/imu` now publishes @ 250 Hz, POINT-LIO green end-to-end (init walks 1% → 100% within 250 ms). Per-room PCD capture procedure documented in `setup-jetson.md` §15. |
+| 2026-05-23 | **AMS HF bypassed for PA6-CF print workflow** — feed direct from Creality SpacePi X4 → 4 mm PTFE Bowden → P1S. PA6-CF re-absorbs ambient moisture in AMS chamber within hours, defeating the 24 h pre-dry. SpacePi X4 keeps filament heated through the entire print. |
+| 2026-05-23 | **Magigoo PA reinstated** in BOM. Bambu Lab liquid glue is not rated for PA / PA-CF per their product page; Bambu wiki PA6-CF guide explicitly calls for PA-specific glue stick. The −$15 substitution was a false economy vs the cost of a 10 h first-layer detachment. |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 
