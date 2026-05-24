@@ -65,19 +65,77 @@ def main():
                             tolerance=0.01, angularTolerance=0.1)
 
     # ---- Posed assembly (preview only, not printable as one piece) ----
-    # Shoulder fixed at origin. Coax between shoulder yoke arms.
-    # Femur hanging from coax bottom yoke. Tibia from femur distal yoke.
-    # Straight-leg pose for layout sanity check.
-    coax_in_assy = (coax_shell.union(coax_cover.translate((0, 0, 0)))
-                    .translate((0, -15, 10)))
-    femur_in_assy = (femur.union(femur_cover)
-                     .rotate((0,0,0), (1,0,0), 90)   # rotate so X is down
-                     .translate((0, 0, -90)))
-    tibia_in_assy = (tibia.union(tibia_cover)
-                     .rotate((0,0,0), (1,0,0), 90)
-                     .translate((0, 0, -220)))
+    # Mate each link by sharing the servo axis with the upstream piece.
+    # Straight-leg pose: leg hangs in -Z direction.
+    # Shoulder is fixed at origin; its servo 1 spline axis runs along world Z
+    # at world (12.5, -15, 0).
+    from leg_common import SPLINE_X_OFFSET, SERVO_H, SERVO_CLEAR
+    from shoulder import SPLINE_X_SHOULDER, YOKE_ARM_Y, YOKE_GAP_Z
+    from coax     import BODY_Z as COAX_BODY_Z, S2_AXIS_Z, S2_GAP_Y
+    from femur    import (BODY_CX as FEMUR_BCX, BODY_Z as FEMUR_BODY_Z,
+                          S3_AXIS_X, S3_AXIS_Z)
+    from tibia    import BODY_CX as TIBIA_BCX, BODY_Z as TIBIA_BODY_Z
 
-    assy = shoulder.union(coax_in_assy).union(femur_in_assy).union(tibia_in_assy)
+    # 1) Shoulder: at origin. Servo 1 axis at world (12.5, -15, 0) along Z.
+    #    Inner face of shoulder top arm (= top of coax body) at Z = +YOKE_GAP_Z/2.
+    coax_world_X = 0
+    coax_world_Y = -YOKE_ARM_Y / 2     # = -15
+    coax_world_Z = YOKE_GAP_Z/2 - COAX_BODY_Z   # body top sits at top-arm inner
+
+    coax_assy = (coax_shell.union(coax_cover)
+                 .translate((coax_world_X, coax_world_Y, coax_world_Z)))
+
+    # 2) Coax servo-2 axis in world:
+    s2_axis_world = (
+        coax_world_X + SPLINE_X_OFFSET,
+        coax_world_Y,
+        coax_world_Z + S2_AXIS_Z,
+    )
+
+    # Femur: rotate +90 about Y so femur local +X -> world -Z (femur hangs down).
+    # After rotation, femur servo-2 spline world coords (before translate):
+    #   wx = local_Z = FEMUR_BODY_Z/2
+    #   wy = local_Y = 0
+    #   wz = -local_X = -(FEMUR_BCX + SPLINE_X_OFFSET)
+    femur_rot = (femur.union(femur_cover)
+                 .rotate((0,0,0), (0,1,0), 90))
+    femur_spline_after_rot = (
+        FEMUR_BODY_Z / 2,
+        0,
+        -(FEMUR_BCX + SPLINE_X_OFFSET),
+    )
+    femur_T = (
+        s2_axis_world[0] - femur_spline_after_rot[0],
+        s2_axis_world[1] - femur_spline_after_rot[1],
+        s2_axis_world[2] - femur_spline_after_rot[2],
+    )
+    femur_assy = femur_rot.translate(femur_T)
+
+    # 3) Femur servo-3 (knee) axis in world. Femur local: (S3_AXIS_X, 0, S3_AXIS_Z+BODY_Z/2)
+    knee_local = (S3_AXIS_X, 0, S3_AXIS_Z + FEMUR_BODY_Z / 2)
+    knee_after_rot = (knee_local[2], knee_local[1], -knee_local[0])
+    knee_world = (
+        knee_after_rot[0] + femur_T[0],
+        knee_after_rot[1] + femur_T[1],
+        knee_after_rot[2] + femur_T[2],
+    )
+
+    # Tibia: same rotation as femur. Translate so its servo-3 spline lands at knee_world.
+    tibia_rot = (tibia.union(tibia_cover)
+                 .rotate((0,0,0), (0,1,0), 90))
+    tibia_spline_after_rot = (
+        TIBIA_BODY_Z / 2,
+        0,
+        -(TIBIA_BCX + SPLINE_X_OFFSET),
+    )
+    tibia_T = (
+        knee_world[0] - tibia_spline_after_rot[0],
+        knee_world[1] - tibia_spline_after_rot[1],
+        knee_world[2] - tibia_spline_after_rot[2],
+    )
+    tibia_assy = tibia_rot.translate(tibia_T)
+
+    assy = shoulder.union(coax_assy).union(femur_assy).union(tibia_assy)
     cq.exporters.export(assy, "leg_v31_assembly.stl",
                         tolerance=0.05, angularTolerance=0.5)
 
