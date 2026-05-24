@@ -71,7 +71,7 @@ After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgra
 
 ### What carries over from Nova v5.2b
 
-- Arduino Nano slot for aux peripherals (PIR, ultrasonic, OLED, RGB LEDs, MP3, IMU)
+- Arduino Nano slot for aux peripherals — **v3.5 cut**: OLED + WS2812B only (PIR / ultrasonic / MP3 / MPU-6050 removed; D456 + L2 perception stack covers their roles)
 - Battery input + reverse polarity protection geometry (replicated with MOSFET-based reverse protection instead of diode)
 - Power switch, voltmeter, fuse (Class T 30A — LiPo dead-short interrupt rating; ANL was originally specced but 6 kA AIC insufficient vs 20 kA Class T)
 
@@ -117,8 +117,8 @@ After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgra
                                   │  (Phase 4 reserved)   │
                                   └───────────────────────┘
 
-       ┌──── Arduino Nano (separate I²C, aux only:
-       │                   PIR, OLED, RGB, MP3, ultrasonic, MPU-6050) ────┐
+       ┌──── Arduino Nano (USB-serial bridge from Jetson:
+       │                   OLED + WS2812B status LEDs) ────┐
        │                                                                  │
        └──────────────────────────────────────────────────────────────────┘
 ```
@@ -366,9 +366,9 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] Implement 3-DOF-per-leg IK solver (reference mogar/spot_micro)
 - [ ] 8-phase walk gait controller on Jetson — publishes `/joint_commands` to Teensy via micro-ROS
 - [ ] Stand, sit, walk validated on hardware
-- [ ] MPU-6050 body stabilization feedback
+- [ ] Body stabilization feedback via D456 IMU (MPU-6050 cut per BOM v3.5)
 - [ ] Calibrate LiDAR ↔ RealSense extrinsics
-- [ ] EKF fusion: MPU-6050 + D456 IMU via `robot_localization`
+- [ ] EKF fusion: D456 IMU + L2 IMU via `robot_localization` (MPU-6050 cut)
 - [ ] RTAB-Map 3D SLAM on walking platform
 - [ ] POINT-LIO comparison (LiDAR-IMU only)
 
@@ -428,7 +428,7 @@ Before assembling any subsystem into the chassis, validate on the bench. Catchin
 2. **Power rail validation** — Each buck/converter loaded with realistic current draw before being committed to the chassis
 3. **Servo bring-up** — Single-servo bench tests before daisy-chaining; full chain ping before powered movement
 4. **Network smoke test** — Static IPs, L2 UDP packet flow, simultaneous SSH-over-WiFi
-5. **Sensor smoke test** — I2C addresses, PIR/ultrasonic returns, OLED + RGB
+5. **Sensor smoke test** — OLED + WS2812B via Arduino Nano USB-serial (PIR/ultrasonic/MPU/DFPlayer cut per BOM v3.5)
 
 Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 

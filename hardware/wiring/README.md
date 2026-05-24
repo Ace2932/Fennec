@@ -92,24 +92,26 @@ Teensy 4.1                          I²C bus (separate from Arduino Nano aux bus
 
 I²C pull-ups: 10 kΩ to 3.3 V on SDA + SCL at the Teensy end of the bus.
 
-## I²C bus map (Arduino Nano aux peripherals — separate bus)
+## Arduino Nano peripheral map (reduced per BOM v3.5 cut)
+
+No I²C aux bus anymore. PIR / ultrasonic / DFPlayer / MPU-6050 dropped
+because D456 + L2 perception stack covers their roles. Nano's only job
+is to drive the OLED + LED strip from data received over USB-serial from
+the Jetson.
 
 ```
-Arduino Nano (CH340)              I²C aux peripherals (independent of Teensy I²C)
-  A4 (SDA) ──┬──────────┬──────────┐
-  A5 (SCL) ──┤          │          │
-             ▼          ▼          ▼
-         MPU-6050    SSD1331    (future:
-         (GY-521)    96×64       additional
-         0x68/0x69   OLED        I²C peripherals)
-                     0x32
-
-Plus GPIO peripherals on Nano:
-  - HC-SR04 × 2 (ultrasonic, trigger + echo per sensor)
-  - MH-SR602 × 3 (PIR, single GPIO each)
-  - WS2812B × 4 (WS2812B chain, single GPIO)
-  - DFPlayer Mini Pro (UART, separate from Feetech bus)
+Jetson ──USB-serial (115200)──► Arduino Nano
+                                  │
+                                  ├──SPI──► SSD1331 96×64 OLED
+                                  │         (MOSI D11, SCK D13, CS D10,
+                                  │          DC D9, RST D8)
+                                  │
+                                  └──GPIO──► WS2812B RGB LED strip
+                                            (data D6, 800 kHz)
 ```
+
+Power: 5 V from UBEC rail. ~0.3 A combined (OLED + 4 LEDs at moderate
+brightness).
 
 ## USB topology (Jetson Orin Nano Super, P3766)
 

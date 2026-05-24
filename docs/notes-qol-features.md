@@ -330,7 +330,7 @@ Use `jtop` (the `jetson-stats` Python package) rather than parsing `tegrastats` 
 **Scope (v2 — assumes Option B is done):**
 
 - Per-cell LiPo discharge curve (V→SoC mapping). Look up SoC from voltage during a "rest" window (current <0.2 A for >5 s), use that as the integrator reset point.
-- Temperature derating (cold pack delivers less capacity). MPU-6050 ambient is close enough to pack-side temperature for a first cut.
+- Temperature derating (cold pack delivers less capacity). Per BOM v3.5 the MPU-6050 is cut; use Jetson SoC temp or D456 internal temp as a proxy for ambient (or skip temp derate until a dedicated pack-side thermistor is added).
 
 **Surface:**
 

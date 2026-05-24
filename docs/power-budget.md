@@ -138,7 +138,7 @@ Even with a dedicated buck, switching ripple at the buck's switching frequency (
 
 - Ethernet switch (TP-Link LS105G or NETGEAR GS305): ~3W = 0.6A
 - Fans (if any, 2× 40mm): ~0.5A combined
-- Aux peripherals (PIR, ultrasonic, OLED, RGB LEDs, etc.): ~0.5A
+- Aux peripherals: OLED + WS2812B via Arduino Nano: ~0.3A (BOM v3.5 cut removed PIR/ultrasonic/MPU/DFPlayer)
 - **Total: ~1.5A continuous**
 
 UBEC 5V/5A handles this with 3× headroom. Already owned, no change.

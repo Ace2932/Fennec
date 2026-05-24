@@ -82,7 +82,7 @@ Other safety:
 
 ### 7. Aux MCU + peripherals (carryover from Nova v5.2b)
 
-- Arduino Nano slot (3-pack already owned) for PIR motion, HC-SR04 ultrasonic, SSD1331 OLED, WS2812B RGB LEDs, DFPlayer Mini Pro + speaker, MPU-6050 IMU
+- Arduino Nano slot (3-pack already owned). **BOM v3.5 cut: only SSD1331 OLED + WS2812B LEDs remain active.** PIR / ultrasonic / DFPlayer / MPU-6050 dropped (redundant with D456 + L2 perception stack). Nano now acts as USB-serial bridge from Jetson driving the OLED (SPI) + LED strip (1 GPIO).
 - Teensy 4.1 footprint (already owned) for INA226 I²C reader, E-stop GPIO, Pattern B half-duplex driver
 
 ### 8. Mechanical / connector convention
