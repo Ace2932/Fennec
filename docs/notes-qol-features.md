@@ -15,6 +15,7 @@ Ordering is roughly highest-payoff-per-hour first within each group. All paths a
 **Scope:**
 
 - New ROS 2 node `nova_ops/preflight_check` exposing a service `~/run` returning a structured pass/fail per check plus an overall result.
+- Same node also publishes `/preflight_status` (`diagnostic_msgs/DiagnosticStatus` or a small custom msg with `overall: OK|WARN|FAIL` + `last_run_stamp` + per-check rows) at 0.2 Hz, latched. The service updates this topic on each run. Consumers like the §8 LED state machine read the topic instead of polling the service.
 - Provide a CLI wrapper `ros2 run nova_ops preflight` that just calls the service, pretty-prints to terminal, and exits non-zero on fail (so it can gate the bringup launch file).
 - Each check is a small Python class implementing `name()`, `run() -> (Status, message)` so adding a new check is one file and one entry in the registry.
 
@@ -32,7 +33,7 @@ Ordering is roughly highest-payoff-per-hour first within each group. All paths a
 - **Topic liveness** for each expected topic (count of pubs ≥1, last message age <2× expected period). Easy to add once the topic list is stable.
 - **Network** — ping L2 at 192.168.1.62, 100 ms timeout.
 - **Disk space** — `/` and `/var/log` >2 GB free; avoids mid-walk rosbag write failure.
-- **Firmware version match** — `/firmware_version` reports `nova-teensy <git-sha> loop=<hz>Hz`. Compare the SHA against the value written by `make deploy` (see §5) to `~/.nova/last-deployed.sha`. **Don't** compare against repo `HEAD` directly — any uncommitted WIP would false-mismatch.
+- **Firmware version match** — `/firmware_version` reports `nova-teensy <git-sha> loop=<hz>Hz`. Compare the SHA against the `git_sha` field in `~/.nova/last-deployed.json` (written by `make deploy`, see §5). **Don't** compare against repo `HEAD` directly — any uncommitted WIP would false-mismatch.
 - **Time sync** — drift between Jetson `CLOCK_REALTIME` and last bag stamp <500 ms. Jetson L4T ships systemd-timesyncd by default; don't assume chrony.
 
 **Integration:**
@@ -75,8 +76,9 @@ Ordering is roughly highest-payoff-per-hour first within each group. All paths a
 /loop_max_us, /loop_p99_us          # 1 Hz — ISR response latency
 /loop_exec_max_us, /loop_exec_p99_us, /tick_missed_count  # 1 Hz — exec quality
 /firmware_version                   # 0.1 Hz — pinned for incident reconstruction
-/imu/d456/data                      # 200 Hz once realsense2_camera launches with imu enabled
-/imu/mpu6050/data                   # 100 Hz once Nano-side IMU node lands
+/camera/accel/sample                # 101 Hz — D456 accel (per project log 2026-05-18)
+/camera/gyro/sample                 # 200 Hz — D456 gyro
+# /imu/data from MPU-6050 not on a topic yet — add once a Nano-side IMU node lands
 /cmd_vel                            # whatever the controller pubs
 /tf, /tf_static                     # for replay-time URDF reconstruction
 # Cameras + lidar deliberately omitted — too much bandwidth for always-on.
@@ -119,11 +121,11 @@ Per-joint voltage + temperature are *not* yet on a topic (firmware ⏳); add the
 | Position | `lower ≤ goal ≤ upper`, with 2° margin inside URDF limits | Clamp to limit, log warn (first 10 occurrences per joint, then throttle) |
 | Velocity | Numerically diff goal vs last command vs Δt; reject if > URDF velocity limit | Replace goal with last + sign × v_max × Δt |
 | Load | STS3215 load is in `effort[]` of `/joint_states` (firmware contract). 3 samples >70% sustained → refuse new goals that increase load, allow ones that reduce | "Joint overloaded — backing off" + log |
-| Temperature ⏳ | Per-joint temp not yet published — gated on firmware stub. Once available: >60°C → derate by 20% (slew rate halved); >70°C → reject all goals for that joint | Trigger a `/safety_event` topic so other nodes know |
+| Temperature ⏳ | Per-joint temp not yet published — gated on firmware stub. Once available: >60°C → derate by 20% (slew rate halved); >70°C → reject all goals for that joint | Publish on a new `/safety_envelope_events` topic (software-side, distinct from the firmware's hardware-latched `/safety_state` FSM) |
 
 **Failure visibility:**
 
-- Counters per joint per failure mode published at 1 Hz on `/safety_envelope_counters`. Foxglove panel shows them. Sudden uptick on one joint = telltale sign of a stuck encoder, bad URDF limit, or a mechanical bind.
+- Counters per joint per failure mode published at 1 Hz on `/safety_envelope_counters`. Before Foxglove lands, `ros2 topic echo --once /safety_envelope_counters` is enough; once it does, build a Foxglove plot panel. Sudden uptick on one joint = telltale sign of a stuck encoder, bad URDF limit, or a mechanical bind.
 
 **Open questions:**
 
@@ -179,11 +181,12 @@ A bash wrapper that just calls 6 launch files in sequence would mostly work, but
 
 - Add a `deploy` target to `firmware/teensy/firmware/Makefile` (or `platformio.ini` `extra_scripts`):
   1. Local build via `pio run -e teensy41` → produces `.pio/build/teensy41/firmware.hex`.
-  2. Hash the hex, compare against `~/.nova/last-deployed.hash` on the Jetson — skip if identical (no point cycling the bus master if nothing changed).
+  2. SHA256 the hex blob, read the `hex_sha256` field from `~/.nova/last-deployed.json` on the Jetson — skip if identical (no point cycling the bus master if nothing changed).
   3. `scp` the hex to the Jetson (`/tmp/nova-firmware.hex`).
   4. Trigger a remote `teensy_loader_cli --mcu=TEENSY41 -w -v /tmp/nova-firmware.hex` over SSH.
   5. Wait for the Teensy USB device to re-enumerate (Linux: poll `/dev/ttyACM*`).
   6. Run `ros2 topic echo --once /firmware_version` to confirm the new firmware is alive.
+  7. Write `~/.nova/last-deployed.json` with both `git_sha` (the source SHA embedded in `/firmware_version`, used by §1) and `hex_sha256` (the blob hash, used by step 2). Single file, both fields, no naming-collision risk.
 
 **Prerequisites on the Jetson:**
 
@@ -260,7 +263,7 @@ A bash wrapper that just calls 6 launch files in sequence would mostly work, but
 | `/loop_p99_us`, `/loop_exec_p99_us`, `/tick_missed_count` | `firmware_loop` | (none) | p99_us, exec_p99_us, missed |
 | `/battery_low`, `/estop`, `/safety_state` | `safety` | (none) | low (bool), estop (bool), state_id |
 | (future, ⏳) per-joint voltage + temp | `servo_health` | joint_id | voltage, temp_c |
-| `/imu/d456/data` (when realsense2_camera launches with IMU) | `imu` | sensor="d456" | accel_{x,y,z}, gyro_{x,y,z} |
+| `/camera/accel/sample` + `/camera/gyro/sample` (D456, two separate topics — must be re-stitched in the writer) | `imu` | sensor="d456" | accel_{x,y,z} or gyro_{x,y,z} per row |
 | `jtop` exporter (jetson-stats) | `jetson` | (none) | gpu_load, cpu_load, ram_used_mb, soc_temp_c, power_mw |
 
 Use `jtop` (the `jetson-stats` Python package) rather than parsing `tegrastats` text — cleaner API, official, designed for L4T.
@@ -334,9 +337,9 @@ Use `jtop` (the `jetson-stats` Python package) rather than parsing `tegrastats` 
 
 **Surface:**
 
-- `/battery_soc` topic (`percent`, `minutes_remaining`, `quality: PROXY|MEASURED|UNRELIABLE`). `PROXY` = Option A, `MEASURED` = Option B.
-- Foxglove panel from [`notes-virtual-view-autocal.md`](./notes-virtual-view-autocal.md) §1 shows a big number + a runtime graph.
-- LED state machine in [§8](#8-rgb-led-status-pattern-on-the-arduino-nano) consumes this for the amber thresholds.
+- `/battery_soc` topic (`percent`, `minutes_remaining`, `quality: PROXY|MEASURED|UNRELIABLE`) — the canonical source. `PROXY` = Option A, `MEASURED` = Option B.
+- Foxglove panel from [`notes-virtual-view-autocal.md`](./notes-virtual-view-autocal.md) §1 shows a big number + a runtime graph. *Until the Foxglove bridge lands (Phase 2 per that doc), the topic is the surface — `ros2 topic echo /battery_soc` works.*
+- LED state machine in [§8](#8-rgb-led-status-pattern-on-the-arduino-nano) consumes the same topic for the amber thresholds.
 
 **Open questions:**
 
@@ -406,6 +409,18 @@ ops/                       # outside ros2_ws — non-ROS tooling
 ```
 
 Top-of-package README in `nova_ops/` explains "this package is the operations layer — nothing here is on the gait critical path; everything is allowed to crash without killing the robot." Worth saying explicitly so a future contributor doesn't put time-critical control loops in here.
+
+**On-disk paths these features assume** — none exist on a fresh Jetson, and several need permissioning:
+
+| Path | Used by | Created by | Mode |
+|------|---------|------------|------|
+| `~/.nova/` (e.g. `last-deployed.json`) | §1 preflight, §5 deploy | `make deploy` first-run + bringup `tmpfiles.d` snippet | user-owned, `0700` |
+| `/var/log/nova/incidents/<ts>/` | §2 dashcam | bringup launch (`mkdir -p` with `0775`, group=`nova`) | `0775`, group-writable |
+| `/var/log/nova/telemetry/` | §7 CSV writer | bringup launch | `0775`, group-writable |
+| `/var/lib/nova/calibration/` | virtual-view §2 auto-cal | bringup launch | `0775`, group-writable |
+| `/var/lib/nova/battery-state.json` | §9 SoC persistence | `nova_ops/battery_soc` node on shutdown | user-owned, `0644` |
+
+Ship a `tmpfiles.d` snippet (`/usr/lib/tmpfiles.d/nova.conf`) so systemd recreates them on boot — keeps bringup launch from depending on idempotent `mkdir` shenanigans and survives a `/var/log` cleanup.
 
 ---
 
