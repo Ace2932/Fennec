@@ -27,7 +27,12 @@ Forward-looking feature ideas, captured 2026-05-24. Not yet scheduled in the pha
 
 ### Scope sketch
 
-- Install `ros-humble-foxglove-bridge` on Jetson; expose port 8765 over Tailscale (don't open to LAN by default)
+- Install + launch on Jetson:
+  ```bash
+  sudo apt install ros-$ROS_DISTRO-foxglove-bridge
+  ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765
+  ```
+  `$ROS_DISTRO` is `humble` on the current Jetson (per `docs/setup-jetson.md`). Default port is 8765 — keep it, don't expose to LAN, reach it over Tailscale from the viewer.
 - Build a default Foxglove layout: 3D panel (URDF + TF + LiDAR cloud), 2 image panels (D456 color + depth), plots for `/joint_states` position vs `/joint_commands`, per-rail power from `/power_rails` (`Float32MultiArray`, 9 floats `[leg_v,leg_a,leg_w,hip_v,hip_a,hip_w,jetson_v,jetson_a,jetson_w]`), `/battery_low` indicator
 - Point cloud bandwidth: the ROS bridge already publishes `/unilidar/cloud` at 12 Hz × 5042 pts (the wrapper decimates from the raw L2 stream via `cloud_scan_num: 18`). That's ~1 MB/s on the wire — fine on LAN/Tailscale, tight on LTE. Further decimation needs a relay node since `foxglove_bridge` can't voxel-downsample.
 
