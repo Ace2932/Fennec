@@ -10,9 +10,17 @@ Forward-looking feature ideas, captured 2026-05-24. Not yet scheduled in the pha
 
 ### Inputs already in place
 
-- `/joint_states` (will be) published by Teensy via micro-ROS once Phase 1 firmware is live
-- `nova_description` URDF skeleton planned for Week 2 (see [`work-schedule.md`](./work-schedule.md))
+- `/joint_states` is publishing now (200 Hz, `sensor_msgs/JointState`, pos/vel/load in `effort[]` — see `firmware/teensy/firmware/README.md`)
 - `/unilidar/cloud` @ 12 Hz, `/unilidar/imu`, `/camera/color/image_raw`, `/camera/depth/image_rect_raw`, `/camera/{accel,gyro}/sample` — all confirmed working ([`setup-jetson.md`](./setup-jetson.md) §13, project log 2026-05-18)
+
+### Hard prerequisites that *aren't* in place yet
+
+A live 3D mirror needs both of these to land before the Foxglove URDF panel can animate anything:
+
+1. **`nova_description` URDF** — the skeleton was carried into Week 2 ([`work-schedule.md`](./work-schedule.md)). No URDF, no model to bind joints to.
+2. **JointState `name[]` populated** — firmware deliberately ships `/joint_states` with empty `name[]` and `frame_id` because URDF joint names haven't been frozen (firmware README line 103, "URDF joint-name binding lands when the gait controller is on the Jetson"). Either the gait controller node has to rewrite the message before Foxglove sees it, or the firmware contract changes once joint names are stable. Pick before building the layout — the layout depends on matching strings.
+
+These are pre-§1, not §1 itself. Without them the rest of this scope sketch is moot.
 
 ### Approach options
 
@@ -50,7 +58,7 @@ Forward-looking feature ideas, captured 2026-05-24. Not yet scheduled in the pha
 
 ### Candidates (ordered by ease + payoff)
 
-1. **Gyro bias auto-zero on boot** — MPU-6050 + D456 IMU. On node start, hold still for 5–10 s, average gyro readings, store as bias, subtract on output. (L2 IMU would also benefit but the ROS bridge isn't delivering frames yet — see project log 2026-05-18 and `notes-qol-features.md`; add once the bridge bug is resolved.) Trivial to implement as a ROS 2 service `~/calibrate_gyro_bias` plus auto-trigger on launch when `/cmd_vel` has been zero for N seconds. Accel bias is a separate, harder problem (needs known gravity orientation) — skip for v1; D456 has factory accel cal in its flash.
+1. **Gyro bias auto-zero on boot** — MPU-6050 + D456 IMU. On node start, hold still for 5–10 s, average gyro readings, store as bias, subtract on output. (L2 IMU would also benefit but the ROS bridge isn't delivering frames yet — see project log 2026-05-18 and `notes-qol-features.md`; add once the bridge bug is resolved.) Trivial to implement as a ROS 2 service `~/calibrate_gyro_bias`. Auto-trigger on launch by sampling the IMU itself — if gyro magnitude stays <0.01 rad/s for 5 s, the robot is stationary; run the cal. **Don't gate on `/cmd_vel` being zero** — that topic doesn't exist until the controller is up, which is post-launch. Accel bias is a separate, harder problem (needs known gravity orientation) — skip for v1; D456 has factory accel cal in its flash.
 2. **Servo zero-position auto-detect** — current plan is manual per-joint home offset. Auto path: command each leg to a known reference posture (e.g. tibia against a printed jig under the chassis), record `/joint_states` reading, store offset. Requires the jig but no per-joint human tweaking. Could also use hard-stops: drive servo slowly toward mechanical limit, detect current spike via STS3215 load feedback, back off by known mechanical-stop-to-zero offset. Risk: stop-driven calibration stresses gear train — only run with low torque limit.
 3. **Camera–IMU extrinsic auto-cal (Kalibr)** — D456 has its own IMU so this is mostly checking that the factory extrinsics are still valid; rerun if the camera is remounted. Phase 2+.
 4. **LiDAR–IMU extrinsic auto-cal** — separate tool (`lidar_imu_calibration` / `lidar_align`-class). Rotate the robot through known yaw/pitch, solve for the transform. Needed before EKF fusion can use both sources. Phase 2+.

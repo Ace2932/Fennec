@@ -23,9 +23,11 @@ Ordering is roughly highest-payoff-per-hour first within each group. All paths a
 
 | Check | What it does | Fail mode |
 |-------|--------------|-----------|
-| Bus ping sweep | Read `/servo_present_mask` (Int32 bitmask, see firmware README) — verify all 12 expected IDs report present | Missing IDs listed |
+| Bus presence + freshness | Read `/servo_present_mask` (Int32 bitmask — bit i = joint i has answered *since boot*, not "is alive now") AND `/joint_states` (200 Hz) within the last 1 s. Both required: mask catches dead-at-boot servos, freshness catches one that answered at boot then died mid-session. | Missing IDs (from mask) and/or stale `/joint_states` listed separately |
 | E-stop | Read latest `/estop` topic — must be `false` (released) | "E-stop engaged" — refuse to bring up gait |
 | Battery latch | Read latest `/battery_low` topic — must be `false`. (Continuous voltage isn't measured today; see §9.) | "Battery comparator tripped (≤13.0 V)" |
+
+**Subscription QoS gotcha:** `/estop`, `/battery_low`, and `/safety_state` are *edge-change publishes* per the firmware contract — no message arrives until the GPIO changes. A vanilla subscriber that comes up after the last edge sees nothing and times out. The preflight node must subscribe with `transient_local` durability so the last-published value is delivered on connect. (Verify the firmware publishes with `transient_local` too — if it's `volatile`, the QoS won't match and the subscription will drop. Coordinate the QoS profile in both places.)
 
 **v2 check set** (add as needs surface):
 
@@ -185,7 +187,7 @@ A bash wrapper that just calls 6 launch files in sequence would mostly work, but
   3. `scp` the hex to the Jetson (`/tmp/nova-firmware.hex`).
   4. Trigger a remote `teensy_loader_cli --mcu=TEENSY41 -w -v /tmp/nova-firmware.hex` over SSH.
   5. Wait for the Teensy USB device to re-enumerate (Linux: poll `/dev/ttyACM*`).
-  6. Run `ros2 topic echo --once /firmware_version` to confirm the new firmware is alive.
+  6. Confirm the new firmware is alive: `timeout 15 ros2 topic echo --once /firmware_version`. `/firmware_version` publishes at 0.1 Hz (once per 10 s) so a plain `--once` can hang up to that long; the timeout fails loud instead of silent-stalling.
   7. Write `~/.nova/last-deployed.json` with both `git_sha` (the source SHA embedded in `/firmware_version`, used by §1) and `hex_sha256` (the blob hash, used by step 2). Single file, both fields, no naming-collision risk.
 
 **Prerequisites on the Jetson:**
@@ -224,7 +226,7 @@ A bash wrapper that just calls 6 launch files in sequence would mostly work, but
 | Replay profile | Plays | Runs live | Status |
 |---------------|-------|-----------|--------|
 | `slam` | sensors + IMU + tf | POINT-LIO, robot_state_publisher | feasible today |
-| `nav` | sensors + tf + map | Nav2, planner | feasible once Nav2 is up |
+| `nav` | sensors + IMU + tf + POINT-LIO `/map` (recorded from a prior SLAM run, or load a pre-built `.pgm`/yaml via `nav2_map_server`) | Nav2 planner + controller | feasible once Nav2 is up; map source has to be explicit, not assumed |
 | `gait` | IMU + joint_states + joint_commands | Gait controller, output remapped to `/joint_commands_shadow` so nothing hits the bus | **prereq: gait controller has to support a shadow-output mode; not free** |
 
 - Refuse to start if the live Teensy bridge is publishing `/joint_states` (else the bag-played and live messages collide).
@@ -414,13 +416,13 @@ Top-of-package README in `nova_ops/` explains "this package is the operations la
 
 | Path | Used by | Created by | Mode |
 |------|---------|------------|------|
-| `~/.nova/` (e.g. `last-deployed.json`) | §1 preflight, §5 deploy | `make deploy` first-run + bringup `tmpfiles.d` snippet | user-owned, `0700` |
-| `/var/log/nova/incidents/<ts>/` | §2 dashcam | bringup launch (`mkdir -p` with `0775`, group=`nova`) | `0775`, group-writable |
-| `/var/log/nova/telemetry/` | §7 CSV writer | bringup launch | `0775`, group-writable |
-| `/var/lib/nova/calibration/` | virtual-view §2 auto-cal | bringup launch | `0775`, group-writable |
+| `~/.nova/` (e.g. `last-deployed.json`) | §1 preflight, §5 deploy | `make deploy` first-run + bringup `mkdir -p` (per-user path, *not* `tmpfiles.d` territory) | user-owned, `0700` |
+| `/var/log/nova/incidents/<ts>/` | §2 dashcam | `tmpfiles.d` snippet | `0775`, group=`nova`, group-writable |
+| `/var/log/nova/telemetry/` | §7 CSV writer | `tmpfiles.d` snippet | `0775`, group=`nova`, group-writable |
+| `/var/lib/nova/calibration/` | virtual-view §2 auto-cal | `tmpfiles.d` snippet | `0775`, group=`nova`, group-writable |
 | `/var/lib/nova/battery-state.json` | §9 SoC persistence | `nova_ops/battery_soc` node on shutdown | user-owned, `0644` |
 
-Ship a `tmpfiles.d` snippet (`/usr/lib/tmpfiles.d/nova.conf`) so systemd recreates them on boot — keeps bringup launch from depending on idempotent `mkdir` shenanigans and survives a `/var/log` cleanup.
+Ship a `tmpfiles.d` snippet (`/usr/lib/tmpfiles.d/nova.conf`) for the `/var/log/nova/` + `/var/lib/nova/` directories — systemd recreates them on boot, surviving a `/var/log` cleanup or a fresh image. `~/.nova/` isn't a `tmpfiles.d` target (the spec is for system paths); handle it with a one-liner `mkdir -p` in bringup.
 
 ---
 
