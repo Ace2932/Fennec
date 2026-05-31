@@ -61,7 +61,22 @@ def main():
         ("tibia_v31_shell",     tibia),
         ("tibia_v31_cover",     tibia_cover),
     ]
+    # Export base (Left side) AND mirrored (Right side) variants.
+    # Mirror about the XZ plane (Y-flip) gives a hand-correct Right-side
+    # part. For a quadruped, you print 2 of each: one base (Left front+rear)
+    # and one mirror (Right front+rear). Front vs Rear distinction is
+    # handled at chassis-mount time (rotate 180° about Z) — no separate print.
     for name, obj in parts:
+        cq.exporters.export(obj, f"{name}_L.stl",
+                            tolerance=0.01, angularTolerance=0.1)
+        cq.exporters.export(obj, f"{name}_L.step")
+        # Right variant: mirror about XZ plane (flip Y axis)
+        obj_R = obj.mirror("XZ")
+        cq.exporters.export(obj_R, f"{name}_R.stl",
+                            tolerance=0.01, angularTolerance=0.1)
+        cq.exporters.export(obj_R, f"{name}_R.step")
+        # Keep legacy un-suffixed exports for back-compat with existing
+        # leg_v31_assembly.stl preview path
         cq.exporters.export(obj, f"{name}.stl",
                             tolerance=0.01, angularTolerance=0.1)
         cq.exporters.export(obj, f"{name}.step")

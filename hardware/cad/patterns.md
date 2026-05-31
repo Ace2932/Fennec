@@ -19,16 +19,18 @@ This skill (CadQuery + preview loop) is for **utility parts**:
 - Anything single-body or single-assembly that doesn't need full
   kinematic constraints
 
-**Use OnShape (not this skill) for:**
+**Use the V5 OpenSCAD track (not this skill) for the leg links:**
 
-- Leg-joint kinematic stack (hip + femur + tibia multi-body assemblies)
-- Anything where mate relationships drive geometry
-- Anything that needs IK / joint-limit verification before printing
+- Shoulder, coax, femur, tibia — canonical design at `hardware/cad/leg_v5/`.
+  Reuse the original NovaSM3 STL, carve an STS3215 cavity via boolean
+  `difference()`. **Do not re-derive leg geometry in CadQuery** — wrong tool,
+  and from-scratch attempts (V3.1, V4) were rejected (in `hardware/cad/archive/`).
 
-NovaSM3 leg redesign lives in `~/codebases/NOVA/nova_sts3215_redesign/`
-(OpenSCAD source) and the OnShape workspace. **Do not re-derive leg
-kinematics in CadQuery** — wrong tool for the job. Import the OnShape
-STEP into CadQuery only if you need to attach a utility bracket to it.
+**Use OnShape (not this skill) for the chassis + multi-body assemblies:**
+
+- Chassis trunk, sensor-mount-to-chassis interfaces
+- Anything where mate relationships drive geometry between separate parts
+- Anything that imports a reference STEP (Jetson, L2, D456)
 
 All dimensions in **mm**. All snippets assume:
 
@@ -198,20 +200,23 @@ until snug-but-not-forced. Loctite 243 the M3s anyway.
 
 ```python
 # STS3215 (12V 30kg hip + 7.4V 19kg femur/tibia share the same body)
-# Source: Feetech datasheet + on-hand measurement
+# Source: STEP inspection 2026-05-24 (~/codebases/NOVA/feetech_servo_models/.../STS3215_03a v1.step)
+# These supersede the OLD values (body_l=40, horn_offset=9, mount_x_pitch=49) that were wrong.
 STS3215 = {
-    "body_l":       40.0,
-    "body_w":       20.0,
-    "body_h":       40.5,
-    "flange_l":     54.0,
-    "flange_t":     2.5,
-    "horn_face_z":  35.5,    # measure on real part — varies ±0.3
-    "horn_offset":  9.0,     # output-shaft axis from body midpoint
-    "back_shaft_d": 6.0,
-    "back_shaft_h": 1.5,
-    "mount_screw_d": 2.2,    # M2 self-tapper
-    "mount_x_pitch": 49.0,
-    "mount_y_pitch": 10.0,
+    "body_l":        45.40,   # STEP-verified
+    "body_w":        24.80,   # STEP-verified
+    "body_h":        34.30,   # STEP-verified, between top/bottom horn-disc faces
+    "bbox_total_z":  39.60,   # body + both horn discs (don't use for pocket — use body_h)
+    "horn_face_z":   18.70,   # top horn disc Z position from body center
+    "horn_disc_od":  20.0,    # both top + bottom horn disc OD
+    "horn_disc_t":   8.80,    # top horn disc thickness (dimensions.md §1)
+    "horn_offset":   12.50,   # CRITICAL — spline X offset from body center
+    "horn_screw_d":  2.5,     # M2.5 (NOT M3 as old notes claimed)
+    "horn_screw_bcd": 13.86,  # 4× holes at ±45° from cardinal, ~14 mm BCD
+    "back_shaft_d":  6.0,     # bottom shaft OD
+    "back_shaft_face_z": -15.60,  # bottom horn disc Z position
+    # mount_x_pitch / mount_y_pitch DELIBERATELY OMITTED — needs back-plate inspection
+    # see dimensions.md §1 CRITICAL CORRECTION #6
 }
 
 def nova_sts3215_dual_mount(workplane, clearance_mat="PA6-CF"):
@@ -858,7 +863,7 @@ assert len(parts) == 1, f"BUG: {len(parts)} disconnected pieces"
 
 Bake this into every build script. Passing watertight + 1 component is
 the real "geometry will print as expected" gate. See
-`leg_v3/check_connectivity.py` for a ready-to-run validator.
+`archive/leg_v3/check_connectivity.py` for a ready-to-run validator.
 
 ### Common disconnected-component causes
 

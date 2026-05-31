@@ -1,6 +1,6 @@
 ---
 name: nova-sm3-cad
-description: "Use this skill when designing a 3D-printable utility part for the NovaSM3 quadruped build (this project). Triggers: any mention of a NovaSM3 part, Feetech STS3215 mount, 688ZZ bearing seat, hip pocket, femur U-bracket, tibia, foot pad, LiPo pocket, XT60/XT30/E-stop/RJ-45 panel cutout, Pololu buck carrier, INA226 mount, Teensy 4.1 / Arduino Nano footprint, RealSense D456 bracket, Unitree L2 LiDAR riser, LC filter pocket, MPU-6050 mount, leg-rail star injection, cable strain relief, WS2812B status LED, servo zero-position calibration jig, antenna mount; or any CAD work in ~/codebases/NOVA/proj/. Do NOT use for: leg-joint kinematic stack (use OnShape instead — multi-body assemblies with mate relationships are the wrong fit for CadQuery), or for non-NovaSM3 robotics work (use the upstream parametric-3d-printing skill alone)."
+description: "Use this skill when designing a 3D-printable utility part for the NovaSM3 quadruped build (this project). Triggers: any mention of a NovaSM3 part, Feetech STS3215 mount, 688ZZ bearing seat, hip pocket, femur U-bracket, tibia, foot pad, LiPo pocket, XT60/XT30/E-stop/RJ-45 panel cutout, Pololu buck carrier, INA226 mount, Teensy 4.1 / Arduino Nano footprint, RealSense D456 bracket, Unitree L2 LiDAR riser, LC filter pocket, MPU-6050 mount, leg-rail star injection, cable strain relief, WS2812B status LED, servo zero-position calibration jig, antenna mount; or any CAD work in ~/codebases/NOVA/proj/. Do NOT use for: the leg links shoulder/coax/femur/tibia (use the V5 OpenSCAD original-shell-carve at hardware/cad/leg_v5/ instead), the chassis + multi-body assemblies (use OnShape via Jarvis MCP), or non-NovaSM3 robotics work (use the upstream parametric-3d-printing skill alone)."
 ---
 
 # NovaSM3 CAD Patterns
@@ -30,24 +30,31 @@ from this repo (`hardware/cad/patterns.md`) and the upstream parametric-
    - Use the CadQuery + preview-iterate loop from the upstream skill's
      `SKILL.md` for the actual code generation + STL export.
 
-2. **For the leg-joint kinematic stack OR chassis + multi-body assemblies**
-   (hip + femur + tibia mates, chassis-to-shoulder bolt patterns, sensor
-   mount-to-chassis interfaces, anything where mate relationships drive
-   geometry, anything that needs IK / joint-limit verification or
-   imports a reference STEP like the Jetson):
+2. **For the leg links** (shoulder, coax, femur, tibia):
+   - Do NOT use this skill, and do NOT model from scratch. The canonical
+     design is **V5 OpenSCAD original-shell-carve** at `hardware/cad/leg_v5/`:
+     import the original NovaSM3 STL, carve an STS3215 cavity via boolean
+     `difference()`. Read `hardware/cad/leg_v5/README.md` + `ITERATE.md`.
+   - Build: `cd hardware/cad/leg_v5 && ./build_all.sh`. Edit cavity placement
+     in the per-part `.scad` (femur's is shared via `femur_params.scad`).
+
+3. **For the chassis + multi-body assemblies** (chassis-to-shoulder bolt
+   patterns, sensor mount-to-chassis interfaces, anything where mate
+   relationships drive geometry or that imports a reference STEP like the
+   Jetson):
    - Do NOT use this skill. Use **OnShape via Jarvis OnShape MCP**
      (Claude Code plugin: `/plugin install github:ReshefElisha/jarvis-onshape-mcp`).
      ~60 MCP tools, FeatureScript escape hatch, multi-view renders.
    - Full setup + boundary documented in
      `docs/cad-tooling.md` (Jarvis install + API keys + reference-STEP catalog).
-   - WIP sources: `~/codebases/NOVA/nova_sts3215_redesign/` (OpenSCAD,
-     historical) + the OnShape workspace where the Jetson STEP and
-     leg V3.1 STEPs are imported.
+   - Reference STEPs (Jetson P3766, archived leg V3.1) import into the OnShape
+     workspace; rejected leg attempts live in `hardware/cad/archive/`.
 
 ## Reference
 
-- **CAD tooling setup:** `docs/cad-tooling.md` (Jarvis OnShape MCP +
-  CadQuery dual-track workflow + reference STEP catalog)
+- **CAD tooling setup:** `docs/cad-tooling.md` (three-track workflow:
+  V5 OpenSCAD legs + CadQuery utility + Jarvis OnShape MCP chassis)
+- **Canonical leg design:** `hardware/cad/leg_v5/README.md` + `ITERATE.md`
 - Canonical macros: `hardware/cad/patterns.md` (in this repo, version-
   controlled, source of truth)
 - Canonical part dimensions: `hardware/cad/dimensions.md`

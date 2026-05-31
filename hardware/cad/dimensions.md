@@ -26,14 +26,15 @@ real-world batch variation listed where known.
 |---|---|---|
 | Body length (long X axis) | 45.40 | ✅ |
 | Body width (Y) | 24.80 | ✅ |
-| Body height (Z, shaft direction) | 36.80 | ✅ |
+| Body height (Z, shaft direction, between horn-disc faces) | 34.30 | ✅ (STEP 2026-05-24, top horn Z=+18.7 − bottom horn Z=−15.6 = 34.3) |
+| Total bbox Z (body + both horn discs) | 39.60 | ✅ (STEP 2026-05-24, Z range −19.4 to +20.2) |
 | Spline X offset from body center | **+12.50** | ✅ (CRITICAL — coaxial with bottom shaft) |
 | Spline OD | 6.0 | ✅ |
 | Top horn boss OD × thickness | 8.0 × ~1.0 | ✅ |
 | Top horn disc OD × thickness | 20.0 × 8.8 | ✅ |
 | Bottom horn disc / reaction OD × thickness | 20.0 × 2.1 | ✅ |
 | Bottom reaction shaft OD | 6.0 | ✅ |
-| Horn screw pattern | 4× M3 on 14.0 mm BCD, +45° from cardinal | ✅ |
+| Horn screw pattern | 4× M2.5 on 13.86 mm BCD, ±45° from cardinal | ✅ (STEP 2026-05-24, holes r=1.25 mm = M2.5 clearance, NOT M3) |
 | Body mount screws | 4× M2.5 (rear plate) | ⚠️ REVIEW — verify thread spec |
 | Batch tolerance on body dims | ±0.10 | ✅ (manufacturer spec) |
 
@@ -506,6 +507,9 @@ These differ from values currently in `patterns.md` or `nova_sm3_patterns.md`:
 1. **L2 LiDAR mount BCD = 22.5 mm**, NOT 50 mm. The earlier 50 mm in `patterns.md` §8 was a placeholder. Update `L2_LIDAR['bolt_circle_d']` from 50.0 → 22.5.
 2. **STS3215 horn-disc OD = 20 mm**, NOT 25 mm as written in some older notes. STEP file is authoritative.
 3. **STS3215 spline X offset = +12.5 mm** from body center. CRITICAL: every cavity in leg V3.1 reflects this. Old OpenSCAD `coxa.scad` had it at 0 (bug).
+4. **STS3215 horn screws are M2.5, NOT M3.** STEP shows holes at r=1.25 mm (∅2.5 = M2.5 clearance). Older notes / `patterns.md` calling them M3 are wrong. BCD measured at 13.86 mm (call it 14 mm).
+5. **STS3215 body Z (between horn faces) = 34.3 mm**, not 36.8. Older 36.8 figure conflated body height with bbox-including-horn-discs. Bbox total Z = 39.6 (39.6 - 34.3 = 5.3 mm of horn-disc stack on top + bottom). Use 34.3 for bracket pocket depth.
+6. **patterns.md §3 mount_x_pitch=49 / mount_y_pitch=10 IS WRONG** — body is only 45.4 mm long, so 49 mm pitch is impossible. Real STS3215 back-plate mount pattern needs separate STEP inspection on the back face (X=−22.7 plane). Do NOT use patterns.md numbers for mounting until verified.
 
 ---
 
@@ -517,7 +521,7 @@ When designing a new CAD part:
 2. **If ⚠️ REVIEW, caliper-measure the actual part before committing.**
 3. **If ❌ MISSING, you must measure — no fallback.**
 4. **Add the verification to this file** when you measure — bump ⚠️ to ✅ and cite source (e.g., "caliper 2026-05-24 on Ovonic pack A").
-5. **Cross-reference** with `patterns.md` macros and `leg_v3/leg_common.py` constants. If they disagree, this file wins.
+5. **Cross-reference** with `patterns.md` macros, `leg_v5/leg_v5_common.scad` (canonical leg dims), and `archive/leg_v3/leg_common.py` constants. If they disagree, this file wins.
 
 ---
 

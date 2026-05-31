@@ -220,8 +220,8 @@ a mobile robot. Audio is novelty. Kept: status display + LEDs only.
 ## 10. Mechanical Decisions (Resolved)
 
 - **L2 mounting:** top-center of chassis, on a riser ~5-10cm above the highest obstruction (arm shoulder, body panels). Centerline placement for symmetric 360° coverage and minimal yaw moment during body sway.
-- **Leg redesign:** in progress in CAD. Absorbs horn-spline fitment, servo pocket geometry for STS3215 dimensions, and dual-axis back-shaft U-brackets.
-- **Servo bracket fitment:** validated as part of leg redesign — no separate test print needed.
+- **Leg redesign:** CAD complete (V5, 2026-05-26). Approach: reuse the original NovaSM3 STLs and carve an STS3215 cavity inside via OpenSCAD boolean — keeps original shape, resizes the servo pocket. 9 STLs (shoulder + coax_L/R + femur_shell_L/R + femur_cover_L/R + tibia_L/R) at `hardware/cad/leg_v5/`. Pending: first-article print (coax X-bbox tight). Rejected from-scratch attempts (V2/V3/V4) archived.
+- **Servo bracket fitment:** absorbed into the leg cavity — no separate bracket. Validated on first-article leg print, not a standalone coupon.
 
 ---
 

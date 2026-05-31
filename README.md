@@ -320,13 +320,13 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [x] Set up GitHub repo with this README and BOM
 
 **Week 1 (2026-05-15 → 2026-05-22):**
-- [ ] OnShape: import STS3215 + NovaSM3 reference geometry, caliper-measure on-hand servos, first-article leg-joint print
+- [x] Leg CAD complete — V5 OpenSCAD original-shell-carve (`hardware/cad/leg_v5/`, STS3215 cavity in original NovaSM3 STLs). Pending: caliper on-hand servos + first-article leg-joint print.
 - [ ] Install KiCad 8.x + Pololu library on laptop; cache datasheets for offline use during away-week
 - [ ] Back up LeRobot Pi SD contents
 - [ ] Create NVIDIA Developer account, download JetPack 6.x image
 
 **Week 2 (2026-05-22 → 2026-05-28):** detailed checklist in [`docs/checklists/week-2.md`](./docs/checklists/week-2.md)
-- [ ] Carryover from Week 1: OnShape leg-joint CAD + caliper pass + hip-pocket first article
+- [ ] Carryover from Week 1: caliper pass + first-article leg print (V5 leg CAD itself is done)
 - [ ] ROS 2 Humble + librealsense2 + unilidar_sdk2 on Jetson (Jetson already flashed + persistent — Week 1 head-start)
 - [ ] PlatformIO + TeensyDuino + micro-ROS Teensy firmware skeleton (compile-green)
 - [ ] KiCad install + Pololu library (PCB v6 prep for Week 3)
@@ -515,6 +515,8 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-23 | **AMS HF bypassed for PA6-CF print workflow** — feed direct from Creality SpacePi X4 → 4 mm PTFE Bowden → P1S. PA6-CF re-absorbs ambient moisture in AMS chamber within hours, defeating the 24 h pre-dry. SpacePi X4 keeps filament heated through the entire print. |
 | 2026-05-23 | **Magigoo PA reinstated** in BOM. Bambu Lab liquid glue is not rated for PA / PA-CF per their product page; Bambu wiki PA6-CF guide explicitly calls for PA-specific glue stick. The −$15 substitution was a false economy vs the cost of a 10 h first-layer detachment. |
 | 2026-05-24 | **Forward-looking feature notes committed** (PR #1, merge `8cb8b1e`): [`docs/notes-qol-features.md`](./docs/notes-qol-features.md) (preflight check, always-on MCAP dashcam with incident freeze, per-joint safety envelope, `nova bringup` launcher with profiles, `make deploy` for Teensy, bag replay harness, telemetry → CSV/Grafana, RGB status LED, battery SoC widget, Gazebo digital twin) and [`docs/notes-virtual-view-autocal.md`](./docs/notes-virtual-view-autocal.md) (Foxglove bridge over Tailscale, IMU bias zero on boot, servo zero-position auto-detect, camera/LiDAR/IMU extrinsic auto-cal). Notes only — opportunistic pickup during Phase 1/2 idle time. New packages proposed: `nova_ops` + `nova_calibration`. |
+| 2026-05-26 | **Leg CAD done — V5 OpenSCAD original-shell-carve** ([`hardware/cad/leg_v5/`](./hardware/cad/leg_v5/README.md)). Reuses the original NovaSM3 STLs and carves an STS3215 cavity inside via boolean `difference()` — keeps the original shape, resizes the servo pocket. 9 STLs (shoulder + coax_L/R + femur_shell_L/R + femur_cover_L/R + tibia_L/R); femur prints as shell+cover sharing one cavity; tibia passive. Beat the from-scratch OnShape (V4) + CadQuery (V3.1) brackets → those archived. Pending: first-article print (coax X-bbox tight). |
+| 2026-05-30 | **CAD docs reorganized:** V2/V3/V4 leg attempts moved to `hardware/cad/archive/`; `hardware/cad/README.md` + `docs/cad-tooling.md` reframed to the three-track model (V5 OpenSCAD = leg links, CadQuery = utility, OnShape = chassis). |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
 | TBD | First successful walk gait |
 
