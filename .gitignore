@@ -97,3 +97,16 @@ node_modules/
 *.f3z.backup
 *.bak
 *.tmp
+
+# --- KiCad ---
+# per-user GUI state (window layout, last sheet)
+*.kicad_prl
+# KiCad auto-backup archives
+*-backups/
+# regenerated footprint cache
+fp-info-cache
+# in-progress autosaves
+_autosave-*
+# exported DRC/ERC reports (regenerable)
+*.drc.json
+*.erc.json

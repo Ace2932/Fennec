@@ -1,0 +1,350 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(generator_version "9.0")
+	(uuid "f535083b-f621-4317-a378-cf746e7f972b")
+	(paper "A4")
+	(lib_symbols)
+	(sheet
+		(at 38.1 152.4)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "0af7f1f2-3a0a-4436-aaa7-f191048b3c83")
+		(property "Sheetname" "07 Aux MCU + Peripherals"
+			(at 38.1 151.6884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "07_aux_mcu.kicad_sch"
+			(at 38.1 178.3772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "8")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 152.4 38.1)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "27a07a1d-f9e1-432b-b0b9-19fa0d701a09")
+		(property "Sheetname" "02 Power Rails (Pololu bucks)"
+			(at 152.4 37.3884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "02_power_rails.kicad_sch"
+			(at 152.4 64.0772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 152.4 114.3)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "38477265-f64f-4f2e-aefb-289b79c664e1")
+		(property "Sheetname" "06 Safety Chain"
+			(at 152.4 113.5884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "06_safety_chain.kicad_sch"
+			(at 152.4 140.2772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "7")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 38.1 114.3)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "45d7d740-e2f4-40d0-8d10-022e9099f66d")
+		(property "Sheetname" "05 Bus Integrity"
+			(at 38.1 113.5884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "05_bus_integrity.kicad_sch"
+			(at 38.1 140.2772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "6")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 152.4 152.4)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "6edc1b8a-dc4c-428d-8457-a29d39eb3953")
+		(property "Sheetname" "08 Connectors + Mechanical"
+			(at 152.4 151.6884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "08_connectors.kicad_sch"
+			(at 152.4 178.3772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "9")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 38.1 76.2)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "8f3fe7b3-c0aa-43f7-a2b9-c8492e89dcc9")
+		(property "Sheetname" "03 Servo Bus (star injection)"
+			(at 38.1 75.4884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "03_servo_bus.kicad_sch"
+			(at 38.1 102.1772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 152.4 76.2)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "e76e40d6-be2f-49cd-bcdb-1dc94bab9b30")
+		(property "Sheetname" "04 Bus Master (Pattern B)"
+			(at 152.4 75.4884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "04_bus_master.kicad_sch"
+			(at 152.4 102.1772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "5")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 38.1 38.1)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "ef143087-bea8-42bd-8bca-c15c2f4ac5f7")
+		(property "Sheetname" "01 Battery Input + Reverse Protection"
+			(at 38.1 37.3884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "01_battery.kicad_sch"
+			(at 38.1 64.0772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+	(embedded_fonts no)
+)

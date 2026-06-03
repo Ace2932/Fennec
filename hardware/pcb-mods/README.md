@@ -126,5 +126,5 @@ Resolve during schematic review.
 
 ---
 
-> **Status:** design spec updated at BOM v3.4 / v0.3.2-l2-dedicated. Schematic + Gerber work pending.
+> **Status:** design spec at BOM v3.5 / v0.3.2-l2-dedicated. **Schematic captured** in KiCad 9 (`nova_pcb_v6/`, §1-§8 hierarchical, autobuild): all 54 components footprinted (KiCad-stock libs), pin-name-level wiring audit passed, ERC clean except 1 intentional warning (`V7V5_ARM` — reserved Phase-4 arm rail, DNP). Audit added the two missing off-board load connectors J12 (`V12_JET`→Jetson) + J13 (`V12_L2`→L2 LiDAR). Next: PCB layout + DRC + Gerber export.
 > **Owner:** Aiden Fox.

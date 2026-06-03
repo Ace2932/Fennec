@@ -333,7 +333,8 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] Bambu Studio + PA6-CF drier preheat
 
 **Week 3 — Away (2026-05-29 → 2026-06-05, laptop only):**
-- [ ] PCB v6 schematic + layout in KiCad — see [`hardware/pcb-mods/README.md`](./hardware/pcb-mods/README.md)
+- [x] PCB v6 **schematic** captured in KiCad 9 (2026-06-03) — §1-§8 hierarchical, all 54 parts footprinted, pin-name wiring audit passed, ERC-clean (1 intentional warning: reserved arm rail). See [`hardware/pcb-mods/README.md`](./hardware/pcb-mods/README.md)
+- [ ] PCB v6 **layout** + DRC + Gerber export in KiCad
 - [ ] Backup: continue Teensy firmware / URDF / ROS 2 scaffolding if PCB stalls or finishes early
 
 **Week 4+ (back to shop):**
