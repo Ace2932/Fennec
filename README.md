@@ -2,11 +2,11 @@
 
 > A modified [NovaSM3](https://github.com/cguweb-com/Arduino-Projects/tree/main/Nova-SM3) quadruped platform (by Chris Locke / [novaspotmicro.com](https://novaspotmicro.com/)) rebuilt around a unified Feetech STS3215 TTL servo bus, NVIDIA Jetson Orin Nano Super compute, and ROS 2 Humble — designed as a platform for Vision-Language-Action (VLA) model deployment, 3D SLAM, and autonomous mobile manipulation.
 
-**Status:** 🔧 Phase 0 — Pre-build setup (CAD + parts ordering)
+**Status:** 🔧 Phase 1 — hardware bring-up (firmware critical-path green; Phase 0 closed — PCB v6 board placed 2026-06-03, power-board routing in progress)
 **Platform:** Quadruped (12 DOF) — arm (6-DOF, Phase 4 future) on shelf
 **Compute:** NVIDIA Jetson Orin Nano Super 8GB
 **Middleware:** ROS 2 Humble
-**Last updated:** May 16, 2026 (BOM v3.4)
+**Last updated:** June 6, 2026 (BOM v3.4)
 
 ---
 
