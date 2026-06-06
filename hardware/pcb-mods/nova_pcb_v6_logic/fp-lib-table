@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "nova_v6")(type "KiCad")(uri "${KIPRJMOD}/nova_v6.pretty")(options "")(descr "Nova v6 custom footprints — Pololu bucks, Teensy 4.1, Class-T block, INA226 module"))
+)

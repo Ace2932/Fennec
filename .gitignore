@@ -107,6 +107,8 @@ node_modules/
 fp-info-cache
 # in-progress autosaves
 _autosave-*
+# editor lock files (pcbnew/eeschema open)
+*.lck
 # exported DRC/ERC reports (regenerable)
 *.drc.json
 *.erc.json
