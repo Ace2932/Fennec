@@ -20,6 +20,25 @@ Roadmap + feature specs: [`docs/notes-qol-features.md`](../../../docs/notes-qol-
 | §7 Telemetry → CSV / Grafana | 📋 stub |
 | §8 RGB status LED on Arduino Nano | 📋 stub |
 | §9 Battery SoC widget | 📋 stub |
+| §10 🔴 `/battery_low` → `systemctl poweroff` node | ❌ **MISSING — required before first battery walk** |
+
+## §10 — battery_low shutdown node (gap found 2026-06-12 software review)
+
+The Teensy publishes `/battery_low` (13.0 V comparator, debounced + latched) and the whole
+two-stage LVC design assumes a Jetson node runs a clean shutdown before the 12.4 V hardware
+cutoff yanks the rails (`firmware/teensy/README.md` documents it as existing — it doesn't).
+Without it: pack sags 13.0→12.4 V under gait load in minutes, HARDCUT fires, Jetson loses
+power mid-SD-write.
+
+Spec (~30 lines, lives in `nova_ops`, NOT allowed to crash-exempt like the rest of ops —
+launch it in the safety group):
+- Subscribe `/battery_low` (reliable QoS) + `/safety_state`
+- On `battery_low == true` sustained >2 s (comparator already debounces; this guards topic
+  glitches): log, publish `/shutdown_imminent`, freeze dashcam, then
+  `systemd-run systemctl poweroff` (node user needs polkit rule or sudoers entry for
+  poweroff — document in setup-jetson.md)
+- Companion firmware-side gap (command-staleness failsafe) tracked in
+  `firmware/teensy/README.md` TODO #1.
 
 ## Preflight check (v1)
 

@@ -42,6 +42,15 @@ If (1) misses → debug Teensy firmware (DMA vs ISR, UART config, ISR priority).
 
 ## ROS 2 topic contract
 
+> ⚠️ This table is the original plan; the implementation diverged (better). Actual contract:
+> `/joint_states` carries raw units (position 0..4095, effort = raw load 0..1000, servo id=i+1);
+> telemetry is discrete topics (`/power_rails`, `/servo_voltage`, `/servo_temperature`,
+> `/servo_present_mask`, per-class `/servo_err_*`, loop histogram stats) instead of one
+> DiagnosticArray; plus `/safety_state` Int32 (latched FSM) alongside the raw `/estop` /
+> `/battery_low` edge publishes, and `/safety_clear` sub. `nova_calibration`'s README documents
+> the raw-unit convention — treat the code + that README as the contract until this table is
+> rewritten.
+
 | Direction | Topic | Type | Rate |
 |-----------|-------|------|------|
 | Pub | `/joint_states` | `sensor_msgs/JointState` | 100 Hz |
@@ -50,12 +59,29 @@ If (1) misses → debug Teensy firmware (DMA vs ISR, UART config, ISR priority).
 | Pub | `/battery_low` | `std_msgs/Bool` | event-driven (13.0V trigger) |
 | Sub | `/joint_commands` | `sensor_msgs/JointState` (position field) | 100 Hz target |
 
+## 🔴 TODO before first battery walk (gaps found 2026-06-12 software review)
+
+1. **Command-staleness failsafe (this firmware).** If `/joint_commands` stops arriving
+   (USB cable out, Jetson panic, agent crash), the tick loop currently re-broadcasts the
+   last target forever — robot frozen mid-step, torque held, until LVC. Add: no command
+   for N ms (start: 500 ms) → slew to neutral stand pose → reduce torque; publish a
+   `command_stale` flag. The inverse direction is already covered (ISR watchdog resets a
+   wedged Teensy; Jetson sees heartbeat drop).
+2. **`/battery_low` → poweroff subscriber (nova_ops, not here).** Firmware publishes the
+   13.0 V event but nothing on the Jetson subscribes — the documented
+   "`systemctl poweroff` before the 12.4 V hard cutoff" node was never implemented.
+   Without it the two-stage LVC chain degrades to a hard power yank mid-SD-write.
+   Tracked in `ros2_ws/src/nova_ops/README.md`.
+
 ## Open questions for firmware phase
 
 - DMA vs ISR for UART TX/RX (DMA preferred for jitter; ISR simpler)
 - Per-servo poll interval — round-robin all 12 vs prioritize legs over arm/idle joints
+  (current: 1 servo/tick = 16.7 Hz per joint; budget fits 2/tick if closed-loop work
+  ever needs faster feedback)
 - Failure-mode behavior: lost servo response → retry budget → flag dead in `/joint_states`
-- micro-ROS QoS profile for `/joint_commands` (reliable vs best-effort)
+- micro-ROS QoS profile — recommended resolution: `/joint_commands` best-effort keep-last-1
+  (stale commands are worse than none), safety/state topics reliable
 
 Resolve during firmware bring-up.
 
