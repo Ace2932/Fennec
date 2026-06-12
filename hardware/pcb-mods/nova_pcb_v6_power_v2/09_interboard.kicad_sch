@@ -582,6 +582,22 @@
 				(hide yes)
 			)
 		)
+		(property "Manufacturer" "Adam Tech (DigiKey 10414809)" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "BHR-12-VUA" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "1a5a7dec-c60d-4859-9ad2-884d76200b06")
 		)
