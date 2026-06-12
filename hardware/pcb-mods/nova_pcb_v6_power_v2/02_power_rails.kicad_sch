@@ -1902,6 +1902,14 @@
 				(hide yes)
 			)
 		)
+		(property "DigiKey" "S1011EC-40-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "f1e8d018-f73a-4c2d-8e5d-463e2d51f206")
 		)
@@ -3323,6 +3331,14 @@
 				(hide yes)
 			)
 		)
+		(property "DigiKey" "SRR1260-220MCT-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "0817574e-3667-4da3-a29c-bf7b4b7dd2eb")
 		)
@@ -3450,6 +3466,14 @@
 			)
 		)
 		(property "MPN" "UPW1E471MPD" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "493-1826-ND" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3635,6 +3659,14 @@
 				(hide yes)
 			)
 		)
+		(property "DigiKey" "493-1826-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "07aa5f10-392d-439b-ac7b-8cbeb56f18fa")
 		)
@@ -3804,6 +3836,14 @@
 			)
 		)
 		(property "MPN" "UPW1E471MPD" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "493-1826-ND" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)

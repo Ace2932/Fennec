@@ -598,6 +598,14 @@
 				(hide yes)
 			)
 		)
+		(property "DigiKey" "2057-BHR-12-VUA-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "1a5a7dec-c60d-4859-9ad2-884d76200b06")
 		)

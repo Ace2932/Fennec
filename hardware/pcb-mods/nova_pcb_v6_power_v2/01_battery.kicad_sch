@@ -1229,6 +1229,14 @@
 				(hide yes)
 			)
 		)
+		(property "DigiKey" "S1011EC-40-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "9f4d5d59-88dd-4207-851f-593791d5dd7a")
 		)

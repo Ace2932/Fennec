@@ -1184,7 +1184,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Nichicon" (at 0 0 0)
+		(property "Manufacturer" "FymuSing (Amazon, 10x17mm, 4mm pitch)" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1192,7 +1192,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "UPW1E102MPD6" (at 0 0 0)
+		(property "MPN" "FymuSing-1000uF-25V" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1347,6 +1347,14 @@
 				(hide yes)
 			)
 		)
+		(property "DigiKey" "455-2248-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "6c946e87-bfb1-456e-9dff-241f48ea22fc")
 		)
@@ -1416,7 +1424,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Nichicon" (at 0 0 0)
+		(property "Manufacturer" "FymuSing (Amazon, 10x17mm, 4mm pitch)" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1424,7 +1432,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "UPW1E102MPD6" (at 0 0 0)
+		(property "MPN" "FymuSing-1000uF-25V" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1987,7 +1995,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Nichicon" (at 0 0 0)
+		(property "Manufacturer" "FymuSing (Amazon, 10x17mm, 4mm pitch)" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1995,7 +2003,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "UPW1E102MPD6" (at 0 0 0)
+		(property "MPN" "FymuSing-1000uF-25V" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2216,7 +2224,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Nichicon" (at 0 0 0)
+		(property "Manufacturer" "FymuSing (Amazon, 10x17mm, 4mm pitch)" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2224,7 +2232,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "UPW1E102MPD6" (at 0 0 0)
+		(property "MPN" "FymuSing-1000uF-25V" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2363,7 +2371,7 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Nichicon" (at 0 0 0)
+		(property "Manufacturer" "FymuSing (Amazon, 10x17mm, 4mm pitch)" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2371,7 +2379,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "UPW1E102MPD6" (at 0 0 0)
+		(property "MPN" "FymuSing-1000uF-25V" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
