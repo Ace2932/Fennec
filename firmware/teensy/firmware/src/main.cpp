@@ -523,7 +523,18 @@ void setup() {
   delay(2000);  // give agent time to attach
 
   allocator = rcl_get_default_allocator();
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  // The agent lives on the Jetson, which cold-boots 30-60 s AFTER the
+  // Teensy. The old RCCHECK here bricked the firmware (LED-on while(1),
+  // watchdog not yet running) on every real robot power-up unless the
+  // agent happened to already be running — dev flashing masked it
+  // (2026-06-12 adversarial review). Retry forever with a fast blink;
+  // motion is impossible before the agent anyway (broadcast gates on
+  // joint_cmd_rx_count > 0) and the hardware safety chain doesn't need us.
+  while (rclc_support_init(&support, 0, NULL, &allocator) != RCL_RET_OK) {
+    digitalWrite(LED_PIN, !digitalRead(LED_PIN));   // 2 Hz = waiting for agent
+    delay(250);
+  }
+  digitalWrite(LED_PIN, LOW);
   RCCHECK(rclc_node_init_default(&node, "nova_teensy", "", &support));
   RCCHECK(rclc_publisher_init_default(
       &heartbeat_pub,

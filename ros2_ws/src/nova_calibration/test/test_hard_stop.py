@@ -97,3 +97,60 @@ def test_abort():
     servo = FakeServo(start=0, stop_at=4000, search_dir=+1)
     res = _make(servo, aborted=lambda: True).run_joint(cfg)
     assert res.outcome == Outcome.ABORTED
+
+
+class CompliantStopServo(FakeServo):
+    """Models a springy printed-PA6 stop: past `stop_at` the joint keeps
+    creeping (compliance) and load rises only modestly — staying BELOW
+    load_threshold. Pre-leash, the goal ran open-loop to the 0/4095 clamp
+    while the gears ground against the spring."""
+
+    def tick(self):
+        delta = max(-self.step_follow, min(self.step_follow, self.goal - self.pos))
+        nxt = self.pos + delta
+        past = (self.search_dir > 0 and nxt >= self.stop_at) or \
+               (self.search_dir < 0 and nxt <= self.stop_at)
+        if past:
+            # creep 1 raw/tick into the compliant stop, load sub-threshold
+            self.pos += self.search_dir * 1
+            self.load = 150
+        else:
+            self.pos = nxt
+            self.load = 20
+
+
+def test_compliant_stop_goal_error_is_bounded():
+    cfg = JointHomeConfig(1, 'FL_knee', search_dir=+1,
+                          stop_to_home_raw=100, placeholder=False)
+    servo = CompliantStopServo(start=1000, stop_at=1200, search_dir=+1)
+    params = HardStopParams(timeout_s=5.0)
+
+    max_err = {'v': 0}
+    orig_send = servo.send_goal
+
+    def tracking_send(jid, raw):
+        orig_send(jid, raw)
+        max_err['v'] = max(max_err['v'], abs(raw - servo.pos))
+
+    calib = HardStopCalibrator(
+        read_position=servo.read_position, read_load=servo.read_load,
+        send_goal=tracking_send, is_aborted=lambda: False,
+        sleep_tick=servo.tick, params=params)
+    res = calib.run_joint(cfg)
+
+    # Semantically correct outcome for a sub-threshold compliant stop:
+    # TIMEOUT ("check threshold/mechanics"), NOT silent grinding.
+    assert res.outcome == Outcome.TIMEOUT
+    # The real assertion: goal never ran away — position error (∝ torque)
+    # stays bounded by the leash + one step.
+    assert max_err['v'] <= params.leash_raw + params.step_raw, max_err['v']
+
+
+def test_leash_does_not_break_normal_detection():
+    cfg = JointHomeConfig(1, 'FL_coxa', search_dir=-1,
+                          stop_to_home_raw=80, placeholder=False)
+    servo = FakeServo(start=2000, stop_at=1800, search_dir=-1)
+    calib = _make(servo)
+    res = calib.run_joint(cfg)
+    assert res.outcome == Outcome.OK
+    assert res.stop_pos_raw == 1800

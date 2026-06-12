@@ -45,6 +45,10 @@ class HardStopParams:
     stall_ticks: int = 4         # consecutive over-threshold ticks => stopped
     pos_epsilon: int = 2         # raw counts; below this = "not moving"
     backoff_raw: int = 60        # retreat from the stop after detection (~5 deg)
+    leash_raw: int = 24          # max goal lead over last measured position —
+                                 # bounds position error (∝ torque) when the
+                                 # stop is compliant (printed PA6 flexes) or
+                                 # /joint_states is stale (16.7 Hz per joint)
     timeout_s: float = 12.0      # per-joint abort if no stop found
 
     @property
@@ -111,6 +115,17 @@ class HardStopCalibrator:
                                       detail='aborted mid-run')
 
             goal = _clamp_raw(goal + cfg.search_dir * p.step_raw)
+            # Leash the goal to the last measured position. Without this the
+            # goal advances open-loop: at a compliant stop the load can sit
+            # below load_threshold while the goal runs away to the 0/4095
+            # clamp, grinding the gears at ever-increasing torque until the
+            # ceiling finally trips (2026-06-12 review). Leashed, the goal
+            # stalls when the joint stalls, so worst-case position error —
+            # and therefore torque — is bounded at leash_raw + step_raw.
+            if cfg.search_dir > 0:
+                goal = min(goal, _clamp_raw(prev_pos + p.leash_raw))
+            else:
+                goal = max(goal, _clamp_raw(prev_pos - p.leash_raw))
             self._send_goal(jid, goal)
             self._sleep_tick()
 

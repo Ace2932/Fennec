@@ -89,6 +89,19 @@ Adversarial review, same day — three more, all fixed:
    `MAX_FRAME_LEN`(=38)-byte stack array — 6 bytes of stack smashed at 40 Hz. Invisible
    with ≤10 servos on a bench, memory corruption with the full fleet. `MAX_PARAM_BYTES`
    32→40 plus an explicit frame-size guard in `sync_write_goal_positions()`.
+6.5 **(pass 2) Cold-boot brick.** micro-ROS init ran in `setup()` BEFORE the tick timer,
+   and `RCCHECK` bricked into a while(1) on failure — but the agent lives on the Jetson,
+   which boots 30-60 s after the Teensy. Every real robot power-up bricked the firmware
+   (no watchdog running yet) until a manual power cycle; dev flashing masked it because
+   the agent was already up. `rclc_support_init` now retries forever with a 2 Hz LED blink.
+   Motion is impossible pre-agent anyway (broadcast gates on first command) and the
+   hardware safety chain is autonomous.
+6.6 **(pass 2, nova_calibration) Hard-stop probe goal runaway.** The probe advanced its
+   goal open-loop; against a compliant stop (printed PA6 flexes) load could sit below
+   threshold while the goal ran to the 0/4095 clamp, grinding gears at rising torque.
+   Goal now leashed to `leash_raw`(=24) past the last measured position — worst-case
+   torque bounded, compliant stops resolve as TIMEOUT instead of silent grinding.
+   Regression-tested (`test_hard_stop.py`, 7/7).
 6. **Edge-only safety topics blinded late joiners.** `/estop`, `/battery_low`,
    `/safety_state`, `/command_stale` published only on change — a respawned
    battery_shutdown node (or preflight on a quiet bus) could never learn an
