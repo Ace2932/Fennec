@@ -542,6 +542,32 @@ If wifi to the Jetson is flaky (USB-side carrier or weak wlP1p1s0 signal), uploa
 
 ---
 
+## 15. Battery-shutdown sudoers rule (required before first battery walk)
+
+`nova_ops battery_shutdown_node` (§10) executes `sudo -n systemctl poweroff` when the
+13.0 V comparator latches. `-n` = never prompt, so the node's user needs a passwordless
+rule for exactly that one command:
+
+```bash
+echo 'aiden ALL=(ALL) NOPASSWD: /usr/bin/systemctl poweroff' | \
+    sudo tee /etc/sudoers.d/nova-battery-shutdown
+sudo chmod 440 /etc/sudoers.d/nova-battery-shutdown
+# verify (should power off — do this at a convenient moment):
+sudo -n systemctl poweroff --dry-run 2>/dev/null || echo "RULE NOT WORKING"
+```
+
+Scope deliberately limited to `systemctl poweroff` — not blanket NOPASSWD.
+Bench-verify the full chain without killing the Jetson:
+
+```bash
+ros2 run nova_ops battery_shutdown_node --ros-args -p dry_run:=true
+# second terminal:
+ros2 topic pub --once /safety_state std_msgs/msg/Int32 '{data: 2}'
+# expect FATAL log + /shutdown_imminent + "DRY RUN — would exec" line
+```
+
+---
+
 ## Next (separate sessions — Phase 1 plan)
 
 - NVMe install + rootfs migration **(deferred — NAND shortage, see BOM §1; run from 128 GB microSD until prices recover)**

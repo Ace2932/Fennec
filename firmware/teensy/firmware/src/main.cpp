@@ -25,6 +25,25 @@ constexpr size_t NOVA_JOINT_COUNT = 12;
 volatile uint32_t joint_cmd_rx_count = 0;
 double latched_cmd_position[NOVA_JOINT_COUNT] = {0};
 
+// ---------------- Command-staleness failsafe ----------------
+// If /joint_commands stops arriving (USB cable out, Jetson panic, agent
+// crash) the broadcast path would otherwise re-send the last target
+// forever — robot frozen mid-step with torque held until LVC. Instead:
+// after NOVA_CMD_STALE_TIMEOUT_US without a fresh command, overwrite the
+// latched targets with the latest MEASURED positions (freeze in place —
+// the slew limiter turns that into a gentle decel) and flag /command_stale.
+// "Neutral stand pose" is deliberately NOT used: calibration offsets live
+// on the Jetson, so raw stand-pose values are meaningless at this layer.
+// Recovery is automatic — any fresh command clears the flag and slews
+// from the frozen pose to the new target.
+#ifndef NOVA_CMD_STALE_TIMEOUT_US
+#define NOVA_CMD_STALE_TIMEOUT_US 500000UL   // 500 ms
+#endif
+uint32_t last_joint_cmd_us = 0;   // stamped in joint_cmd_callback (executor
+                                  // runs in tick context — no ISR race)
+bool     cmd_stale = false;
+uint32_t cmd_stale_events = 0;    // lifetime count, for diagnostics
+
 // Safety state machine — instance + clear-request flag declared up here so
 // the bus-write gate (broadcast_servo_commands()) can refuse to fire when a
 // latch is active. Definition body lives in safety_state.h.
@@ -215,6 +234,10 @@ inline void slew_init_all() {
 
 void broadcast_servo_commands() {
   if (!safety_fsm.motion_enabled()) return;
+  // Never write the bus before the first real command arrives — the latched
+  // array boots as all-zeros, and SYNC_WRITEing raw 0 to 12 servos at
+  // power-on would slam every joint to one end of travel.
+  if (joint_cmd_rx_count == 0) return;
   cmd_decimate_count++;
   if (cmd_decimate_count < CMD_BROADCAST_DECIMATE) return;
   cmd_decimate_count = 0;
@@ -325,6 +348,7 @@ rcl_publisher_t joint_states_pub;
 rcl_publisher_t estop_pub;
 rcl_publisher_t battery_low_pub;
 rcl_publisher_t safety_state_pub;
+rcl_publisher_t command_stale_pub;
 rcl_publisher_t power_rails_pub;
 rcl_publisher_t joint_cmd_rx_pub;
 rcl_publisher_t servo_present_pub;
@@ -365,6 +389,7 @@ std_msgs__msg__Float32MultiArray servo_voltage_msg;
 std_msgs__msg__Float32MultiArray servo_temperature_msg;
 std_msgs__msg__Bool  estop_msg;
 std_msgs__msg__Bool  battery_low_msg;
+std_msgs__msg__Bool  command_stale_msg;
 sensor_msgs__msg__JointState joint_states_msg;
 sensor_msgs__msg__JointState joint_cmd_msg;
 
@@ -390,6 +415,7 @@ void joint_cmd_callback(const void* msgin) {
   size_t n = m->position.size < NOVA_JOINT_COUNT ? m->position.size : NOVA_JOINT_COUNT;
   for (size_t i = 0; i < n; i++) latched_cmd_position[i] = m->position.data[i];
   joint_cmd_rx_count++;
+  last_joint_cmd_us = micros();   // staleness-failsafe freshness stamp
 }
 
 // /safety_clear sub callback — Bool; data=true requests a latch clear.
@@ -549,6 +575,11 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "safety_state"));
+  RCCHECK(rclc_publisher_init_default(
+      &command_stale_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+      "command_stale"));
   RCCHECK(rclc_subscription_init_default(
       &safety_clear_sub,
       &node,
@@ -666,6 +697,7 @@ void setup() {
   heartbeat_msg.data = 0;
   estop_msg.data = false;
   battery_low_msg.data = false;
+  command_stale_msg.data = false;
 #endif
 
 #ifndef NOVA_USE_MICRO_ROS
@@ -716,6 +748,27 @@ void loop() {
     // sync-write frame but no servo will ACK (broadcast doesn't expect
     // ACK anyway). The OE pin toggle in service_bus_stub() is no longer
     // needed — Bus::transmit_blocking() handles direction switching.
+    // Command-staleness failsafe — evaluate BEFORE the broadcast so a
+    // freeze takes effect on this tick's SYNC_WRITE, not the next.
+    if (joint_cmd_rx_count > 0) {
+      bool stale_now =
+          (uint32_t)(handler_start_us - last_joint_cmd_us) > NOVA_CMD_STALE_TIMEOUT_US;
+      if (stale_now && !cmd_stale) {
+        cmd_stale = true;
+        cmd_stale_events++;
+        // Freeze: retarget every joint that has ever answered a poll to its
+        // latest measured position. Joints that never answered keep their
+        // last commanded target (no better information exists for them).
+        for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+          if (servo_present_mask & (uint16_t)(1u << i)) {
+            latched_cmd_position[i] = (double)servo_position_raw[i];
+          }
+        }
+      } else if (!stale_now && cmd_stale) {
+        cmd_stale = false;   // fresh command arrived — normal slew resumes
+      }
+    }
+
     poll_one_servo();
     broadcast_servo_commands();
 
@@ -748,6 +801,11 @@ void loop() {
     if (batt_low_now != battery_low_msg.data) {
       battery_low_msg.data = batt_low_now;
       RCSOFTCHECK(rcl_publish(&battery_low_pub, &battery_low_msg, NULL));
+    }
+    // Edge-change publish for the command-staleness failsafe flag
+    if (cmd_stale != command_stale_msg.data) {
+      command_stale_msg.data = cmd_stale;
+      RCSOFTCHECK(rcl_publish(&command_stale_pub, &command_stale_msg, NULL));
     }
     // Edge-change publish for the latched FSM state
     if (curr_safety != prev_safety) {

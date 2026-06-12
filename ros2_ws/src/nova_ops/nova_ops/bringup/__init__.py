@@ -60,6 +60,9 @@ PROFILES = {
         'actions': [
             ('launch', 'nova_ops', 'preflight.launch.py', {}),
             ('launch', 'nova_ops', 'dashcam.launch.py', {}),
+            # §10 battery_low -> clean poweroff. Safety-critical: the ONLY
+            # nova_ops node not allowed to crash silently.
+            ('node', 'nova_ops', 'battery_shutdown_node', {}),
             # Gait controller doesn't exist yet (Phase 2 deliverable).
             # ('node', 'nova_gait', 'gait_controller', {}),
             # Safety envelope is a library wrapped INSIDE gait_controller's

@@ -3,7 +3,8 @@
 NovaSM3 operations layer. Pre-flight health checks, dashcam, safety
 envelope, bringup launcher, telemetry, status LED, battery SoC, bag
 replay. Not on the gait critical path — every node here is allowed to
-crash without killing the robot.
+crash without killing the robot, with ONE exception: `battery_shutdown`
+(§10) is safety-critical and launches with respawn.
 
 Roadmap + feature specs: [`docs/notes-qol-features.md`](../../../docs/notes-qol-features.md).
 
@@ -20,7 +21,7 @@ Roadmap + feature specs: [`docs/notes-qol-features.md`](../../../docs/notes-qol-
 | §7 Telemetry → CSV / Grafana | 📋 stub |
 | §8 RGB status LED on Arduino Nano | 📋 stub |
 | §9 Battery SoC widget | 📋 stub |
-| §10 🔴 `/battery_low` → `systemctl poweroff` node | ❌ **MISSING — required before first battery walk** |
+| §10 `/battery_low` → `systemctl poweroff` node | ✅ implemented (2026-06-12) — `battery_shutdown_node`, in `walk` profile |
 
 ## §10 — battery_low shutdown node (gap found 2026-06-12 software review)
 
@@ -30,15 +31,18 @@ cutoff yanks the rails (`firmware/teensy/README.md` documents it as existing —
 Without it: pack sags 13.0→12.4 V under gait load in minutes, HARDCUT fires, Jetson loses
 power mid-SD-write.
 
-Spec (~30 lines, lives in `nova_ops`, NOT allowed to crash-exempt like the rest of ops —
-launch it in the safety group):
-- Subscribe `/battery_low` (reliable QoS) + `/safety_state`
-- On `battery_low == true` sustained >2 s (comparator already debounces; this guards topic
-  glitches): log, publish `/shutdown_imminent`, freeze dashcam, then
-  `systemd-run systemctl poweroff` (node user needs polkit rule or sudoers entry for
-  poweroff — document in setup-jetson.md)
-- Companion firmware-side gap (command-staleness failsafe) tracked in
-  `firmware/teensy/README.md` TODO #1.
+Implemented in `nova_ops/battery_shutdown/` (decider = pure logic, unit-tested in
+`test/test_battery_shutdown.py`; node = thin wrapper). Two trigger paths: `/safety_state == 2`
+fires immediately (firmware FSM already debounced), raw `/battery_low` sustained ≥2 s as the
+backup if the latched edge message is lost. Once fired the decision is permanent — recovery
+at idle doesn't cancel (pack will sag again on next step). Publishes `/shutdown_imminent`
+(transient-local), waits `grace_s` for the dashcam freeze to flush, then
+`sudo -n systemctl poweroff`. Params: `raw_sustain_s`, `grace_s`, `dry_run`.
+**Host prereq:** passwordless poweroff sudoers rule — see `docs/setup-jetson.md`.
+Bench test: `ros2 run nova_ops battery_shutdown_node --ros-args -p dry_run:=true` then
+`ros2 topic pub --once /safety_state std_msgs/Int32 '{data: 2}'`.
+Companion firmware-side fix (command-staleness failsafe) shipped same day — see
+`firmware/teensy/README.md`.
 
 ## Preflight check (v1)
 

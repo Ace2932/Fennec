@@ -35,6 +35,8 @@ setup(
             'safety_counters = nova_ops.safety_envelope.counters_node:main',
             # `ros2 run nova_ops oled_status` — STUB OLED + LED status bridge to Arduino Nano via USB-serial
             'oled_status = nova_ops.oled_status.node:main',
+            # `ros2 run nova_ops battery_shutdown_node` — /battery_low -> clean poweroff (§10, NOT allowed-to-crash)
+            'battery_shutdown_node = nova_ops.battery_shutdown.node:main',
         ],
     },
 )

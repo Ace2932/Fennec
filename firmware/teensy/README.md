@@ -59,19 +59,22 @@ If (1) misses → debug Teensy firmware (DMA vs ISR, UART config, ISR priority).
 | Pub | `/battery_low` | `std_msgs/Bool` | event-driven (13.0V trigger) |
 | Sub | `/joint_commands` | `sensor_msgs/JointState` (position field) | 100 Hz target |
 
-## 🔴 TODO before first battery walk (gaps found 2026-06-12 software review)
+## ✅ Resolved 2026-06-12 (gaps from software review — both shipped same day)
 
-1. **Command-staleness failsafe (this firmware).** If `/joint_commands` stops arriving
-   (USB cable out, Jetson panic, agent crash), the tick loop currently re-broadcasts the
-   last target forever — robot frozen mid-step, torque held, until LVC. Add: no command
-   for N ms (start: 500 ms) → slew to neutral stand pose → reduce torque; publish a
-   `command_stale` flag. The inverse direction is already covered (ISR watchdog resets a
-   wedged Teensy; Jetson sees heartbeat drop).
-2. **`/battery_low` → poweroff subscriber (nova_ops, not here).** Firmware publishes the
-   13.0 V event but nothing on the Jetson subscribes — the documented
-   "`systemctl poweroff` before the 12.4 V hard cutoff" node was never implemented.
-   Without it the two-stage LVC chain degrades to a hard power yank mid-SD-write.
-   Tracked in `ros2_ws/src/nova_ops/README.md`.
+1. **Command-staleness failsafe — IMPLEMENTED.** After `NOVA_CMD_STALE_TIMEOUT_US`
+   (default 500 ms) without a fresh `/joint_commands`, the latched targets are overwritten
+   with the latest MEASURED positions (freeze-in-place; the slew limiter makes it a gentle
+   decel) and `/command_stale` (Bool, edge-published) goes true. Recovery is automatic on
+   the next fresh command. Deviation from the original spec: freeze-at-measured instead of
+   "slew to neutral stand" — calibration offsets live on the Jetson, so raw stand-pose
+   values are meaningless at this layer.
+2. **Boot-broadcast gate — bonus bug found during implementation.** `broadcast_servo_commands()`
+   used to SYNC_WRITE the all-zeros latched array at 40 Hz from power-on — on real hardware
+   that slams all 12 joints to raw position 0 before the first command. Now gated on
+   `joint_cmd_rx_count > 0`: the bus is never written until the host has commanded at
+   least once.
+3. **`/battery_low` → poweroff — IMPLEMENTED in nova_ops** (`battery_shutdown_node`,
+   §10 in `ros2_ws/src/nova_ops/README.md`; sudoers prereq in `docs/setup-jetson.md` §15).
 
 ## Open questions for firmware phase
 
