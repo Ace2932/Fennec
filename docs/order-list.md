@@ -62,6 +62,24 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 - 1× electrolytic cap: 470 µF, 25V
 - Bundle into the next DigiKey / Mouser order to save shipping
 
+### 🔴 Class T 30A fuse + block — ~$40 (CRITICAL GAP found 2026-06-12 state-matrix review)
+Spec'd in PCB README §1 since the beginning, F1 deliberately moved OFF-BOARD 2026-06-04
+(LiPo dead-short = 10–20 kA; only Class T's 20 kA AIC interrupts it — see research notes
+2026-05-17 §9) — **but it never entered this order list.** Right now the battery lead is
+unfused: a chafed wire or dropped tool across VBAT is the one fire-class failure on the robot.
+- **Fuse: Eaton Bussmann JJN-30 (30 A Class T)** — DigiKey search `JJN-30`
+- **Holder: Blue Sea Systems 5502 Class T fuse block (30–80 A)** — Amazon/West Marine
+- Install: bolt-down block inline in the battery→J1 lead, as close to the pack as practical.
+- DO NOT substitute ANL/MIDI/blade (~6 kA AIC — can fail-to-interrupt on a LiPo short).
+
+### 🟡 LiPo balance-lead buzzer alarm — ~$5 (gap found 2026-06-12)
+If the UBEC/V5_AUX dies mid-run, BOTH LM393 LVC stages go silently dead (R16 defaults rails
+ON) and the Teensy dies with it — frozen robot drains the pack with no electronic protection.
+Independent last line: balance-plug buzzer alarm set to **3.3 V/cell**, plugged in whenever
+SW1 is on. Any "1S-8S low voltage buzzer alarm" 2-pack on Amazon (~$7).
+- Also VERIFY: is the **UBEC module itself** owned? J2 header is ordered, but no UBEC
+  module appears anywhere in this list. If not on the shelf, add one (5 V ≥3 A UBEC).
+
 ### ⚠️ TVS regen clamps for servo rails — ~$5 (gap found 2026-06-12, NOT in original order)
 Covers the case the electrical review missed: **e-stop pressed mid-gait** → bucks disable
 (output high-Z, can no longer sink regen to battery) → coasting legs generate into a rail whose
