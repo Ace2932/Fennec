@@ -62,6 +62,19 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 - 1× electrolytic cap: 470 µF, 25V
 - Bundle into the next DigiKey / Mouser order to save shipping
 
+### ⚠️ TVS regen clamps for servo rails — ~$5 (gap found 2026-06-12, NOT in original order)
+Covers the case the electrical review missed: **e-stop pressed mid-gait** → bucks disable
+(output high-Z, can no longer sink regen to battery) → coasting legs generate into a rail whose
+only sink is the bulk caps (1 J into 5000 µF from 7.5 V ≈ 21 V rail — over servo limits).
+- **SMBJ8.5A ×5** (8.5 V standoff / ~14 V clamp) — DigiKey search `SMBJ8.5A` (Littelfuse/Vishay, ~$0.45)
+- **SMBJ13A ×5** (13 V standoff / ~21.5 V clamp) — DigiKey search `SMBJ13A`
+- Install OFF-BOARD: solder across the injection-point XT30 pigtails, **cathode (band) to +**.
+  2× SMBJ8.5A on V7V5_LEG injections, 1× SMBJ13A on V12_HIP, optional 1× SMBJ13A on V12_L2.
+  V12_JET needs none (Jetson input tolerates 9–20 V; buck output cap rides through).
+- Normal-operation regen is already safe — Pololu bucks are synchronous and sink current back
+  to the battery while enabled. The clamp only works during disable/e-stop windows.
+- Bundle with the next DigiKey order (this section + LC filter above).
+
 ---
 
 ## 3. Safety + bus-master parts (PCB v6 critical-path)
