@@ -81,7 +81,8 @@ unfused: a chafed wire or dropped tool across VBAT is the one fire-class failure
 If the UBEC/V5_AUX dies mid-run, BOTH LM393 LVC stages go silently dead (R16 defaults rails
 ON) and the Teensy dies with it — frozen robot drains the pack with no electronic protection.
 Independent last line: balance-plug buzzer alarm set to **3.3 V/cell**, plugged in whenever
-SW1 is on. Any "1S-8S low voltage buzzer alarm" 2-pack on Amazon (~$7).
+SW1 is on. ✅ OWNED (verified 2026-06-12): FLY RC 5-pack purchased 2026-05-16, pre-set 3.3 V.
+Operational rule: buzzer rides the balance plug any time the robot is switched on.
 - ✅ UBEC module VERIFIED OWNED (2026-06-12): SoloGood 5V/5A UBEC ×2, purchased 2026-05-03
   (input 5.5–35 V covers 4S; 5 A ≈ 10× the V5_AUX load; second unit = shelf spare).
   Buzzer still required — the spare doesn't help mid-run.
