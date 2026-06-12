@@ -2490,6 +2490,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "6b36937f-2cc7-46d6-b71e-1a082ad207b6")
 		)
@@ -2580,6 +2588,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "8b57176e-b279-4526-89ce-12998a05ebf0")
 		)
@@ -2663,6 +2679,14 @@
 			)
 		)
 		(property "DigiKey" "BSS138CT-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "03 SMD SOT-23" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2820,6 +2844,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "06 INA header (4-pin)" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "d1dbdc68-2e50-4f48-8fc7-e22b0cfa2992")
 		)
@@ -2934,6 +2966,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "5cee177c-9ac7-494f-ac6c-1bdad4de05d5")
 		)
@@ -3017,6 +3057,14 @@
 			)
 		)
 		(property "DigiKey" "311-10.0KHRCT-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3172,6 +3220,14 @@
 			)
 		)
 		(property "DigiKey" "296-1015-1-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "04 SMD SOIC-8" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3352,6 +3408,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "c505d78f-6c8d-487e-8c20-2901ab9b8d1c")
 		)
@@ -3435,6 +3499,14 @@
 			)
 		)
 		(property "DigiKey" "296-1015-1-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "04 SMD SOIC-8" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3535,6 +3607,14 @@
 			)
 		)
 		(property "MPN" "INA226-20A-R002-MODULE" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "06 INA header (4-pin)" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3649,6 +3729,14 @@
 			)
 		)
 		(property "DigiKey" "311-4.70KHRCT-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3941,6 +4029,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "dd9302d7-62b1-49df-95ca-692a42bb0433")
 		)
@@ -4031,6 +4127,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "2b2a2d1b-1dd7-4e80-84c4-c8af7d760f0a")
 		)
@@ -4114,6 +4218,14 @@
 			)
 		)
 		(property "DigiKey" "311-10.0KHRCT-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4276,6 +4388,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "04 SMD SOIC-8" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "5"
 			(uuid "7b0407a9-c92f-4867-a35c-9bf89f3c449d")
 		)
@@ -4384,6 +4504,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "97cae83e-6637-4b89-b76a-19df958762da")
 		)
@@ -4459,6 +4587,14 @@
 			)
 		)
 		(property "MPN" "INA226-20A-R002-MODULE" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "06 INA header (4-pin)" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4702,6 +4838,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "10 THT screw block" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "d5204cbc-75f4-453c-8bc6-a554ba898e74")
 		)
@@ -4785,6 +4929,14 @@
 			)
 		)
 		(property "DigiKey" "311-10.0KHRCT-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4942,6 +5094,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "ec6f2f49-8405-448e-97bc-259e77f07cf1")
 		)
@@ -5065,6 +5225,14 @@
 			)
 		)
 		(property "DigiKey" "311-1.00MHRCT-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5205,6 +5373,14 @@
 			)
 		)
 		(property "DigiKey" "311-1344-1-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "02 SMD 0603 C" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5404,6 +5580,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "03 SMD SOT-23" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "1484ec8d-a233-4785-8b9c-f7df99ad075d")
 		)
@@ -5523,6 +5707,14 @@
 			)
 		)
 		(property "DigiKey" "BSS138CT-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "03 SMD SOT-23" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5748,6 +5940,14 @@
 			)
 		)
 		(property "DigiKey" "311-100KHRCT-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)

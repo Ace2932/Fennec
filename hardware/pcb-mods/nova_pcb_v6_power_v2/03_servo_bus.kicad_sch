@@ -1118,6 +1118,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "11 THT XT30" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "ce5783b1-7f20-4da7-bab0-488b48a5d8c4")
 		)
@@ -1193,6 +1201,14 @@
 			)
 		)
 		(property "MPN" "FymuSing-1000uF-25V" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "15 THT 1000uF tallest last" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1355,6 +1371,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "08 THT JST" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "6c946e87-bfb1-456e-9dff-241f48ea22fc")
 		)
@@ -1440,6 +1464,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "15 THT 1000uF tallest last" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "3b814e90-75ab-4a2e-84b9-bccbd161512a")
 		)
@@ -1515,6 +1547,14 @@
 			)
 		)
 		(property "MPN" "XT30U-M" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "11 THT XT30" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1727,6 +1767,14 @@
 			)
 		)
 		(property "MPN" "XT30U-M" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "11 THT XT30" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2011,6 +2059,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "15 THT 1000uF tallest last" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "f00a70ad-7b96-4933-93b1-c4aca52210df")
 		)
@@ -2158,6 +2214,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "11 THT XT30" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "f8c3734e-0166-4573-9657-ae0de330fea0")
 		)
@@ -2233,6 +2297,14 @@
 			)
 		)
 		(property "MPN" "FymuSing-1000uF-25V" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "15 THT 1000uF tallest last" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2380,6 +2452,14 @@
 			)
 		)
 		(property "MPN" "FymuSing-1000uF-25V" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "15 THT 1000uF tallest last" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2657,6 +2737,14 @@
 			)
 		)
 		(property "MPN" "XT30U-M" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "11 THT XT30" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)

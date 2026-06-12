@@ -1237,6 +1237,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "07 THT pin header" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "9f4d5d59-88dd-4207-851f-593791d5dd7a")
 		)
@@ -1312,6 +1320,14 @@
 			)
 		)
 		(property "MPN" "KF301-5.0-2P" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "10 THT screw block" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1467,6 +1483,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "12 THT XT60 (snap cover off first)" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "f1f17e88-be5c-4c4d-9c6f-fc3b5d467dc9")
 		)
@@ -1543,6 +1567,14 @@
 			)
 		)
 		(property "MPN" "IRLB3034PBF" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "13 THT TO-220 (test per Step 10a FIRST)" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)

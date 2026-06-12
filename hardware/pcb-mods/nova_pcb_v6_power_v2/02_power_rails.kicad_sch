@@ -1814,6 +1814,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "11 THT XT30 (buck landing)" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "b1523f5d-adaa-4168-bf3e-7555a9aa3b52")
 		)
@@ -1903,6 +1911,14 @@
 			)
 		)
 		(property "DigiKey" "S1011EC-40-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "07 THT pin header" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2125,6 +2141,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "11 THT XT30 (buck landing)" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "9e84cc73-b85f-4458-87eb-793adafe1576")
 		)
@@ -2206,6 +2230,14 @@
 			)
 		)
 		(property "MPN" "D42V55F7" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "11 THT XT30 (buck landing, DNP option)" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2359,6 +2391,14 @@
 			)
 		)
 		(property "MPN" "D42V110F12" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "11 THT XT30 (buck landing)" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2577,6 +2617,14 @@
 			)
 		)
 		(property "MPN" "D24V22F12" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "11 THT XT30 (buck landing)" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2989,6 +3037,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "11 THT XT30" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "8fc44645-533d-42bf-bb5b-8210a4cdb75a")
 		)
@@ -3153,6 +3209,14 @@
 			)
 		)
 		(property "MPN" "XT30U-M" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "11 THT XT30" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3339,6 +3403,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "05 SMD inductor (big pads, max iron heat)" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "0817574e-3667-4da3-a29c-bf7b4b7dd2eb")
 		)
@@ -3474,6 +3546,14 @@
 			)
 		)
 		(property "DigiKey" "493-1826-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "14 THT 470uF" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3667,6 +3747,14 @@
 				(hide yes)
 			)
 		)
+		(property "AssemblyOrder" "14 THT 470uF" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "07aa5f10-392d-439b-ac7b-8cbeb56f18fa")
 		)
@@ -3844,6 +3932,14 @@
 			)
 		)
 		(property "DigiKey" "493-1826-ND" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "14 THT 470uF" (at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
