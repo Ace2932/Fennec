@@ -79,8 +79,8 @@ uint8_t boot_self_test_flags = 0;
 // UART2 → 74HC125 → Feetech bus
 constexpr uint8_t BUS_RX_PIN     = 7;   // Serial2 RX
 constexpr uint8_t BUS_TX_PIN     = 8;   // Serial2 TX
-constexpr uint8_t BUS_OE_TX_PIN  = 6;   // 74HC125 OE for TX gate (HIGH = enable TX)
-constexpr uint8_t BUS_OE_RX_PIN  = 5;   // 74HC125 OE for RX gate (LOW = enable RX)
+constexpr uint8_t BUS_OE_TX_PIN  = 6;   // 74HC125 OE̅ for TX gate (ACTIVE-LOW: LOW = enable TX)
+constexpr uint8_t BUS_OE_RX_PIN  = 5;   // 74HC125 OE̅ for RX gate (ACTIVE-LOW: LOW = enable RX)
 // I2C0 (Wire) — INA226 ×3
 constexpr uint8_t I2C_SDA_PIN    = 18;
 constexpr uint8_t I2C_SCL_PIN    = 19;
@@ -851,6 +851,19 @@ void loop() {
 #ifdef NOVA_USE_MICRO_ROS
     heartbeat_msg.data++;
     RCSOFTCHECK(rcl_publish(&heartbeat_pub, &heartbeat_msg, NULL));
+    // 1 Hz state refresh — /estop, /battery_low, /safety_state and
+    // /command_stale are otherwise edge-only, which blinds any subscriber
+    // that (re)starts after the edge: a respawned battery_shutdown node
+    // would never learn the pack is already latched low, and preflight's
+    // checks would report STALE on a quiet bus. Re-publishing current
+    // values at 1 Hz costs 4 tiny msgs/s and makes every consumer
+    // late-join-safe. (Found in the 2026-06-12 adversarial review.)
+    RCSOFTCHECK(rcl_publish(&estop_pub, &estop_msg, NULL));
+    RCSOFTCHECK(rcl_publish(&battery_low_pub, &battery_low_msg, NULL));
+    safety_state_msg.data = (int32_t)safety_fsm.state();
+    RCSOFTCHECK(rcl_publish(&safety_state_pub, &safety_state_msg, NULL));
+    command_stale_msg.data = cmd_stale;
+    RCSOFTCHECK(rcl_publish(&command_stale_pub, &command_stale_msg, NULL));
     joint_cmd_rx_msg.data = (int32_t)joint_cmd_rx_count;
     RCSOFTCHECK(rcl_publish(&joint_cmd_rx_pub, &joint_cmd_rx_msg, NULL));
     servo_present_msg.data = (int32_t)servo_present_mask;

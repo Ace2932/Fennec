@@ -25,9 +25,14 @@ namespace feetech {
 
 class Bus {
  public:
-  // OE pin convention matches src/main.cpp's bus_set_tx/rx helpers:
-  //   tx mode → tx_oe HIGH, rx_oe HIGH (mute RX gate while we drive)
-  //   rx mode → tx_oe LOW,  rx_oe LOW  (release bus, enable RX gate)
+  // OE pin convention — 74HC125 output-enables are ACTIVE-LOW (OE̅).
+  // Verified against nova_pcb_v6_logic 04_bus_master netlist 2026-06-12:
+  // U7 gate1 (OE̅=pin1=OE_TX) drives TEENSY_TX→bus, gate2 (OE̅=pin4=OE_RX)
+  // drives bus→TEENSY_RX, no inverters in either path. Therefore:
+  //   tx mode → tx_oe LOW  (driver ON),  rx_oe HIGH (receiver muted)
+  //   rx mode → tx_oe HIGH (driver OFF), rx_oe LOW  (receiver on)
+  // The original firmware had this inverted — TX never drove the bus and
+  // the idle-high UART fought every servo response through the TX gate.
   Bus(uint8_t tx_oe_pin, uint8_t rx_oe_pin, uint32_t baud)
       : tx_oe_pin_(tx_oe_pin), rx_oe_pin_(rx_oe_pin), baud_(baud) {}
 
@@ -201,6 +206,9 @@ class Bus {
   Result sync_write_goal_positions(const uint8_t* ids, const uint16_t* goals, uint8_t n) {
     if (n == 0) return OK;
     if (n > 12) return ERR_BAD_FRAME;   // bounded for v1 (12 servos)
+    // Frame-size guard — keep independent of the v1 bound above so a future
+    // n bump can't silently reintroduce the 2026-06-12 stack overflow.
+    if ((uint16_t)(8 + 3 * n) > MAX_FRAME_LEN) return ERR_BAD_FRAME;
     uint8_t payload[12 * 2];
     for (uint8_t i = 0; i < n; i++) {
       unpack_u16_le(goals[i], &payload[i * 2], &payload[i * 2 + 1]);
@@ -214,12 +222,12 @@ class Bus {
   // Direct OE control — kept inline for the main-loop scope hook
   // (service_bus_stub() toggles these during bring-up).
   inline void set_tx() {
-    digitalWrite(tx_oe_pin_, HIGH);
-    digitalWrite(rx_oe_pin_, HIGH);
+    digitalWrite(tx_oe_pin_, LOW);    // OE̅ low = TX driver enabled
+    digitalWrite(rx_oe_pin_, HIGH);   // OE̅ high = RX gate muted
   }
   inline void set_rx() {
-    digitalWrite(tx_oe_pin_, LOW);
-    digitalWrite(rx_oe_pin_, LOW);
+    digitalWrite(tx_oe_pin_, HIGH);   // OE̅ high = TX driver released
+    digitalWrite(rx_oe_pin_, LOW);    // OE̅ low = RX gate enabled
   }
 
  private:

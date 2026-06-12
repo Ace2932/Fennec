@@ -65,7 +65,12 @@ def _compose(context, *args, **kwargs):
             ))
         elif kind == 'node':
             _, pkg, exe, params = action
-            label = f'node {pkg}/{exe} params={params}'
+            # '_respawn' is composer metadata, not a ROS parameter —
+            # strip it before passing params through.
+            params = dict(params)
+            respawn = params.pop('_respawn', False)
+            label = f'node {pkg}/{exe} params={params}' + (
+                ' [respawn]' if respawn else '')
             out.append(LogInfo(msg=f'  [{kind}] {label}'))
             if dry_run:
                 continue
@@ -78,6 +83,7 @@ def _compose(context, *args, **kwargs):
             out.append(Node(
                 package=pkg, executable=exe, output='screen',
                 parameters=[params] if params else None,
+                respawn=respawn, respawn_delay=2.0,
             ))
         else:
             out.append(LogInfo(msg=f'  [unknown] {action}'))

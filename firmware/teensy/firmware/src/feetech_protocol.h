@@ -13,7 +13,11 @@ namespace feetech {
 // ---------------- Wire frame constants ----------------
 constexpr uint8_t HEADER_BYTE        = 0xFF;
 constexpr uint8_t BROADCAST_ID       = 0xFE;
-constexpr uint8_t MAX_PARAM_BYTES    = 32;
+// Sized for the worst frame on this bus: SYNC_WRITE goal positions to all
+// 12 servos = 7 header/inst bytes + 12×(id + 2 data) + checksum = 44 bytes
+// → params region needs ≥ 38. 40 leaves margin. (Was 32 → MAX_FRAME_LEN 38,
+// which sync_write_goal_positions overflowed by 6 bytes on a full fleet.)
+constexpr uint8_t MAX_PARAM_BYTES    = 40;
 constexpr uint8_t FRAME_OVERHEAD     = 6;   // 2 header + id + len + inst + checksum
 constexpr uint8_t MAX_FRAME_LEN      = FRAME_OVERHEAD + MAX_PARAM_BYTES;
 constexpr uint8_t MAX_RESPONSE_LEN   = MAX_FRAME_LEN;

@@ -76,6 +76,24 @@ If (1) misses → debug Teensy firmware (DMA vs ISR, UART config, ISR priority).
 3. **`/battery_low` → poweroff — IMPLEMENTED in nova_ops** (`battery_shutdown_node`,
    §10 in `ros2_ws/src/nova_ops/README.md`; sudoers prereq in `docs/setup-jetson.md` §15).
 
+Adversarial review, same day — three more, all fixed:
+
+4. **74HC125 OE polarity inverted** (`feetech_bus.h set_tx/set_rx`). The '125's
+   output-enables are ACTIVE-LOW; firmware drove both HIGH for TX / both LOW for RX.
+   Net effect on real hardware: TX buffer tri-stated during transmit (bus never driven)
+   AND the idle-high UART driving the bus through the TX gate during receive (contention
+   with every servo response). Verified against the logic-board netlist (U7 gate1
+   OE̅=OE_TX, gate2 OE̅=OE_RX, no inverters) and corrected. **Bench-verify with a scope
+   on first contact anyway** — this is the highest-consequence polarity on the board.
+5. **SYNC_WRITE stack buffer overflow.** 12-servo goal broadcast = 44-byte frame into a
+   `MAX_FRAME_LEN`(=38)-byte stack array — 6 bytes of stack smashed at 40 Hz. Invisible
+   with ≤10 servos on a bench, memory corruption with the full fleet. `MAX_PARAM_BYTES`
+   32→40 plus an explicit frame-size guard in `sync_write_goal_positions()`.
+6. **Edge-only safety topics blinded late joiners.** `/estop`, `/battery_low`,
+   `/safety_state`, `/command_stale` published only on change — a respawned
+   battery_shutdown node (or preflight on a quiet bus) could never learn an
+   already-latched state. All four now also re-publish at 1 Hz from the heartbeat.
+
 ## Open questions for firmware phase
 
 - DMA vs ISR for UART TX/RX (DMA preferred for jitter; ISR simpler)
