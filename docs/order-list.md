@@ -77,8 +77,9 @@ If the UBEC/V5_AUX dies mid-run, BOTH LM393 LVC stages go silently dead (R16 def
 ON) and the Teensy dies with it — frozen robot drains the pack with no electronic protection.
 Independent last line: balance-plug buzzer alarm set to **3.3 V/cell**, plugged in whenever
 SW1 is on. Any "1S-8S low voltage buzzer alarm" 2-pack on Amazon (~$7).
-- Also VERIFY: is the **UBEC module itself** owned? J2 header is ordered, but no UBEC
-  module appears anywhere in this list. If not on the shelf, add one (5 V ≥3 A UBEC).
+- ✅ UBEC module VERIFIED OWNED (2026-06-12): SoloGood 5V/5A UBEC ×2, purchased 2026-05-03
+  (input 5.5–35 V covers 4S; 5 A ≈ 10× the V5_AUX load; second unit = shelf spare).
+  Buzzer still required — the spare doesn't help mid-run.
 
 ### ⚠️ TVS regen clamps for servo rails — ~$5 (gap found 2026-06-12, NOT in original order)
 Covers the case the electrical review missed: **e-stop pressed mid-gait** → bucks disable
