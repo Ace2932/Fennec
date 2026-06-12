@@ -153,7 +153,7 @@ only sink is the bulk caps (1 J into 5000 µF from 7.5 V ≈ 21 V rail — over 
 | J8 | JST **B3B-XH-A** 1×03 2.5 mm (servo bus TTL) | 1 | DigiKey **455-2247-ND** — [link](https://www.digikey.com/en/products/detail/jst-sales-america-inc/B3B-XH-A/1651046) |
 | J2 + M1 | PinHeader 1×03 + 1×02 2.54 (UBEC aux + voltmeter) | 1 strip | Sullins **`PRPC040SAAN-RC`** 40-pin breakaway, snap to length (covers both) |
 | J20 | IDC box header **2×06 2.54 shrouded vertical THT** (interboard) | 1 | Würth WR-BHD series — [filter](https://www.digikey.com/en/product-highlight/w/wurth-electronics/wr-bhd-series-box-headers-and-idc-connectors), pick 12-pos 2.54 |
-| SW1, SW2 | TB132 footprint = **5mm pitch, 1.2mm drill = standard KF301**. 1×02 PCB screw block | 2 | ✅ **ALREADY HAVE** — Tugermoola 72pc 5mm 2/3/4-pin kit (bought 2026-05-03) has KF301-style 2-pin blocks that drop in. Use 2. ⚠️ Kit rated **10A**; SW2 (mA) fine, **SW1 carries ~15A** → undersized, runs warm. Optional: swap SW1 for a 15–20A 5mm block (same footprint) for margin. |
+| SW1, SW2 | TB132 footprint = **5mm pitch, 1.2mm drill = standard KF301**. 1×02 PCB screw block | 2 | ✅ **ALREADY HAVE** — Tugermoola 72pc 5mm 2/3/4-pin kit (bought 2026-05-03) has KF301-style 2-pin blocks that drop in. Use 2. ⚠️ Kit rated **10A**; SW2 (mA) fine, **SW1 carries ~15A** → undersized, runs warm. 🔴 NOT OPTIONAL (2026-06-12 review): buy a **15–20 A rated 5 mm-pitch 2-pin block** for SW1 (same KF301/TB132 footprint — search "KF301 16A" or Phoenix MKDS 1.5/2). $3, bundle with next order. |
 
 ### SW1 main power switch (off-board, wires to SW1's TB132)
 - ✅ **CHOSEN (2026-06-08): Blue Sea Systems Contura SPST, "Off-on" style** ($17.40, Prime). Carling VJB1 body.
