@@ -67,10 +67,15 @@ Spec'd in PCB README §1 since the beginning, F1 deliberately moved OFF-BOARD 20
 (LiPo dead-short = 10–20 kA; only Class T's 20 kA AIC interrupts it — see research notes
 2026-05-17 §9) — **but it never entered this order list.** Right now the battery lead is
 unfused: a chafed wire or dropped tool across VBAT is the one fire-class failure on the robot.
-- **Fuse: Eaton Bussmann JJN-30 (30 A Class T)** — DigiKey search `JJN-30`
-- **Holder: Blue Sea Systems 5502 Class T fuse block (30–80 A)** — Amazon/West Marine
-- Install: bolt-down block inline in the battery→J1 lead, as close to the pack as practical.
-- DO NOT substitute ANL/MIDI/blade (~6 kA AIC — can fail-to-interrupt on a LiPo short).
+- ✅ **CHOSEN 2026-06-12: MRBF instead of Class T** — Blue Sea **5191 Surface Mount** block
+  ($24) + **Bussmann MRBF-30** fuse (~$10). Engineering note: the 2026-05-17 Class T rationale
+  assumed 10–20 kA short current (large-bank figure); this single 4S 4 Ah pack's real Isc =
+  16.8 V ÷ ~6–12 mΩ ≈ **1.5–3 kA**, vs MRBF's 10 kA AIC (≈9 kA at 16.8 V) → 3–4× margin, at
+  ⅓ the size/weight of a Class T block — better fit for the chassis. Class T (5007 + JJN-30)
+  remains the upgrade path if the pack ever grows or parallels.
+- Install: 5191 screwed to chassis near the pack; battery XT60 pigtail → 10 AWG ring → stud →
+  MRBF-30 → output ring → J1 lead.
+- Still banned: ANL/MIDI/blade (1–6 kA AIC — can fail-to-interrupt even on this pack).
 
 ### 🟡 LiPo balance-lead buzzer alarm — ~$5 (gap found 2026-06-12)
 If the UBEC/V5_AUX dies mid-run, BOTH LM393 LVC stages go silently dead (R16 defaults rails
