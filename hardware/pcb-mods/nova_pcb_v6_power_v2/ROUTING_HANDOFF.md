@@ -226,3 +226,49 @@ silk_over_copper, 1 track_dangling (leftover fragment — delete or ignore).
 all current-capacity work is already in widths/doubling, verified IPC-2152).
 
 After seams: final DRC → Gerbers (`kicad-cli pcb export gerbers` + drill) → PCBWay.
+
+
+## Step 10 — Amazon-part authenticity bench checks (DO BEFORE FIRST POWER)
+
+DigiKey parts (16 lines, see `Complete_Digikey_Order_NOVA.csv`) are authorized-channel —
+no checks needed. Amazon parts have **no traceability**; specs below are seller claims until
+measured. Ranked by consequence of a fake:
+
+### 10a. Q1 — IRLB3034 (Amazon 5-pack) — HIGHEST PRIORITY
+Pass element of the battery hard cutoff; carries full ~15 A. Fake (relabeled smaller die) =
+10× Rds(on) → ~4.5 W instead of 0.45 W at 15 A → thermal runaway on the protection part itself.
+Test ALL 5, keep the best 2 (one spare):
+1. **Gate threshold:** DMM diode mode or bench supply — Vgs ramp, drain conducts ~1.4–2.5 V.
+2. **Rds(on) at Vgs = 4.5 V:** force known current (e.g. 1 A from bench supply through drain),
+   measure Vds with DMM. Expect ≤ 2 mΩ → 2 mV @ 1 A (datasheet max 1.7 mΩ @ 10 V, ~2 mΩ @ 4.5 V).
+   Fake readout: tens of mV. Use 4-wire/Kelvin probing — lead resistance swamps 2 mΩ otherwise.
+3. **Consistency:** all 5 within ~30% of each other. Wide spread = mixed/fake batch.
+
+### 10b. C1–C5 — FymuSing 1000 µF/25 V (Amazon, no datasheet exists)
+Bulk transient absorbers at star injection points; ±20% tolerable, but verify they're not
+hollow-spec: LCR/component tester (TC1/T7 ~$15 or DE-5000):
+- Capacitance ≥ 800 µF (-20% floor)
+- ESR < 100 mΩ (generic 1000µF/25V typically 20–60 mΩ)
+- Test all 5 + spares; reject any outlier. Mark measured values on the can with sharpie.
+
+### 10c. INA226 modules ×4 (GODIY) — shunt verified, chip unverified
+R002 shunt already confirmed (photo + physical). TI silicon could be clone. Cal test per module
+(after Step 8 wiring, before trusting telemetry):
+1. I2C scan → addr responds (0x40/0x41/0x44 per jumper card above).
+2. Manufacturer ID reg 0xFE = 0x5449 ("TI"), Die ID reg 0xFF = 0x2260. Clone often fails this.
+3. Known load (e.g. 1 A from bench supply), CAL = 2560 (0x0A00) @ 1 mA LSB → current reg within
+   5%. Off by 50× = R100 shunt snuck in; off by random = clone ADC.
+
+### 10d. XT30/XT60 (SoloGood "AMASS") — clone check
+- Genuine: **AMASS molded logo** on housing, tight mate (no wiggle), gold contacts uniform.
+- Under first servo load test: IR-gun or finger-check each connector — warm = loose contact,
+  re-crimp or swap. Order-list warning stands: clones run hot under servo transients.
+
+### 10e. Low risk, quick checks
+- **Blue Sea Contura SW1:** continuity both positions; no warmth at 15 A (UL-listed, rarely faked).
+- **Mxuteuk e-stop SW2:** beep test NC contact: closed at rest, OPEN pressed + stays open until
+  twist-release. Wire break must read as pressed (fail-safe direction — matches Q3 inverter design).
+- **Pololu bucks:** bought direct from Pololu — genuine. Standard bring-up sweep only (Step 8 card).
+
+Order of operations: 10a–10b on the bench BEFORE soldering anything; 10c after Step 8 wiring;
+10d–10e during first power-up. Then proceed to the Step 8 bench validation sweeps.
