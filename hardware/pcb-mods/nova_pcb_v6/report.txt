@@ -1,0 +1,135 @@
+Info: Processing symbol 'U2:nova_v6:Pololu_D42V110Fx'.
+Info: Processing symbol 'C2:Capacitor_THT:CP_Radial_D12.5mm_P5.00mm'.
+Info: Processing symbol 'C3:Capacitor_THT:CP_Radial_D12.5mm_P5.00mm'.
+Info: Processing symbol 'C4:Capacitor_THT:CP_Radial_D12.5mm_P5.00mm'.
+Info: Processing symbol 'C5:Capacitor_THT:CP_Radial_D12.5mm_P5.00mm'.
+Info: Processing symbol 'C6:Capacitor_THT:CP_Radial_D10.0mm_P5.00mm'.
+Info: Processing symbol 'FB1:Inductor_SMD:L_0603_1608Metric'.
+Info: Processing symbol 'H1:MountingHole:MountingHole_3.2mm_M3'.
+Info: Processing symbol 'H2:MountingHole:MountingHole_3.2mm_M3'.
+Info: Processing symbol 'H3:MountingHole:MountingHole_3.2mm_M3'.
+Info: Processing symbol 'H4:MountingHole:MountingHole_3.2mm_M3'.
+Info: Processing symbol 'J1:Connector_AMASS:AMASS_XT60-M_1x02_P7.20mm_Vertical'.
+Info: Processing symbol 'J2:Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical'.
+Info: Processing symbol 'J3:Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical'.
+Info: Processing symbol 'J4:Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical'.
+Info: Processing symbol 'J5:Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical'.
+Info: Processing symbol 'J6:Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical'.
+Info: Processing symbol 'J7:Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical'.
+Info: Processing symbol 'J8:Connector_JST:JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical'.
+Info: Processing symbol 'J9:Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical'.
+Info: Processing symbol 'J10:Connector_PinHeader_2.54mm:PinHeader_1x07_P2.54mm_Vertical'.
+Info: Processing symbol 'J11:Connector_JST:JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical'.
+Info: Processing symbol 'J12:Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical'.
+Info: Processing symbol 'J13:Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical'.
+Info: Processing symbol 'JP1:Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical'.
+Info: Processing symbol 'L1:Inductor_SMD:L_12x12mm_H8mm'.
+Info: Processing symbol 'M1:Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical'.
+Info: Processing symbol 'Q1:Package_TO_SOT_THT:TO-220-3_Vertical'.
+Info: Processing symbol 'Q2:Package_TO_SOT_SMD:SOT-23'.
+Info: Processing symbol 'R1:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'R2:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'R3:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'R4:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'R5:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'R6:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'R7:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'R8:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'R9:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'R10:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'R11:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'R12:Resistor_SMD:R_0603_1608Metric'.
+Info: Processing symbol 'SW1:TerminalBlock_Philmore:TerminalBlock_Philmore_TB132_1x02_P5.00mm_Horizontal'.
+Info: Processing symbol 'SW2:TerminalBlock_Philmore:TerminalBlock_Philmore_TB132_1x02_P5.00mm_Horizontal'.
+Info: Processing symbol 'U1:nova_v6:Pololu_D42V110Fx'.
+Info: Processing symbol 'U12:Module:Arduino_Nano'.
+Info: Processing symbol 'U11:nova_v6:INA226_Module_Breakout'.
+Info: Processing symbol 'U10:nova_v6:INA226_Module_Breakout'.
+Info: Processing symbol 'U9:nova_v6:INA226_Module_Breakout'.
+Info: Processing symbol 'U8:Package_SO:SOIC-8_3.9x4.9mm_P1.27mm'.
+Info: Processing symbol 'U7:Package_SO:SOIC-14_3.9x8.7mm_P1.27mm'.
+Info: Processing symbol 'U6:nova_v6:Teensy_4.1'.
+Info: Processing symbol 'U5:nova_v6:Pololu_D42V55Fx'.
+Info: Processing symbol 'U4:nova_v6:Pololu_D42V55Fx'.
+Info: Processing symbol 'U3:nova_v6:Pololu_D24V22Fx'.
+Info: Processing symbol 'C1:Capacitor_THT:CP_Radial_D12.5mm_P5.00mm'.
+Info: Total warnings: 74, errors: 0.
+
+
+Warning: No net found for component U1 pad NC3 (no pin NC3 in symbol).
+Warning: No net found for component U2 pad NC9 (no pin NC9 in symbol).
+Warning: No net found for component U2 pad NC6 (no pin NC6 in symbol).
+Warning: No net found for component U2 pad NC7 (no pin NC7 in symbol).
+Warning: No net found for component U2 pad NC12 (no pin NC12 in symbol).
+Warning: No net found for component U2 pad NC4 (no pin NC4 in symbol).
+Warning: No net found for component U2 pad NC8 (no pin NC8 in symbol).
+Warning: No net found for component U1 pad NC6 (no pin NC6 in symbol).
+Warning: No net found for component U1 pad NC10 (no pin NC10 in symbol).
+Warning: No net found for component U2 pad NC13 (no pin NC13 in symbol).
+Warning: No net found for component U2 pad NC1 (no pin NC1 in symbol).
+Warning: No net found for component U2 pad NC5 (no pin NC5 in symbol).
+Warning: No net found for component U2 pad NC2 (no pin NC2 in symbol).
+Warning: No net found for component U1 pad NC8 (no pin NC8 in symbol).
+Warning: No net found for component U3 pad PG (no pin PG in symbol).
+Warning: No net found for component U1 pad NC7 (no pin NC7 in symbol).
+Warning: No net found for component U4 pad PG (no pin PG in symbol).
+Warning: No net found for component U4 pad VRP (no pin VRP in symbol).
+Warning: No net found for component U4 pad VRP (no pin VRP in symbol).
+Warning: No net found for component U4 pad PG (no pin PG in symbol).
+Warning: No net found for component U1 pad NC13 (no pin NC13 in symbol).
+Warning: No net found for component U5 pad VRP (no pin VRP in symbol).
+Warning: No net found for component U5 pad PG (no pin PG in symbol).
+Warning: No net found for component U5 pad PG (no pin PG in symbol).
+Warning: No net found for component U5 pad VRP (no pin VRP in symbol).
+Warning: No net found for component U1 pad NC2 (no pin NC2 in symbol).
+Warning: No net found for component U6 pad T15 (no pin T15 in symbol).
+Warning: No net found for component U6 pad T29 (no pin T29 in symbol).
+Warning: No net found for component U6 pad T14 (no pin T14 in symbol).
+Warning: No net found for component U6 pad T13 (no pin T13 in symbol).
+Warning: No net found for component U6 pad T36 (no pin T36 in symbol).
+Warning: No net found for component U6 pad T17 (no pin T17 in symbol).
+Warning: No net found for component U6 pad T39 (no pin T39 in symbol).
+Warning: No net found for component U6 pad T33 (no pin T33 in symbol).
+Warning: No net found for component U6 pad T22 (no pin T22 in symbol).
+Warning: No net found for component U6 pad T9 (no pin T9 in symbol).
+Warning: No net found for component U6 pad T24 (no pin T24 in symbol).
+Warning: No net found for component U6 pad T5 (no pin T5 in symbol).
+Warning: No net found for component U6 pad T23 (no pin T23 in symbol).
+Warning: No net found for component U6 pad T16 (no pin T16 in symbol).
+Warning: No net found for component U6 pad T7 (no pin T7 in symbol).
+Warning: No net found for component U6 pad T37 (no pin T37 in symbol).
+Warning: No net found for component U6 pad T28 (no pin T28 in symbol).
+Warning: No net found for component U6 pad T30 (no pin T30 in symbol).
+Warning: No net found for component U6 pad T25 (no pin T25 in symbol).
+Warning: No net found for component U6 pad T21 (no pin T21 in symbol).
+Warning: No net found for component U6 pad T27 (no pin T27 in symbol).
+Warning: No net found for component U6 pad T26 (no pin T26 in symbol).
+Warning: No net found for component U6 pad TGND (no pin TGND in symbol).
+Warning: No net found for component U6 pad T10 (no pin T10 in symbol).
+Warning: No net found for component U6 pad T20 (no pin T20 in symbol).
+Warning: No net found for component U6 pad T34 (no pin T34 in symbol).
+Warning: No net found for component U6 pad T41 (no pin T41 in symbol).
+Warning: No net found for component U6 pad T12 (no pin T12 in symbol).
+Warning: No net found for component U6 pad TVIN (no pin TVIN in symbol).
+Warning: No net found for component U6 pad T3V3 (no pin T3V3 in symbol).
+Warning: No net found for component U6 pad TGND_2 (no pin TGND_2 in symbol).
+Warning: No net found for component U6 pad T6 (no pin T6 in symbol).
+Warning: No net found for component U6 pad T8 (no pin T8 in symbol).
+Warning: No net found for component U6 pad T35 (no pin T35 in symbol).
+Warning: No net found for component U6 pad T32 (no pin T32 in symbol).
+Warning: No net found for component U6 pad T11 (no pin T11 in symbol).
+Warning: No net found for component U6 pad T38 (no pin T38 in symbol).
+Warning: No net found for component U6 pad T31 (no pin T31 in symbol).
+Warning: No net found for component U6 pad T40 (no pin T40 in symbol).
+Warning: No net found for component U1 pad NC11 (no pin NC11 in symbol).
+Warning: No net found for component U1 pad NC12 (no pin NC12 in symbol).
+Warning: No net found for component U1 pad NC4 (no pin NC4 in symbol).
+Warning: No net found for component U1 pad NC1 (no pin NC1 in symbol).
+Warning: No net found for component U1 pad NC5 (no pin NC5 in symbol).
+Warning: No net found for component U1 pad NC9 (no pin NC9 in symbol).
+Warning: No net found for component U2 pad NC10 (no pin NC10 in symbol).
+Warning: No net found for component U2 pad NC3 (no pin NC3 in symbol).
+Warning: No net found for component U2 pad NC11 (no pin NC11 in symbol).
+
+
+Info: Total warnings: 74, errors: 0.

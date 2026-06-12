@@ -92,7 +92,7 @@ MATERIALS = {
                 "drier_h": 12, "use": "secondary brackets, mounts"},
     "PETG":    {"nozzle": 240, "bed":  70, "chamber": "open",
                 "drier_h":  4, "use": "accent / cable clips"},
-    "TPU 95A": {"nozzle": 230, "bed":  60, "chamber": "open",
+    "TPU 95A": {"nozzle": 230, "bed":  45, "chamber": "open",
                 "drier_h":  6, "use": "bumpers, gaskets, strain relief"},
     "PLA":     {"nozzle": 220, "bed":  60, "chamber": "open",
                 "drier_h":  0, "use": "fit-test coupons, mockups"},
@@ -105,7 +105,8 @@ MATERIALS = {
   at 60-70 °C **during** the print with Bowden feed routed straight to the
   P1S input. Do NOT load PA6-CF into the AMS — chamber is unheated, spool
   rewets in hours.
-- Bed adhesion: **Magigoo PA** on textured PEI. **Bambu liquid glue is NOT
+- Bed adhesion: **Magigoo PA** on the Bambu **Engineering Plate** (smooth,
+  high-temp — the plate on hand). **Bambu liquid glue is NOT
   rated for PA / PA-CF** — Bambu product page lists PLA/ABS/PETG/ASA/TPU/PET
   only. Bambu wiki PA6-CF guide explicitly calls for PA-specific glue stick.
 - Bed soak: 15 min at 100 °C before first layer.
@@ -123,6 +124,31 @@ MATERIALS = {
   upright so servo body load presses *along* layers, not pulling them
   apart.
 
+**Infill pattern + density by part class:**
+
+Walls + orientation dominate (above) — pattern is the *secondary* lever. Pick
+density first, then pattern. Defaults:
+
+| Part class | Material | Walls | Infill | Pattern | Why |
+|---|---|---|---|---|---|
+| Leg links (shoulder/coax/femur/tibia) | PA6-CF | 5-6 | 100%\* | gyroid if <100% | gait impact fatigues partial infill; isotropic load |
+| Structural brackets (hip mounts, sensor masts) | PA6-CF | 4-5 | 50-60% | **gyroid** | multi-axis + cyclic load → fatigue resistance |
+| Secondary brackets / mounts | PETG-CF | 3-4 | 25-30% | cubic | fast, light, low load |
+| Covers / cosmetic / panels | PETG / PLA | 2-3 | 15-20% | grid / cubic | speed; pattern irrelevant here |
+| Foot pads / bumpers | TPU 95A | 2-3 | 10-20% | gyroid (compliance) or concentric | tune squish, not stiffness |
+| Fit-test coupons | PLA | 2 | 10% | grid | throwaway |
+
+\* **100% is the default on load-bearing parts** (see PA6-CF note above —
+partial infill fatigues under gait transients). Only drop below 100% on a load
+part to cut **distal mass** (e.g. tibia, where weight hurts gait dynamics), and
+then use **gyroid at ≥50%**, never grid/lines.
+
+Why gyroid where it's called: isotropic (equal strength all axes) + continuous
+surface with no flat internal planes → best fatigue / crack resistance for
+cyclic gait loads, and self-supporting. Cost: slower (curved toolpaths), so it's
+wasted on cosmetic parts. Don't bother choosing a pattern for parts thinner than
+~3 wall-widths — they're all perimeter, infill never triggers.
+
 **TPU 95A specifics:**
 
 - AMS auto-cut is a moot point — AMS isn't in the feed path on this build.
@@ -133,6 +159,11 @@ MATERIALS = {
   bump retraction distance slightly vs internal-spool default.
 - No support, no overhangs > 45°.
 - Dry 4-6 h @ 50 °C in SpacePi X4.
+- **Plate = Bambu Engineering Plate (smooth) — the plate on hand.** Smooth PEI
+  bonds TPU *too* hard: keep bed **35-45 °C** (NOT 60), smear a thin glue-stick
+  film as a **release barrier** (not for grip), and peel only when the bed is
+  **fully cool** or the flex rips the PEI coating off. Textured PEI is the
+  proper TPU plate if acquired later — then skip glue, bed 35-45 °C.
 
 **Print queue strategy:**
 
@@ -215,8 +246,14 @@ STS3215 = {
     "horn_screw_bcd": 13.86,  # 4× holes at ±45° from cardinal, ~14 mm BCD
     "back_shaft_d":  6.0,     # bottom shaft OD
     "back_shaft_face_z": -15.60,  # bottom horn disc Z position
-    # mount_x_pitch / mount_y_pitch DELIBERATELY OMITTED — needs back-plate inspection
-    # see dimensions.md §1 CRITICAL CORRECTION #6
+    # Body mount screws — STEP-extracted 2026-06-07 (18× r=1.25 = ∅2.5 circles).
+    # 4× M2.5 on a 9.9 × 9.9 mm SQUARE, centered on the SPLINE axis (x=12.5),
+    # NOT body center: holes at (x,y) = {7.55, 17.45} × {±4.95}. Present on BOTH
+    # shaft-normal faces; mount through the BOTTOM (back-shaft) face — the top
+    # holes sit under the ∅20 horn disc. Closes dimensions.md §1 notes 6 + 9.
+    "mount_screw_d":  2.9,    # M2.5 clearance
+    "mount_pitch":    9.90,   # square pattern, both axes
+    "mount_center_x": 12.50,  # = horn_offset (spline axis), NOT body center
 }
 
 def nova_sts3215_dual_mount(workplane, clearance_mat="PA6-CF"):
@@ -230,12 +267,13 @@ def nova_sts3215_dual_mount(workplane, clearance_mat="PA6-CF"):
                 STS3215["body_w"] + clr["locational"])
           .cutBlind(-(STS3215["body_h"] + clr["slip"])))
 
-    # Front mounting screw pattern (4× M2 self-tapper)
+    # Body mount screw pattern — 4× M2.5 clearance on the 9.9 mm square,
+    # centered on the spline axis (mount_center_x), NOT the body center.
+    cx = STS3215["mount_center_x"]
+    p  = STS3215["mount_pitch"] / 2
     wp = (wp.faces(">Z").workplane()
-          .pushPoints([( STS3215["mount_x_pitch"]/2,  STS3215["mount_y_pitch"]/2),
-                       ( STS3215["mount_x_pitch"]/2, -STS3215["mount_y_pitch"]/2),
-                       (-STS3215["mount_x_pitch"]/2,  STS3215["mount_y_pitch"]/2),
-                       (-STS3215["mount_x_pitch"]/2, -STS3215["mount_y_pitch"]/2)])
+          .pushPoints([(cx + p,  p), (cx + p, -p),
+                       (cx - p,  p), (cx - p, -p)])
           .hole(STS3215["mount_screw_d"]))
 
     # Back-shaft U-bracket: bearing pocket (688ZZ) on opposite link

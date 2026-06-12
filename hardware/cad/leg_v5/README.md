@@ -10,15 +10,18 @@ pocket changes to fit the bigger Feetech servo.
 
 ## Status — all 4 shapes placed + confirmed fitting
 
+3 servos per leg (12 total). The **shoulder is passive** — the coax servo drives
+it. Each moving link houses its own servo:
+
 | Part | Servo | Cavity | Notes |
 |---|---|---|---|
-| **shoulder** | hip-roll body | none cut | original frame already open in the middle; servo slides in |
-| **coax** | thigh-pitch body | carved, confirmed | cavity in main rectangular body, NOT the circular horn-cap extrusion |
-| **femur** | knee body | carved, confirmed | prints as **shell + cover**, both carry the SAME cavity |
-| **tibia** | — | none | PASSIVE shank; knee servo (in femur) drives it via proximal horn-cap |
+| **shoulder** | — (passive) | none cut | PASSIVE bracket; the coax servo's horn drives it (hip-roll output) |
+| **coax** | hip-roll body | carved, confirmed | cavity in main rectangular body, NOT the circular horn-cap extrusion. Horn → shoulder. Coax = the hip/shoulder joint hub |
+| **femur** | hip-pitch body ("femur drive") | carved; **cavity shifted toward coax 2026-06-07** | prints as **shell + cover**, both carry the SAME cavity. Active horn (+Z, thick Ø20 disc) → coax horn-ring; body sits proud by design. L `Y=−24`, R `Y=+24` rot `−90` (R fixed to a TRUE mirror — old `+90` buried the servo). Protrusion intentional; cover wraps the back, mount screws from back-shaft side. **Y=±24 is a starting pick — verify reach against the assembly.** |
+| **tibia** | knee body | carved 2026-06-07 | STS recarves the stock hobby-servo box at the servo end (tight — first-article it) |
 
-Each STS3215 joint spans two parts — body in one, horn drives the next:
-shoulder↔coax (hip), coax↔femur (thigh), femur↔tibia (knee).
+Each STS3215 joint: body in one part, horn drives the next:
+coax↔shoulder (hip-roll), femur↔coax (hip-pitch), tibia↔femur (knee).
 
 Cavities don't need to be watertight — they just feed the TTL daisy-chain wires
 and let the servo move freely.
@@ -35,8 +38,8 @@ femur.scad           ← LeftFemur.stl  shell + cavity (uses femur_params)
 femur_R.scad         ← RightFemur.stl shell + cavity
 femur_cover.scad     ← LeftFemur cover  + SAME cavity (uses femur_params)
 femur_cover_R.scad   ← RightFemur cover + SAME cavity
-tibia.scad           ← LeftTibia.stl,  no cut (passive)
-tibia_R.scad         ← RightTibia.stl, no cut (passive)
+tibia.scad           ← LeftTibia.stl  + knee cavity (OVERLAY toggle; L seed, verify)
+tibia_R.scad         ← RightTibia.stl + knee cavity (placement confirmed)
 preview_with_servo.scad ← visualize STS3215 solid sitting in any part's cavity
 build_all.sh         ← runs openscad on each → 9 STLs
 ```
@@ -90,7 +93,12 @@ shell (yellow), nudge until it sits right, set `OVERLAY = false`, F6, rebuild.
 
 - **First-article every shape.** Coax X-bbox is tight (37.6 mm vs 45.4 mm servo
   spanning the diagonal) — confirm material at every cavity face on a test print
-  before batching 4 legs.
+  before batching 4 legs. **Tibia is also tight**: the STS3215 is bigger than the
+  stock hobby-servo box it recarves, so the cavity grazes/breaches the box walls
+  — first-article before batching.
+- **Tibia L placement is a seed, not confirmed.** R was overlay-fit (2026-06-07);
+  the L tibia STL is Y-curved/oriented differently, so eyeball `tibia.scad` in
+  OVERLAY and nudge `CAVITY_CENTER` before printing left legs.
 - **Shoulder horn cutout** may be sized for the old ~Ø14 hobby horn; STS3215 disc
   is Ø20. Uncomment the enlarge stub in `shoulder.scad` if the disc fouls.
 - **Left-variant visual check.** Right confirmed; L uses Y-flipped coords. Eyeball

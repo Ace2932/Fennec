@@ -29,11 +29,12 @@
 |------|-------|--------|
 | Teensy 4.1 (with pins) | $50 | ✅ Owned |
 | Arduino Nano (ELEGOO 3-pack, CH340) | $15 | ✅ Ordered |
-| ~~NovaSM3 PCB v5.2b~~ → **NovaSM3 PCB v6 (custom redesign)** | $60 (est.) | 🆕 Design + order from PCBWay — see [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md) for feature set |
+| ~~NovaSM3 PCB v5.2b~~ → **NovaSM3 PCB v6 — 2-board mezzanine** (power + logic, 4-layer each) | $60 (est.) | 🆕 Design + order from PCBWay — **two stacked PCBs**: power board (`nova_pcb_v6_power`: battery / rails / servo-bus / safety) + logic board (`nova_pcb_v6_logic`: Teensy / 74HC125 / Nano), joined by the inter-board connector below. Both 4-layer, ~112×90 max. See [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md). |
+| **Inter-board connector (mezzanine J20)** — 2× 2×6 shrouded box header (2.54 mm THT) + 12-way IDC ribbon | $4 | 🆕 Order — joins power↔logic across the ~20 mm stack gap. Box-header pair + ribbon, **NOT plain pin headers** (two males can't mate; a 0.1″ header can't span the gap). Carries 7 nets: V5_AUX, +3V3, BUS_SERVO, I2C_SDA/SCL, BATT_LOW, GND. |
 | FE-URT-1 USB→TTL Feetech interface | $20 | ✅ Ordered |
 | **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — **populated on PCB; v1 default active**. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
 | **E-stop button (Mxuteuk HB2-ES544, 22mm latching, 2× NC)** | $10 | ✅ Ordered |
-| **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.5V, hip 12V, Jetson 12V). Optional 4th on L2 12V rail if telemetry budget allows. I²C to Teensy. |
+| **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.5V, hip 12V, Jetson 12V). **All 3 as identical 2 mΩ breakout modules** (THT headers; module onboard shunt — no bare VSSOP-10 chip / external 2512 shunt). Must be a 2 mΩ board; 0.1 Ω "meter" modules saturate >0.8 A. Optional 4th on L2 12V rail if telemetry budget allows. I²C to Teensy. |
 | **Comparator + MOSFET parts for hard-cutoff at 12.4V + graceful-shutdown at 13.0V** | $13 | 🆕 Order — two comparator stages. 13.0V: drives Teensy GPIO → Jetson clean shutdown. 12.4V: autonomous battery-feed cutoff if Jetson didn't shut down. ~$3 extra for the second comparator + divider. |
 
 **Feetech bus architecture: Pattern B is v1 default.**
@@ -66,7 +67,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 | **Pololu D42V55F12 — 12V Jetson rail** | **$32** | 🆕 Order — replaces deprecated D24V50F12. Derates to ~3A cont. at 14.8V Vin → ~1.4× headroom over Jetson MAXN 2.1A. Min Vin 12V → **LVC alarm at 13.2V**. Reverse-polarity protected. Find via Pololu D42V55Fx family page → 12V variant. |
 | **Pololu D42V55F7 — 7.5V arm rail (future)** | **$0** | ⚠️ **Footprint reserved on PCB v6; don't populate until Phase 4 arm install.** Output 7.5V (within STS3215 6-8.4V range). Estimated cost when ordered: ~$32. |
 | UBEC 5V/5A | $15 | ✅ Owned — 5V peripherals (Ethernet switch, fans, aux sensors) |
-| Bulk caps for rail injection points (1000 µF / 25V × 4) | $4 | 🆕 Order with electronics — soaks servo impact transients near point of load |
+| Bulk caps for rail injection points (1000 µF / 25V × 5, **low-profile Ø12.5×16 mm radial**) | $5 | 🆕 Order with electronics — soaks servo impact transients near point of load. 5 points: 4× leg (J3-J6 V7V5_LEG) + 1× hip (J7 V12_HIP). **Height-reduced** (16 mm tall vs 20-26 mm standard; Ø12.5 unchanged) to fit the 46.9 mm mezzanine stack. E.g. Rubycon `25ZLH1000MEFC12.5X16`. Footprint `CP_Radial_D12.5mm_P5.00mm` (diameter unchanged → footprint unchanged). |
 | PCB terminals + misc boards | $8 | ✅ Ordered |
 | Dip switches + resistors + buttons | $8 | ✅ Ordered |
 
@@ -103,7 +104,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 - MOSFET hard-cutoff: **3.1V/cell = 12.4V** pack (autonomous backstop, comparator-driven, breaks main battery feed). Drops everything including Jetson — but Jetson should have already shut down cleanly per the 13.0V line above.
 - Panel-mount E-stop: NC contact in series with the **servo-rail + L2-rail enable lines** — kills D42V110F7 + D42V110F12 + D24V22F12 outputs (LiDAR stops spinning); Jetson rail stays live for debug + telemetry post-mortem
 - INA226 per active rail (3-4×): I²C → Teensy → ROS 2 diagnostics topic. Leg, hip, Jetson rails mandatory; L2 buck optional 4th if telemetry budget allows.
-- **Class T 30A fuse on battery feed** (sized for hip-rail peak ~20A + headroom). ANL was originally specced but its 6 kA interrupt rating is insufficient for LiPo dead-short (10-20 kA peaks possible). Class T provides 20 kA interrupt = 6.7× margin. ~$12-18 vs ANL ~$5-8. See [`docs/research/2026-05-17-notes.md`](../docs/research/2026-05-17-notes.md) §9.
+- **Class T 30A fuse on battery feed — mounted OFF-board** (inline bolt-down block in the battery→PCB lead near the pack, not on the PCB; F1 removed from `nova_pcb_v6` 2026-06-04). Sized for hip-rail peak ~20A + headroom. ANL was originally specced but its 6 kA interrupt rating is insufficient for LiPo dead-short (10-20 kA peaks possible); true Class T is always a bolt-down block (no 20 kA cable-inline holder exists). Class T provides 20 kA interrupt = 6.7× margin, and at-source placement protects the battery cable too. ~$12-18 vs ANL ~$5-8. See [`docs/research/2026-05-17-notes.md`](../docs/research/2026-05-17-notes.md) §9.
 
 ---
 
@@ -159,6 +160,7 @@ Switch can be pulled out of its case to save ~60% volume inside the chassis if n
 | M3/M4/M5/M6 stainless hex screw kit | $35 | ✅ Ordered |
 | 8x16x5mm ball bearings × 8 | $15 | ✅ Ordered |
 | Standoffs, zip ties, heat shrink (assorted) | $30 | ✅ Ordered |
+| **Mezzanine standoffs — 4× M3 × 20 mm M-F brass + 8× M3 screws** | $6 | 🆕 Order — set the power↔logic board gap (clears 16 mm bulk caps + ~15 mm Pololu bucks with margin). Total stack ≈ 41 mm < 46.9 mm trunk. Specific length, separate from the assorted standoffs above. |
 | **Threadlocker (Loctite 243 blue)** | **$8** | 🆕 Order |
 | **Electrical tape + Kapton tape** | **$10** | 🆕 Order |
 

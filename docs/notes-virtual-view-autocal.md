@@ -71,6 +71,6 @@ Forward-looking feature ideas, captured 2026-05-24. Not yet scheduled in the pha
 
 - **Phase 1:** publishes the inputs both features need (`/joint_states`, sensor topics). No new work yet.
 - **Phase 2 (weeks 5–8):** good slot for the Foxglove bridge + first auto-cal routines (IMU bias zero is a natural pair with EKF bring-up).
-- **Phase 4 / VLA:** Isaac Sim digital twin becomes much more interesting as a VLA data-collection environment — note here so we don't reinvent it later.
+- **Phase 4 / VLA:** Isaac Sim digital twin becomes much more interesting as a VLA data-collection environment — note here so we don't reinvent it later. Policy-training engine decision (MJX for v1 locomotion, Isaac Lab for VLA) now lives in [`sim-training.md`](./sim-training.md).
 
 > **Status:** notes only, not on the active schedule. Promote to checklist items when Phase 2 starts.

@@ -1067,16 +1067,6 @@
 		)
 		(uuid "577a3eee-0b10-4846-b0f9-0a8975f57ff9")
 	)
-	(label "VBAT_FUSED"
-		(at 72.39 63.5 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "6432b940-3238-4114-8859-ef92c9b83040")
-	)
 	(label "BATT_NEG"
 		(at 116.84 68.58 0)
 		(effects
@@ -1637,72 +1627,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:Fuse")
-		(at 63.5 63.5 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "cdb53342-dc2d-411b-bb80-07be2f5f154c")
-		(property "Reference" "F1"
-			(at 63.5 57.15 270)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "ClassT_30A_JJN30"
-			(at 63.5 69.85 270)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Fuse:Fuseholder_Littelfuse_445_030_series_5x30mm"
-			(at 63.5 63.5 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 63.5 63.5 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 63.5 63.5 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "f89dd98f-4585-4a79-a929-7be577eff3fe")
-		)
-		(pin "2"
-			(uuid "b609c1bf-6bba-4e56-b618-a21eb235d5e9")
-		)
-		(instances
-			(project "nova_pcb_v6"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/ef143087-bea8-42bd-8bca-c15c2f4ac5f7"
-					(reference "F1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:PWR_FLAG")
 		(at 123.19 63.5 0)
 		(unit 1)
@@ -1838,4 +1762,14 @@
 		)
 	)
 	(embedded_fonts no)
+	(wire
+		(pts
+			(xy 59.69 63.5) (xy 67.31 63.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "553de2ba-a114-4280-86f9-da87ae3a1f63")
+	)
 )

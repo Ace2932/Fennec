@@ -28,7 +28,7 @@ Project-specific macros live in [`hardware/cad/patterns.md`](./patterns.md) (ver
 1. OnShape (kinematic) or CadQuery skill (utility) — design + export STL
 2. Slice in Bambu Studio with PA6-CF profile (280 °C nozzle, hardened steel hotend, 100 % infill on structural)
 3. **Filament feed:** Creality SpacePi X4 → 4 mm PTFE Bowden tube → P1S top-side input. **AMS HF bypassed** for PA6-CF — re-absorbs moisture in AMS chamber within hours, defeats the 24 h pre-dry. PA6-CF stays in the heated dryer chamber for the entire print.
-4. Bed prep: textured PEI + **Magigoo PA glue stick** (Bambu liquid glue is not rated for PA / PA-CF — see BOM §8 note). 100 °C bed soak 15 min before first layer.
+4. Bed prep: Bambu **Engineering Plate** (smooth) + **Magigoo PA glue stick** (Bambu liquid glue is not rated for PA / PA-CF — see BOM §8 note). 100 °C bed soak 15 min before first layer.
 5. First-article gate on every structural part — print one, caliper, fit-test on real STS3215 + 688ZZ, then batch. Skip the batch if fit isn't clean.
 
 ## Files in this directory

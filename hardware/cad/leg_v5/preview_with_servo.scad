@@ -7,7 +7,7 @@
 
 include <leg_v5_common.scad>
 
-PART = "shoulder";
+PART = "coax";
 
 // Mirror per-part param table (keep in sync with the .scad files)
 STL_FOR = [

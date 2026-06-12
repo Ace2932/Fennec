@@ -78,21 +78,77 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 - **Primary:** Adafruit / Amazon — INA226 breakout (or bare IC if rolling SMD into PCB v6)
 - **Why:** One per active rail (leg 7.5V, hip 12V, Jetson 12V); optional 4th on L2 rail. I²C to Teensy → ROS 2 diagnostics topic.
 - Buy 4× — one spare.
+- ⚠️ **SHUNT SIZING — CRITICAL.** Stock CJMCU-226 breakout ships a **0.1 Ω** shunt → max ≈0.8 A (INA226 ±81.92 mV ÷ 0.1 Ω). **Leg (~9 A) and hip (~8 A) rails will saturate it.** Order the **high-current INA226 module with 2 mΩ (R002) shunt** (~20 A range) for leg + hip. Jet 12V (~2 A) also fine on R002.
+- ✅ **ORDERED 2026-06-08:** "INA226 Voltage Current Monitor 0-36V **20A**" module — **GODIYMODULES** (sold by DIY-Module, Amazon, $12.88), **×4, arriving Thu Jun 11.** 4.2★/12 reviews, 50+ bought/mo. **R002 shunt confirmed in product photo** = 2 mΩ correct, measured −20A~20A. (Passed over Lufasa 1-review slow listing.) NOT the NOYITO B07PMNQ2DQ (R100/0.1Ω, saturates <1A) and NOT blue Qoroos 3-pack (R100). DigiKey doesn't stock this module class.
+- 📏 **On arrival:** verify shunt reads `R002`, then MEASURE the module's real IN+/IN−/VCC-header pitch + VBUS pin location → fix the `nova_v6:INA226_Module_Breakout` footprint (pad 8/9 colocation) to match BEFORE fab.
+- ⚠️ **FOOTPRINT MISMATCH — board `nova_pcb_v6_power` U9/U10/U11.** `nova_v6:INA226_Module_Breakout` stacks pad 8 (Vbus) on pad 9 (IN−) at identical XY → "drilled holes co-located" DRC error, ×3. Real modules expose **VBUS as its own header pin** (not internally tied to IN−). Fix footprint AFTER picking the exact module: either give VBUS its own landing at the module's real pitch, or delete the board pad and wire VBUS→IN− externally. descr already flags "VERIFY pitch + header vs module before fab."
 
 ### Comparator + MOSFET parts for hard-cutoff at 12.4V + graceful-shutdown at 13.0V — ~$13
 - **Two comparator stages:**
   - 13.0V trigger → drives Teensy GPIO → `/battery_low` topic → Jetson `systemctl poweroff` (clean SD unmount)
   - 12.4V trigger → drives MOSFET on battery feed → autonomous hard cutoff
-- 2× LM393 (dual comparator, one stage each) OR 2× TL431 (DigiKey)
+- **1× LM393** (dual comparator = both stages in one SOIC-8 chip) — board `nova_pcb_v6_power` U8 is a single LM393. Buy 1 + 1 spare, NOT 2. (TL431 alt would need 2×.)
 - 1× IRLB3034PBF logic-level N-channel MOSFET (or similar Rds(on) <5 mΩ at Vgs=4.5V, Id ≥30A)
 - 1× P-channel power MOSFET on the high side if doing high-side switching
 - 2× trim-pot or precision resistor divider to set each trip point
 - Bundle with DigiKey order
 
-### Bulk caps for rail injection points — ~$4
-- 4× 1000 µF / 25V electrolytic (Nichicon UPW series or equivalent)
+### Bulk caps for rail injection points — ~$5
+- **5× 1000 µF / 25V** electrolytic — board `nova_pcb_v6_power` has C1–C5 (5×, not 4×). Buy 5 + spares.
+- Exact SKU: Nichicon **UPW1E102MPD6** (12.5 × 25 mm body, **5 mm lead pitch** — matches footprint `CP_Radial_D12.5mm_P5.00mm`)
 - One per star injection point on the leg 7.5V rail
 - Absorbs servo impact transients near point of load
+
+---
+
+## 3b. PCB v6 on-board parts (matched to `nova_pcb_v6_power` board) — ~$25
+
+> Added after a board↔order-list audit (51 footprints). These were missing from the original list — the board needs every one. Bundle connectors with the DigiKey electronics order; AMASS XT from Amazon/Mouser.
+
+### Connectors
+| Board ref | Part | Qty | Vendor / SKU |
+|---|---|---|---|
+| J1 | AMASS **XT60-M** vertical (battery in) | 1 | ✅ **ORDERED** SoloGood Amass **XT60H** 10-pair ($9.99). Verified vs J1 footprint (Ø4.5mm/7.2mm). ⚠️ Snap cover OFF the male before soldering. 30A rated > ~15A draw. |
+| J3–J7, J12, J13 | AMASS **XT30U-M** vertical | 7 | — |
+| U1–U5 buck offboard terminals | AMASS **XT30** ×2 per buck | 10 | each Pololu buck lands via 2×XT30 |
+| **XT30 TOTAL** | **17 board positions** (7 + 10) + cable mates | ✅ **2× 10-pair pack ordered** | SoloGood "10 Pairs XT30 Amass XT30U" ×2 ordered 2026-06-08 (20M+20F, covers 17 board + mates + spares). Males→board (vertical footprint), females→leads. |
+| J8 | JST **B3B-XH-A** 1×03 2.5 mm (servo bus TTL) | 1 | DigiKey **455-2247-ND** — [link](https://www.digikey.com/en/products/detail/jst-sales-america-inc/B3B-XH-A/1651046) |
+| J2 + M1 | PinHeader 1×03 + 1×02 2.54 (UBEC aux + voltmeter) | 1 strip | Sullins **`PRPC040SAAN-RC`** 40-pin breakaway, snap to length (covers both) |
+| J20 | IDC box header **2×06 2.54 shrouded vertical THT** (interboard) | 1 | Würth WR-BHD series — [filter](https://www.digikey.com/en/product-highlight/w/wurth-electronics/wr-bhd-series-box-headers-and-idc-connectors), pick 12-pos 2.54 |
+| SW1, SW2 | TB132 footprint = **5mm pitch, 1.2mm drill = standard KF301**. 1×02 PCB screw block | 2 | ✅ **ALREADY HAVE** — Tugermoola 72pc 5mm 2/3/4-pin kit (bought 2026-05-03) has KF301-style 2-pin blocks that drop in. Use 2. ⚠️ Kit rated **10A**; SW2 (mA) fine, **SW1 carries ~15A** → undersized, runs warm. Optional: swap SW1 for a 15–20A 5mm block (same footprint) for margin. |
+
+### SW1 main power switch (off-board, wires to SW1's TB132)
+- ✅ **CHOSEN (2026-06-08): Blue Sea Systems Contura SPST, "Off-on" style** ($17.40, Prime). Carling VJB1 body.
+- **Rated 20A @ 12VDC, 15A @ 24VDC** — explicitly covers 4S 16.8V (~18A capacity) at the ~15A battery draw. UL 1500, ISO 8846 ignition-protected, sealed/vibration/salt-resistant.
+- Why this over alternatives: switches whole battery (VBAT→VBAT_PROTECTED). Rejected KCD4 "30A 250VAC" (AC-only rating, DC breaking ≪15A; lamp needs AC 110V) and the 12V-only Carling listings (didn't document the 24V rating). Blue Sea documents 15A@24VDC in writing.
+- Wiring: SPST terminal A → VBAT (TB132 screw 1), terminal B → VBAT_PROTECTED (TB132 screw 2). Screw terminals.
+- ⚠️ **Return the Kodrily inline XT60 switch** (wrong: 18AWG undersized for 15A, electronic-latch redundant w/ Q1, XT60 pigtails don't land on TB132). Prime free return.
+
+> ⚠️ Buy **genuine AMASS** XT30/XT60 — clones have loose tolerance on power connectors (heat, intermittent contact under servo transients).
+
+### SMD passives (0603) — Yageo **RC0603FR-07** series, 1 % (DigiKey, search the MPN)
+| Value | Qty | DigiKey MPN | Refs |
+|---|---|---|---|
+| 10k | 5 | `RC0603FR-0710KL` | R5, R7, R8, R9, R13 |
+| 100k | 2 | `RC0603FR-07100KL` | R2, R10 |
+| 4.7k | 2 | `RC0603FR-074K7L` | R11, R12 |
+| 22k | 1 | `RC0603FR-0722KL` | R3 |
+| **11.3k** (1 %) | 1 | `RC0603FR-0711K3L` | R4 — divider trip-point |
+| **12.1k** (1 %) | 1 | `RC0603FR-0712K1L` | R6 — divider trip-point |
+| 470k | 1 | `RC0603FR-07470KL` | R14 |
+| 1M | 1 | `RC0603FR-071ML` | R15 |
+| 100nF | 1 | `CC0603KRX7R9BB104` (Yageo X7R) | C7 — decoupling |
+
+> R4 (11.3k) + R6 (12.1k) set the comparator trip points → buy **1 % or tighter**. Rest can be 5 %. Buy spares; these are sub-cent each.
+
+### Discretes (DigiKey, same order)
+| Ref | Part | DigiKey link / note |
+|---|---|---|
+| Q1 | **IRLB3034PBF** TO-220 | ⚠️ obsolete at DigiKey → **Amazon/Mouser**. [DK page (sub only)](https://www.digikey.com/en/products/detail/infineon-technologies/IRLB3034PBF/2096638) |
+| Q2 | **BSS138** SOT-23 | https://www.digikey.com/en/products/detail/onsemi/BSS138/244210 |
+| U8 | **LM393DR** SOIC-8 (dual = both stages, buy 1+spare) | https://www.digikey.com/en/products/detail/texas-instruments/LM393DR/276659 ($0.22, 127k stock) |
+| C6 | **470µF 25V** Nichicon **UPW1E471MPD** (10×16mm, 5mm pitch ✓) | https://www.digikey.com/en/products/detail/nichicon/UPW1E471MPD/589567 |
+| L1 | **SRR1260-220M** 22µH (12.5×12.5×6mm — verify land vs `L_12x12mm`) | https://www.digikey.com/en/products/detail/bourns-inc/SRR1260-220M/1969958 |
 
 ---
 
@@ -147,18 +203,21 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 | LiPo safe bag | 15 | ✅ Ordered |
 | ~~XT60 jumper~~ | 0 | ✅ Supplied (Ovonic kit) |
 | ~~XT60 charging lead~~ | 0 | ✅ Supplied (Ovonic kit) |
-| Pololu D42V55F12 (Jetson) | 32 | 🆕 To order |
-| Pololu D42V110F7 (leg) | 60 | 🆕 To order |
-| Pololu D42V110F12 (hip only) | 60 | 🆕 To order |
-| Pololu D24V22F12 (L2 dedicated) | 19 | 🆕 To order |
-| 74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps | 33 | 🆕 To order |
+| Pololu D42V55F12 (Jetson) #5577 | 32 | ✅ Got |
+| Pololu D42V110F7 (leg) #5674 | 60 | ✅ Got |
+| Pololu D42V110F12 (hip only) #5677 | 60 | ✅ Got |
+| Pololu D24V22F12 (L2 dedicated) #2855 | 19 | ✅ Got |
+| INA226 ×3 (HIGH-CURRENT 2mΩ for leg+hip) + 1× LM393 + MOSFETs + 5× bulk caps | 35 | 🆕 To order |
+| PCB on-board connectors (2× XT30 10-pk, XT60 pair, JST, headers, IDC, 2× TB132) | 28 | 🆕 To order (audit add) |
+| SMD passives (0603 R-set + C7) | 5 | 🆕 To order (audit add) |
+| ~~74HC125~~ — on logic board, not this power board | 0 | n/a here |
 | E-stop button (Mxuteuk HB2-ES544) | 10 | ✅ Ordered |
 | Switch + Cat6 ×2 (Cable Matters 1ft) | 23 | ✅ Ordered |
 | LC filter parts (inductor + cap) | 3 | 🆕 To order (DigiKey bundle) |
 | Threadlocker + tape | 18 | ✅ Ordered |
 | ~~Magigoo PA~~ → Bambu liquid glue | 0 | ✅ Using existing |
 | ~~DP adapter~~ | 0 | ❌ Not needed (headless Jetson) |
-| **Subtotal (actual remaining spend)** | **~$217** | |
+| **Subtotal (actual remaining spend)** | **~$250** | (was ~$217; +$33 connectors/passives audit add) |
 
 Updates since v3.4:
 - ISDT 608AC + LiPo bag + E-stop: ordered ✅
@@ -191,9 +250,14 @@ Not included: PCB v6 (~$60), arm servo top-up (~$50).
 
 3. **Don't order yet:**
    - NVMe — wait for NAND price recovery
-   - Arm-rail D42V55F7 — Phase 4
+   - **Arm-rail D42V55F7 (board U5)** — Phase 4. ⚠️ The footprint IS placed on `nova_pcb_v6_power` (U5), but the part is deferred. Board has **5 buck footprints, order only 4** (U1–U4). Leave U5 unpopulated.
    - PCB v6 — until schematic + Gerbers complete
    - Spare bearings / spare servo — order with the next Feetech batch when you actually need them
+
+4. **Open before fab (from board↔BOM audit 2026-06-08):**
+   - INA226 shunt: order **2 mΩ high-current** modules for leg+hip, not stock 0.1 Ω CJMCU (saturates <1 A)
+   - INA226 footprint colocation DRC error (×3) — fix after module chosen
+   - Verify XT30/XT60 are genuine AMASS
 
 ---
 
@@ -208,7 +272,13 @@ Not included: PCB v6 (~$60), arm servo top-up (~$50).
 - [ ] Verify 13.0V graceful-shutdown comparator → Teensy `/battery_low` topic → Jetson `systemctl poweroff` (sweep bench supply down to 13.0V, watch topic + log)
 - [ ] Verify 12.4V MOSFET hard-cutoff via bench-supply sweep before connecting battery (should fire ~30-60 s after 13.0V trigger at typical discharge rate)
 - [ ] Verify E-stop physically opens leg + hip + L2 rail enables (LiDAR stops; Jetson rail stays alive on press)
-- [ ] Verify INA226 ×3 I²C reads (current + voltage) under nominal and loaded states
+- [ ] **INA226 bench-test each of 4 modules BEFORE soldering to board** (modules arrive ~Jun 9; catches DOA + the "reads 0 A" calibration trap behind the 1-star reviews):
+  - [ ] Visual: shunt next to screw terminal reads **`R002`** (2 mΩ). If `R100`/`R000` → wrong part, return.
+  - [ ] ⚠️ Do NOT ohm-meter the shunt — a 2 mΩ shunt reads ~0 Ω on any handheld DMM (lead R ≈ 0.2–0.5 Ω swamps it). "Zero ohms" on a meter is normal, not a fault.
+  - [ ] Power VCC 3.3–5 V, I²C scan → must ACK at **0x40** (A0/A1 unsoldered = default)
+  - [ ] **Set Calibration register (0x05) for Rshunt = 0.002 Ω** — NOT the library default 0.1 Ω. `CAL = 0.00512 / (current_LSB × Rshunt)`; pick current_LSB ≈ 1 mA → CAL = 0.00512 / (0.001 × 0.002) = 2560 (0x0A00). This is the step the 1-star reviewer skipped → he got 0 A.
+  - [ ] Pass a known current (e.g. 2 A bench load through IN+→IN−) → reading matches within a few % → module good. Repeat all 4, label the spare.
+- [ ] Verify INA226 ×3 I²C reads (current + voltage) under nominal and loaded states (on-board, after the per-module bench test above)
 - [ ] Switch power test: 5V UBEC → switch → all 5 ports link-up
 - [ ] LC filter measurement: scope the D24V22F12 output (L2 feed) for ripple at ~400 kHz buck switch frequency, before/after the LC, both at idle and under L2 active load
 

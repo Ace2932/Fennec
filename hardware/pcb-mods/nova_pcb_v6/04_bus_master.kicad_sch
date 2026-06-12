@@ -2010,7 +2010,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Vertical"
+		(property "Footprint" "nova_v6:Teensy_4.1"
 			(at 44.45 76.2 0)
 			(effects
 				(font

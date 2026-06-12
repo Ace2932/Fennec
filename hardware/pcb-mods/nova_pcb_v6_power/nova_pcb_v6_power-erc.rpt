@@ -1,0 +1,20 @@
+ERC report (2026-06-05T15:42:35-0700, Encoding UTF8)
+
+***** Sheet /
+[global_label_dangling]: Global label not connected anywhere else in the schematic
+    ; warning
+    @(154.94 mm, 130.81 mm): Global Label 'V7V5_ARM'
+
+***** Sheet /01 Battery Input + Reverse Protection/
+
+***** Sheet /02 Power Rails (Pololu bucks)/
+
+***** Sheet /03 Servo Bus (star injection)/
+
+***** Sheet /06 Safety Chain/
+
+***** Sheet /08 Connectors + Mechanical/
+
+***** Sheet /09 Inter-Board Connector/
+
+ ** ERC messages: 1  Errors 0  Warnings 1

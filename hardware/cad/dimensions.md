@@ -35,7 +35,7 @@ real-world batch variation listed where known.
 | Bottom horn disc / reaction OD × thickness | 20.0 × 2.1 | ✅ |
 | Bottom reaction shaft OD | 6.0 | ✅ |
 | Horn screw pattern | 4× M2.5 on 13.86 mm BCD, ±45° from cardinal | ✅ (STEP 2026-05-24, holes r=1.25 mm = M2.5 clearance, NOT M3) |
-| Body mount screws | 4× M2.5 (rear plate) | ⚠️ REVIEW — verify thread spec |
+| Body mount screws | 4× M2.5, **9.9 × 9.9 mm square** centered on spline axis (x=12.5, y=0); holes at (x,y) = {7.55, 17.45}×{±4.95}; present on BOTH shaft-normal faces | ✅ (STEP 2026-06-07, 18× r=1.25 circles extracted; see note 9) |
 | Batch tolerance on body dims | ±0.10 | ✅ (manufacturer spec) |
 
 ---
@@ -124,30 +124,37 @@ real-world batch variation listed where known.
 ## 4. Power modules
 
 ### Pololu D42V110F7 / D42V110F12 (leg + hip step-down)
-**Source:** [Pololu D42V110F7](https://www.pololu.com/product/5674) + D42V110F12
+**Source:** Pololu dimension drawing **reg34c** (15 Oct 2025, items 5668-5686), category 370
 
 | Dim | Value | Status |
 |---|---|---|
-| Board L × W × H | 25.4 × 25.4 × 13.0 | ✅ |
-| Header pin layout | Vin / GND / Vout / EN, 2.54 mm pitch | ✅ |
-| Mount holes | 2× M3 at ~11.4 mm from center | ⚠️ REVIEW — some Pololu revs have mount holes, some don't; verify on received board |
+| Board L × W | **31.8 × 43.2** | ✅ (reg34c — CORRECTS earlier 25.4×25.4) |
+| Mount holes | **4× ⌀2.18** (#2 / M2) on 25.4 × 38.9 rectangle | ✅ (reg34c) |
+| Power holes | 4× ⌀2.2 THT (14 AWG), top→bottom VIN GND GND VOUT, vertical span 17.94 | ✅ (reg34c) |
+| Signal holes | 14× ⌀1.02 on 2.54 grid (2×7) — carries EN + VRP/PG + duplicate power | ✅ count (reg34c); per-hole pin map ⚠️ VERIFY on board |
+| Height (with components) | ~13-15 | ⚠️ REVIEW — caliper total Z on received board |
 
 ### Pololu D24V22F12 (L2 LiDAR dedicated, v3.4 split)
-**Source:** [Pololu D24V22Fx family](https://www.pololu.com/category/107/d24v22fx-step-down-voltage-regulators)
+**Source:** Pololu dimension drawing **reg19a** (12 Nov 2015, items 2855/2857-2861), category 192
 
 | Dim | Value | Status |
 |---|---|---|
-| Board L × W × H | 20.3 × 17.8 × 11.0 | ✅ |
+| Board L × W | **17.8 × 17.8** | ✅ (reg19a — CORRECTS earlier 20.3×17.8) |
+| Mount holes | **2× ⌀2.18** (#2 / M2) diagonal on 13.2 × 13.2 | ✅ (reg19a — CORRECTS earlier "none") |
+| Connector | 6× ⌀1.02; main row L→R **PG · EN(SHDN) · VIN · GND · VOUT** + 6th GND offset | ✅ order (reg19a + photo 0J6897); verify L→R vs module |
 | Header pitch | 2.54 | ✅ |
-| Mount holes | none on this size | ✅ |
+| Height (tall caps above PCB) | 6.0 | ✅ (reg19a profile); +~3 header pins below |
 
-### Pololu D42V55F12 (Jetson 12V rail)
-**Source:** Pololu D42V55Fx family
+### Pololu D42V55F12 (Jetson 12V rail) / D42V55F7 (arm, Phase 4 DNP)
+**Source:** Pololu dimension drawing **reg34a** (18 Jun 2025, items 5570-5579), category 354
 
 | Dim | Value | Status |
 |---|---|---|
-| Board L × W × H | 22.9 × 17.8 × 11.0 | ✅ |
+| Board L × W | **25.4 × 25.4** | ✅ (reg34a — CORRECTS earlier 22.9×17.8) |
+| Mount holes | **3× ⌀2.18** (#2 / M2) on 21.1 × 21.1, top-left corner omitted | ✅ (reg34a) |
+| Connector | 2×6 ⌀1.02; cols L→R **VOUT · GND · VIN · VRP · PG · EN** (power dup both rows) | ✅ order (reg34a + photo 0J15502); verify L→R vs module |
 | Header pitch | 2.54 | ✅ |
+| Height (standoff) | 6.1 (F7 & F12 are both ≤12V) | ✅ (reg34a profile) |
 
 ### UBEC 5V/5A
 **Source:** generic UBEC (varies by brand)
@@ -165,6 +172,8 @@ real-world batch variation listed where known.
 | Mount pattern | 4× M2.5 at corners (20.3 × 15.2 mm rectangle) | ⚠️ REVIEW — Adafruit vs generic vary |
 | Pin headers | 2.54 mm pitch (VCC/GND/SCL/SDA + IN+/IN-) | ✅ |
 | Default I²C addr | 0x40, configurable via solder pads | ✅ |
+
+**v3.5+ (2026-06-04): all 3 rails (U9 leg / U10 hip / U11 Jetson) use this identical module** — no bare VSSOP-10 chip + external 2512 shunt (R13/R14 deleted from schematic). The onboard shunt must be **2 mΩ** (a "20A INA226" board); cheap 0.1 Ω "meter" modules saturate >0.8 A and are useless on 8-12 A rails. KiCad footprint: `nova_v6:INA226_Module_Breakout`. Module internal shunt bridges each rail's `*_RAW`↔clean nets (high-side sense).
 
 ---
 
@@ -196,6 +205,7 @@ Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 
 ### Class T 30 A fuse holder
 **Source:** Bussmann Class T standard
+**Mounting: OFF-BOARD (2026-06-04)** — inline bolt-down block in the battery→PCB XT60 lead near the pack; **not a PCB footprint** (F1 removed from `nova_pcb_v6`). At-source placement protects the battery cable too. Dimensions below are for chassis/lead mounting, not a board cutout.
 
 | Dim | Value | Status |
 |---|---|---|
@@ -378,13 +388,14 @@ Standard Cat 6 patch cable. 6.0 mm OD with snagless boot. ✅
 | Inductor | 22 µH, ≥2 A rated, radial choke 10-12 mm OD | ⚠️ REVIEW — exact part TBD |
 | Capacitor | 470 µF / 25 V electrolytic, ~10 × 20 mm radial | ✅ |
 
-### 1000 µF / 25 V bulk caps (4× along leg rail star injection)
-**Source:** Panasonic EEU-FR1E102 or equivalent
+### 1000 µF / 25 V bulk caps (5× at rail star injection: 4× leg V7V5_LEG + 1× hip V12_HIP)
+**Source:** height-reduced radial, Ø12.5 × 16 mm (Rubycon ZLH `25ZLH1000MEFC12.5X16`); shortened from 20-26 mm to fit the 46.9 mm mezzanine stack — Ø12.5 unchanged, so footprint is unchanged
 
 | Dim | Value | Status |
 |---|---|---|
-| Body OD × height | 13.0 × 26.0 | ✅ |
+| Body OD × height | 12.5 × 16.0 | ✅ — low-profile ZLH (Ø unchanged, height 16 mm) |
 | Lead pitch | 5.0 | ✅ |
+| Footprint | `Capacitor_THT:CP_Radial_D12.5mm_P5.00mm` | ✅ |
 
 ---
 
@@ -493,9 +504,9 @@ mounts. Dims kept here only for future re-introduction reference.
 
 | Material | Use | Print profile | Status |
 |---|---|---|---|
-| PA6-CF (Bambu PolyMide PA6-CF or equiv) | structural (legs, chassis, mounts) | 280 °C nozzle, 100 °C bed soak, 24 h dry @ 70 °C, Magigoo PA on PEI textured | ✅ |
+| PA6-CF (Bambu PolyMide PA6-CF or equiv) | structural (legs, chassis, mounts) | 280 °C nozzle, 100 °C bed soak, 24 h dry @ 70 °C, Magigoo PA on Engineering Plate (smooth) | ✅ |
 | PETG-CF (brick red) | secondary brackets | 250 °C, 80 °C bed, 12 h dry | ✅ |
-| TPU 95A (yellow) | foot pads, strain relief | 230 °C, 60 °C bed, 20-30 mm/s, 4-6 h dry @ 50 °C | ✅ |
+| TPU 95A (yellow) | foot pads, strain relief | 230 °C, 40-45 °C bed (Engineering Plate smooth — glue as release, remove cold), 20-30 mm/s, 4-6 h dry @ 50 °C | ✅ |
 | PETG accent (white) | covers, light diffusers | 240 °C, 70 °C bed | ✅ |
 
 ---
@@ -509,7 +520,10 @@ These differ from values currently in `patterns.md` or `nova_sm3_patterns.md`:
 3. **STS3215 spline X offset = +12.5 mm** from body center. CRITICAL: every cavity in leg V3.1 reflects this. Old OpenSCAD `coxa.scad` had it at 0 (bug).
 4. **STS3215 horn screws are M2.5, NOT M3.** STEP shows holes at r=1.25 mm (∅2.5 = M2.5 clearance). Older notes / `patterns.md` calling them M3 are wrong. BCD measured at 13.86 mm (call it 14 mm).
 5. **STS3215 body Z (between horn faces) = 34.3 mm**, not 36.8. Older 36.8 figure conflated body height with bbox-including-horn-discs. Bbox total Z = 39.6 (39.6 - 34.3 = 5.3 mm of horn-disc stack on top + bottom). Use 34.3 for bracket pocket depth.
-6. **patterns.md §3 mount_x_pitch=49 / mount_y_pitch=10 IS WRONG** — body is only 45.4 mm long, so 49 mm pitch is impossible. Real STS3215 back-plate mount pattern needs separate STEP inspection on the back face (X=−22.7 plane). Do NOT use patterns.md numbers for mounting until verified.
+6. **patterns.md §3 mount_x_pitch=49 / mount_y_pitch=10 IS WRONG** — body is only 45.4 mm long, so 49 mm pitch is impossible. ✅ **RESOLVED (2026-06-07, see note 9):** STEP inspected — real pattern is a **9.9 × 9.9 mm square** of 4× M2.5, centered on the spline axis. Update `patterns.md` mount macro to this; do NOT use the old 49×10 numbers.
+7. **Pololu buck board sizes in §4 were pre-drawing estimates — all three corrected** from the Pololu dimension drawings (reg19a / reg34a / reg34c): D42V110 = **31.8 × 43.2** (was 25.4×25.4, badly wrong), D24V22 = **17.8 × 17.8** (was 20.3×17.8; also has 2× ⌀2.18 mounts, not "none"), D42V55 = **25.4 × 25.4** (was 22.9×17.8). Chassis buck-carrier pockets must use the corrected sizes. Connector L→R pin orders now recorded per buck — **verify against the physical module before PCB fab** (a wrong order is a coordinate swap in `nova_v6.pretty`).
+8. **Class-T fuse is OFF-board + all 3 INA226 are modules (2026-06-04).** F1 fuse block dropped from the PCB (now an inline block in the battery lead); leg/hip INA226 (U9/U10) changed from bare VSSOP-10 + external 2 mΩ 2512 shunt to the same `INA226_Module_Breakout` U11 uses, and shunts R13/R14 were deleted. Board now carries **zero fine-pitch (VSSOP-10) parts**. Schematic done + ERC-clean; `.kicad_pcb` needs **Update PCB from Schematic (F8)** to realize it.
+9. **STS3215 body mount-screw pattern extracted from STEP (2026-06-07).** Parsed the 18× r=1.25 mm (∅2.5 = M2.5) circles in `STS3215_03a v1.step` → a **9.9 × 9.9 mm square** of 4 holes, centered on the spline axis (x=12.5, y=0): (x,y) = {7.55, 17.45}×{±4.95}, present on **both** shaft-normal faces. Top face holes sit at R≈7 — **inside the ∅20 horn disc, so unusable**; mount through the **bottom (back-shaft) face**. Implemented as `sts3215_mount_holes()` in `leg_v5_screwlock/sts3215_mount.scad`. Closes note 6.
 
 ---
 
