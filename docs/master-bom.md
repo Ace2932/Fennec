@@ -83,7 +83,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 The off-board side is 25+ wired connections; this category was unspeced until 2026-06-13.
 | Part | For | Status |
 |---|---|---|
-| Silicone wire 10-12 AWG ~3ft | battery / fuse / switch (~15-18 A) | ⬜ Amazon — 18AWG too thin; pack ships 12AWG leads, need short board-side run |
+| Silicone wire 12 AWG (TUOFENG red/black 20ft) | battery / fuse / switch (~15-18 A) | ✅ ordered 2026-06-13 |
 | Silicone wire 18 AWG stranded | servo-rail injection (7.5-8 A) | ✅ owned (TUOFENG) — 18AWG OK at 8A |
 | Wire 22 AWG solid | I2C / EN / sense | ✅ owned (TUOFENG) — solid, solder don't crimp |
 | Ring terminals 12-10 AWG / 5/16" (M8) | MRBF fuse-block wiring | ⬜ Amazon (AIRIC 50pc; crimp w/ WGGE yellow station) |
@@ -113,7 +113,6 @@ power resistors · Etekcity 800 IR gun. Scope (Rigol DHO804) deferred to Phase-5
 Most prior unknowns RESOLVED as owned (Teensy w/pins, FE-URT-1, flux, heat-shrink, JST-XH+dupont
 kit, M3 screws, WS2812B, OLED, USB micro-B). Only these remain:
 1. **DigiKey cart** — submit (MKDS, TVS ×2, 74HC125, Teensy+Nano sockets, IDSD ribbon)
-2. **10-12 AWG silicone wire ~3 ft** — Amazon, or scavenge from spare Ovonic pack lead (battery main; 18AWG too thin for 15A)
-3. **M3 ~20 mm standoffs** — Amazon (mezzanine; Fgruh kit is screws not standoffs)
-4. **Leg servo count** — confirm 12 active in hand
-RESOLVED 2026-06-13: wick (Lesnow), ring terminals (AIRIC), MRBF ×2 + 5191, all bench gear ordered.
+2. **M3 ~20 mm standoffs** — Amazon (mezzanine; Fgruh kit is screws not standoffs) — LAST Amazon item
+3. **Leg servo count** — confirm 12 active in hand
+RESOLVED 2026-06-13: wick (Lesnow), rings (AIRIC), MRBF ×2 + 5191, 12AWG wire (TUOFENG), all bench gear ordered.
