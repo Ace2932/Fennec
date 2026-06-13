@@ -6,14 +6,28 @@ ROUTING_HANDOFF.md Step 10). Compiled from the 2026-06-13 ultrathink electrical 
 
 Order: clear 🔴 before any board work, 🟡 during bench bring-up, ⚪ at checkout/assembly.
 
-## 🔴 1. Logic board routed + reviewed
-- [ ] Route `nova_pcb_v6_logic` (0 traces today) → DRC 0 errors
-- [ ] **Add 100nF decoupling at U7 (74HC125)** — currently absent; part owned
-- [ ] **Verify J20↔J20 pin-1 orientation** — both J20s are male box headers joined by a
-      socket-to-socket ribbon. If pin-1 doesn't map pin-1, the ribbon MIRRORS the whole
-      interboard bus (I2C swapped, EN/safety lines crossed). Check the two footprints'
-      pin-1 positions + the ribbon's straight-through mapping before fab.
+## 🔴 1. Logic board: schematic fixes + route (BEFORE fab)
+Found in 2026-06-13 review. Schematic fixes first (GUI), then re-export netlist → route.
+- [x] **R1/FB1 un-DNP** — were DNP in series in the only bus path = open bus. Now R1=22R,
+      FB1=ferrite (done 2026-06-13). Need 22Ω 0603 + 0603 ferrite added to DigiKey order.
+- [ ] **+3V3 source (GUI):** wire Teensy 4.1 **3.3V output pad → +3V3** net. Currently
+      +3V3 (74HC125 VCC + all 3 INA226 VCC across J20) has NO source → bus driver + all
+      telemetry dead. Teensy reg sources 250mA, load ~10mA. Identify the physical 3.3V pad
+      via PJRC pinout card (NOT a GPIO), add symbol pin, wire. ERC then re-export.
+- [ ] **Add 100nF decoupling at U7 (74HC125)** — absent; part owned
+- [ ] **Verify J20↔J20 pin-1 orientation** — both J20s are MALE box headers + socket-socket
+      ribbon. If pin-1 ≠ pin-1, ribbon MIRRORS the whole interboard bus (I2C/EN/safety crossed).
+- [ ] (tidy) Add `no_connect` flags to 16 unused Nano GPIO pins — clears ERC noise
+- [ ] Route → DRC 0 errors
 - [ ] 2oz outer copper selected for BOTH boards at PCBWay
+
+## 🔴 1b. USB back-feed isolation (Teensy + Nano externally powered)
+V5_AUX (UBEC 5V) feeds Teensy VIN + Nano +5V. Plugging USB to flash/debug WHILE battery
+live = USB 5V vs UBEC 5V fighting on V5_AUX. (This is the ERC "two power outputs" conflict.)
+- [ ] **Teensy 4.1: cut the VUSB↔VIN pad** (bottom of board, PJRC-documented) so USB does
+      data-only when powered from VIN. Do this before first battery+USB session.
+- [ ] **Nano:** never plug USB while battery-powered, OR add a series Schottky on the +5V
+      feed. Confirm whichever before bring-up.
 
 ## 🟡 2. Trip-point calibration (ratiometric to V5_AUX)
 VREF tracks the UBEC, VSENSE tracks the battery. UBEC sag shifts trips LOWER (later).
