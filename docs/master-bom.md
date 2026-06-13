@@ -11,7 +11,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | Part | Status | Note |
 |---|---|---|
 | Jetson Orin Nano Super 8GB | ✅ | MAXN |
-| Teensy 4.1 (U6) | ✅ verify | firmware developed against it; confirm on shelf |
+| Teensy 4.1 (U6) | ✅ | owned 'with pins' — male headers for socketing included |
 | Arduino Nano ×3 | ✅ | 3-pack |
 | 128 GB microSD | ✅ | JetPack 6.2.x; NVMe deferred (NAND prices) |
 
@@ -48,7 +48,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | Teensy 4.1 socket — PPTC241LFBN-RC ×2 | U6 | 🛒 |
 | Arduino Nano socket — PPTC151LFBN-RC ×2 | U12 | 🛒 (Phase 2) |
 | Ferrite FB1 / series-R 22R | FB1/R1 | 🚫 DNP (bus integrity §5) |
-| FE-URT-1 USB-TTL adapter | J9 mate | ⬜ verify (Feetech/AliExpress; Pattern-A servo ID assign) |
+| FE-URT-1 USB-TTL adapter | J9 mate | ✅ owned (DIYmall, 2026-05-03) |
 | 100nF decoupling @ U7 | — | ✅ part owned; ADD footprint when routing |
 | **Interboard J20↔J20 ribbon** — 2×6 IDC socket-both-ends, 2.54mm ×2 | J20 | 🛒 ⚠️ both J20s are MALE box headers; without this cable the two boards are electrically disconnected (I2C / servo-bus / safety lines). Hard mezzanine blocker. |
 
@@ -56,8 +56,8 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | Part | Status |
 |---|---|
 | Gait controller / IK / URDF | software |
-| WS2812B strip | ⬜ Amazon (deferred §8) |
-| SSD1331 OLED | ⬜ Amazon/Adafruit (deferred §8) |
+| WS2812B strip | ✅ owned (ALITOVE 100pc) |
+| SSD1331 OLED | ✅ owned (HiLetgo) |
 
 ## Phase 3 — SLAM / Nav
 | Part | Status |
@@ -76,20 +76,21 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | Part | Status |
 |---|---|
 | Leg STS3215 ×12 active | ⬜ verify count; top-up 2-3 if short |
+| LiPo: Ovonic 4S 6000mAh 120C ×2 | ✅ owned (note: 6000mAh/120C, not 4000mAh) |
 | PA6-CF filament | ✅ |
 
 ## Harness + assembly consumables (mostly Amazon — NOT yet bought)
 The off-board side is 25+ wired connections; this category was unspeced until 2026-06-13.
 | Part | For | Status |
 |---|---|---|
-| Silicone wire 10-12 AWG | battery / fuse / switch (~15 A) | ⬜ Amazon spool |
-| Silicone wire 14-16 AWG | servo-rail injection (7.5-8 A) | ⬜ Amazon spool |
-| Silicone wire 22-26 AWG | I2C / EN / sense lines | ⬜ Amazon spool |
+| Silicone wire 10-12 AWG ~3ft | battery / fuse / switch (~15-18 A) | ⬜ Amazon — 18AWG too thin; pack ships 12AWG leads, need short board-side run |
+| Silicone wire 18 AWG stranded | servo-rail injection (7.5-8 A) | ✅ owned (TUOFENG) — 18AWG OK at 8A |
+| Wire 22 AWG solid | I2C / EN / sense | ✅ owned (TUOFENG) — solid, solder don't crimp |
 | Ring terminals 10 AWG / 5/16" stud ×4 | MRBF fuse-block wiring | ⬜ Amazon/DigiKey |
-| Heat-shrink assortment | every XT / TVS / fuse solder joint | ⬜ Amazon (have Kapton+tape, not heat-shrink) |
-| M3 standoffs ~20 mm (nylon) | mezzanine board-to-board | ⬜ Amazon kit |
-| M3 standoffs/screws | board → chassis (H1-H4 + power M3) | ⬜ Amazon kit |
-| JST-XH 3-pin plug + crimps | board ↔ first-servo bus pigtail | ⬜ verify (STS cable may cover) |
+| Heat-shrink assortment | every XT / TVS / fuse joint | ✅ owned (Ginsco 580pc) |
+| M3 standoffs ~20 mm | mezzanine board-to-board | ⬜ Amazon — Fgruh kit is screws NOT standoffs |
+| M3 screws/nuts/washers | board → chassis | ✅ owned (Fgruh 1220pc) |
+| JST-XH plug + crimps | board ↔ servo-bus pigtail | ✅ owned (PEBA crimp+connector kit) |
 | Servo-bus extension cables | leg runs > stock cable length | ⬜ verify (Feetech) |
 
 ## Soldering / tools — verify on shelf
@@ -97,17 +98,19 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 |---|---|
 | Pinecil V2 iron | ✅ |
 | Thin solder 0.6-0.8 mm | ⬜ verify |
-| Flux (pen/syringe) | ⬜ verify — REQUIRED for SOIC-8 + 0603 drag-solder |
+| Flux | ✅ owned (BEEYUIHF liquid flux) |
 | Solder wick | ⬜ verify — SMD bridge cleanup |
-| USB micro-B cable | ⬜ verify — Teensy 4.1 ↔ Jetson micro-ROS link (micro-B, not USB-C) |
+| USB micro-B cable | ✅ owned (USC) — Teensy↔Jetson micro-ROS link |
 
 ## Bench / bring-up gear (Amazon — separate from robot BOM)
 Kungber 30V/10A supply · FNIRSI LCR-P1 tester · KeeYees logic analyzer · Chanzon 1Ω+4Ω
 power resistors · Etekcity 800 IR gun. Scope (Rigol DHO804) deferred to Phase-5 servo testing.
 
-## Open verifications (don't get ambushed at assembly)
-1. **Teensy 4.1** physically on shelf
-2. **FE-URT-1** Feetech adapter on shelf (needed before first bus bring-up)
-3. **Leg servo count** — confirm 12 active in hand
-4. **Flux + solder wick + USB micro-B cable** — bench consumables (see Soldering/tools)
-5. **JST-XH harness plug** — confirm STS3215 cables mate the board bus header, else order plug+crimps
+## Remaining gaps (verified against Amazon order history 2026-06-13)
+Most prior unknowns RESOLVED as owned (Teensy w/pins, FE-URT-1, flux, heat-shrink, JST-XH+dupont
+kit, M3 screws, WS2812B, OLED, USB micro-B). Only these remain:
+1. **J20 IDC ribbon ×2** (2×6 socket-both-ends, 2.54mm) — DigiKey, this order
+2. **10-12 AWG silicone wire ~3 ft** — Amazon (battery main; 18AWG owned is too thin for 15A)
+3. **M3 ~20 mm standoffs** — Amazon (mezzanine; Fgruh kit is screws not standoffs)
+4. **Solder + wick** — verify on shelf
+5. **Leg servo count** — confirm 12 active in hand
