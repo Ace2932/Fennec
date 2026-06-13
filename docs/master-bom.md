@@ -35,7 +35,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | PRPC040 header strip | J2/M1 (+logic J9/J10/JP1) | 📦 |
 | MKDS 1,5/2-5,08 16A ×3 | SW1 | 🛒 |
 | KF301 kit block (SW2) | SW2 | ✅ |
-| MRBF-30 fuse ×2 + Blue Sea 5191 block | inline | ⬜ Amazon |
+| MRBF-30 fuse ×2 + Blue Sea 5191 block | inline | ✅ ordered 2026-06-12 (verify 5191 = single-MRBF terminal variant) |
 | SMBJ8.5A ×10 (leg) + SMBJ13A ×10 (hip/L2) TVS | off-board | 🛒 |
 | Balance buzzer ×5 | — | ✅ |
 | UBEC 5V/5A ×2 | — | ✅ |
@@ -112,8 +112,8 @@ power resistors · Etekcity 800 IR gun. Scope (Rigol DHO804) deferred to Phase-5
 ## Remaining gaps (verified against Amazon order history 2026-06-13)
 Most prior unknowns RESOLVED as owned (Teensy w/pins, FE-URT-1, flux, heat-shrink, JST-XH+dupont
 kit, M3 screws, WS2812B, OLED, USB micro-B). Only these remain:
-1. **J20 IDC ribbon ×2** (2×6 socket-both-ends, 2.54mm) — DigiKey, this order
-2. **10-12 AWG silicone wire ~3 ft** — Amazon (battery main; 18AWG owned is too thin for 15A)
+1. **DigiKey cart** — submit (MKDS, TVS ×2, 74HC125, Teensy+Nano sockets, IDSD ribbon)
+2. **10-12 AWG silicone wire ~3 ft** — Amazon, or scavenge from spare Ovonic pack lead (battery main; 18AWG too thin for 15A)
 3. **M3 ~20 mm standoffs** — Amazon (mezzanine; Fgruh kit is screws not standoffs)
-4. **Solder + wick** — verify on shelf
-5. **Leg servo count** — confirm 12 active in hand
+4. **Leg servo count** — confirm 12 active in hand
+RESOLVED 2026-06-13: wick (Lesnow), ring terminals (AIRIC), MRBF ×2 + 5191, all bench gear ordered.
