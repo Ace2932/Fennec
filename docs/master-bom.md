@@ -86,7 +86,7 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 | Silicone wire 10-12 AWG ~3ft | battery / fuse / switch (~15-18 A) | ⬜ Amazon — 18AWG too thin; pack ships 12AWG leads, need short board-side run |
 | Silicone wire 18 AWG stranded | servo-rail injection (7.5-8 A) | ✅ owned (TUOFENG) — 18AWG OK at 8A |
 | Wire 22 AWG solid | I2C / EN / sense | ✅ owned (TUOFENG) — solid, solder don't crimp |
-| Ring terminals 10 AWG / 5/16" stud ×4 | MRBF fuse-block wiring | ⬜ Amazon/DigiKey |
+| Ring terminals 12-10 AWG / 5/16" (M8) | MRBF fuse-block wiring | ⬜ Amazon (AIRIC 50pc; crimp w/ WGGE yellow station) |
 | Heat-shrink assortment | every XT / TVS / fuse joint | ✅ owned (Ginsco 580pc) |
 | M3 standoffs ~20 mm | mezzanine board-to-board | ⬜ Amazon — Fgruh kit is screws NOT standoffs |
 | M3 screws/nuts/washers | board → chassis | ✅ owned (Fgruh 1220pc) |
@@ -98,9 +98,12 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 |---|---|
 | Pinecil V2 iron | ✅ |
 | Thin solder 0.6-0.8 mm | ⬜ verify |
-| Flux | ✅ owned (BEEYUIHF liquid flux) |
-| Solder wick | ⬜ verify — SMD bridge cleanup |
-| USB micro-B cable | ✅ owned (USC) — Teensy↔Jetson micro-ROS link |
+| Flux | ✅ owned (BEEYUIHF) |
+| Solder wick (2-3mm braid) | ⬜ Amazon — SMD bridge cleanup (sucker owned, but it's THT-only) |
+| Solder sucker | ✅ owned — THT desolder |
+| Crimpers | ✅ WGGE WG-015 (12-10 insulated lugs) · iCrimp (23-10 ferrules) · PEBA (dupont/JST) |
+| USB micro-B cable | ✅ owned (USC) |
+| Reflow hotplate + paste | 🚫 SKIP — 21 SMD parts all 0603/SOT-23/SOIC, hand-solder; no stencil; half-THT board anyway |
 
 ## Bench / bring-up gear (Amazon — separate from robot BOM)
 Kungber 30V/10A supply · FNIRSI LCR-P1 tester · KeeYees logic analyzer · Chanzon 1Ω+4Ω
