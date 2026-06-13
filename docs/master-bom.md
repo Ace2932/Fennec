@@ -47,7 +47,9 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | 74HC125 SOIC-14 (SN74HC125D) ×5 | U7 | 🛒 |
 | Teensy 4.1 socket — PPTC241LFBN-RC ×2 | U6 | 🛒 |
 | Arduino Nano socket — PPTC151LFBN-RC ×2 | U12 | 🛒 (Phase 2) |
-| Ferrite FB1 / series-R 22R | FB1/R1 | 🚫 DNP (bus integrity §5) |
+| R1 = 22Ω 0603 (RC0603FR-0722RL) | R1 | 🛒 ADD to DigiKey — un-DNP'd 2026-06-13 (was open bus) |
+| FB1 = ferrite 0603 600Ω@100MHz | FB1 | 🛒 ADD to DigiKey — un-DNP'd 2026-06-13 |
+| 100nF decoupling @ U7 | U7 | ✅ owned; add footprint when routing |
 | FE-URT-1 USB-TTL adapter | J9 mate | ✅ owned (DIYmall, 2026-05-03) |
 | 100nF decoupling @ U7 | — | ✅ part owned; ADD footprint when routing |
 | **Interboard J20↔J20 ribbon** — 2×6 IDC socket-both-ends, 2.54mm ×2 | J20 | 🛒 ⚠️ both J20s are MALE box headers; without this cable the two boards are electrically disconnected (I2C / servo-bus / safety lines). Hard mezzanine blocker. |
