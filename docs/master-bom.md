@@ -50,6 +50,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | Ferrite FB1 / series-R 22R | FB1/R1 | 🚫 DNP (bus integrity §5) |
 | FE-URT-1 USB-TTL adapter | J9 mate | ⬜ verify (Feetech/AliExpress; Pattern-A servo ID assign) |
 | 100nF decoupling @ U7 | — | ✅ part owned; ADD footprint when routing |
+| **Interboard J20↔J20 ribbon** — 2×6 IDC socket-both-ends, 2.54mm ×2 | J20 | 🛒 ⚠️ both J20s are MALE box headers; without this cable the two boards are electrically disconnected (I2C / servo-bus / safety lines). Hard mezzanine blocker. |
 
 ## Phase 2 — gait/walk + status polish
 | Part | Status |
@@ -75,8 +76,30 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | Part | Status |
 |---|---|
 | Leg STS3215 ×12 active | ⬜ verify count; top-up 2-3 if short |
-| Mezzanine M3 standoffs (20 mm gap) | ⬜ Amazon |
 | PA6-CF filament | ✅ |
+
+## Harness + assembly consumables (mostly Amazon — NOT yet bought)
+The off-board side is 25+ wired connections; this category was unspeced until 2026-06-13.
+| Part | For | Status |
+|---|---|---|
+| Silicone wire 10-12 AWG | battery / fuse / switch (~15 A) | ⬜ Amazon spool |
+| Silicone wire 14-16 AWG | servo-rail injection (7.5-8 A) | ⬜ Amazon spool |
+| Silicone wire 22-26 AWG | I2C / EN / sense lines | ⬜ Amazon spool |
+| Ring terminals 10 AWG / 5/16" stud ×4 | MRBF fuse-block wiring | ⬜ Amazon/DigiKey |
+| Heat-shrink assortment | every XT / TVS / fuse solder joint | ⬜ Amazon (have Kapton+tape, not heat-shrink) |
+| M3 standoffs ~20 mm (nylon) | mezzanine board-to-board | ⬜ Amazon kit |
+| M3 standoffs/screws | board → chassis (H1-H4 + power M3) | ⬜ Amazon kit |
+| JST-XH 3-pin plug + crimps | board ↔ first-servo bus pigtail | ⬜ verify (STS cable may cover) |
+| Servo-bus extension cables | leg runs > stock cable length | ⬜ verify (Feetech) |
+
+## Soldering / tools — verify on shelf
+| Item | Status |
+|---|---|
+| Pinecil V2 iron | ✅ |
+| Thin solder 0.6-0.8 mm | ⬜ verify |
+| Flux (pen/syringe) | ⬜ verify — REQUIRED for SOIC-8 + 0603 drag-solder |
+| Solder wick | ⬜ verify — SMD bridge cleanup |
+| USB micro-B cable | ⬜ verify — Teensy 4.1 ↔ Jetson micro-ROS link (micro-B, not USB-C) |
 
 ## Bench / bring-up gear (Amazon — separate from robot BOM)
 Kungber 30V/10A supply · FNIRSI LCR-P1 tester · KeeYees logic analyzer · Chanzon 1Ω+4Ω
@@ -86,3 +109,5 @@ power resistors · Etekcity 800 IR gun. Scope (Rigol DHO804) deferred to Phase-5
 1. **Teensy 4.1** physically on shelf
 2. **FE-URT-1** Feetech adapter on shelf (needed before first bus bring-up)
 3. **Leg servo count** — confirm 12 active in hand
+4. **Flux + solder wick + USB micro-B cable** — bench consumables (see Soldering/tools)
+5. **JST-XH harness plug** — confirm STS3215 cables mate the board bus header, else order plug+crimps
