@@ -5,6 +5,23 @@
 	(uuid "bc6aa0eb-1398-4374-b16d-59b7b0b75cae")
 	(paper "A4")
 	(lib_symbols
+		(symbol "Device:R"
+			(pin_numbers (hide yes))
+			(pin_names (offset 0))
+			(exclude_from_sim no)(in_bom yes)(on_board yes)
+			(property "Reference" "R" (at 2.032 0 90)(effects (font (size 1.27 1.27))))
+			(property "Value" "R" (at 0 0 90)(effects (font (size 1.27 1.27))))
+			(property "Footprint" "" (at -1.778 0 90)(effects (font (size 1.27 1.27))(hide yes)))
+			(property "Datasheet" "~" (at 0 0 0)(effects (font (size 1.27 1.27))(hide yes)))
+			(property "Description" "Resistor" (at 0 0 0)(effects (font (size 1.27 1.27))(hide yes)))
+			(property "ki_keywords" "R res resistor" (at 0 0 0)(effects (font (size 1.27 1.27))(hide yes)))
+			(property "ki_fp_filters" "R_*" (at 0 0 0)(effects (font (size 1.27 1.27))(hide yes)))
+			(symbol "R_0_1" (rectangle (start -1.016 -2.54)(end 1.016 2.54)(stroke (width 0.254)(type default))(fill (type none))))
+			(symbol "R_1_1"
+				(pin passive line (at 0 3.81 270)(length 1.27)(name "~" (effects (font (size 1.27 1.27))))(number "1" (effects (font (size 1.27 1.27)))))
+				(pin passive line (at 0 -3.81 90)(length 1.27)(name "~" (effects (font (size 1.27 1.27))))(number "2" (effects (font (size 1.27 1.27)))))
+			)
+		)
 		(symbol "Connector_Generic:Conn_01x03"
 			(pin_names
 				(offset 1.016)
@@ -1524,16 +1541,6 @@
 	)
 	(wire
 		(pts
-			(xy 109.22 71.12) (xy 104.14 71.12)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "040f0b12-d093-4b87-a6c3-bbd58d2b3776")
-	)
-	(wire
-		(pts
 			(xy 109.22 78.74) (xy 104.14 78.74)
 		)
 		(stroke
@@ -1574,13 +1581,33 @@
 	)
 	(wire
 		(pts
-			(xy 160.02 73.66) (xy 146.05 73.66)
+			(xy 53.34 49.53) (xy 53.34 50.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "659a0278-8cd6-47c5-a267-1de3f68573c7")
+	)
+	(wire
+		(pts
+			(xy 160.02 73.66) (xy 152.4 73.66)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "6856d441-ae1b-42fb-b8cf-c0caa7fa5a5f")
+	)
+	(wire
+		(pts
+			(xy 90.17 71.12) (xy 109.22 71.12)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7f643302-441c-4620-986a-16655ba22e42")
 	)
 	(wire
 		(pts
@@ -1591,6 +1618,16 @@
 			(type default)
 		)
 		(uuid "9224fa76-f8bd-40bf-9ab3-0f9c96702c73")
+	)
+	(wire
+		(pts
+			(xy 90.17 71.12) (xy 90.17 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a45752c6-6495-4cc6-9fdf-3761d4a75128")
 	)
 	(wire
 		(pts
@@ -1622,7 +1659,7 @@
 		)
 		(uuid "f6f4a1d4-71e8-40c4-a166-cea069b131a0")
 	)
-	(label "OLED_CS"
+	(label "OLED_RST_F"
 		(at 104.14 78.74 180)
 		(effects
 			(font
@@ -1632,7 +1669,7 @@
 		)
 		(uuid "10d0a65c-6e5e-42ea-879d-26456dfd1a88")
 	)
-	(label "OLED_DC"
+	(label "OLED_DC_F"
 		(at 104.14 81.28 180)
 		(effects
 			(font
@@ -1653,7 +1690,7 @@
 		(uuid "4a609b5d-2720-41e0-ba89-0b8e0c94bc70")
 	)
 	(label "NANO_3V3"
-		(at 53.34 50.8 90)
+		(at 53.34 49.53 90)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1672,7 +1709,7 @@
 		)
 		(uuid "6b2ba455-70d9-4318-9bb0-31499e573b5c")
 	)
-	(label "OLED_RST"
+	(label "OLED_CS_F"
 		(at 104.14 83.82 180)
 		(effects
 			(font
@@ -1692,7 +1729,7 @@
 		)
 		(uuid "7a3b5d10-dbd0-4ddc-bc7d-e77e92494027")
 	)
-	(label "SPI_MOSI"
+	(label "SPI_MOSI_F"
 		(at 104.14 76.2 180)
 		(effects
 			(font
@@ -1722,7 +1759,7 @@
 		)
 		(uuid "a13970a7-3c8d-444d-893f-b4b3f09ad890")
 	)
-	(label "SPI_SCK"
+	(label "SPI_SCK_F"
 		(at 104.14 73.66 180)
 		(effects
 			(font
@@ -1731,16 +1768,6 @@
 			(justify right bottom)
 		)
 		(uuid "aff47ea1-33f5-463c-b62c-cb9b7af579c9")
-	)
-	(label "NANO_3V3"
-		(at 104.14 71.12 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "bea061b5-bff2-4410-96b0-c0c265dc6468")
 	)
 	(label "OLED_DC"
 		(at 38.1 83.82 180)
@@ -1764,7 +1791,7 @@
 	)
 	(global_label "V5_AUX"
 		(shape bidirectional)
-		(at 146.05 73.66 0)
+		(at 152.4 73.66 90)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1773,7 +1800,7 @@
 		)
 		(uuid "26f82d99-568e-440e-a1f8-94a6f89c3c4c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 146.05 73.66 0)
+			(at 152.4 73.66 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1794,6 +1821,26 @@
 		(uuid "5d29476a-c405-4dd1-bb19-a6e89d2f6122")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 55.88 50.8 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "V5_AUX"
+		(shape bidirectional)
+		(at 90.17 69.85 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "ec0cf95e-5787-4ab0-88c2-13f43dcfc6d8")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 90.17 69.85 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1881,7 +1928,7 @@
 		(dnp no)
 		(uuid "38bac2aa-4f42-47c9-b7e9-6d7196cf0e6c")
 		(property "Reference" "U12"
-			(at 50.8 49.53 0)
+			(at 50.546 37.846 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1889,7 +1936,7 @@
 			)
 		)
 		(property "Value" "Arduino_Nano_v3.x"
-			(at 50.8 103 0)
+			(at 50.8 106.426 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2089,7 +2136,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 104.14 68.58 90)
+		(at 104.14 68.58 180)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2097,7 +2144,7 @@
 		(dnp no)
 		(uuid "ad3aa6ef-2f1f-41c8-b262-7197f7b96567")
 		(property "Reference" "#PWR71"
-			(at 104.14 62.23 270)
+			(at 97.79 68.58 270)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2106,7 +2153,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 104.14 74.93 270)
+			(at 110.49 68.58 270)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2219,7 +2266,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 154.94 76.2 0)
+		(at 154.94 76.2 270)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2227,7 +2274,7 @@
 		(dnp no)
 		(uuid "c4f8f257-1304-4a0a-b810-117413cd9eac")
 		(property "Reference" "#PWR72"
-			(at 161.29 76.2 270)
+			(at 154.94 82.55 270)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2236,7 +2283,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 148.59 76.2 270)
+			(at 154.94 69.85 270)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2292,7 +2339,7 @@
 		(dnp no)
 		(uuid "d502d951-6738-47b0-b7d1-e40d95dac9ca")
 		(property "Reference" "J10"
-			(at 114.3 69.85 0)
+			(at 118.364 76.708 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2300,7 +2347,7 @@
 			)
 		)
 		(property "Value" "SSD1331_OLED"
-			(at 114.3 82.55 0)
+			(at 114.3 60.96 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2363,6 +2410,76 @@
 			)
 		)
 	)
+	(symbol
+		(lib_id "Device:R")(at 50.8 127.0 0)(unit 1)
+		(exclude_from_sim no)(in_bom yes)(on_board yes)(dnp no)(uuid "35f8c78b-863c-4bdb-8146-216bd5504251")
+		(property "Reference" "R2" (at 50.8 120.65 0)(effects (font (size 1.27 1.27))))
+		(property "Value" "1k" (at 50.8 133.35 0)(effects (font (size 1.27 1.27))))
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric" (at 50.8 127.0 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Datasheet" "~" (at 50.8 127.0 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Description" "" (at 50.8 127.0 0)(effects (font (size 1.27 1.27))))
+		(pin "1" (uuid "7494163f-6b42-4be9-b39f-43c0babcecc2"))
+		(pin "2" (uuid "22d24e60-5dc2-47a4-801b-336926dd130f"))
+		(instances (project "nova_pcb_v6_logic" (path "/f535083b-f621-4317-a378-cf746e7f972b/0af7f1f2-3a0a-4436-aaa7-f191048b3c83" (reference "R2")(unit 1))))
+	)
+	(label "SPI_SCK" (at 50.8 123.19 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "e3e4d2d8-0479-4b4c-b487-dd72c5337009"))
+	(label "SPI_SCK_F" (at 50.8 130.81 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "9e921ae3-e08d-4725-a13c-f5805b840fff"))
+	(symbol
+		(lib_id "Device:R")(at 63.5 127.0 0)(unit 1)
+		(exclude_from_sim no)(in_bom yes)(on_board yes)(dnp no)(uuid "07b1f917-e406-4bad-8da2-4647a6764f0c")
+		(property "Reference" "R3" (at 63.5 120.65 0)(effects (font (size 1.27 1.27))))
+		(property "Value" "1k" (at 63.5 133.35 0)(effects (font (size 1.27 1.27))))
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric" (at 63.5 127.0 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Datasheet" "~" (at 63.5 127.0 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Description" "" (at 63.5 127.0 0)(effects (font (size 1.27 1.27))))
+		(pin "1" (uuid "792c2ad7-56fb-4e00-ba00-d26f939a8b24"))
+		(pin "2" (uuid "51937c3d-4040-4282-9353-95bb857bfa08"))
+		(instances (project "nova_pcb_v6_logic" (path "/f535083b-f621-4317-a378-cf746e7f972b/0af7f1f2-3a0a-4436-aaa7-f191048b3c83" (reference "R3")(unit 1))))
+	)
+	(label "SPI_MOSI" (at 63.5 123.19 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "dc12c9e3-eccf-4d94-b6de-56521a2c011d"))
+	(label "SPI_MOSI_F" (at 63.5 130.81 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "6b345c2e-cde7-4b54-a939-e7dd3ce9f897"))
+	(symbol
+		(lib_id "Device:R")(at 76.2 127.0 0)(unit 1)
+		(exclude_from_sim no)(in_bom yes)(on_board yes)(dnp no)(uuid "7a7fdd6b-3792-4af8-8829-16182533cad1")
+		(property "Reference" "R4" (at 76.2 120.65 0)(effects (font (size 1.27 1.27))))
+		(property "Value" "1k" (at 76.2 133.35 0)(effects (font (size 1.27 1.27))))
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric" (at 76.2 127.0 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Datasheet" "~" (at 76.2 127.0 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Description" "" (at 76.2 127.0 0)(effects (font (size 1.27 1.27))))
+		(pin "1" (uuid "8ef71a89-7f44-4c9e-b16d-067048042974"))
+		(pin "2" (uuid "203f58d2-58e1-48b4-8672-292864cf8ab9"))
+		(instances (project "nova_pcb_v6_logic" (path "/f535083b-f621-4317-a378-cf746e7f972b/0af7f1f2-3a0a-4436-aaa7-f191048b3c83" (reference "R4")(unit 1))))
+	)
+	(label "OLED_RST" (at 76.2 123.19 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "f3558b12-dec0-4597-92d2-4be6ae797f8c"))
+	(label "OLED_RST_F" (at 76.2 130.81 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "d4ef1f62-c26e-4915-8b5e-4088c110cfaa"))
+	(symbol
+		(lib_id "Device:R")(at 88.9 127.0 0)(unit 1)
+		(exclude_from_sim no)(in_bom yes)(on_board yes)(dnp no)(uuid "fb0e51bd-1376-43d8-8b84-9d60537103b0")
+		(property "Reference" "R5" (at 88.9 120.65 0)(effects (font (size 1.27 1.27))))
+		(property "Value" "1k" (at 88.9 133.35 0)(effects (font (size 1.27 1.27))))
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric" (at 88.9 127.0 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Datasheet" "~" (at 88.9 127.0 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Description" "" (at 88.9 127.0 0)(effects (font (size 1.27 1.27))))
+		(pin "1" (uuid "361ed9f3-4398-40c1-b83d-24747aee106d"))
+		(pin "2" (uuid "539b925d-5db9-4ee1-a12c-7b78959c038b"))
+		(instances (project "nova_pcb_v6_logic" (path "/f535083b-f621-4317-a378-cf746e7f972b/0af7f1f2-3a0a-4436-aaa7-f191048b3c83" (reference "R5")(unit 1))))
+	)
+	(label "OLED_DC" (at 88.9 123.19 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "4d48a898-8f35-45b5-a356-4650a10d7e64"))
+	(label "OLED_DC_F" (at 88.9 130.81 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "a5876a68-cbb9-4e2a-bf1d-2b4729f71bf0"))
+	(symbol
+		(lib_id "Device:R")(at 101.6 127.0 0)(unit 1)
+		(exclude_from_sim no)(in_bom yes)(on_board yes)(dnp no)(uuid "b4400a2c-92aa-4726-b013-128f7ede6bf6")
+		(property "Reference" "R6" (at 101.6 120.65 0)(effects (font (size 1.27 1.27))))
+		(property "Value" "1k" (at 101.6 133.35 0)(effects (font (size 1.27 1.27))))
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric" (at 101.6 127.0 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Datasheet" "~" (at 101.6 127.0 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Description" "" (at 101.6 127.0 0)(effects (font (size 1.27 1.27))))
+		(pin "1" (uuid "367ebee0-9b90-417d-af6b-44d21d25bdd6"))
+		(pin "2" (uuid "c711f4df-15b8-42bc-b122-a694ba0329a3"))
+		(instances (project "nova_pcb_v6_logic" (path "/f535083b-f621-4317-a378-cf746e7f972b/0af7f1f2-3a0a-4436-aaa7-f191048b3c83" (reference "R6")(unit 1))))
+	)
+	(label "OLED_CS" (at 101.6 123.19 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "b005600f-5da6-4782-a910-0b0975f23c4a"))
+	(label "OLED_CS_F" (at 101.6 130.81 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "3c0c549e-d7e6-4c0d-b18d-80242f217f31"))
 	(sheet_instances
 		(path "/"
 			(page "1")

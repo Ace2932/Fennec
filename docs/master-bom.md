@@ -49,6 +49,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | Arduino Nano socket — PPTC151LFBN-RC ×2 | U12 | 🛒 (Phase 2) |
 | R1 = 22Ω 0603 (RC0603FR-0722RL) | R1 | 🛒 ADD to DigiKey — un-DNP'd 2026-06-13 (was open bus) |
 | FB1 = ferrite 0603 600Ω@100MHz | FB1 | 🛒 ADD to DigiKey — un-DNP'd 2026-06-13 |
+| R2–R6 = 1kΩ 0603 ×5 | R2–R6 | 🛒 ADD — OLED SPI series protection (5V Nano logic → SSD1331), added 2026-06-14 |
 | 100nF decoupling @ U7 (C1) | U7 | ✅ placed + routed 2026-06-14 |
 | +3V3 source (Teensy T3V3O→+3V3) | U6 | ✅ fixed 2026-06-13 (was unsourced = dead board) |
 | FE-URT-1 USB-TTL adapter | J9 mate | ✅ owned (DIYmall, 2026-05-03) |
@@ -61,7 +62,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 |---|---|
 | Gait controller / IK / URDF | software |
 | WS2812B strip | ✅ owned (ALITOVE 100pc) |
-| SSD1331 OLED | ✅ owned (HiLetgo) |
+| SSD1331 OLED | ✅ owned (HiLetgo, 7-pin, VCC 2.8-5.5V). Board reworked 2026-06-14 for it: J10.2→V5_AUX (5V), CS/RST swapped to match module pin order, 5× 1k series Rs (R2-R6) on SPI/control. ALT if logic level still flaky: Adafruit 684 (DK 1528-1500-ND, has 74LVC245+boost) — 5V VIN, wire 7 of its pins to J10. |
 
 ## Phase 3 — SLAM / Nav
 | Part | Status |

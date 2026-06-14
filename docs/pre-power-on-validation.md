@@ -33,6 +33,14 @@ Found in 2026-06-13 review. Schematic fixes first (GUI), then re-export netlist 
       `feetech_bus.h` (Serial2→Serial1). I2C 18/19 already matched. **E-stop polarity
       flipped LOW→HIGH** (NC fail-safe; SafetyFSM already latches until /safety_clear →
       snap-back on release handled). Reconciliation was mandatory — old defines = dead bus.
+- [x] **OLED (J10) integration fixed** (2026-06-14) — owned HiLetgo SSD1331 (7-pin, VCC
+      2.8-5.5V = has onboard reg). Found 3 issues vs the board: (1) J10 pin order had CS/RST
+      crossed vs the module → swapped on board (J10.5=OLED_RST, J10.7=OLED_CS); (2) Vcc was
+      on NANO_3V3 (Nano's ≤50mA reg, often absent off-USB) → moved to **V5_AUX (5V)**;
+      (3) Nano is 5V → its SPI logic over-drives the 3.3V-reg'd SSD1331 → added **5× 1k
+      series R (R2-R6)** on SCK/MOSI/RST/DC/CS. Schematic + full re-route, DRC 0/0, gerbers
+      re-cut. BENCH-VERIFY: if display still glitches, swap to Adafruit 684 (74LVC245+boost,
+      5V VIN, DK 1528-1500-ND) — wire 7 pins to J10.
 - [ ] (tidy) Add `no_connect` flags to 16 unused Nano GPIO pins — clears ERC noise
 - [ ] 2oz outer copper selected for BOTH boards at PCBWay
 
