@@ -52,6 +52,42 @@ live = USB 5V vs UBEC 5V fighting on V5_AUX. (This is the ERC "two power outputs
 - [ ] **Nano:** never plug USB while battery-powered, OR add a series Schottky on the +5V
       feed. Confirm whichever before bring-up.
 
+## 🔴 1c. Connector mating audit (BEFORE assembly — HARD GATE)
+The board files only define what net lands on each connector pin; they CANNOT verify the
+**physical part's** pinout/polarity. Every off-board connector below is correct on the BOARD
+side (verified from the .kicad_pcb) — the open item is confirming the MATING part agrees.
+Only rigid direct-plug modules force a board re-route; the rest are hand-wired, so the board
+pin is the reference and you wire the cable/leads to match it. (Compiled 2026-06-14 after the
+OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the rest of the set.)
+
+**🔴 High — a mismatch damages a part or shorts power:**
+- [ ] **J11 WS2812B** — board: `1=+5V, 2=GND, 3=DATA`. WS2812B strip wire order varies; reverse
+      5V/GND = fried strip. Crimp the JST-XH pigtail to match J11, and connect to the strip's
+      **DIN** end (not DOUT). Verify with a meter before plugging in.
+- [ ] **J8 servo bus** — board: `1=GND, 2=V7V5_LEG, 3=BUS_SERVO`. ✅ Matches Feetech STS3215
+      standard (GND/VCC/Signal). NOTE: servo uses a 5264 connector, board is JST-XH — crimp
+      your own JST-XH pigtail in GND/V+/Signal order (don't assume a pre-made cable's housing mates).
+- [ ] **J20 interboard ribbon** — both boards' pinouts identical (verified). A 2×6 IDC ribbon
+      can be built/plugged mirrored → 5V meets GND. **Meter-check pin1↔pin1 continuity** on the
+      assembled cable before first power; confirm shroud keys are consistent.
+- [ ] **U1–U5 Pololu bucks** (off-board, XT30 + EN wire) — board: `VIN=VBAT_PROTECTED, GND,
+      EN=EN_BUCKS/EN_JET, VOUT`. Reverse VIN into a Pololu = dead module. Match each buck's
+      VIN/GND/VOUT/EN silk to the wiring.
+
+**🟡 Medium — silent failure / safety-logic inversion:**
+- [ ] **U9–U11 INA226 modules** — board connects I2C+power only (`4=SDA, 5=SCL, 6=VCC, 7=GND`).
+      Confirm (a) module header order matches your dupont wiring, (b) the inline shunt terminals
+      are on the intended rail for each, (c) **3 distinct I2C addresses** (A0/A1 straps).
+- [ ] **SW2 + J21 e-stop contacts** — board expects **NC** (`SW2: GND↔EN_SW`; `J21: sense↔GND`).
+      Fail-safe depends on NC, not NO. Identify the NC pairs on the Mxuteuk button; confirm it has
+      a *second* NC block for J21. NO wiring → reads always-pressed or never trips.
+
+**🟢 Low — protected or bench-only:**
+- [ ] **J1 XT60** — `1=VBAT(+), 2=BATT_NEG(−)`. Q1 reverse-prot covers a slip, but confirm.
+- [ ] **SW1** — confirm the physical switch is rated for full pack current (~15–18 A).
+- [ ] **J9 FE-URT-1** — Pattern-A bench adapter only; confirm its data pin = MASTER_A if used.
+- [ ] **Q1 IRLB3034** — TO-220 G/D/S = pin 1/2/3 (matches footprint); confirm tab = Drain.
+
 ## 🟡 2. Trip-point calibration (ratiometric to V5_AUX)
 VREF tracks the UBEC, VSENSE tracks the battery. UBEC sag shifts trips LOWER (later).
 Verified-on-paper trips: BATT_LOW 13.0V, HARDCUT 12.4V (resistor math confirmed 2026-06-13).
