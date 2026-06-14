@@ -41,7 +41,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | UBEC 5V/5A ×2 | — | ✅ |
 | E-stop (Mxuteuk) + Blue Sea Contura switch | SW1/SW2 wiring | ✅ |
 
-## Logic board — `nova_pcb_v6_logic` (schematic FIXED 2026-06-13; ⬜ route via Freerouting → PCBWay)
+## Logic board — `nova_pcb_v6_logic` (ROUTED 2026-06-14, DRC 0 errors → PCBWay)
 | Part | Ref | Status |
 |---|---|---|
 | 74HC125 SOIC-14 (SN74HC125D) ×5 | U7 | 🛒 |

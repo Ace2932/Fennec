@@ -15,14 +15,11 @@ Found in 2026-06-13 review. Schematic fixes first (GUI), then re-export netlist 
       74HC125 + 3× INA226 now powered.
 - [ ] **Add 100nF decoupling at U7 (74HC125)** — absent; part owned. Small schematic add
       (place C, wire +3V3/GND near U7) — do before/with routing.
-- [ ] **Route the board** — 20 signal nets (GND + V5_AUX are inner planes). Custom A* got
-      100% connectivity but not DRC-clean (via clearance + dense-pin crossings); headless
-      Freerouting unavailable (no Java/DSN export). **Use Freerouting via KiCad GUI:**
-      Plugin & Content Manager → install Freerouting → Tools → External Plugins → Freerouting
-      (auto DSN export → route → SES import). Or File→Export Specctra DSN, route standalone,
-      File→Import Specctra Session. Then `B` re-pour → DRC 0 errors.
-- [ ] **Verify J20↔J20 pin-1 orientation** — both J20s are MALE box headers + socket-socket
-      ribbon. If pin-1 ≠ pin-1, ribbon MIRRORS the whole interboard bus (I2C/EN/safety crossed).
+- [x] **Routed** (2026-06-14) via Freerouting headless (openjdk + freerouting-2.2.4.jar;
+      pcbnew ExportSpecctraDSN → java route → ImportSpecctraSES). 24 nets, 154 tracks, 3 vias.
+      Min thermal spokes 2→1 to clear GND starved-thermal. **DRC: 0 errors, 0 unconnected.**
+- [x] **J20↔J20 net mapping VERIFIED matched** — both boards' J20 pin→net identical (straight
+      ribbon = correct, no bus mirror). Remaining: visual key-orientation at assembly (shrouds enforce).
 - [ ] (tidy) Add `no_connect` flags to 16 unused Nano GPIO pins — clears ERC noise
 - [ ] 2oz outer copper selected for BOTH boards at PCBWay
 
