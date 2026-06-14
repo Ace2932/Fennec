@@ -41,7 +41,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | UBEC 5V/5A ×2 | — | ✅ |
 | E-stop (Mxuteuk) + Blue Sea Contura switch | SW1/SW2 wiring | ✅ |
 
-## Logic board — `nova_pcb_v6_logic` (⬜ routing not started; then PCBWay)
+## Logic board — `nova_pcb_v6_logic` (schematic FIXED 2026-06-13; ⬜ route via Freerouting → PCBWay)
 | Part | Ref | Status |
 |---|---|---|
 | 74HC125 SOIC-14 (SN74HC125D) ×5 | U7 | 🛒 |
@@ -49,7 +49,8 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | Arduino Nano socket — PPTC151LFBN-RC ×2 | U12 | 🛒 (Phase 2) |
 | R1 = 22Ω 0603 (RC0603FR-0722RL) | R1 | 🛒 ADD to DigiKey — un-DNP'd 2026-06-13 (was open bus) |
 | FB1 = ferrite 0603 600Ω@100MHz | FB1 | 🛒 ADD to DigiKey — un-DNP'd 2026-06-13 |
-| 100nF decoupling @ U7 | U7 | ✅ owned; add footprint when routing |
+| 100nF decoupling @ U7 | U7 | ⬜ owned; ADD footprint to schematic before route |
+| +3V3 source (Teensy T3V3O→+3V3) | U6 | ✅ fixed 2026-06-13 (was unsourced = dead board) |
 | FE-URT-1 USB-TTL adapter | J9 mate | ✅ owned (DIYmall, 2026-05-03) |
 | 100nF decoupling @ U7 | — | ✅ part owned; ADD footprint when routing |
 | **Interboard J20↔J20 ribbon** — 2×6 IDC socket-both-ends, 2.54mm ×2 | J20 | 🛒 ⚠️ both J20s are MALE box headers; without this cable the two boards are electrically disconnected (I2C / servo-bus / safety lines). Hard mezzanine blocker. |

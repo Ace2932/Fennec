@@ -10,15 +10,20 @@ Order: clear 🔴 before any board work, 🟡 during bench bring-up, ⚪ at chec
 Found in 2026-06-13 review. Schematic fixes first (GUI), then re-export netlist → route.
 - [x] **R1/FB1 un-DNP** — were DNP in series in the only bus path = open bus. Now R1=22R,
       FB1=ferrite (done 2026-06-13). Need 22Ω 0603 + 0603 ferrite added to DigiKey order.
-- [ ] **+3V3 source (GUI):** wire Teensy 4.1 **3.3V output pad → +3V3** net. Currently
-      +3V3 (74HC125 VCC + all 3 INA226 VCC across J20) has NO source → bus driver + all
-      telemetry dead. Teensy reg sources 250mA, load ~10mA. Identify the physical 3.3V pad
-      via PJRC pinout card (NOT a GPIO), add symbol pin, wire. ERC then re-export.
-- [ ] **Add 100nF decoupling at U7 (74HC125)** — absent; part owned
+- [x] **+3V3 source FIXED** (2026-06-13) — Teensy 3.3V pad `T3V3O` added to U6 symbol (Power
+      output) + wired to +3V3. Netlist verified: +3V3 = [U6.T3V3O, U7.10/13/14, J20.5].
+      74HC125 + 3× INA226 now powered.
+- [ ] **Add 100nF decoupling at U7 (74HC125)** — absent; part owned. Small schematic add
+      (place C, wire +3V3/GND near U7) — do before/with routing.
+- [ ] **Route the board** — 20 signal nets (GND + V5_AUX are inner planes). Custom A* got
+      100% connectivity but not DRC-clean (via clearance + dense-pin crossings); headless
+      Freerouting unavailable (no Java/DSN export). **Use Freerouting via KiCad GUI:**
+      Plugin & Content Manager → install Freerouting → Tools → External Plugins → Freerouting
+      (auto DSN export → route → SES import). Or File→Export Specctra DSN, route standalone,
+      File→Import Specctra Session. Then `B` re-pour → DRC 0 errors.
 - [ ] **Verify J20↔J20 pin-1 orientation** — both J20s are MALE box headers + socket-socket
       ribbon. If pin-1 ≠ pin-1, ribbon MIRRORS the whole interboard bus (I2C/EN/safety crossed).
 - [ ] (tidy) Add `no_connect` flags to 16 unused Nano GPIO pins — clears ERC noise
-- [ ] Route → DRC 0 errors
 - [ ] 2oz outer copper selected for BOTH boards at PCBWay
 
 ## 🔴 1b. USB back-feed isolation (Teensy + Nano externally powered)
