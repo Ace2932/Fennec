@@ -1,0 +1,6 @@
+interface:
+  display_name: "LE NOVA"
+  short_description: "Repo-specific patterns and workflows for LE_NOVA"
+  default_prompt: "Use the LE_NOVA repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true
