@@ -40,7 +40,7 @@ Found in 2026-06-13 review. Schematic fixes first (GUI), then re-export netlist 
       (3) Nano is 5V → its SPI logic over-drives the 3.3V-reg'd SSD1331 → added **5× 1k
       series R (R2-R6)** on SCK/MOSI/RST/DC/CS. Schematic + full re-route, DRC 0/0, gerbers
       re-cut. BENCH-VERIFY: if display still glitches, swap to Adafruit 684 (74LVC245+boost,
-      5V VIN, DK 1528-1500-ND) — wire 7 pins to J10.
+      5V VIN, DK 684-ND) — wire 7 pins to J10.
 - [ ] (tidy) Add `no_connect` flags to 16 unused Nano GPIO pins — clears ERC noise
 - [ ] 2oz outer copper selected for BOTH boards at PCBWay
 
