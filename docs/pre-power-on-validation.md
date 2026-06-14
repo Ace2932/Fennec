@@ -58,6 +58,15 @@ Output-wire inductance + 1000µF bulk = LC tank the buck loop may ring against (
       injection point. If ringing: add small series damping or move bulk closer.
 - [ ] (Phase-5 task — needs scope; deferred with the scope purchase)
 
+
+## 🟡 8. WS2812B status-LED current budget (J20 ribbon limit)
+V5_AUX reaches the logic board ONLY via 2× J20 ribbon conductors (~2A, 28AWG). Feeds
+Teensy(~0.1A)+Nano(~0.05A)+WS2812B strip (J11). WS2812B = 60mA each @ full white.
+- [ ] Keep status LEDs **≤16-20** (≤1A) — fine on the ribbon. (§8 intent = a few status LEDs.)
+- [ ] If a larger strip is ever wanted: feed it DIRECTLY from power-board V5_AUX, not J20.
+- NOTE (verified 2026-06-14): I2C pullups R11/R12 → +3V3 (NOT 5V) ✓ — Teensy 4.1 I2C pins
+  are not 5V-tolerant; whole logic domain is consistently 3.3V. No level-shift hazard.
+
 ## ⚪ 6. 2oz copper at fab
 - [ ] PCBWay checkout: explicitly select **2oz outer copper** for both boards.
       Default is 1oz → halves every thermal margin. Gerbers don't enforce it.
