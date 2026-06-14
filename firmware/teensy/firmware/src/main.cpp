@@ -52,8 +52,8 @@ volatile bool safety_clear_request = false;
 
 // Boot self-test result bitmap — set in setup() after GPIO pinMode but
 // before the tick timer starts. Bits:
-//   0 = ESTOP_PIN read LOW at boot (button pressed at startup — operator
-//       fault, refuse to arm)
+//   0 = ESTOP_PIN read HIGH at boot (button pressed / contact open at
+//       startup — operator fault, refuse to arm)
 //   1 = BATTERY_LOW_PIN read HIGH at boot (pack already under 13.0V —
 //       refuse to arm)
 // Non-zero result means safety_fsm pre-seeded to a latched fault.
@@ -76,21 +76,23 @@ uint8_t boot_self_test_flags = 0;
 #endif
 
 // ---------------- Pinout ----------------
-// UART2 → 74HC125 → Feetech bus
-constexpr uint8_t BUS_RX_PIN     = 7;   // Serial2 RX
-constexpr uint8_t BUS_TX_PIN     = 8;   // Serial2 TX
-constexpr uint8_t BUS_OE_TX_PIN  = 6;   // 74HC125 OE̅ for TX gate (ACTIVE-LOW: LOW = enable TX)
-constexpr uint8_t BUS_OE_RX_PIN  = 5;   // 74HC125 OE̅ for RX gate (ACTIVE-LOW: LOW = enable RX)
+// Pin numbers reconciled to nova_pcb_v6_logic board routing 2026-06-14.
+// UART1 (Serial1) → 74HC125 → Feetech bus
+constexpr uint8_t BUS_RX_PIN     = 0;   // Serial1 RX (board: U6 pad TEENSY_RX → pin 0)
+constexpr uint8_t BUS_TX_PIN     = 1;   // Serial1 TX (board: U6 pad TEENSY_TX → pin 1)
+constexpr uint8_t BUS_OE_TX_PIN  = 2;   // 74HC125 OE̅ for TX gate (ACTIVE-LOW: LOW = enable TX)
+constexpr uint8_t BUS_OE_RX_PIN  = 3;   // 74HC125 OE̅ for RX gate (ACTIVE-LOW: LOW = enable RX)
 // I2C0 (Wire) — INA226 ×3
 constexpr uint8_t I2C_SDA_PIN    = 18;
 constexpr uint8_t I2C_SCL_PIN    = 19;
 // Safety GPIO
-constexpr uint8_t ESTOP_PIN       = 2;   // input from E-stop NC contact (LOW = pressed)
-constexpr uint8_t BATTERY_LOW_PIN = 3;   // input from 13.0V comparator (HIGH = below 13.0V)
+constexpr uint8_t ESTOP_PIN       = 5;   // E-stop NC contact (J21) w/ INPUT_PULLUP. NC closed = LOW idle;
+                                         // pressed OR wire-break/unplug = HIGH (fail-safe)
+constexpr uint8_t BATTERY_LOW_PIN = 4;   // input from 13.0V comparator (HIGH = below 13.0V)
 constexpr uint8_t LED_PIN         = LED_BUILTIN;
 
 // ---------------- Feetech bus (Pattern B half-duplex via 74HC125) ----------------
-// Bus class owns the OE pins + Serial2; service_bus_stub still just toggles
+// Bus class owns the OE pins + Serial1; service_bus_stub still just toggles
 // direction until 74HC125 + a real servo are on the bench. Once hardware
 // lands, replace the toggle with a round-robin ping/read cycle — the Bus
 // instance already has ping(), read_position(), write_goal_position(), and
@@ -474,7 +476,7 @@ void setup() {
   pinMode(BATTERY_LOW_PIN, INPUT_PULLDOWN);
   pinMode(LED_PIN, OUTPUT);
 
-  // Feetech bus init (OE pinModes + Serial2.begin + default to RX).
+  // Feetech bus init (OE pinModes + Serial1.begin + default to RX).
   servo_bus.begin();
 
   // USB-CDC for host logging (will become micro-ROS transport once enabled)
@@ -507,7 +509,7 @@ void setup() {
   // already pressed, or battery-low comparator already asserted, pre-seed
   // the safety FSM into the matching latched state — the operator must
   // resolve and clear before any servo writes can fire.
-  bool estop_boot   = (digitalRead(ESTOP_PIN) == LOW);
+  bool estop_boot   = (digitalRead(ESTOP_PIN) == HIGH);   // HIGH = pressed/open (NC fail-safe)
   bool batt_low_boot = (digitalRead(BATTERY_LOW_PIN) == HIGH);
   if (estop_boot)   boot_self_test_flags |= 0x01;
   if (batt_low_boot) boot_self_test_flags |= 0x02;
@@ -787,7 +789,7 @@ void loop() {
     read_ina226_stub();
 
     // Safety GPIO sense + state-machine update
-    bool estop_now = (digitalRead(ESTOP_PIN) == LOW);
+    bool estop_now = (digitalRead(ESTOP_PIN) == HIGH);   // HIGH = pressed/open (NC fail-safe)
     bool batt_low_now = (digitalRead(BATTERY_LOW_PIN) == HIGH);
     nova::SafetyState prev_safety = safety_fsm.state();
     safety_fsm.update(estop_now, batt_low_now);

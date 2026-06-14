@@ -806,11 +806,29 @@
 						)
 					)
 				)
+				(pin bidirectional line
+					(at -3.81 -15.24 0)
+					(length 2.54)
+					(name ""
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "T5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
 			)
 			(symbol "Conn_01x09_1_1"
 				(rectangle
 					(start -1.27 11.43)
-					(end 1.27 -13.97)
+					(end 1.27 -16.51)
 					(stroke
 						(width 0.254)
 						(type default)
@@ -1344,6 +1362,16 @@
 	)
 	(wire
 		(pts
+			(xy 35.56 96.52) (xy 35.56 91.44)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "211f9fb7-936c-4693-94ff-830415cc3f82")
+	)
+	(wire
+		(pts
 			(xy 39.37 86.36) (xy 34.29 86.36)
 		)
 		(stroke
@@ -1381,6 +1409,16 @@
 			(type default)
 		)
 		(uuid "4264acb8-6df4-428e-a03f-30748d28ca8c")
+	)
+	(wire
+		(pts
+			(xy 30.48 96.52) (xy 33.02 96.52)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "52727416-30ae-4d02-8fe5-0b37a2aef290")
 	)
 	(wire
 		(pts
@@ -1481,6 +1519,16 @@
 			(type default)
 		)
 		(uuid "abaea407-ffd2-47b9-b56b-63e353ddf543")
+	)
+	(wire
+		(pts
+			(xy 35.56 91.44) (xy 40.64 91.44)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b511d7ba-8e02-406c-b41f-8e2e932d9b41")
 	)
 	(wire
 		(pts
@@ -2107,6 +2155,9 @@
 		)
 		(pin "T3V3O"
 			(uuid "3b5659e7-a8b0-41fc-9994-c2a0d87c451c")
+		)
+		(pin "T5"
+			(uuid "e4ac8034-5103-48df-8497-c6be3a0478c7")
 		)
 		(instances
 			(project "nova_pcb_v6_logic"
@@ -2756,6 +2807,71 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 30.48 96.52 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a28fa299-d831-4c56-93ea-2156d93fca11")
+		(property "Reference" "#PWR02"
+			(at 30.48 102.87 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 30.48 90.17 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 30.48 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 30.48 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 30.48 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "d96f36d2-426a-4327-8a92-f7e684f1a708")
+		)
+		(instances
+			(project "nova_pcb_v6_logic"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/e76e40d6-be2f-49cd-bcdb-1dc94bab9b30"
+					(reference "#PWR02")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "74xx:74LS125")
 		(at 115.57 105.41 0)
 		(unit 3)
@@ -3150,6 +3266,76 @@
 			(project "nova_pcb_v6_logic"
 				(path "/f535083b-f621-4317-a378-cf746e7f972b/e76e40d6-be2f-49cd-bcdb-1dc94bab9b30"
 					(reference "#PWR41")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector_Generic:Conn_01x02")
+		(at 35.56 101.6 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "fb58db14-e714-4792-9333-c07a62a5f33e")
+		(property "Reference" "J21"
+			(at 38.1 100.3299 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "Conn_01x02"
+			(at 38.1 102.8699 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical"
+			(at 35.56 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 35.56 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(at 35.56 101.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "4e9700ae-800a-457c-b461-9c92563339c4")
+		)
+		(pin "2"
+			(uuid "2741d131-c99d-4907-a34b-e7db7e428e1a")
+		)
+		(instances
+			(project ""
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/e76e40d6-be2f-49cd-bcdb-1dc94bab9b30"
+					(reference "J21")
 					(unit 1)
 				)
 			)

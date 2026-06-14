@@ -1,6 +1,6 @@
 // Feetech STS3215 protocol — frame layout, instruction codes, register map.
 // Mirrors the Feetech SCServo SDK enough to issue PING / READ_DATA / WRITE_DATA
-// / SYNC_WRITE from Teensy's Serial2 with no extra dependencies. Frames are
+// / SYNC_WRITE from Teensy's Serial1 with no extra dependencies. Frames are
 // half-duplex over the 74HC125 (Pattern B); the OE direction switching lives
 // in feetech_bus.h, not here.
 

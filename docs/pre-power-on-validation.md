@@ -20,6 +20,19 @@ Found in 2026-06-13 review. Schematic fixes first (GUI), then re-export netlist 
       Min thermal spokes 2→1 to clear GND starved-thermal. **DRC: 0 errors, 0 unconnected.**
 - [x] **J20↔J20 net mapping VERIFIED matched** — both boards' J20 pin→net identical (straight
       ribbon = correct, no bus mirror). Remaining: visual key-orientation at assembly (shrouds enforce).
+- [x] **E-stop sense to Teensy ADDED** (2026-06-14) — was: hardware e-stop (Q3) killed
+      bucks but Teensy was blind (no ESTOP on J20, 12 pins full). Added J21 (Conn_01x02)
+      → e-stop button's 2nd NC dry contact → Teensy pin 5 (`INPUT_PULLUP`) + GND. Dry
+      contact = no level-shift; NC-to-GND = LOW idle, pressed/break/unplug = HIGH = e-stop
+      (FAIL-SAFE). Routed F.Cu J21.1→U6.T5 (existing 154 tracks untouched). DRC 0/0,
+      gerbers re-cut. Net auto-named `Net-(J21-Pin_1)` (label didn't stick; electrically
+      correct). No power-board / J20 change.
+- [x] **Firmware pins reconciled to board** (2026-06-14, teensy41_ci green) — board routes
+      bus to Serial1 (pins 0/1), OE to 2/3, BATT_LOW to 4, e-stop to 5; firmware was on
+      Serial2 7/8 / OE 5,6 / BATT_LOW 3 / ESTOP 2. Updated `main.cpp` defines +
+      `feetech_bus.h` (Serial2→Serial1). I2C 18/19 already matched. **E-stop polarity
+      flipped LOW→HIGH** (NC fail-safe; SafetyFSM already latches until /safety_clear →
+      snap-back on release handled). Reconciliation was mandatory — old defines = dead bus.
 - [ ] (tidy) Add `no_connect` flags to 16 unused Nano GPIO pins — clears ERC noise
 - [ ] 2oz outer copper selected for BOTH boards at PCBWay
 
