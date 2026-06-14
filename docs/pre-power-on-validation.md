@@ -63,9 +63,10 @@ Output-wire inductance + 1000µF bulk = LC tank the buck loop may ring against (
       Default is 1oz → halves every thermal margin. Gerbers don't enforce it.
 
 ## ⚪ 7. Off-board I2C noise immunity
-3 INA226 on dupont near servo switching; FB1/R1 series-R+ferrite are DNP.
+3 INA226 on dupont near servo switching. (Bus-integrity R1=22Ω + FB1 ferrite now POPULATED,
+not DNP — 2026-06-13 fix; tune values up only if needed.)
 - [ ] Start I2C at 100kHz; only raise to 400k after the cal test passes clean
-- [ ] If readings glitch under servo load: populate FB1/R1 (footprints reserved)
+- [ ] If readings glitch under servo load: raise R1 toward 100Ω / swap ferrite
 
 ---
 **"100% won't die" = all 🔴 cleared + 🟡 #2/#3/#4 bench-passed.** #5 needs the scope (Phase 5).
