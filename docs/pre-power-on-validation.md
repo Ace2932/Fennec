@@ -13,8 +13,8 @@ Found in 2026-06-13 review. Schematic fixes first (GUI), then re-export netlist 
 - [x] **+3V3 source FIXED** (2026-06-13) — Teensy 3.3V pad `T3V3O` added to U6 symbol (Power
       output) + wired to +3V3. Netlist verified: +3V3 = [U6.T3V3O, U7.10/13/14, J20.5].
       74HC125 + 3× INA226 now powered.
-- [ ] **Add 100nF decoupling at U7 (74HC125)** — absent; part owned. Small schematic add
-      (place C, wire +3V3/GND near U7) — do before/with routing.
+- [x] **100nF decoupling at U7 DONE** (2026-06-14) — C1 (CC0603 100nF) across +3V3/GND
+      placed next to U7 pin14, routed.
 - [x] **Routed** (2026-06-14) via Freerouting headless (openjdk + freerouting-2.2.4.jar;
       pcbnew ExportSpecctraDSN → java route → ImportSpecctraSES). 24 nets, 154 tracks, 3 vias.
       Min thermal spokes 2→1 to clear GND starved-thermal. **DRC: 0 errors, 0 unconnected.**
