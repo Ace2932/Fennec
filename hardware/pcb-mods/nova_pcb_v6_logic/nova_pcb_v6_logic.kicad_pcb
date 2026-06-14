@@ -1580,7 +1580,7 @@
 				)
 			)
 		)
-		(property "Value" "22R_DNP"
+		(property "Value" "22R"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(uuid "602d8ed5-411c-4c75-9647-e69f40ef9bd5")
@@ -1619,7 +1619,7 @@
 		(path "/45d7d740-e2f4-40d0-8d10-022e9099f66d/4e718eb5-204d-4c31-89f2-b6594c0ae626")
 		(sheetname "/05 Bus Integrity/")
 		(sheetfile "05_bus_integrity.kicad_sch")
-		(attr smd dnp)
+		(attr smd)
 		(fp_line
 			(start -0.237258 0.5225)
 			(end 0.237258 0.5225)
@@ -2537,6 +2537,9 @@
 			(drill 1)
 			(layers "*.Cu" "*.Mask")
 			(remove_unused_layers no)
+			(net 14 "+3V3")
+			(pinfunction "3V3")
+			(pintype "power_out")
 			(uuid "8e957d96-5008-4393-b1b2-01cc032087d9")
 		)
 		(pad "T5" thru_hole circle
@@ -2945,7 +2948,7 @@
 				)
 			)
 		)
-		(property "Value" "FB_DNP"
+		(property "Value" "Ferrite_600R"
 			(at 0 1.43 0)
 			(layer "F.Fab")
 			(uuid "6d5aa6d4-0805-4891-b932-e94835906915")
@@ -2984,7 +2987,7 @@
 		(path "/45d7d740-e2f4-40d0-8d10-022e9099f66d/30453f93-2e35-42f2-9cb2-d0fc321fd018")
 		(sheetname "/05 Bus Integrity/")
 		(sheetfile "05_bus_integrity.kicad_sch")
-		(attr smd dnp)
+		(attr smd)
 		(fp_line
 			(start -0.162779 0.51)
 			(end 0.162779 0.51)

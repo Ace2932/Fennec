@@ -727,23 +727,23 @@
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
-			(property "Reference" "J"
-				(at 0 12.7 0)
+			(property "Reference" "U6"
+				(at 0 6.35 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Value" "Conn_01x09"
-				(at 0 -12.7 0)
+			(property "Value" "Teensy4.1"
+				(at 6.858 -4.318 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Footprint" ""
+			(property "Footprint" "nova_v6:Teensy_4.1"
 				(at 0 0 0)
 				(effects
 					(font
@@ -761,13 +761,12 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Generic connector, single row, 01x09, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(property "Description" ""
 				(at 0 0 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(property "ki_keywords" "connector"
@@ -788,10 +787,30 @@
 					(hide yes)
 				)
 			)
+			(symbol "Conn_01x09_1_0"
+				(pin power_out line
+					(at -5.08 -12.7 0)
+					(length 3.81)
+					(name "3V3"
+						(effects
+							(font
+								(size 0.762 0.762)
+							)
+						)
+					)
+					(number "T3V3O"
+						(effects
+							(font
+								(size 0.762 0.762)
+							)
+						)
+					)
+				)
+			)
 			(symbol "Conn_01x09_1_1"
 				(rectangle
 					(start -1.27 11.43)
-					(end 1.27 -11.43)
+					(end 1.27 -13.97)
 					(stroke
 						(width 0.254)
 						(type default)
@@ -1317,13 +1336,13 @@
 	)
 	(wire
 		(pts
-			(xy 39.37 81.28) (xy 34.29 81.28)
+			(xy 34.29 88.9) (xy 39.37 88.9)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "3a179053-fca9-4af0-b124-de8c49d5f497")
+		(uuid "2a036370-7c48-46bb-bde5-ed46cfc4ac98")
 	)
 	(wire
 		(pts
@@ -1367,6 +1386,26 @@
 	)
 	(wire
 		(pts
+			(xy 34.29 81.28) (xy 39.37 81.28)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "925893ef-3138-4887-81eb-6dfb9c2e3713")
+	)
+	(wire
+		(pts
+			(xy 34.29 71.12) (xy 39.37 71.12)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9717f9e4-ef1f-46ac-af70-fd082eed65e4")
+	)
+	(wire
+		(pts
 			(xy 152.4 63.5) (xy 147.32 63.5)
 		)
 		(stroke
@@ -1384,16 +1423,6 @@
 			(type default)
 		)
 		(uuid "a2692d74-ccd6-49e4-8fdc-ed3cf39917ea")
-	)
-	(wire
-		(pts
-			(xy 39.37 71.12) (xy 34.29 71.12)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "a9e20eb5-0f2e-48f8-9509-8827616a7774")
 	)
 	(wire
 		(pts
@@ -1497,7 +1526,7 @@
 	)
 	(wire
 		(pts
-			(xy 172.72 92.71) (xy 167.64 92.71)
+			(xy 172.72 92.71) (xy 152.4 92.71)
 		)
 		(stroke
 			(width 0)
@@ -1576,7 +1605,7 @@
 		(uuid "5584a302-00ed-438f-a038-e07a82e08255")
 	)
 	(label "MASTER_B"
-		(at 167.64 92.71 180)
+		(at 152.4 92.71 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -1677,12 +1706,12 @@
 	)
 	(global_label "I2C_SCL"
 		(shape bidirectional)
-		(at 34.29 83.82 0)
+		(at 34.29 83.82 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "0e1a65d3-9459-49f5-a9d6-183edba82986")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
@@ -1697,16 +1726,36 @@
 	)
 	(global_label "BUS_SIGNAL"
 		(shape bidirectional)
-		(at 167.64 90.17 0)
+		(at 167.64 90.17 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "10f15a0e-d056-4270-bd39-24dcd0a1cecb")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 167.64 90.17 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "+3V3"
+		(shape bidirectional)
+		(at 34.29 88.9 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "1a2ba8a7-338e-4e1d-be57-a689303d44fe")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 34.29 88.9 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1737,12 +1786,12 @@
 	)
 	(global_label "BUS_SIGNAL"
 		(shape bidirectional)
-		(at 101.6 76.2 0)
+		(at 101.6 76.2 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "2848b58a-d9dc-4b87-b006-3220aae5bf08")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
@@ -1757,16 +1806,16 @@
 	)
 	(global_label "+3V3"
 		(shape bidirectional)
-		(at 114.3 118.11 90)
+		(at 114.3 118.11 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "41301912-4d45-4a62-b7f2-17db07f22260")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 114.3 118.11 0)
+			(at 114.3 118.11 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1777,12 +1826,12 @@
 	)
 	(global_label "BATT_LOW"
 		(shape bidirectional)
-		(at 34.29 86.36 0)
+		(at 34.29 86.36 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "43ae7529-bb8e-4be1-a8a0-7e6b739e173f")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
@@ -1797,12 +1846,12 @@
 	)
 	(global_label "V5_AUX"
 		(shape bidirectional)
-		(at 34.29 66.04 0)
+		(at 34.29 66.04 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "4444317b-0f43-4d14-9f86-52fdb6db4c51")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
@@ -1817,16 +1866,16 @@
 	)
 	(global_label "+3V3"
 		(shape bidirectional)
-		(at 114.3 143.51 90)
+		(at 114.3 143.51 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "a89ea137-b93d-48f8-a870-10a99442d47f")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 114.3 143.51 0)
+			(at 114.3 143.51 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1837,12 +1886,12 @@
 	)
 	(global_label "I2C_SDA"
 		(shape bidirectional)
-		(at 34.29 81.28 0)
+		(at 34.29 81.28 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "c26455d6-5321-410b-a7f5-7aae44c622f8")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
@@ -2003,7 +2052,7 @@
 			)
 		)
 		(property "Value" "Teensy4.1"
-			(at 44.45 82.55 0)
+			(at 51.308 80.518 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2062,6 +2111,9 @@
 		)
 		(pin "9"
 			(uuid "30d1c2ad-b03e-410f-9202-66e28a463f31")
+		)
+		(pin "T3V3O"
+			(uuid "3b5659e7-a8b0-41fc-9994-c2a0d87c451c")
 		)
 		(instances
 			(project "nova_pcb_v6_logic"

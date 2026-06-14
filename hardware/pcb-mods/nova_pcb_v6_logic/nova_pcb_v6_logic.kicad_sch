@@ -6,84 +6,12 @@
 	(paper "A4")
 	(lib_symbols)
 	(sheet
-		(at 38.1 38.1)
-		(size 88.9 25.4)
-		(fields_autoplaced yes)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(fill
-			(color 0 0 0 0.0000)
-		)
-		(uuid "e76e40d6-be2f-49cd-bcdb-1dc94bab9b30")
-		(property "Sheetname" "04 Bus Master (Pattern B)"
-			(at 38.1 37.3884 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left bottom)
-			)
-		)
-		(property "Sheetfile" "04_bus_master.kicad_sch"
-			(at 38.1 64.0772 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(instances
-			(project "nova_pcb_v6_logic"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b"
-					(page "2")
-				)
-			)
-		)
-	)
-	(sheet
-		(at 152.4 38.1)
-		(size 88.9 25.4)
-		(fields_autoplaced yes)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(fill
-			(color 0 0 0 0.0000)
-		)
-		(uuid "45d7d740-e2f4-40d0-8d10-022e9099f66d")
-		(property "Sheetname" "05 Bus Integrity"
-			(at 152.4 37.3884 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left bottom)
-			)
-		)
-		(property "Sheetfile" "05_bus_integrity.kicad_sch"
-			(at 152.4 64.0772 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(instances
-			(project "nova_pcb_v6_logic"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b"
-					(page "3")
-				)
-			)
-		)
-	)
-	(sheet
 		(at 38.1 76.2)
 		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -120,8 +48,96 @@
 		)
 	)
 	(sheet
+		(at 152.4 38.1)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "45d7d740-e2f4-40d0-8d10-022e9099f66d")
+		(property "Sheetname" "05 Bus Integrity"
+			(at 152.4 37.3884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "05_bus_integrity.kicad_sch"
+			(at 152.4 64.0772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6_logic"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 38.1 114.3)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "495b5e2f-8422-4126-a962-b63ae9783ab4")
+		(property "Sheetname" "09 Inter-Board Connector"
+			(at 38.1 113.5884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "09_interboard.kicad_sch"
+			(at 38.1 140.2772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6_logic"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "6")
+				)
+			)
+		)
+	)
+	(sheet
 		(at 152.4 76.2)
 		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -158,8 +174,12 @@
 		)
 	)
 	(sheet
-		(at 38.1 114.30000000000001)
+		(at 38.1 38.1)
 		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -168,9 +188,9 @@
 		(fill
 			(color 0 0 0 0.0000)
 		)
-		(uuid "495b5e2f-8422-4126-a962-b63ae9783ab4")
-		(property "Sheetname" "09 Inter-Board Connector"
-			(at 38.1 113.5884 0)
+		(uuid "e76e40d6-be2f-49cd-bcdb-1dc94bab9b30")
+		(property "Sheetname" "04 Bus Master (Pattern B)"
+			(at 38.1 37.3884 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -178,8 +198,8 @@
 				(justify left bottom)
 			)
 		)
-		(property "Sheetfile" "09_interboard.kicad_sch"
-			(at 38.1 140.2772 0)
+		(property "Sheetfile" "04_bus_master.kicad_sch"
+			(at 38.1 64.0772 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -190,7 +210,7 @@
 		(instances
 			(project "nova_pcb_v6_logic"
 				(path "/f535083b-f621-4317-a378-cf746e7f972b"
-					(page "6")
+					(page "2")
 				)
 			)
 		)
@@ -198,21 +218,6 @@
 	(sheet_instances
 		(path "/"
 			(page "1")
-		)
-		(path "/e76e40d6-be2f-49cd-bcdb-1dc94bab9b30"
-			(page "2")
-		)
-		(path "/45d7d740-e2f4-40d0-8d10-022e9099f66d"
-			(page "3")
-		)
-		(path "/0af7f1f2-3a0a-4436-aaa7-f191048b3c83"
-			(page "4")
-		)
-		(path "/6edc1b8a-dc4c-428d-8457-a29d39eb3953"
-			(page "5")
-		)
-		(path "/495b5e2f-8422-4126-a962-b63ae9783ab4"
-			(page "6")
 		)
 	)
 	(embedded_fonts no)

@@ -713,27 +713,27 @@
   "sheets": [
     [
       "f535083b-f621-4317-a378-cf746e7f972b",
-      "1"
+      "Root"
     ],
     [
       "e76e40d6-be2f-49cd-bcdb-1dc94bab9b30",
-      "2"
+      "04 Bus Master (Pattern B)"
     ],
     [
       "45d7d740-e2f4-40d0-8d10-022e9099f66d",
-      "3"
+      "05 Bus Integrity"
     ],
     [
       "0af7f1f2-3a0a-4436-aaa7-f191048b3c83",
-      "4"
+      "07 Aux MCU + Peripherals"
     ],
     [
       "6edc1b8a-dc4c-428d-8457-a29d39eb3953",
-      "5"
+      "08 Connectors + Mechanical"
     ],
     [
       "495b5e2f-8422-4126-a962-b63ae9783ab4",
-      "6"
+      "09 Inter-Board Connector"
     ]
   ],
   "text_variables": {}
