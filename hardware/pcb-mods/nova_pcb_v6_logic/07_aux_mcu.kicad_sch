@@ -1581,16 +1581,6 @@
 	)
 	(wire
 		(pts
-			(xy 53.34 49.53) (xy 53.34 50.8)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "659a0278-8cd6-47c5-a267-1de3f68573c7")
-	)
-	(wire
-		(pts
 			(xy 160.02 73.66) (xy 152.4 73.66)
 		)
 		(stroke
@@ -1689,16 +1679,7 @@
 		)
 		(uuid "4a609b5d-2720-41e0-ba89-0b8e0c94bc70")
 	)
-	(label "NANO_3V3"
-		(at 53.34 49.53 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "5fdef247-d138-4c3a-b77d-e60d43798a2d")
-	)
+
 	(label "LED_DATA"
 		(at 152.4 78.74 180)
 		(effects
@@ -2480,6 +2461,74 @@
 	)
 	(label "OLED_CS" (at 101.6 123.19 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "b005600f-5da6-4782-a910-0b0975f23c4a"))
 	(label "OLED_CS_F" (at 101.6 130.81 0)(effects (font (size 1.27 1.27))(justify left bottom))(uuid "3c0c549e-d7e6-4c0d-b18d-80242f217f31"))
+	(no_connect
+		(at 38.1 60.96)
+		(uuid "e7ab30c5-2fa7-406b-a375-7ecdae7502fc")
+	)
+	(no_connect
+		(at 38.1 63.5)
+		(uuid "e28641ac-67a6-458b-8cec-94c8940e0bcc")
+	)
+	(no_connect
+		(at 38.1 66.04)
+		(uuid "52a53f59-9e5a-461b-9626-060e35fedcf2")
+	)
+	(no_connect
+		(at 38.1 68.58)
+		(uuid "693a33cb-d4f6-433d-bad8-606007858be5")
+	)
+	(no_connect
+		(at 38.1 71.12)
+		(uuid "4ea87b9d-30e4-4827-84c2-10f1e7c2b91f")
+	)
+	(no_connect
+		(at 38.1 73.66)
+		(uuid "211a6955-881f-4fd2-b7cc-5296c02a815c")
+	)
+	(no_connect
+		(at 38.1 78.74)
+		(uuid "ac4e3faf-3509-4de3-a7fa-50b2a430a1cb")
+	)
+	(no_connect
+		(at 38.1 91.44)
+		(uuid "ac076df4-d3ea-4578-920b-4ce03a081885")
+	)
+	(no_connect
+		(at 63.5 76.2)
+		(uuid "6a6a95c8-d5e5-4fc2-b725-c55937f16c88")
+	)
+	(no_connect
+		(at 63.5 78.74)
+		(uuid "7d14a8a3-b357-4b61-88ac-d621cceba79b")
+	)
+	(no_connect
+		(at 63.5 81.28)
+		(uuid "87bcee41-cdb2-4073-a482-35029aad714a")
+	)
+	(no_connect
+		(at 63.5 83.82)
+		(uuid "54ab41cd-8508-41eb-88ca-53e9f7a5bb57")
+	)
+	(no_connect
+		(at 63.5 86.36)
+		(uuid "320dda68-f3cd-411d-b587-9edccb218824")
+	)
+	(no_connect
+		(at 63.5 88.9)
+		(uuid "df7464ac-0a59-4df3-88ce-019b1b5c3e7c")
+	)
+	(no_connect
+		(at 63.5 91.44)
+		(uuid "c97c6586-9536-4713-9a41-8c2433033db0")
+	)
+	(no_connect
+		(at 63.5 93.98)
+		(uuid "42a08778-cb5e-4066-8c04-6d30fb88bb25")
+	)
+	(no_connect
+		(at 53.34 50.8)
+		(uuid "f2ef0033-11e4-423c-906a-a791e1836b8e")
+	)
 	(sheet_instances
 		(path "/"
 			(page "1")
