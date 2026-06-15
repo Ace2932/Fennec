@@ -1,0 +1,46 @@
+name: ros-pytest
+
+# Pure-logic unit tests for the ROS 2 packages, on every PR + push to main.
+# These suites import only the packages' algorithm modules (no rclpy, no
+# hardware), so they run fast on plain CPython without a ROS install — the same
+# way they're authored. The full colcon build + node-level tests run on the
+# Jetson; this is the quick pre-merge correctness filter.
+
+on:
+  pull_request:
+    paths:
+      - 'ros2_ws/src/**'
+      - '.github/workflows/ros-pytest.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ros2_ws/src/**'
+      - '.github/workflows/ros-pytest.yml'
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Run package unit tests
+        run: |
+          set -e
+          cd ros2_ws/src
+          fail=0
+          for pkg in nova_ops nova_calibration nova_locomotion; do
+            if [ -d "$pkg/test" ]; then
+              echo "::group::$pkg"
+              ( cd "$pkg" && PYTHONPATH=. python -m pytest test/ -q ) || fail=1
+              echo "::endgroup::"
+            fi
+          done
+          exit $fail
