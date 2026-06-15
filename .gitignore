@@ -112,3 +112,5 @@ _autosave-*
 # exported DRC/ERC reports (regenerable)
 *.drc.json
 *.erc.json
+*-drc.rpt
+*-erc.rpt
