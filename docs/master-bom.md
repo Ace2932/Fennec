@@ -44,7 +44,8 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 ## Logic board — `nova_pcb_v6_logic` (ROUTED 2026-06-14, DRC 0 errors → PCBWay)
 | Part | Ref | Status |
 |---|---|---|
-| 74HC125 SOIC-14 (SN74HC125D) ×5 | U7 | 🛒 |
+| **SN74LVC125AD** SOIC-14 ×5 | U7 | 🛒 ⚠️ ORDER LVC NOT HC — 5V-tolerant inputs (servo bus is 5V-TTL; HC at 3.3V isn't 5V-tolerant → servo response over-drives input). Same SOIC-14 pinout, VCC 3.3V (max 3.6V). Sch value was stale "74LS125" (5V TTL, wrong for 3.3V). Changed 2026-06-14. |
+| R7 = 10kΩ 0603 | R7 | 🛒 ADD — bus idle pull-up (BUS_SIGNAL→+3V3), keeps half-duplex bus defined in TX/RX turnaround. Added 2026-06-14. |
 | Teensy 4.1 socket — PPTC241LFBN-RC ×2 | U6 | 🛒 |
 | Arduino Nano socket — PPTC151LFBN-RC ×2 | U12 | 🛒 (Phase 2) |
 | R1 = 22Ω 0603 (RC0603FR-0722RL) | R1 | 🛒 ADD to DigiKey — un-DNP'd 2026-06-13 (was open bus) |

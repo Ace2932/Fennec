@@ -41,6 +41,15 @@ Found in 2026-06-13 review. Schematic fixes first (GUI), then re-export netlist 
       series R (R2-R6)** on SCK/MOSI/RST/DC/CS. Schematic + full re-route, DRC 0/0, gerbers
       re-cut. BENCH-VERIFY: if display still glitches, swap to Adafruit 684 (74LVC245+boost,
       5V VIN, DK 684-ND) — wire 7 pins to J10.
+- [x] **U7 → SN74LVC125A (5V-tolerant)** (2026-06-14) — servo bus is 5V-TTL; the 74HC125 at
+      +3V3 is NOT 5V-tolerant (input abs-max VCC+0.5=3.8V) → servo's 5V response over-drives
+      gate2 input, clamp current ~54mA through R1's 22Ω = stress/damage. SN74LVC125A: same
+      SOIC-14 pinout (drop-in), VCC 3.3V (max 3.6V — keep on +3V3, never 5V), inputs 5V-tolerant,
+      outputs swing 3.3V (Teensy-safe). Correct whether bus is 3.3V or 5V. (Sch value was stale
+      "74LS125" = 5V TTL, also wrong for 3.3V.) Value-only change, no reroute.
+- [x] **Bus idle pull-up R7 (10k BUS_SIGNAL→+3V3)** (2026-06-14) — half-duplex push-pull bus
+      floats during TX↔RX turnaround → gate2 input indeterminate / false RX bytes. R7 holds idle
+      HIGH at 3.3V; 10k = idle bias only (drivers do edges), no speed penalty.
 - [ ] (tidy) Add `no_connect` flags to 16 unused Nano GPIO pins — clears ERC noise
 - [ ] 2oz outer copper selected for BOTH boards at PCBWay
 
