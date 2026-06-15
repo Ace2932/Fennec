@@ -36,10 +36,14 @@ jobs:
           set -e
           cd ros2_ws/src
           fail=0
+          # test_preflight imports rclpy (it's a ROS integration test that runs
+          # on the Jetson) — skip it in this no-ROS runner. Other nova_ops suites
+          # are pure logic and DO run here.
+          declare -A IGNORE=( [nova_ops]="--ignore=test/test_preflight.py" )
           for pkg in nova_ops nova_calibration nova_locomotion; do
             if [ -d "$pkg/test" ]; then
               echo "::group::$pkg"
-              ( cd "$pkg" && PYTHONPATH=. python -m pytest test/ -q ) || fail=1
+              ( cd "$pkg" && PYTHONPATH=. python -m pytest test/ -q ${IGNORE[$pkg]} ) || fail=1
               echo "::endgroup::"
             fi
           done
