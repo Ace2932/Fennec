@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<!-- 3-DOF leg macro for NovaSM3 (Feetech STS3215 bus servos).
+     Chain: base -> <leg>_hip (coax, HAA hip ab/ad) -> <leg>_upper (femur, HFE hip
+     flex) -> <leg>_lower (tibia, KFE knee) -> <leg>_foot.
+     Visual/collision = the real carved NovaSM3 STLs (mm -> m, scale 0.001).
+
+     ⚠️ LINK OFFSETS ARE PLACEHOLDERS (see nova.urdf.xacro properties).
+        The axis-to-axis distances live in the original mesh geometry and were
+        NOT measured (no mesh tool in this env). MEASURE FROM CAD before using
+        this for gait/sim — kinematics will be wrong until then. Mesh visuals
+        are exact; only the joint origins need refinement. -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="nova_leg"
+               params="leg side mount_x mount_y mount_z reflect">
+    <!-- side: 'Left' or 'Right' (selects mesh). reflect: +1 left, -1 right. -->
+
+    <!-- ===== HAA : base -> hip (coax) ===== -->
+    <joint name="${leg}_haa" type="revolute">
+      <parent link="base_link"/>
+      <child  link="${leg}_hip"/>
+      <origin xyz="${mount_x} ${mount_y} ${mount_z}" rpy="0 0 0"/>
+      <axis xyz="1 0 0"/>
+      <limit lower="${-haa_range}" upper="${haa_range}"
+             effort="${eff_hip}" velocity="${vel_servo}"/>
+    </joint>
+    <link name="${leg}_hip">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_${side}Coax.stl" scale="0.001 0.001 0.001"/></geometry>
+      </visual>
+      <collision>
+        <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_${side}Coax.stl" scale="0.001 0.001 0.001"/></geometry>
+      </collision>
+      <xacro:link_inertial mass="${m_hip}"/>
+    </link>
+
+    <!-- ===== HFE : hip -> upper (femur) ===== -->
+    <joint name="${leg}_hfe" type="revolute">
+      <parent link="${leg}_hip"/>
+      <child  link="${leg}_upper"/>
+      <origin xyz="${hip_to_upper_x} ${reflect*hip_to_upper_y} ${hip_to_upper_z}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="${-hfe_range}" upper="${hfe_range}"
+             effort="${eff_leg}" velocity="${vel_servo}"/>
+    </joint>
+    <link name="${leg}_upper">
+      <visual>
+        <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_${side}Femur.stl" scale="0.001 0.001 0.001"/></geometry>
+      </visual>
+      <collision>
+        <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_${side}Femur.stl" scale="0.001 0.001 0.001"/></geometry>
+      </collision>
+      <xacro:link_inertial mass="${m_upper}"/>
+    </link>
+
+    <!-- ===== KFE : upper -> lower (tibia) ===== -->
+    <joint name="${leg}_kfe" type="revolute">
+      <parent link="${leg}_upper"/>
+      <child  link="${leg}_lower"/>
+      <origin xyz="${upper_to_lower_x} 0 ${upper_to_lower_z}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="${-kfe_range}" upper="${kfe_range}"
+             effort="${eff_leg}" velocity="${vel_servo}"/>
+    </joint>
+    <link name="${leg}_lower">
+      <visual>
+        <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_${side}Tibia.stl" scale="0.001 0.001 0.001"/></geometry>
+      </visual>
+      <collision>
+        <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_${side}Tibia.stl" scale="0.001 0.001 0.001"/></geometry>
+      </collision>
+      <xacro:link_inertial mass="${m_lower}"/>
+    </link>
+
+    <!-- ===== foot (fixed) ===== -->
+    <joint name="${leg}_foot_joint" type="fixed">
+      <parent link="${leg}_lower"/>
+      <child  link="${leg}_foot"/>
+      <origin xyz="${lower_to_foot_x} 0 ${lower_to_foot_z}" rpy="0 0 0"/>
+    </joint>
+    <link name="${leg}_foot">
+      <visual>
+        <geometry><mesh filename="package://nova_description/meshes/SM3_Foot.stl" scale="0.001 0.001 0.001"/></geometry>
+      </visual>
+      <collision><geometry><sphere radius="0.012"/></geometry></collision>
+      <xacro:link_inertial mass="${m_foot}"/>
+    </link>
+
+  </xacro:macro>
+</robot>
