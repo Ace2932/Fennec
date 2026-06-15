@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<!-- ============================================================
+     NovaSM3 — 12-DOF quadruped (Feetech STS3215 bus servos)
+     First-cut URDF. Visuals = real carved NovaSM3 STLs (exact).
+
+     ⚠️⚠️  LINK OFFSETS + MASSES + INERTIAS BELOW ARE PLACEHOLDERS  ⚠️⚠️
+     They were NOT measured from CAD (no mesh tool available when authored).
+     The kinematics WILL BE WRONG until you replace every value tagged
+     "TODO-CAD" with axis-to-axis distances measured from the leg_v5 assembly
+     / original_body_files meshes. Do this BEFORE training any gait in MJX or
+     planning with MoveIt. Mesh visuals are correct; only the numbers are not.
+
+     Joint names are canonical here (the firmware stack is ID-based, no names).
+     ID<->name map: config/joint_id_map.yaml.
+     ============================================================ -->
+<robot name="nova_sm3" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ===================== STS3215 servo limits ===================== -->
+  <!-- 30 kg·cm ≈ 2.94 N·m (hip), 19 kg·cm ≈ 1.86 N·m (femur/tibia).
+       ~0.16 s/60° no-load ≈ 6.5 rad/s; derate. Position ranges per-joint
+       are conservative placeholders — set to real mechanical travel. -->
+  <xacro:property name="eff_hip"  value="2.9"/>
+  <xacro:property name="eff_leg"  value="1.8"/>
+  <xacro:property name="vel_servo" value="6.0"/>
+  <xacro:property name="haa_range" value="0.7"/>   <!-- TODO-CAD mechanical travel -->
+  <xacro:property name="hfe_range" value="1.5"/>   <!-- TODO-CAD -->
+  <xacro:property name="kfe_range" value="2.2"/>   <!-- TODO-CAD -->
+
+  <!-- ===================== link offsets (m) ===================== -->
+  <!-- TODO-CAD: every value below is a placeholder SpotMicro-class guess. -->
+  <xacro:property name="body_half_x" value="0.10"/>  <!-- TODO-CAD half trunk length -->
+  <xacro:property name="body_half_y" value="0.05"/>  <!-- TODO-CAD half trunk width  -->
+  <xacro:property name="mount_z"     value="0.0"/>   <!-- TODO-CAD hip row height -->
+  <xacro:property name="hip_to_upper_x" value="0.0"/>    <!-- TODO-CAD -->
+  <xacro:property name="hip_to_upper_y" value="0.045"/>  <!-- TODO-CAD coax horn -> femur axis -->
+  <xacro:property name="hip_to_upper_z" value="0.0"/>    <!-- TODO-CAD -->
+  <xacro:property name="upper_to_lower_x" value="0.0"/>  <!-- TODO-CAD -->
+  <xacro:property name="upper_to_lower_z" value="-0.11"/><!-- TODO-CAD femur length -->
+  <xacro:property name="lower_to_foot_x" value="0.0"/>   <!-- TODO-CAD -->
+  <xacro:property name="lower_to_foot_z" value="-0.13"/> <!-- TODO-CAD tibia length -->
+
+  <!-- ===================== masses (kg) ===================== -->
+  <!-- TODO-CAD: weigh / compute from CAD. STS3215 ≈ 0.06 kg each. -->
+  <xacro:property name="m_base"  value="1.2"/>
+  <xacro:property name="m_hip"   value="0.12"/>
+  <xacro:property name="m_upper" value="0.16"/>
+  <xacro:property name="m_lower" value="0.08"/>
+  <xacro:property name="m_foot"  value="0.02"/>
+
+  <!-- crude box inertia helper (TODO-CAD: replace with real tensors) -->
+  <xacro:macro name="link_inertial" params="mass">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia ixx="${mass*1e-3}" iyy="${mass*1e-3}" izz="${mass*1e-3}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:include filename="$(find nova_description)/urdf/leg.macro.xacro"/>
+
+  <!-- ===================== base / trunk ===================== -->
+  <link name="base_link">
+    <visual>
+      <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_ChassisTrunk.stl" scale="0.001 0.001 0.001"/></geometry>
+    </visual>
+    <collision>
+      <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_ChassisTrunk.stl" scale="0.001 0.001 0.001"/></geometry>
+    </collision>
+    <xacro:link_inertial mass="${m_base}"/>
+  </link>
+
+  <!-- ===================== 4 legs =====================
+       FL=front-left  FR=front-right  RL=rear-left  RR=rear-right
+       reflect +1 = left side, -1 = right side -->
+  <xacro:nova_leg leg="FL" side="Left"  reflect="1"
+                  mount_x="${ body_half_x}" mount_y="${ body_half_y}" mount_z="${mount_z}"/>
+  <xacro:nova_leg leg="FR" side="Right" reflect="-1"
+                  mount_x="${ body_half_x}" mount_y="${-body_half_y}" mount_z="${mount_z}"/>
+  <xacro:nova_leg leg="RL" side="Left"  reflect="1"
+                  mount_x="${-body_half_x}" mount_y="${ body_half_y}" mount_z="${mount_z}"/>
+  <xacro:nova_leg leg="RR" side="Right" reflect="-1"
+                  mount_x="${-body_half_x}" mount_y="${-body_half_y}" mount_z="${mount_z}"/>
+
+</robot>
