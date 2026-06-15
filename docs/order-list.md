@@ -8,6 +8,65 @@ One-shot consolidated checkout for the BOM v3.4 committed adds (~$362, ISDT 608A
 
 ---
 
+## 🆕 2026-06-14 update — order reconciliation + arm Phase-4 schematic adds
+
+Cross-checked Amazon order history against the board BOM. **Big/long-lead items DONE since the lists above:** MRBF fuse system (Blue Sea 5191 block + Bay Marine MRBF-30 ×2), SW1 switch (Blue Sea 8282 Contura SPST), Q1 IRLB3034PBF ×5, bulk caps 1000µF/25V ×12 (FymuSing — Ø10×17mm; fits Ø12.5 land + 5mm pitch, clears the 20mm standoff gap, 1mm over the 16mm low-profile spec → fine), 12AWG silicone wire, 5/16" ring lugs, M3×20 mezzanine standoffs, full bench kit (30V/10A PSU, IR thermometer, 24MHz logic analyzer, LCR/transistor tester, 100W load resistors, solder wick).
+
+Arm Phase-4 now wired into the power board (schematic only, ERC clean, F8+route+gerber pending): U5.EN re-gated VBAT_PROTECTED→EN_BUCKS · **J14** arm output XT30 added (was a dangling net) · **U12** arm INA226 added (addr **0x45**, DNP). See [[project-power-board-arm-phase4]].
+
+---
+
+## 🟢 FINAL pre-build order (both boards + Phase-4) — 2026-06-15
+
+Full multi-phase, both-board audit. Both boards are routed + DRC-clean (logic: 0 unconnected / 0 errors; power: clean, and the J14/EN/U12 edits add **zero** new orderable parts). Teensy 4.1 ✅ owned, Nano ✅ ordered, no DNP surprises → **BOM is frozen.** This is intended to be the **last DigiKey/Mouser order**. The 3 non-DigiKey lines at the bottom are separate-vendor orders that can't go on DigiKey.
+
+### A. DigiKey / Mouser cart — ONE order
+
+**Active / ICs**
+- LM393DR SOIC-8 ×2 (power U8 + spare)
+- BSS138 SOT-23 ×5 (power Q2/Q3/Q4 + spares)
+- 74**LVC**125 SOIC-14 ×5 (logic U7 — board uses LVC, 5V-tolerant; keep it) — *Q1 IRLB3034 ✅ already ordered*
+
+**Electrolytics**
+- 470µF/25V radial Ø10 5mm-pitch ×4 (power C6/C8/C9 + L2-filter cap; e.g. Nichicon UPW1E471MPD) — *1000µF C1–C5 ✅ ordered*
+
+**Inductor**
+- 22µH ≥2A power inductor ×1 (Bourns SRR1260-220M) — power L1 / L2-LiDAR LC filter
+
+**0603 passives — consolidated across BOTH boards** (buy 10-packs, Yageo RC0603 1% / X7R)
+| Value | Qty | Refs |
+|---|---|---|
+| 10k | 9 | pwr R5/R7/R8/R9/R13 + logic R7×2 |
+| 1k | 5 | logic R2–R6 |
+| 100k | 2 | pwr R2/R16 |
+| 4.7k | 2 | pwr R11/R12 |
+| 22k · 470k · 1M | 1 each | pwr R3/R14/R15 |
+| **11.3k 1%** · **12.1k 1%** | 1 each (buy a few — trip-point) | pwr R4/R6 |
+| 22R | 2 | logic R1 (bus series) |
+| 100nF (C0603 X7R) | 4 | pwr C7 + logic C1 |
+| 600R ferrite (L0603) | 2 | logic FB1 |
+
+**Connectors**
+- JST **B3B-XH-A** ×4 (power J8 + logic J11 + spares) — DK 455-2247-ND
+- 🔴 **IDC box header 2×06 2.54 shrouded ×2** (J20 on *each* board) + **12-way ribbon** + 2 IDC receptacle ends (mezzanine link — currently have zero; pair required, two males can't mate)
+- 2.54 pin-header breakaway strip ×1 (Sullins PRPC040SAAN) — covers pwr J2/M1 + logic J10/J21/J9/JP1
+- 2.54 shorting jumpers ×3 (JP_BUS_MASTER, logic JP1)
+- 🔴 **SW1 15–20A screw block** (KF301-16A / Phoenix MKDS — kit block is 10A, SW1 carries ~15A) *(DigiKey or Amazon)*
+
+**TVS (off-board, power rails incl. Phase-4 arm)**
+- SMBJ8.5A ×5 (2 leg + 1 arm Phase-4 + spares) · SMBJ13A ×5 (hip + L2 + spares) — cathode band to +, across injection XT30 pigtails
+
+### B. NOT DigiKey — separate-vendor orders (don't forget)
+- **Pololu:** D42V55F7 arm buck (~$32) — Phase-4 install
+- **Amazon:** +1 INA226 20A R002 module — arm U12 consumed the 4th/spare → 0 spares now
+- **Feetech / AliExpress:** 6× servo daisy-chain cables — Phase-4 arm (user handling)
+- **PCBWay:** both boards ×5 + stencils — **after** power-board routing (J14/EN/U12) + gerber regen
+
+### Why this is the last DigiKey trip
+Both boards DRC-clean → no design churn pulling new parts; pending power edits add nothing orderable; Phase-4 electronics folded in (TVS arm clamp in the ×5). Only re-order risk = a 1% trip-point value (R4 11.3k / R6 12.1k) failing bench trim → buy a couple neighboring values as insurance.
+
+---
+
 ## 1. Power conversion + charging
 
 ### ISDT 608AC LiPo charger — ~$60 ✅ ORDERED
