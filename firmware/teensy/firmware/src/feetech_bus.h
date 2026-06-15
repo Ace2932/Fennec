@@ -1,5 +1,5 @@
 // Pattern B half-duplex bus driver for the Feetech STS3215 chain.
-// Owns the 74HC125 OE pins (DE/RE-equivalent gating) and Teensy Serial2 TX
+// Owns the 74HC125 OE pins (DE/RE-equivalent gating) and Teensy Serial1 TX
 // timing. Frames built in feetech_protocol.h; this file is the wire-side
 // state machine.
 //
@@ -17,10 +17,11 @@
 
 namespace feetech {
 
-// Pattern B uses Teensy Serial2 (pins 7/8) through 74HC125. Tunable via
-// build flags so a Pattern A bench bringup can override.
+// Pattern B uses Teensy Serial1 (pins 0/1) through 74HC125 — matches
+// nova_pcb_v6_logic board routing (U6 pads TEENSY_RX→pin0, TEENSY_TX→pin1).
+// Tunable via build flags so a Pattern A bench bringup can override.
 #ifndef NOVA_FEETECH_UART
-#define NOVA_FEETECH_UART Serial2
+#define NOVA_FEETECH_UART Serial1
 #endif
 
 class Bus {

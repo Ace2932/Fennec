@@ -511,6 +511,31 @@
 			)
 		)
 	)
+	(symbol
+		(lib_id "Device:R")
+		(at 119.38 63.5 0)(unit 1)
+		(exclude_from_sim no)(in_bom yes)(on_board yes)(dnp no)(uuid "c5491327-3da7-42e5-acb3-50f08e86b830")
+		(property "Reference" "R7" (at 119.38 57.15 0)(effects (font (size 1.27 1.27))))
+		(property "Value" "10k" (at 119.38 69.85 0)(effects (font (size 1.27 1.27))))
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric" (at 119.38 63.5 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Datasheet" "~" (at 119.38 63.5 0)(effects (font (size 1.27 1.27))(hide yes)))
+		(property "Description" "" (at 119.38 63.5 0)(effects (font (size 1.27 1.27))))
+		(pin "1" (uuid "12eac064-ce81-44db-97ea-db1d7ef1c42f"))
+		(pin "2" (uuid "646f8e25-3180-451b-bc6f-576ec2b2b4cd"))
+		(instances (project "nova_pcb_v6_logic" (path "/f535083b-f621-4317-a378-cf746e7f972b/45d7d740-e2f4-40d0-8d10-022e9099f66d" (reference "R7")(unit 1))))
+	)
+	(global_label "+3V3"
+		(shape input)(at 119.38 59.69 90)
+		(effects (font (size 1.27 1.27))(justify left))
+		(uuid "cc65eae0-26d8-495d-b63c-7854995aebf9")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}" (at 119.38 59.69 0)(effects (font (size 1.27 1.27))(hide yes)))
+	)
+	(global_label "BUS_SIGNAL"
+		(shape bidirectional)(at 119.38 67.31 270)
+		(effects (font (size 1.27 1.27))(justify left))
+		(uuid "021ed938-7b4b-44c6-a31a-f1ce87aa45fb")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}" (at 119.38 67.31 0)(effects (font (size 1.27 1.27))(hide yes)))
+	)
 	(sheet_instances
 		(path "/"
 			(page "1")

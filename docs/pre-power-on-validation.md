@@ -20,6 +20,36 @@ Found in 2026-06-13 review. Schematic fixes first (GUI), then re-export netlist 
       Min thermal spokes 2→1 to clear GND starved-thermal. **DRC: 0 errors, 0 unconnected.**
 - [x] **J20↔J20 net mapping VERIFIED matched** — both boards' J20 pin→net identical (straight
       ribbon = correct, no bus mirror). Remaining: visual key-orientation at assembly (shrouds enforce).
+- [x] **E-stop sense to Teensy ADDED** (2026-06-14) — was: hardware e-stop (Q3) killed
+      bucks but Teensy was blind (no ESTOP on J20, 12 pins full). Added J21 (Conn_01x02)
+      → e-stop button's 2nd NC dry contact → Teensy pin 5 (`INPUT_PULLUP`) + GND. Dry
+      contact = no level-shift; NC-to-GND = LOW idle, pressed/break/unplug = HIGH = e-stop
+      (FAIL-SAFE). Routed F.Cu J21.1→U6.T5 (existing 154 tracks untouched). DRC 0/0,
+      gerbers re-cut. Net auto-named `Net-(J21-Pin_1)` (label didn't stick; electrically
+      correct). No power-board / J20 change.
+- [x] **Firmware pins reconciled to board** (2026-06-14, teensy41_ci green) — board routes
+      bus to Serial1 (pins 0/1), OE to 2/3, BATT_LOW to 4, e-stop to 5; firmware was on
+      Serial2 7/8 / OE 5,6 / BATT_LOW 3 / ESTOP 2. Updated `main.cpp` defines +
+      `feetech_bus.h` (Serial2→Serial1). I2C 18/19 already matched. **E-stop polarity
+      flipped LOW→HIGH** (NC fail-safe; SafetyFSM already latches until /safety_clear →
+      snap-back on release handled). Reconciliation was mandatory — old defines = dead bus.
+- [x] **OLED (J10) integration fixed** (2026-06-14) — owned HiLetgo SSD1331 (7-pin, VCC
+      2.8-5.5V = has onboard reg). Found 3 issues vs the board: (1) J10 pin order had CS/RST
+      crossed vs the module → swapped on board (J10.5=OLED_RST, J10.7=OLED_CS); (2) Vcc was
+      on NANO_3V3 (Nano's ≤50mA reg, often absent off-USB) → moved to **V5_AUX (5V)**;
+      (3) Nano is 5V → its SPI logic over-drives the 3.3V-reg'd SSD1331 → added **5× 1k
+      series R (R2-R6)** on SCK/MOSI/RST/DC/CS. Schematic + full re-route, DRC 0/0, gerbers
+      re-cut. BENCH-VERIFY: if display still glitches, swap to Adafruit 684 (74LVC245+boost,
+      5V VIN, DK 684-ND) — wire 7 pins to J10.
+- [x] **U7 → SN74LVC125A (5V-tolerant)** (2026-06-14) — servo bus is 5V-TTL; the 74HC125 at
+      +3V3 is NOT 5V-tolerant (input abs-max VCC+0.5=3.8V) → servo's 5V response over-drives
+      gate2 input, clamp current ~54mA through R1's 22Ω = stress/damage. SN74LVC125A: same
+      SOIC-14 pinout (drop-in), VCC 3.3V (max 3.6V — keep on +3V3, never 5V), inputs 5V-tolerant,
+      outputs swing 3.3V (Teensy-safe). Correct whether bus is 3.3V or 5V. (Sch value was stale
+      "74LS125" = 5V TTL, also wrong for 3.3V.) Value-only change, no reroute.
+- [x] **Bus idle pull-up R7 (10k BUS_SIGNAL→+3V3)** (2026-06-14) — half-duplex push-pull bus
+      floats during TX↔RX turnaround → gate2 input indeterminate / false RX bytes. R7 holds idle
+      HIGH at 3.3V; 10k = idle bias only (drivers do edges), no speed penalty.
 - [ ] (tidy) Add `no_connect` flags to 16 unused Nano GPIO pins — clears ERC noise
 - [ ] 2oz outer copper selected for BOTH boards at PCBWay
 
@@ -30,6 +60,42 @@ live = USB 5V vs UBEC 5V fighting on V5_AUX. (This is the ERC "two power outputs
       data-only when powered from VIN. Do this before first battery+USB session.
 - [ ] **Nano:** never plug USB while battery-powered, OR add a series Schottky on the +5V
       feed. Confirm whichever before bring-up.
+
+## 🔴 1c. Connector mating audit (BEFORE assembly — HARD GATE)
+The board files only define what net lands on each connector pin; they CANNOT verify the
+**physical part's** pinout/polarity. Every off-board connector below is correct on the BOARD
+side (verified from the .kicad_pcb) — the open item is confirming the MATING part agrees.
+Only rigid direct-plug modules force a board re-route; the rest are hand-wired, so the board
+pin is the reference and you wire the cable/leads to match it. (Compiled 2026-06-14 after the
+OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the rest of the set.)
+
+**🔴 High — a mismatch damages a part or shorts power:**
+- [ ] **J11 WS2812B** — board: `1=+5V, 2=GND, 3=DATA`. WS2812B strip wire order varies; reverse
+      5V/GND = fried strip. Crimp the JST-XH pigtail to match J11, and connect to the strip's
+      **DIN** end (not DOUT). Verify with a meter before plugging in.
+- [ ] **J8 servo bus** — board: `1=GND, 2=V7V5_LEG, 3=BUS_SERVO`. ✅ Matches Feetech STS3215
+      standard (GND/VCC/Signal). NOTE: servo uses a 5264 connector, board is JST-XH — crimp
+      your own JST-XH pigtail in GND/V+/Signal order (don't assume a pre-made cable's housing mates).
+- [ ] **J20 interboard ribbon** — both boards' pinouts identical (verified). A 2×6 IDC ribbon
+      can be built/plugged mirrored → 5V meets GND. **Meter-check pin1↔pin1 continuity** on the
+      assembled cable before first power; confirm shroud keys are consistent.
+- [ ] **U1–U5 Pololu bucks** (off-board, XT30 + EN wire) — board: `VIN=VBAT_PROTECTED, GND,
+      EN=EN_BUCKS/EN_JET, VOUT`. Reverse VIN into a Pololu = dead module. Match each buck's
+      VIN/GND/VOUT/EN silk to the wiring.
+
+**🟡 Medium — silent failure / safety-logic inversion:**
+- [ ] **U9–U11 INA226 modules** — board connects I2C+power only (`4=SDA, 5=SCL, 6=VCC, 7=GND`).
+      Confirm (a) module header order matches your dupont wiring, (b) the inline shunt terminals
+      are on the intended rail for each, (c) **3 distinct I2C addresses** (A0/A1 straps).
+- [ ] **SW2 + J21 e-stop contacts** — board expects **NC** (`SW2: GND↔EN_SW`; `J21: sense↔GND`).
+      Fail-safe depends on NC, not NO. Identify the NC pairs on the Mxuteuk button; confirm it has
+      a *second* NC block for J21. NO wiring → reads always-pressed or never trips.
+
+**🟢 Low — protected or bench-only:**
+- [ ] **J1 XT60** — `1=VBAT(+), 2=BATT_NEG(−)`. Q1 reverse-prot covers a slip, but confirm.
+- [ ] **SW1** — confirm the physical switch is rated for full pack current (~15–18 A).
+- [ ] **J9 FE-URT-1** — Pattern-A bench adapter only; confirm its data pin = MASTER_A if used.
+- [ ] **Q1 IRLB3034** — TO-220 G/D/S = pin 1/2/3 (matches footprint); confirm tab = Drain.
 
 ## 🟡 2. Trip-point calibration (ratiometric to V5_AUX)
 VREF tracks the UBEC, VSENSE tracks the battery. UBEC sag shifts trips LOWER (later).
