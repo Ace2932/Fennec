@@ -144,12 +144,28 @@ not DNP — 2026-06-13 fix; tune values up only if needed.)
 - [ ] If readings glitch under servo load: raise R1 toward 100Ω / swap ferrite
 
 ## 🔵 9. Phase-4 arm rail (when populating U5 — NOT for current fab)
-Found 2026-06-14 by `tools/board_health.py` (single-pad net). The arm buck U5
-(D42V55F7, DNP populate-and-go) outputs `V7V5_ARM` to **U5.4 only — no connector
-or consumer on the board.** EN is tied to VBAT_PROTECTED (always-on when populated).
-- [ ] Before populating U5: add an off-board injection connector (XT30) for
-      `V7V5_ARM` so the arm rail can exit the board to the arm servos. Currently
-      it's a dead-end pad — populating U5 alone produces no usable arm rail.
+Found 2026-06-14 by `tools/board_health.py` + EN-gating audit. The arm buck U5
+(D42V55F7) is DNP. "Populate-and-go" is INACCURATE — it needs the fixes below.
+The current board (no arm) is unaffected: U5 empty = zero effect, DRC 0/0.
+
+**Gap 1 — arm rail has no exit.** `V7V5_ARM` = `U5.4` only (single-pad net).
+Populate U5 → 7.5V goes nowhere; arm servos can't be powered.
+- [ ] Add an off-board injection connector (XT30) for `V7V5_ARM` before populating U5.
+
+**Gap 2 — 🔴 arm buck is UNGATED by the safety chain (safety hazard).** U5.EN
+(pin3) is tied to **VBAT_PROTECTED = always-on**. Contrast: U1/U2/U3 legs+hips
+EN=EN_BUCKS (killed by e-stop Q3 AND hardcut Q2); U4 jetson EN=EN_JET (killed by
+hardcut Q4). U5 arm is killed by **NEITHER e-stop NOR hardcut** → when populated,
+hitting e-stop leaves the arm powered + holding torque (pinch/crush hazard), and
+critical-low battery kills everything except the arm.
+- [ ] Re-route U5.EN from VBAT_PROTECTED → **EN_BUCKS** (gates the arm on both
+      e-stop and hardcut, same as legs/hips). Do this with Gap-1 connector add.
+
+**Phase-4 must-checks (for the arm to function — not board-fab blockers):**
+- [ ] Bus: 6 arm STS3215 daisy-chain off J8 → firmware servo count 12→18;
+      re-check SYNC_WRITE frame size vs `MAX_PARAM_BYTES` (was bumped for 12).
+- [ ] Power budget: arm buck (D42V55F7) rating vs 6-servo stall, and
+      battery / MRBF fuse / Q1 headroom for legs+hips+jetson+arm simultaneously.
 
 ---
 **"100% won't die" = all 🔴 cleared + 🟡 #2/#3/#4 bench-passed.** #5 needs the scope (Phase 5).
