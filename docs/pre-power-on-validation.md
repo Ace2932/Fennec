@@ -143,6 +143,14 @@ not DNP — 2026-06-13 fix; tune values up only if needed.)
 - [ ] Start I2C at 100kHz; only raise to 400k after the cal test passes clean
 - [ ] If readings glitch under servo load: raise R1 toward 100Ω / swap ferrite
 
+## 🔵 9. Phase-4 arm rail (when populating U5 — NOT for current fab)
+Found 2026-06-14 by `tools/board_health.py` (single-pad net). The arm buck U5
+(D42V55F7, DNP populate-and-go) outputs `V7V5_ARM` to **U5.4 only — no connector
+or consumer on the board.** EN is tied to VBAT_PROTECTED (always-on when populated).
+- [ ] Before populating U5: add an off-board injection connector (XT30) for
+      `V7V5_ARM` so the arm rail can exit the board to the arm servos. Currently
+      it's a dead-end pad — populating U5 alone produces no usable arm rail.
+
 ---
 **"100% won't die" = all 🔴 cleared + 🟡 #2/#3/#4 bench-passed.** #5 needs the scope (Phase 5).
 Part-quality tests (Q1 Rds, cap ESR, MRBF, fakes) are separate — ROUTING_HANDOFF.md Step 10.

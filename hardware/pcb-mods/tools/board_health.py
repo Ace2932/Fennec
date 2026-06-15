@@ -49,19 +49,27 @@ def run_drc(board):
     return r.returncode == 0
 
 def run_erc(board):
+    import tempfile
     sch = board.replace(".kicad_pcb", ".kicad_sch")
     if not os.path.exists(sch):
         print("  (no top .kicad_sch next to board - skipped)"); return True
-    r = subprocess.run([CLI, "sch", "erc", "--exit-code-violations", sch], capture_output=True, text=True)
-    rpt = board.replace(".kicad_pcb", "-erc.rpt")
+    rpt = os.path.join(tempfile.gettempdir(), "board_health_erc.rpt")
+    if os.path.exists(rpt): os.remove(rpt)
+    r = subprocess.run([CLI, "sch", "erc", "--exit-code-violations", "--output", rpt, sch],
+                       capture_output=True, text=True)
     if os.path.exists(rpt):
         counts = collections.Counter()
         for line in open(rpt):
             line = line.strip()
             if line.startswith("[") and "]" in line:
                 counts[line[:line.index("]")+1]] += 1
-        for k, v in sorted(counts.items()): print("  %3d %s" % (v, k))
+        if counts:
+            for k, v in sorted(counts.items()): print("  %3d %s" % (v, k))
+        else:
+            print("  0 violations")
         os.remove(rpt)
+    else:
+        print("  (no ERC report produced)")
     return r.returncode == 0
 
 def analyze(board):
