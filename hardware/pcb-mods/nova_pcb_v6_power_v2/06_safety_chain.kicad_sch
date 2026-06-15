@@ -5498,6 +5498,208 @@
 			)
 		)
 	)
+	(symbol
+		(lib_id "Sensor_Energy:INA226")
+		(at 165.1 200.66 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp yes)
+		(uuid "c1cdb69b-3a9d-40b8-a0b7-cca00676f5f9")
+		(property "Reference" "U12"
+			(at 165.1 194.31 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Value" "INA226"
+			(at 165.1 207.01 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" "nova_v6:INA226_Module_Breakout"
+			(at 165.1 200.66 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" "~"
+			(at 165.1 200.66 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Description" "Arm rail current monitor (Phase-4 reserve, DNP)"
+			(at 165.1 200.66 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Manufacturer" "GODIYMODULES (Amazon, off-board, addr 0x45 - DNP Phase-4 arm)" (at 0 0 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "MPN" "INA226-20A-R002-MODULE" (at 0 0 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "AssemblyOrder" "06 INA header (4-pin) - Phase-4 DNP" (at 0 0 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1"
+			(uuid "fd8cc7ef-956b-4b72-9e35-c53804885946")
+		)
+		(pin "2"
+			(uuid "651a3785-d740-4c13-be16-7f8ab81e3f34")
+		)
+		(pin "3"
+			(uuid "4a60667a-6f3d-4453-ac0d-e1bbac3ae9c5")
+		)
+		(pin "4"
+			(uuid "8481684f-3c4c-4f08-bb5b-97b5925679e2")
+		)
+		(pin "5"
+			(uuid "439192f6-5fb8-4b33-9ea4-6869eeb77a44")
+		)
+		(pin "6"
+			(uuid "7c74f757-d69d-4506-9e19-1dceaf9ac27f")
+		)
+		(pin "7"
+			(uuid "e7a9e480-c11f-4e7e-b04c-7f9947c2c894")
+		)
+		(pin "8"
+			(uuid "971a8753-ed99-43f1-b4d1-dbd8a1daa4a6")
+		)
+		(pin "9"
+			(uuid "bba167b3-c7c5-4ca2-935c-ad0b855e22e3")
+		)
+		(pin "10"
+			(uuid "cd1a7765-351d-425d-b1d1-377bc729ef6b")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "U12")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(global_label "I2C_SDA"
+		(shape bidirectional)
+		(at 175.26 200.66 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "055cf84a-d914-4949-898d-0918ea7c9fcf")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 175.26 200.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "I2C_SCL"
+		(shape bidirectional)
+		(at 175.26 203.2 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "2c11798a-811c-449b-a9fe-27464cf3e45c")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 175.26 203.2 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "+3V3"
+		(shape bidirectional)
+		(at 165.1 187.96 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "4a2584b8-c4e0-4fe7-977f-7992aec409c4")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 165.1 187.96 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 165.1 213.35999999999999 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "5bd06c04-e840-4ff0-9dfb-2e6b272c2a26")
+		(property "Reference" "#PWR616"
+			(at 171.45 213.35999999999999 270)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "GND"
+			(at 158.75 213.35999999999999 270)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Footprint" ""
+			(at 165.1 213.35999999999999 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" "~"
+			(at 165.1 213.35999999999999 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Description" ""
+			(at 165.1 213.35999999999999 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(pin "1"
+			(uuid "a36fc1a7-1988-4aa8-8924-17f181f7920b")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "#PWR616")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(no_connect
+		(at 154.94 193.04)
+		(uuid "3dab53f5-934a-440c-995b-72a58acf9b38")
+	)
+	(no_connect
+		(at 154.94 203.2)
+		(uuid "25df5830-45ec-41df-ab40-17f13dd31872")
+	)
+	(no_connect
+		(at 154.94 205.74)
+		(uuid "9eaf43d7-9891-4758-961f-9a05bd583928")
+	)
+	(no_connect
+		(at 175.26 193.04)
+		(uuid "1d0ff341-980f-4dd7-a74e-eb5bcd7116a0")
+	)
+	(no_connect
+		(at 175.26 195.58)
+		(uuid "1bc69e92-0727-4a08-9daa-0e0f301e0498")
+	)
+	(no_connect
+		(at 175.26 208.28)
+		(uuid "509e3886-e3a5-4201-a652-e0eb8b7f319a")
+	)
 	(sheet_instances
 		(path "/"
 			(page "1")
