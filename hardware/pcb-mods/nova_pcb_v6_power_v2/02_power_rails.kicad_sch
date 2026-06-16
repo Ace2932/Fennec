@@ -1662,7 +1662,7 @@
 			)
 		)
 	)
-	(global_label "VBAT_PROTECTED"
+	(global_label "EN_BUCKS"
 		(shape bidirectional)
 		(at 154.94 128.27 0)
 		(effects
@@ -3668,6 +3668,181 @@
 			(project "nova_pcb_v6_power_v2"
 				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
 					(reference "#PWR29")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector_Generic:Conn_01x02")
+		(at 195.58 127 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "3f75873f-a617-47c8-8311-f5db48657713")
+		(property "Reference" "J14"
+			(at 195.58 120.65 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "XT30_Arm7V5"
+			(at 195.58 133.35 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical"
+			(at 195.58 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 195.58 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 195.58 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "AMASS" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "XT30U-M" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "11 THT XT30" (at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "5dbcf617-4be9-4b80-a97f-1429ef97a547")
+		)
+		(pin "2"
+			(uuid "f7078458-2dbc-43e5-a936-fd3c4291f29e")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "J14")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(global_label "V7V5_ARM"
+		(shape bidirectional)
+		(at 190.5 127 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "5416d534-5c57-4242-bdd1-b2f0d571ddcd")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 190.5 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 190.5 129.54 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "f9a33160-4ee9-4e50-bffa-c622bfdbae95")
+		(property "Reference" "#PWR218"
+			(at 196.85 129.54 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 184.15 129.54 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 190.5 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 190.5 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 190.5 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "1a8a9e9d-f6b8-47fd-b515-a405f0c9a177")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "#PWR218")
 					(unit 1)
 				)
 			)
