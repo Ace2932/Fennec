@@ -9,6 +9,15 @@ _Last updated: 2026-06-15 (B1 cleared — both boards fab-ready, gate GO)_
 ## ✅ Recently cleared
 - **B1 — power board arm placement + routing — DONE** (PR #13). U12 + J14 placed/routed, U5.EN routed on EN_BUCKS, V7V5_ARM/BATT_NEG widened + high-current pads solid, duplicate U12/J14 + dangling chain cleaned, gerbers regenerated. **fab_gate: GO on both boards.**
 
+## 📋 Pre-fab checklist (2026-06-16 board↔order + spec-margin review)
+Board parts all match the order; no orphans. Action items from the margin review (detail in `order-list.md`):
+- **C8/C9 → 470µF/35V** (not 25V) — they're on the raw 16.8V VBAT rail (25V = 1.49×). ✅ order updated.
+- **TVS clamps (SMBJ8.5A) are not optional** — protect the 25V V7V5_LEG bulk caps + servos from ~21V e-stop regen.
+- **Hip buck D42V110F12 is the tightest rail (~1.1×)** — bench thermal-IR is mandatory; D24V150F12 upgrade path ready.
+- **SW1 needs the 15–20A screw block** (kit block is 10A; SW1 ~15A).
+- Physical-verify before fab: INA226 module pitch, off-board buck XT30 pin-order, Teensy footprint, L1 (SRR1260) land, 1000µF Ø10×17 fit.
+- Comfortable margins (no action): Q1 Vds/Id, XT60, INA226 (2.2×), 0603 R power, BSS138, LM393, L1 current (2.8×).
+
 ## 🔴 Hard blockers (gate everything downstream)
 | # | Blocker | Owner | Gates | Notes |
 |---|---|---|---|---|
