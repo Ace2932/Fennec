@@ -23,6 +23,13 @@ Board parts all match the order; no orphans. Action items from the margin review
 - Physical-verify before fab: INA226 module pitch, off-board buck XT30 pin-order, Teensy footprint, L1 (SRR1260) land, 1000µF Ø10×17 fit.
 - Comfortable margins (no action): Q1 Vds/Id, XT60, INA226 (2.2×), 0603 R power, BSS138, LM393, L1 current (2.8×).
 
+## 🧪 Safety-chain findings (2026-06-17 circuit-logic review) — feed into B3 bench validation
+Logic + divider math **verified correct** (graceful 13.02V, hard ~12.4V w/ hysteresis, fail-safe E-stop open=off, BATT_LOW at Teensy-safe 3.3V). No wiring bugs. Bench-validation worries to prove:
+- **LVC trip accuracy is referenced to V5_AUX (the 5V UBEC), not a precision ref** → all trips scale with the UBEC's actual output (4.85V → graceful ~12.6 / hard ~12.0 = over-discharge). **Bench-trim trip points against MEASURED V5_AUX.** Design-improvement option (not now): TL431 precision ref feeding the dividers decouples it.
+- **Graceful→hard timing window (13.0→12.4V) may be shorter than the Jetson's clean shutdown (~15-30s)** → if pack crosses 12.4V mid-shutdown, hard-cut yanks power → SD-corruption risk. **Bench-measure that 13.0→12.4 takes longer than `systemctl poweroff`** (likely self-extends — load drops during shutdown → VBAT rebounds → may un-trip hard cut; confirm).
+- **Power-on false battery-low latch — ✅ FIXED in firmware (PR #17):** boot read of BATTERY_LOW was instantaneous off a V5_AUX-ramping comparator → nondeterministic false latch. Now settle-confirmed (250ms + every-sample-HIGH). Bench: power-cycle 10× cold, confirm no spurious latch.
+- **V5_AUX death = no LVC cutoff** (comparators + pull-ups die) → over-discharge. Known SPOF, mitigated by the independent balance-plug buzzer (owned). Keep buzzer on the pack whenever SW1 is on.
+
 ## 🔴 Hard blockers (gate everything downstream)
 | # | Blocker | Owner | Gates | Notes |
 |---|---|---|---|---|
