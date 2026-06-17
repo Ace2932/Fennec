@@ -26,6 +26,7 @@ Full multi-phase, both-board audit. Both boards are routed + DRC-clean (logic: 0
 - LM393DR SOIC-8 ×2 (power U8 + spare)
 - BSS138 SOT-23 ×5 (power Q2/Q3/Q4 + spares)
 - 74**LVC**125 SOIC-14 ×5 (logic U7 — board uses LVC, 5V-tolerant; keep it) — *Q1 IRLB3034 ✅ already ordered*
+- **D1 = 15V Zener, SOD-123 ×5** (BZT52C15 / MMSZ5245B) — Q1 gate-clamp (gate-hardening, see STATUS pre-fab TODO)
 
 **Electrolytics** — radial Ø10 5mm-pitch (2026-06-16 board review split by rail voltage):
 - **C6 (V12_L2, 12V): 470µF/25V** (2.1× ✓) — Nichicon UPW1E471MPD
@@ -45,6 +46,7 @@ Full multi-phase, both-board audit. Both boards are routed + DRC-clean (logic: 0
 | 22k · 470k · 1M | 1 each | pwr R3/R14/R15 |
 | **11.3k 1%** · **12.1k 1%** | 1 each (buy a few — trip-point) | pwr R4/R6 |
 | 22R | 2 | logic R1 (bus series) |
+| 100R | 2 | pwr R17 (Q1 gate-R, hardening) |
 | 100nF (C0603 X7R) | 4 | pwr C7 + logic C1 |
 | 600R ferrite (L0603) | 2 | logic FB1 |
 
