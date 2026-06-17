@@ -14,11 +14,13 @@ Board parts all match the order; no orphans. Action items from the margin review
 - **C8/C9 → 470µF/35V** (not 25V) — they're on the raw 16.8V VBAT rail (25V = 1.49×). ✅ order updated.
 - **TVS clamps (SMBJ8.5A) are not optional** — protect the 25V V7V5_LEG bulk caps + servos from ~21V e-stop regen.
 - **Hip buck D42V110F12 — tightest rail, the one to PROVE on the bench.** Two compounding tight margins: (1) current ~1.1× (~8A vs ~9A derated @14.8V); (2) **dropout headroom ~1.2V** — it's a 12V output from a 4S rail that sags to 13.2V LVC, so under load+sag it could drop out of 12V regulation → **hip servos brown out mid-gait**. Bench-gate before any gait: 4× 30kg hip stand-in, sweep Vin 16.8→13.2V, confirm (a) thermal IR ok after 10min AND (b) 12V holds (no dropout/>100mV droop) at the low-Vin end. **Plan B is a drop-in:** bucks are off-board, so swap to D24V150F12 or parallel — **no board respin**. Bounded risk.
-- 🟠 **TODO (must do pre-fab) — Q1 gate-protection hardening.** DECIDED: add it (peace-of-mind, despite low value — reverse-plug is already impossible via keyed XT60 + bulk caps damp the rail; this guards Q1's gate vs >20V transients, Vgs is 16.8V/±20V = 1.19×). **Board change → reopens the F8/route/gerber cycle.**
-    - **Best done in eeschema, NOT headless** (polarized zener + the `Device:R`/`Device:D_Zener` lib_symbols aren't cached in 01_battery + Q1 is mirrored → headless = segfault/polarity risk; a backwards zener is worse than nothing).
-    - **eeschema recipe (01_battery, at Q1):** break gate↔VBAT_PROTECTED; add `Device:R` **R17=100Ω** wired VBAT_PROTECTED→R17→gate; add `Device:D_Zener` **D1=15V** (BZT52C15) **cathode→gate / anode→GND**; annotate → ERC → F8 → place R17+D1 near Q1 (battery edge) → route → save.
-    - **Then me:** netlist-verify (R17 spans VBAT_PROTECTED↔gate; D1 cathode→gate, anode→GND — catches a backwards zener) → re-pour → DRC → regen gerbers → fab_gate.
-    - Parts (in cart): **R17 100Ω 0603 · D1 15V zener SOD-123 (BZT52C15)**.
+- 🟠 **TODO (must do pre-fab) — Q1 gate hardening + LVC comparator decoupling (one board edit, bundle).** Board change → reopens the F8/route/gerber cycle once; do both at the same time.
+    - **Q1 hardening:** guards Q1's gate vs >20V transients (Vgs 16.8/±20V = 1.19×). Low-value (keyed XT60 + bulk caps), adding for peace of mind.
+    - **LVC decoupling (2026-06-17 review):** the LM393 (U8) has **no V+ decoupling and no reference filtering** — V5_AUX (its supply *and* the source of VREF_G/H) is undecoupled, and VREF_G/VREF_H are unfiltered (only VSENSE has C7). → trip-threshold jitter / chatter risk on a safety cutoff.
+    - **Best in eeschema, NOT headless** (polarized zener + `Device:R`/`Device:D_Zener` lib_symbols not cached in 01_battery + Q1 mirrored → headless segfault/polarity risk).
+    - **eeschema recipe:** *01_battery:* break gate↔VBAT_PROTECTED; add `Device:R` **R17=100Ω** (VBAT_PROTECTED→R17→gate) + `Device:D_Zener` **D1=15V** (BZT52C15, **cathode→gate / anode→GND**). *06_safety_chain (at U8):* add **C10=0.1µF** V5_AUX→GND (decouple V+) + **C11=100nF** VREF_G→GND + **C12=100nF** VREF_H→GND. Annotate → ERC → F8 → place (R17/D1 at battery edge; C10/C11/C12 at U8) → route → save.
+    - **Then me:** netlist-verify (R17 VBAT_PROTECTED↔gate; D1 cathode→gate/anode→GND; C10/C11/C12 on the right nets) → re-pour → DRC → regen gerbers → fab_gate.
+    - Parts (in cart): **R17 100Ω 0603 · D1 15V zener SOD-123 (BZT52C15) · C10/C11/C12 = 100nF 0603 ×3**.
 - **SW1 needs the 15–20A screw block** (kit block is 10A; SW1 ~15A).
 - Physical-verify before fab: INA226 module pitch, off-board buck XT30 pin-order, Teensy footprint, L1 (SRR1260) land, 1000µF Ø10×17 fit.
 - **🔴 Mezzanine height (≤~17mm under the logic board, ~20mm standoff gap):** C8/C9 = **25V** (Ø10×16) — NOT 35V (Ø10×20 hits the top board; 25V meets 80% derating anyway). Also confirm the **INA226 breakout modules on headers** clear the 20mm gap (tallest under-stack parts). Reverted the earlier 35V call.
@@ -38,6 +40,8 @@ Logic + divider math **verified correct** (graceful 13.02V, hard ~12.4V w/ hyste
 - **OLED (J10) SPI driven at 5V** by the 5V Nano → verify the SSD1331 module is 5V-logic-tolerant (likely ok — PR #2 OLED level fix).
 - **LVC sense/comparator GND vs 15A power-GND bounce:** mitigated by the C7 RC filter + comparator hysteresis (mV bounce ≪ 0.16V band), but confirm the divider/comparator GND taps a *quiet* point, not the 15A return path.
 - No 5V↔3.3V cross-domain clash: Nano's 5V signals stay logic-board-local; all J20 cross-board nets (I2C, BUS_SERVO, BATT_LOW) are 3.3V ✓.
+- **I2C @ 400kHz with 4 INA226 modules + the mezzanine ribbon:** bus C (~150-250pF from 4 modules + ribbon + traces) vs the 4.7k pull-ups — verify rise time at bring-up; if marginal → 2.2k pull-ups or drop to 100kHz.
+- **Inrush at SW1 close:** C8/C9 (940µF on VBAT) + buck input caps → tens of A brief inrush through the 20A switch contacts. RC-build-acceptable; watch for contact wear → NTC inrush limiter if it becomes an issue.
 
 ## 🔴 Hard blockers (gate everything downstream)
 | # | Blocker | Owner | Gates | Notes |

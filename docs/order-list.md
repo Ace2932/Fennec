@@ -47,7 +47,7 @@ Full multi-phase, both-board audit. Both boards are routed + DRC-clean (logic: 0
 | **11.3k 1%** · **12.1k 1%** | 1 each (buy a few — trip-point) | pwr R4/R6 |
 | 22R | 2 | logic R1 (bus series) |
 | 100R | 2 | pwr R17 (Q1 gate-R, hardening) |
-| 100nF (C0603 X7R) | 4 | pwr C7 + logic C1 |
+| 100nF (C0603 X7R) | 7 | pwr C7 + **C10 (U8/V5_AUX decouple) + C11/C12 (VREF_G/H filter)** + logic C1 |
 | 600R ferrite (L0603) | 2 | logic FB1 |
 
 **Connectors**
