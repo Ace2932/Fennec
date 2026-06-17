@@ -21,6 +21,7 @@ Board parts all match the order; no orphans. Action items from the margin review
     - Parts (in cart): **R17 100Ω 0603 · D1 15V zener SOD-123 (BZT52C15)**.
 - **SW1 needs the 15–20A screw block** (kit block is 10A; SW1 ~15A).
 - Physical-verify before fab: INA226 module pitch, off-board buck XT30 pin-order, Teensy footprint, L1 (SRR1260) land, 1000µF Ø10×17 fit.
+- **🔴 Mezzanine height (≤~17mm under the logic board, ~20mm standoff gap):** C8/C9 = **25V** (Ø10×16) — NOT 35V (Ø10×20 hits the top board; 25V meets 80% derating anyway). Also confirm the **INA226 breakout modules on headers** clear the 20mm gap (tallest under-stack parts). Reverted the earlier 35V call.
 - Comfortable margins (no action): Q1 Vds/Id, XT60, INA226 (2.2×), 0603 R power, BSS138, LM393, L1 current (2.8×).
 
 ## 🧪 Safety-chain findings (2026-06-17 circuit-logic review) — feed into B3 bench validation
