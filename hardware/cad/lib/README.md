@@ -5,7 +5,7 @@ match the real build: correct STS3215 screw patterns, heat-set inserts, bearing
 seats, connector cutouts — all from verified dimensions.
 
 ## The loop (no GUI needed)
-1. **Author** a `.scad` that `use <../lib/nova_cad_lib.scad>;` and composes modules.
+1. **Author** a `.scad` that `include <../lib/nova_cad_lib.scad>;` (use `include`, NOT `use` — the lib exposes constants `use` won't import) and composes modules. Build parts up from the XY plane (z=0); pass `L = part thickness` to hole modules.
 2. **Render** → manifold STL + PNG preview:
    ```bash
    openscad -o part.stl part.scad

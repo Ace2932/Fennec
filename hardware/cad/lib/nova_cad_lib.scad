@@ -5,8 +5,11 @@
 // new/edited part automatically matches the current design: STS3215 mounts,
 // heat-set insert bosses, M-screw holes, 688ZZ bearing seats, connector cutouts.
 //
-// Usage:  use <.../lib/nova_cad_lib.scad>;  then call the modules.
-// Tuned for Bambu P1S + PA6-CF. $fn set by caller (default 64 below).
+// Usage:  include <.../lib/nova_cad_lib.scad>;  then call the modules.
+//   IMPORTANT: use `include`, NOT `use`. This file exposes CONSTANTS (EPS,
+//   STS_*, BEARING_*, SCREW, ...) which OpenSCAD's `use` does NOT import — only
+//   `include` does. The file has no top-level geometry, so include is safe.
+// Tuned for Bambu P1S + PA6-CF. Set $fn before the include to override the 64 default.
 // ============================================================================
 $fn = $fn ? $fn : 64;
 EPS = 0.05;
@@ -20,7 +23,7 @@ STS_HORN_RELIEF_D = 22.0;                        // horn disc OD + 2mm
 STS_BODYMNT = [[7.55,4.95],[7.55,-4.95],[17.45,4.95],[17.45,-4.95]];
 
 // ---- bearing (688ZZ) -------------------------------------------------------
-BEARING_OD = 16.05; BEARING_ID = 8.0; BEARING_H = 5.0;
+BEARING_OD = 16.0; BEARING_ID = 8.0; BEARING_H = 5.0;   // RAW 688ZZ; press clr added in bearing_seat
 
 // ---- print clearances (PA6-CF on P1S) --------------------------------------
 CLR_BODY = 0.25;     // add to servo-cavity dims (press fit)
@@ -36,17 +39,19 @@ SCREW = [
 ];
 function _scr(s) = SCREW[search([s], SCREW)[0]][1];
 
-// clearance through-hole for a screw, length L (centered on Z, drilled -Z..)
+// Clearance through-hole. Convention: part sits on the XY plane (z=0..L); the
+// hole is drilled from just below z=0 up THROUGH the top, so pass L = part
+// thickness (over-cut handled here). Subtract from the part.
 module screw_hole(size="M3", L=20) {
-  d = _scr(size)[0];
-  translate([0,0,-L/2]) cylinder(d=d, h=L);
+  translate([0,0,-EPS]) cylinder(d=_scr(size)[0], h=L+2*EPS);
 }
 
-// counterbored clearance hole (socket-head), head pocket on +Z
+// counterbored clearance hole (socket head) for a part of thickness L; head
+// pocket recessed into the TOP face (z = L-head_h .. L).
 module screw_counterbore(size="M3", L=20) {
   p=_scr(size);
   screw_hole(size,L);
-  translate([0,0,-EPS]) cylinder(d=p[4], h=p[5]+EPS);
+  translate([0,0,L-p[5]]) cylinder(d=p[4], h=p[5]+EPS);
 }
 
 // heat-set insert boss + bore. Place boss base at Z=0, grows +Z.
@@ -67,6 +72,14 @@ module heatset_bore(size="M3", from_z=0) {
 // 4× horn screw holes on the 14mm BCD at ±45°, centered at origin
 module sts_horn_holes(size="M2.5", L=12) {
   for (a=[45,135,225,315]) rotate([0,0,a]) translate([STS_HORN_BCD/2,0,0]) screw_hole(size,L);
+}
+// Composite "bolt TO the horn" pattern: small center clearance for the spline
+// boss + 4 BCD screw holes. Subtract from a part whose face sits on the horn
+// disc. NOTE: shaft_clr_d must be < BCD (14) so it doesn't eat the screw holes
+// (the Ø22 horn *pass-through* relief is a different use — don't combine them).
+module sts_horn_mount(size="M2.5", shaft_clr_d=12, L=12) {
+  translate([0,0,-EPS]) cylinder(d=shaft_clr_d, h=L+2*EPS);   // through (part z=0..L)
+  sts_horn_holes(size, L);
 }
 // 4× body-mount holes (origin = spline axis), for bolting a bracket to the servo face
 module sts_body_mount_holes(size="M2.5", L=12, mirror_y=false)
