@@ -31,6 +31,14 @@ Logic + divider math **verified correct** (graceful 13.02V, hard ~12.4V w/ hyste
 - **Power-on false battery-low latch — ✅ FIXED in firmware (PR #17):** boot read of BATTERY_LOW was instantaneous off a V5_AUX-ramping comparator → nondeterministic false latch. Now settle-confirmed (250ms + every-sample-HIGH). Bench: power-cycle 10× cold, confirm no spurious latch.
 - **V5_AUX death = no LVC cutoff** (comparators + pull-ups die) → over-discharge. Known SPOF, mitigated by the independent balance-plug buzzer (owned). Keep buzzer on the pack whenever SW1 is on.
 
+## 🔌 Logic-board / bus findings (2026-06-17 review) — feed into firmware bench bring-up
+74LVC125 half-duplex bus logic + JP_BUS_MASTER + R1(22Ω)/FB1(ferrite) integrity **verified correct**. Checks to do at bring-up:
+- **🔴 BRING-UP-CRITICAL: bus is driven at 3.3V** (U7 74LVC125 VCC=+3V3, idle pull-up R7→+3V3). LVC is 5V-tolerant on *inputs* (reads 5V servo replies fine) but only *drives* 3.3V. **Confirm STS3215 VIH ≤ ~2.3V so 3.3V is a solid high** — *probably OK* (STS3215 commonly driven at 3.3V in LeRobot/SO-ARM) but **bench-test a single servo on the real bus FIRST.** If it needs 5V: power U7 from V5_AUX + R7 to 5V, or level-shift. Fail-early on the bench before assuming the bus works.
+- **WS2812B (J11) on V5_AUX via JST-XH (3A) + J20:** keep LEDs **status-only (few)** — a full strip exceeds the JST pin / J20 / 5A UBEC budget. (5V Nano drives the data → WS2812B VIH ok ✓.)
+- **OLED (J10) SPI driven at 5V** by the 5V Nano → verify the SSD1331 module is 5V-logic-tolerant (likely ok — PR #2 OLED level fix).
+- **LVC sense/comparator GND vs 15A power-GND bounce:** mitigated by the C7 RC filter + comparator hysteresis (mV bounce ≪ 0.16V band), but confirm the divider/comparator GND taps a *quiet* point, not the 15A return path.
+- No 5V↔3.3V cross-domain clash: Nano's 5V signals stay logic-board-local; all J20 cross-board nets (I2C, BUS_SERVO, BATT_LOW) are 3.3V ✓.
+
 ## 🔴 Hard blockers (gate everything downstream)
 | # | Blocker | Owner | Gates | Notes |
 |---|---|---|---|---|
