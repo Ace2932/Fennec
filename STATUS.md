@@ -68,11 +68,11 @@ Logic + divider math **verified correct** (graceful 13.02V, hard ~12.4V w/ hyste
 |---|---|---|
 | #13 | power board arm routed + cleaned + gerbers | open |
 | #10 | nova_locomotion (leg IK + trot) + ros-pytest CI | open |
-| #3 | "LE_NOVA ECC bundle" | open — **predates current work, triage/close?** |
 | — | #6–#9, #11 (order-list, URDF, fab_gate, logic ERC, STATUS) | ✅ merged |
+| — | #3 LE_NOVA ECC bundle | ✅ closed (stale, never merged) |
 
 ## ⏭️ Next actions (rough order)
-1. Merge PRs #13 + #10 (triage #3).
+1. Merge PRs #13 + #10.
 2. **Fab:** both boards ×5 + stencils → PCBWay (both pass `fab_gate` GO).
 3. Place **FINAL order** (DigiKey cart per `order-list.md` + Pololu D42V55F7 arm buck + Amazon +1 INA226 + Feetech cables).
 4. **B2:** CAD pass → refine `TODO-CAD` across URDF + locomotion.
