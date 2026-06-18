@@ -40,17 +40,20 @@ pio run -t upload        # flash
 
 | Function | Teensy pin | Notes |
 |----------|-----------|-------|
-| Bus UART RX | 7 (Serial2 RX) | from 74HC125 RX gate |
-| Bus UART TX | 8 (Serial2 TX) | into 74HC125 TX gate |
-| 74HC125 TX OE | 6 | HIGH = drive TX onto bus |
-| 74HC125 RX OE | 5 | LOW = enable RX from bus |
-| I²C SDA | 18 (Wire) | INA226 ×3 |
-| I²C SCL | 19 (Wire) | INA226 ×3 |
-| E-stop NC sense | 2 | INPUT_PULLUP, LOW = pressed |
-| Battery-low (13.0V comparator) | 3 | INPUT_PULLDOWN, HIGH = below 13.0V |
+| Bus UART RX | 0 (Serial1 RX) | from SN74LVC125A RX gate |
+| Bus UART TX | 1 (Serial1 TX) | into SN74LVC125A TX gate |
+| Bus driver TX OE̅ | 2 | **active-LOW**: LOW = enable TX onto bus |
+| Bus driver RX OE̅ | 3 | **active-LOW**: LOW = enable RX from bus |
+| I²C SDA | 18 (Wire) | INA226 ×3 (×4 with L2) |
+| I²C SCL | 19 (Wire) | INA226 ×3 (×4 with L2) |
+| E-stop NC sense | 5 | INPUT_PULLUP, NC contact (J21). Idle (closed) = LOW; pressed OR wire-break/unplug = HIGH (fail-safe) |
+| Battery-low (13.0V comparator) | 4 | INPUT_PULLDOWN, HIGH = below 13.0V |
 | Heartbeat LED | 13 (LED_BUILTIN) | 1 Hz toggle |
 
-Avoid Teensy `Serial1` (pins 0/1) for the bus — known half-duplex issues per Teensy forum. We use `Serial2` (pins 7/8).
+Pin numbers reconciled to the `nova_pcb_v6_logic` board routing 2026-06-14 and are the
+source of truth (match `src/main.cpp` lines 81–92). The bus runs on **Serial1 (pins 0/1)** as
+routed on v6 — half-duplex direction is handled by the SN74LVC125A gates via the OE̅ pins above,
+not by relying on the UART. (An earlier draft used Serial2 7/8; that is obsolete.)
 
 ## ROS 2 topics (current implementation)
 

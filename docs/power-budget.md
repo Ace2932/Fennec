@@ -178,7 +178,7 @@ Cost of splitting: +1 buck module (~$32 for D42V55F7), +1 wire harness, +chassis
 
 ## Total battery current at peak
 
-4S LiPo 4000mAh / 14.8V nominal.
+4S LiPo 6000mAh / 14.8V nominal (real packs: Ovonic 4S 6000mAh 120C ×2 per master-bom.md).
 
 **Sustained walk (v1 quadruped, v3.4 split rails):**
 - Leg rail: 8A @ 7.5V = 60W → 4.1A @ 14.8V
@@ -188,7 +188,7 @@ Cost of splitting: +1 buck module (~$32 for D42V55F7), +1 wire harness, +chassis
 - 5V aux: 1.5A @ 5V = 7.5W → 0.5A @ 14.8V
 - **Total: ~14A @ 14.8V** ≈ 205W sustained
 
-**Pack runtime at 14A:** 4000 mAh / 14000 mA = **~17 minutes sustained walking**.
+**Pack runtime at 14A:** 6000 mAh / 14000 mA = **~26 minutes sustained walking**.
 
 This is plausible for a dev session; longer runs need either pack swap (you have two) or stationary intervals.
 

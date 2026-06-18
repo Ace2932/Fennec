@@ -32,7 +32,7 @@
 | ~~NovaSM3 PCB v5.2b~~ → **NovaSM3 PCB v6 — 2-board mezzanine** (power + logic, 4-layer each) | $60 (est.) | 🆕 Design + order from PCBWay — **two stacked PCBs**: power board (`nova_pcb_v6_power`: battery / rails / servo-bus / safety) + logic board (`nova_pcb_v6_logic`: Teensy / 74HC125 / Nano), joined by the inter-board connector below. Both 4-layer, ~112×90 max. See [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md). |
 | **Inter-board connector (mezzanine J20)** — 2× 2×6 shrouded box header (2.54 mm THT) + 12-way IDC ribbon | $4 | 🆕 Order — joins power↔logic across the ~20 mm stack gap. Box-header pair + ribbon, **NOT plain pin headers** (two males can't mate; a 0.1″ header can't span the gap). Carries 7 nets: V5_AUX, +3V3, BUS_SERVO, I2C_SDA/SCL, BATT_LOW, GND. |
 | FE-URT-1 USB→TTL Feetech interface | $20 | ✅ Ordered |
-| **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — **populated on PCB; v1 default active**. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
+| **SN74LVC125A quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — **must be LVC (5V-tolerant), NOT plain 74HC125**. Populated on PCB; v1 default active. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
 | **E-stop button (Mxuteuk HB2-ES544, 22mm latching, 2× NC)** | $10 | ✅ Ordered |
 | **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.5V, hip 12V, Jetson 12V). **All 3 as identical 2 mΩ breakout modules** (THT headers; module onboard shunt — no bare VSSOP-10 chip / external 2512 shunt). Must be a 2 mΩ board; 0.1 Ω "meter" modules saturate >0.8 A. Optional 4th on L2 12V rail if telemetry budget allows. I²C to Teensy. |
 | **Comparator + MOSFET parts for hard-cutoff at 12.4V + graceful-shutdown at 13.0V** | $13 | 🆕 Order — two comparator stages. 13.0V: drives Teensy GPIO → Jetson clean shutdown. 12.4V: autonomous battery-feed cutoff if Jetson didn't shut down. ~$3 extra for the second comparator + divider. |
@@ -55,7 +55,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 
 | Item | Price | Status |
 |------|-------|--------|
-| 4S LiPo 14.8V 4000mAh (×2) | $130 | ✅ Owned |
+| 4S LiPo 14.8V 6000mAh 120C (×2, Ovonic) | $130 | ✅ Owned |
 | XT60 plug + high-current switch | $15 | ✅ Ordered |
 | Lighted rocker switch 12V | $5 | ✅ Ordered |
 | Mini digital voltmeter | $10 | ✅ Ordered |
@@ -75,7 +75,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 
 | Item | Price | Status |
 |------|-------|--------|
-| **ISDT 608AC charger** | **$60** | ✅ Ordered. AC mode caps ~55W ≈ 75 min for 4S 4000mAh pack. Includes charge / discharge / **storage** modes. |
+| **ISDT 608AC charger** | **$60** | ✅ Ordered. AC mode caps ~55W ≈ 110 min for 4S 6000mAh pack. Includes charge / discharge / **storage** modes. |
 | **LiPo safe bag** | **$15** | ✅ Ordered. |
 | ~~XT60 jumper~~ | $0 | ✅ Supplied with Ovonic 4S kit (confirmed) |
 | ~~XT60 charging lead~~ | $0 | ✅ Supplied with Ovonic 4S kit (confirmed, XT60 ↔ JST-XH 5-pin balance) |

@@ -249,8 +249,11 @@ void broadcast_servo_commands() {
   for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
     ids[i] = SERVO_ID_BASE + i;
     double v = latched_cmd_position[i];
-    if (v < 0.0)    v = 0.0;
-    if (v > 4095.0) v = 4095.0;
+    // NaN guard: (uint16_t)NaN is UB and NaN bypasses both range checks below
+    // (NaN<0 and NaN>4095 are both false). Floor to 0 like a negative; slew
+    // limiter still bounds the resulting step. Host should never publish NaN.
+    if (isnan(v) || v < 0.0) v = 0.0;
+    else if (v > 4095.0)     v = 4095.0;
     uint16_t target = (uint16_t)v;
 
     uint16_t out;
