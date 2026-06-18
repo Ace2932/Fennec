@@ -143,6 +143,22 @@ not DNP — 2026-06-13 fix; tune values up only if needed.)
 - [ ] Start I2C at 100kHz; only raise to 400k after the cal test passes clean
 - [ ] If readings glitch under servo load: raise R1 toward 100Ω / swap ferrite
 
+## 🟡 10. Servo-bus half-duplex timing (firmware bring-up, servos on bus)
+Single-wire half-duplex: Teensy Serial1 (pins 0/1) drives the bus through SN74LVC125A
+gates, direction switched by OE̅_TX (pin 2) / OE̅_RX (pin 3), active-LOW, with a 2µs
+TX↔RX settle in `feetech_bus.h transmit_blocking`. At 1Mbaud one byte ≈ 10µs — a short
+or wrong turnaround corrupts frames or causes driver contention. (Pin choice is correct;
+this validates the *timing*, the real half-duplex risk.)
+- [ ] SCOPE bus line + both OE̅ pins during a PING/READ round-trip: TX gate must disable
+      BEFORE the servo replies (no driver fight), RX gate enable in time for the first reply byte.
+- [ ] Confirm `flush()` finishes (last byte fully shifted out) before OE̅_TX releases —
+      a clipped last byte = checksum fail.
+- [ ] Confirm 2µs settle is enough at 1Mbaud; widen if the first reply byte is clipped.
+- [ ] Bus integrity at far servo (R1=22Ω + FB1 ferrite populated): check rise/fall + reflections.
+      On errors the firmware auto-drops 1M→500k→250k — confirm that fallback triggers and recovers.
+- [ ] Single servo (ID ping) first, then full 12-servo chain — watch SYNC_WRITE (no-ACK broadcast)
+      vs individual READs for collisions.
+
 ## 🔵 9. Phase-4 arm rail (when populating U5 — NOT for current fab)
 Found 2026-06-14 by `tools/board_health.py` + EN-gating audit. The arm buck U5
 (D42V55F7) is DNP. "Populate-and-go" is INACCURATE — it needs the fixes below.

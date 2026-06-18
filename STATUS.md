@@ -65,7 +65,7 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
 3. Fab: both boards ×5 + stencils → PCBWay. Place FINAL order (DigiKey cart + Pololu arm buck + Amazon INA + Feetech cables).
 4. **B2:** CAD pass → refine `TODO-CAD` across URDF + locomotion.
 5. Assemble + **B3** (MRBF + safety bench validation) before any LiPo.
-6. Firmware bench bring-up (real 74LVC125 + INA226 + STS3215) + servo ID assignment (`docs/setup-servos.md`).
+6. Firmware bench bring-up (real SN74LVC125A + INA226 + STS3215) + servo ID assignment (`docs/setup-servos.md`). Run bus half-duplex timing checks — `pre-power-on-validation.md` §10.
 7. Leg first-article print (PA6-CF).
 
 ## 🟡 Not started (deeper backlog)
