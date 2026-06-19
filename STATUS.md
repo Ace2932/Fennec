@@ -43,10 +43,12 @@ Multi-agent alignment pass. Core electrical contracts (INA226 addrs/shunt, bus
 Full audit detail in memory: [[project-system-audit-2026-06]].
 
 ## 🟠 Pending board edit (pre-fab, reopens power board once)
-- **Q1 gate hardening** — add **R17 100Ω** (gate series) + **D1 18V gate-source zener (BZT52C18)**.
-  Q1 gate=VBAT (≤16.8V), Vgs(max)=20V; hot-plug LC ring can exceed 20V → gate kill. Zener clamps
-  Vgs<20V. **NOT 15V** (conducts at 16.8V) and **NOT a VBAT TVS** (clamps ~29V > 20V → too late
-  for the gate; TVS only useful as optional board-wide cap/buck spike clamp). Parts in `order-list.md`.
+- **Q1 gate hardening — ⚠️ MARGINAL, backstop only.** Q1 gate=VBAT (≤16.8V), Vgs(max)=20V → 3.2V
+  headroom. Mechanism = **R17 (~1kΩ, NOT 100Ω) + D1 18V gate-source zener (BZT52C18)** — zener
+  clamp = Vz+Iz·Zz, so R17 must be ~1k to keep clamp <20V (100Ω → ~21V, fails). NOT 15V (conducts
+  at 16.8V), NOT a TVS (clamps ~29V > 20V). **Primary fix = inrush-limit VBAT** (precharge/NTC,
+  pre-power §3) to prevent the ring; zener = backstop. Cleaner: gate divider (Vgs→12V) or ±25V-Vgs
+  FET. **BENCH-VALIDATE the VBAT transient (scope) before trusting it — don't fab assuming solved.**
   Sequence: eeschema place → F8 → route → DRC 0 → **regen gerbers** → fab_gate GO.
 
 ## 🔴 Hard blockers (gate everything downstream)

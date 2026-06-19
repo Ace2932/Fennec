@@ -91,16 +91,27 @@ Also: **delete SN74HC125D (296-1192-5-ND)** from the cart — wrong logic family
 🔴 **Q1 gate-harden parts (pending board edit — add to cart):**
 | Part | DK # | Mfr P/N | Qty | Ref |
 |---|---|---|---|---|
-| 100Ω 0603 1% | 311-100HRCT-ND | RC0603FR-07100RL | 10 | R17 (gate series) |
-| 18V zener SOD-123 | (BZT52C18) | BZT52C18-7-F | 10 | D1 (gate-source clamp) |
+| 1kΩ 0603 1% | 311-1.00KHRCT-ND | RC0603FR-071KL | (already in cart) | R17 (gate series) |
+| 4.7kΩ 0603 1% | 311-4.70KHRCT-ND | RC0603FR-074K7L | 10 | R17 tune alt (have 4.7k in prior order too) |
+| 18V zener SOD-123 | BZT52C18-FDICT-ND | BZT52C18-7-F | 10 | D1 (gate-source clamp, **backstop**) |
 
-**Q1 protection decision (2026-06-18):** Q1 (IRLB3034) gate = VBAT_PROTECTED, source = BATT_NEG
-→ **Vgs ≈ VBAT (≤16.8V)**, Vgs(max) = 20V. Hot-plug LC ring on VBAT can push Vgs > 20V → gate
-oxide kill. **Fix = R17 (gate series) + D1 18V gate-source zener** — clamps Vgs directly < 20V,
-R17 drops the spike. **NOT 15V** (would conduct at the 16.8V normal gate). **NOT a VBAT TVS** —
-a TVS silent at 16.8V (Vwm ≥17V) clamps at Vc ≈ 29V (~1.6× standoff) > 20V Vgs → gate dies
-before it clamps; a unidirectional TVS can't fit the tight 17→20V window. A VBAT TVS is only
-useful as *optional board-wide* spike protection (caps/bucks), clamp ≤28V — not the gate fix.
+**Q1 protection — ⚠️ MARGINAL, treat as backstop (2026-06-18, revised after deeper analysis):**
+Q1 (IRLB3034) gate = VBAT_PROTECTED, source = BATT_NEG → **Vgs ≈ full pack (≤16.8V)**, Vgs(max)
+= **20V** → only **3.2V headroom**. Hot-plug LC ring on VBAT (≈5470µF + lead L, no on-board TVS)
+can ring to ~22–33V → Vgs > 20V → gate-oxide kill.
+
+- **Mechanism = R17 (gate series) + D1 gate-source zener** — clamps Vgs *directly* (a TVS can't:
+  silent-at-16.8V means Vwm≥17V → clamps ~29V > 20V, gate dies first; TVS only optional board-wide).
+- **R17 = ~1kΩ, NOT 100Ω.** Zener clamp = Vz + Iz·Zz (Zz≈25Ω). At R17=100Ω a 33V spike → ~120mA
+  → clamp ~**21V > 20V (fails)**. At R17≈1kΩ → ~15mA → clamp ~**18.4V < 20V (ok)**. R17 can be large
+  free — Q1 is a static reverse-protect FET (never fast-switched; e-stop kills bucks, not Q1).
+- **Still tight:** BZT52C18 Vz range 16.8–19.1V; low corner = full-charge pack → near-zero margin
+  (large R17 keeps it harmless).
+- **Primary fix should be inrush-limiting** (precharge R / NTC / current-limited first-connect —
+  pre-power §3) to PREVENT the ring; then the zener is a cheap backstop, not load-bearing.
+- **Cleaner alternatives:** gate divider (Vgs→~12V, big margin + 13–15V zener) OR a ±25V-Vgs FET.
+- **BENCH-VALIDATE** the real VBAT transient on the scope before trusting any of this (Phase-5).
+  Do NOT fab assuming the gate is solved by the zener alone.
 
 ✅ **Received since (Amazon):** M3×20 standoffs, MRBF-30 + Blue Sea 5191, 12AWG wire, ring lugs, solder wick, bench gear (PSU / logic analyzer / 1Ω loads).
 
