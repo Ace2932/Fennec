@@ -67,6 +67,20 @@ Both boards DRC-clean → no design churn pulling new parts; pending power edits
 
 ---
 
+## 🆕 2026-06-18 — cart audit (actual DigiKey cart vs the FINAL list above)
+
+Audited the in-progress DigiKey cart against §A. **Cart deviates — fix before checkout:**
+
+🔴 **Wrong part in cart:** had **SN74HC125D** (DK 296-1192-5-ND) — plain HC, **NOT 5V-tolerant**. Servo bus is 5V-TTL into a 3.3V-powered buffer → HC inputs over-driven. Replace with **SN74LVC125AD, DK 296-8453-5-ND** (74LVC, supply 1.65–3.6V, SOIC-14, 5V-tolerant inputs). Qty 5–10. *(Verified against datasheet 2026-06-18.)*
+
+🟡 **Cart was missing most of §A.** In cart: MKDS SW1 block (277-1263), SMBJ8.5A/SMBJ13A TVS, Teensy/Nano sockets (PPTC241/151), J20 ribbon (IDSD-06-D-09.00). **NOT in cart — add, or confirm they shipped in a prior DigiKey order:** LM393DR ×2 · BSS138 ×5 · 470µF/25V ×4 · SRR1260-220M (L1) ×1 · full 0603 set (incl **11.3k/12.1k 1%**, 22R, 100nF, 600R ferrite) · JST B3B-XH-A · **J20 IDC box headers ×2** (ribbon mates to MALE box headers on each board) · PRPC040 strip · shorting jumpers ×3.
+
+✅ **Received since (Amazon):** M3×20 standoffs, MRBF-30 + Blue Sea 5191, 12AWG wire, ring lugs, solder wick, bench gear (PSU / logic analyzer / 1Ω loads).
+
+**Verify owned before fab:** XT30 ≥18 mating pairs · real 6000mAh pack physical dims (re-measure → `dimensions.md §5` + LiPo pocket, currently flagged).
+
+---
+
 ## 1. Power conversion + charging
 
 ### ISDT 608AC LiPo charger — ~$60 ✅ ORDERED
