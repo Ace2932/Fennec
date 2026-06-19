@@ -49,7 +49,7 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
   (R17=10k → clamp ~18V; 100Ω→21V fails). NOT 15V, NOT a TVS (~29V>20V). +R_gs 100k bleed (opt).
   **⚠️ SOA check:** soft-start dumps ½CV²≈0.77J in Q1 (linear) over the ramp — must stay in IRLB3034
   10ms SOA, else use a precharge resistor (energy in R not FET). **BENCH-VALIDATE transient (scope)
-  before fab.** New part to order: C_gs **0.47µF (470nF, "474") 0603 X7R ≥25V** — NOT 47pF; rest owned. 
+  before fab.** New parts to order: **C_gs 0.47µF 0603 X7R 25V — DK 1276-2082-1-ND (CL10B474KA8NFNC) ✅** + **D1 BZT52C18 zener — DK 4878-BZT52C18CT-ND, SOD-123F ✅** (rest owned). **Reminders when placing the edit:** use **SOD-123F** footprint for D1; soft-start (R17+C_gs) is PRIMARY, zener is BACKSTOP; SOA-check Q1; bench-validate transient before fab. 
   Sequence: eeschema place → F8 → route → DRC 0 → **regen gerbers** → fab_gate GO.
 
 ## 🔴 Hard blockers (gate everything downstream)

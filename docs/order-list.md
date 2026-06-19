@@ -92,7 +92,7 @@ Also: **delete SN74HC125D (296-1192-5-ND)** from the cart — wrong logic family
 | Part | DK # | Mfr P/N | Qty | Ref |
 |---|---|---|---|---|
 | 10kΩ 0603 1% | 311-10.0KHRCT-ND | RC0603FR-0710KL | ✅ prior order | R17 (gate series / soft-start) |
-| **0.47µF (470nF) 0603 X7R ≥25V** | _confirm on page_ | CL10B474KA8NNNC / GRM188R71E474KA12D | 10 | **C_gs (soft-start cap) — NEW, ADD.** ⚠️ "474"=470nF (NOT "470"=47pF); ≥25V (gate ≤16.8V) |
+| **0.47µF 0603 X7R 25V** | **1276-2082-1-ND** ✅verified | CL10B474KA8NFNC (Samsung) | 10 | **C_gs (soft-start cap) — NEW, ADD.** "474"=470nF (NOT "470"=47pF) |
 | 18V zener **SOD-123F** | **4878-BZT52C18CT-ND** ✅verified | BZT52C18 (Diotec) | 10 | D1 (gate-source clamp, backstop). 500mW, Zzt 45Ω. **Use SOD-123F footprint** (larger than SOD-123). |
 | 100kΩ 0603 1% | 311-100KHRCT-ND | RC0603FR-07100KL | ✅ prior order | R_gs (gate bleed, optional) |
 
