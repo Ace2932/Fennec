@@ -73,7 +73,16 @@ Audited the in-progress DigiKey cart against §A. **Cart deviates — fix before
 
 🔴 **Wrong part in cart:** had **SN74HC125D** (DK 296-1192-5-ND) — plain HC, **NOT 5V-tolerant**. Servo bus is 5V-TTL into a 3.3V-powered buffer → HC inputs over-driven. Replace with **SN74LVC125AD, DK 296-8453-5-ND** (74LVC, supply 1.65–3.6V, SOIC-14, 5V-tolerant inputs). Qty 5–10. *(Verified against datasheet 2026-06-18.)*
 
-🟡 **Cart was missing most of §A.** In cart: MKDS SW1 block (277-1263), SMBJ8.5A/SMBJ13A TVS, Teensy/Nano sockets (PPTC241/151), J20 ribbon (IDSD-06-D-09.00). **NOT in cart — add, or confirm they shipped in a prior DigiKey order:** LM393DR ×2 · BSS138 ×5 · 470µF/25V ×4 · SRR1260-220M (L1) ×1 · full 0603 set (incl **11.3k/12.1k 1%**, 22R, 100nF, 600R ferrite) · JST B3B-XH-A · **J20 IDC box headers ×2** (ribbon mates to MALE box headers on each board) · PRPC040 strip · shorting jumpers ×3.
+🟢 **Prior DigiKey order ($25.85, ×10 each) CONFIRMED covers:** LM393DR · BSS138 · 470µF/25V (UPW1E471MPD) · 100nF (CC0603) · **BHR-12-VUA J20 box headers** · SRR1260-220M (L1) · PRPC040 strip · full power-board 0603 R-set (10k/100k/4.7k/22k/470k/1M + **11.3k & 12.1k 1% trips**) · JST B3B-XH-A.
+
+✅ **In current cart, correct:** MKDS SW1 block (277-1263) · SMBJ8.5A/SMBJ13A TVS · Teensy/Nano sockets (PPTC241/151) · J20 ribbon (IDSD-06-D-09.00).
+
+🟡 **Still genuinely missing — in NEITHER order, all logic-board parts — ADD to cart:**
+- **SN74LVC125AD ×5** (296-8453-5-ND) — the HC→LVC swap
+- **1kΩ 0603 ×5** (RC0603FR-071KL) — logic R2–R6, OLED SPI series
+- **22Ω 0603 ×2** (RC0603FR-0722RL) — logic R1, bus series
+- **600Ω@100MHz ferrite 0603 ×2** — logic FB1, bus integrity
+- **2.54 shorting jumpers ×3** — JP_BUS_MASTER + logic JP1
 
 ✅ **Received since (Amazon):** M3×20 standoffs, MRBF-30 + Blue Sea 5191, 12AWG wire, ring lugs, solder wick, bench gear (PSU / logic analyzer / 1Ω loads).
 
