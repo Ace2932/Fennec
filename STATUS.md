@@ -43,12 +43,13 @@ Multi-agent alignment pass. Core electrical contracts (INA226 addrs/shunt, bus
 Full audit detail in memory: [[project-system-audit-2026-06]].
 
 ## 🟠 Pending board edit (pre-fab, reopens power board once)
-- **Q1 gate hardening — ⚠️ MARGINAL, backstop only.** Q1 gate=VBAT (≤16.8V), Vgs(max)=20V → 3.2V
-  headroom. Mechanism = **R17 (~1kΩ, NOT 100Ω) + D1 18V gate-source zener (BZT52C18)** — zener
-  clamp = Vz+Iz·Zz, so R17 must be ~1k to keep clamp <20V (100Ω → ~21V, fails). NOT 15V (conducts
-  at 16.8V), NOT a TVS (clamps ~29V > 20V). **Primary fix = inrush-limit VBAT** (precharge/NTC,
-  pre-power §3) to prevent the ring; zener = backstop. Cleaner: gate divider (Vgs→12V) or ±25V-Vgs
-  FET. **BENCH-VALIDATE the VBAT transient (scope) before trusting it — don't fab assuming solved.**
+- **Q1 gate hardening — gate soft-start + zener backstop (⚠️ SOA-gated).** Q1 gate=VBAT (≤16.8V),
+  Vgs(max)=20V → 3.2V headroom. **Primary = soft-start: R17 10k + C_gs 470nF** (τ=4.7ms ≫ 0.5ms LC
+  ring → Q1 ramps on, bulk charges gently, no overshoot). **D1 18V zener (BZT52C18) = backstop**
+  (R17=10k → clamp ~18V; 100Ω→21V fails). NOT 15V, NOT a TVS (~29V>20V). +R_gs 100k bleed (opt).
+  **⚠️ SOA check:** soft-start dumps ½CV²≈0.77J in Q1 (linear) over the ramp — must stay in IRLB3034
+  10ms SOA, else use a precharge resistor (energy in R not FET). **BENCH-VALIDATE transient (scope)
+  before fab.** New part to order: C_gs 470nF 0603 (rest owned). 
   Sequence: eeschema place → F8 → route → DRC 0 → **regen gerbers** → fab_gate GO.
 
 ## 🔴 Hard blockers (gate everything downstream)

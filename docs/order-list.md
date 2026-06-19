@@ -91,27 +91,38 @@ Also: **delete SN74HC125D (296-1192-5-ND)** from the cart — wrong logic family
 🔴 **Q1 gate-harden parts (pending board edit — add to cart):**
 | Part | DK # | Mfr P/N | Qty | Ref |
 |---|---|---|---|---|
-| 1kΩ 0603 1% | 311-1.00KHRCT-ND | RC0603FR-071KL | (already in cart) | R17 (gate series) |
-| 4.7kΩ 0603 1% | 311-4.70KHRCT-ND | RC0603FR-074K7L | 10 | R17 tune alt (have 4.7k in prior order too) |
-| 18V zener SOD-123 | BZT52C18-FDICT-ND | BZT52C18-7-F | 10 | D1 (gate-source clamp, **backstop**) |
+| 10kΩ 0603 1% | 311-10.0KHRCT-ND | RC0603FR-0710KL | ✅ prior order | R17 (gate series / soft-start) |
+| **470nF 0603 X7R 25V** | **1276-1037-1-ND** | **CL10B474KO8NNNC** | 10 | **C_gs (soft-start cap) — NEW, ADD** |
+| 18V zener SOD-123 | BZT52C18-FDICT-ND | BZT52C18-7-F | 10 | D1 (gate-source clamp, backstop) |
+| 100kΩ 0603 1% | 311-100KHRCT-ND | RC0603FR-07100KL | ✅ prior order | R_gs (gate bleed, optional) |
 
 **Q1 protection — ⚠️ MARGINAL, treat as backstop (2026-06-18, revised after deeper analysis):**
 Q1 (IRLB3034) gate = VBAT_PROTECTED, source = BATT_NEG → **Vgs ≈ full pack (≤16.8V)**, Vgs(max)
 = **20V** → only **3.2V headroom**. Hot-plug LC ring on VBAT (≈5470µF + lead L, no on-board TVS)
 can ring to ~22–33V → Vgs > 20V → gate-oxide kill.
 
-- **Mechanism = R17 (gate series) + D1 gate-source zener** — clamps Vgs *directly* (a TVS can't:
-  silent-at-16.8V means Vwm≥17V → clamps ~29V > 20V, gate dies first; TVS only optional board-wide).
-- **R17 = ~1kΩ, NOT 100Ω.** Zener clamp = Vz + Iz·Zz (Zz≈25Ω). At R17=100Ω a 33V spike → ~120mA
-  → clamp ~**21V > 20V (fails)**. At R17≈1kΩ → ~15mA → clamp ~**18.4V < 20V (ok)**. R17 can be large
-  free — Q1 is a static reverse-protect FET (never fast-switched; e-stop kills bucks, not Q1).
-- **Still tight:** BZT52C18 Vz range 16.8–19.1V; low corner = full-charge pack → near-zero margin
-  (large R17 keeps it harmless).
-- **Primary fix should be inrush-limiting** (precharge R / NTC / current-limited first-connect —
-  pre-power §3) to PREVENT the ring; then the zener is a cheap backstop, not load-bearing.
-- **Cleaner alternatives:** gate divider (Vgs→~12V, big margin + 13–15V zener) OR a ±25V-Vgs FET.
-- **BENCH-VALIDATE** the real VBAT transient on the scope before trusting any of this (Phase-5).
-  Do NOT fab assuming the gate is solved by the zener alone.
+**PRIMARY fix = gate soft-start on Q1 (prevents the ring at the source):** Q1 is already the pass
+element in the path. Add **C_gs (gate-source cap)** so the gate ramps slowly through R17 → Q1 turns
+on gradually → bulk caps charge gently → **no abrupt step, no LC ring, no overshoot.** Same R17 does
+double duty (soft-start + zener clamp current-limit).
+- **R17 = 10kΩ** (NOT 100Ω/1k). Bigger = tighter zener clamp AND slower ramp. Clamp = Vz + Iz·Zz
+  (Zz≈25Ω): 33V spike → Iz=(33−18)/10k=1.5mA → clamp ≈ **18.04V < 20V ✓**. Gate quiescent drop
+  negligible (gate leakage only). (100Ω→~21V fail; 1k→18.4V ok; 10k→18.04V best.)
+- **C_gs = 470nF.** τ = R17·C_gs = 10k·470n = **4.7ms**. LC ring period = 2π√(LC) ≈ 2π√(1µH·5470µF)
+  ≈ **0.5ms**. Charge ramp (~3–5×... effectively spreads inrush over ~5–15ms) **≫ 0.5ms → overdamped,
+  no ring.** C_gs (470nF) ≫ Ciss (~3nF) so it dominates the ramp.
+- **D1 18V zener = backstop** for any residual transient. Tight (Vz 16.8–19.1V, low corner = full
+  pack) but with soft-start preventing the ring it's rarely exercised.
+- **R_gs 100k (optional)** gate-source bleed → defined gate + discharges C_gs on disconnect (clean
+  turn-off). Q1 turn-off isn't safety-critical (reverse-prot; off when no battery) but good practice.
+- **⚠️ SOA CHECK (gating):** during soft-start Q1 is in linear region dissipating the charge energy
+  **½CV² = ½·5470µF·16.8² ≈ 0.77 J** over the ~5–15ms ramp. Must stay inside IRLB3034's SOA (check
+  the 10ms single-pulse line). If marginal → use a **precharge resistor** (energy in R, not the FET)
+  instead, or slow/speed the ramp. **This sets whether soft-start-on-Q1 is safe vs needs precharge.**
+- **Cleaner alt if SOA fails:** precharge resistor (bypassed after), or gate divider (Vgs→~12V) +
+  smaller zener, or a ±25V-Vgs FET.
+- **BENCH-VALIDATE** the real VBAT transient on the scope (Phase-5) before trusting any of it. Do NOT
+  fab assuming the gate is solved.
 
 ✅ **Received since (Amazon):** M3×20 standoffs, MRBF-30 + Blue Sea 5191, 12AWG wire, ring lugs, solder wick, bench gear (PSU / logic analyzer / 1Ω loads).
 
