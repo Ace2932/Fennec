@@ -90,6 +90,11 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 - [ ] **SW2 + J21 e-stop contacts** — board expects **NC** (`SW2: GND↔EN_SW`; `J21: sense↔GND`).
       Fail-safe depends on NC, not NO. Identify the NC pairs on the Mxuteuk button; confirm it has
       a *second* NC block for J21. NO wiring → reads always-pressed or never trips.
+- [ ] **JP_BUS_MASTER + JP1 reachable after stack-up** — JP_BUS_MASTER must be flipped to **A**
+      once for servo-ID assignment, then back to **B** (default). Confirm both jumpers are
+      edge/top-accessible, **NOT facing into the ~20 mm mezzanine gap** (else you'd unstack to
+      flip). While here, confirm tallest in-gap parts (bulk caps Ø10×17 mm, INA226 modules) clear
+      the 20 mm M3×20 standoff gap (≤~17 mm target).
 
 **🟢 Low — protected or bench-only:**
 - [ ] **J1 XT60** — `1=VBAT(+), 2=BATT_NEG(−)`. Q1 reverse-prot covers a slip, but confirm.
