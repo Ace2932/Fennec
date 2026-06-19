@@ -77,12 +77,16 @@ Audited the in-progress DigiKey cart against §A. **Cart deviates — fix before
 
 ✅ **In current cart, correct:** MKDS SW1 block (277-1263) · SMBJ8.5A/SMBJ13A TVS · Teensy/Nano sockets (PPTC241/151) · J20 ribbon (IDSD-06-D-09.00).
 
-🟡 **Still genuinely missing — in NEITHER order, all logic-board parts — ADD to cart:**
-- **SN74LVC125AD ×5** (296-8453-5-ND) — the HC→LVC swap
-- **1kΩ 0603 ×5** (RC0603FR-071KL) — logic R2–R6, OLED SPI series
-- **22Ω 0603 ×2** (RC0603FR-0722RL) — logic R1, bus series
-- **600Ω@100MHz ferrite 0603 ×2** — logic FB1, bus integrity
-- **2.54 shorting jumpers ×3** — JP_BUS_MASTER + logic JP1
+🟡 **Final add-to-cart — logic-board parts in NEITHER prior order (all DK# verified 2026-06-18):**
+| Part | DK # | Mfr P/N | Qty | Ref |
+|---|---|---|---|---|
+| SN74LVC125AD (SOIC-14) | 296-8453-5-ND | SN74LVC125AD | 5 | U7 (HC→LVC swap) |
+| 1kΩ 0603 1% | 311-1.00KHRCT-ND | RC0603FR-071KL | 10 | logic R2–R6 (OLED SPI) |
+| 22Ω 0603 1% | 311-22.0HRCT-ND | RC0603FR-0722RL | 10 | logic R1 (bus series) |
+| 600Ω@100MHz ferrite 0603 | 490-5258-1-ND | BLM18KG601SN1D | 10 | logic FB1 (bus integrity) |
+| 2.54 shorting jumper | S9001-ND | SPC02SYAN | 10 | JP_BUS_MASTER + JP1 |
+
+Also: **delete SN74HC125D (296-1192-5-ND)** from the cart — wrong logic family.
 
 ✅ **Received since (Amazon):** M3×20 standoffs, MRBF-30 + Blue Sea 5191, 12AWG wire, ring lugs, solder wick, bench gear (PSU / logic analyzer / 1Ω loads).
 
