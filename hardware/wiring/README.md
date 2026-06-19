@@ -8,7 +8,7 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
                               ┌─── Class T 30A fuse (LiPo-rated, 20 kA AIC)
                               │
 4S LiPo 14.8V (12.8-16.8V) ──┼── MOSFET reverse-polarity protection
-   (Ovonic 4000 mAh × 2)     │
+   (Ovonic 6000 mAh × 2)     │
                               ├── E-stop NC (Mxuteuk HB2-ES544, 22 mm latching)
                               │        │ kills leg + hip + L2 rail EN lines
                               │        │ Jetson rail stays live for debug

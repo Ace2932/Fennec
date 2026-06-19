@@ -317,7 +317,7 @@ Use `jtop` (the `jetson-stats` Python package) rather than parsing `tegrastats` 
 **Option A — sum-of-rails proxy (cheapest, ships with current hardware):**
 
 - Approximate battery input current as `(leg_w + hip_w + jetson_w) / V_batt_assumed`, where `V_batt_assumed` is a static 14.8 V (nominal). Sources for the three rails: `/power_rails` `Float32MultiArray` indices 2 / 5 / 8 at 10 Hz.
-- Integrate to Ah consumed. Subtract from usable capacity (`4000 mAh × 0.9 = 3600 mAh` to LVC).
+- Integrate to Ah consumed. Subtract from usable capacity (`6000 mAh × 0.9 = 5400 mAh` to LVC).
 - **Accuracy caveats:** doesn't include buck losses (5-15% depending on load), doesn't include the 5V UBEC + L2 dedicated buck, doesn't react to actual pack voltage sag. Expect ±15-20% error on "minutes remaining." Good enough for "should I start this 10-min test on a 5-min-remaining estimate?" — not good enough for precise telemetry.
 - Reset point: bringup assumes 100% if user confirms a freshly-charged pack (no way to measure rest voltage). Add a `--soc=NN` flag to override on bringup.
 

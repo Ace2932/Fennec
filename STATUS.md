@@ -12,7 +12,7 @@ Multi-agent alignment pass. Core electrical contracts (INA226 addrs/shunt, bus
 1Mbaud, 13.0/12.4 V thresholds, Teensy↔PCB pin map) **align**. Open items below.
 
 **Fixed this pass (commits 2026-06-18):**
-- `/rostest` skill + local test cmd was `PYTHONPATH=.` → collected **0 tests** (green-on-nothing). Fixed to package-root PYTHONPATH; preflight run only when `rclpy` present. ⚠️ **Check `.github` CI for the same bug** (PR #10 ros-pytest).
+- `/rostest` skill + local test cmd was `PYTHONPATH=.` → collected **0 tests** (green-on-nothing). Fixed to package-root PYTHONPATH; preflight run only when `rclpy` present. (CI `ros-pytest.yml` verified FINE — it `cd`s into each package so its `PYTHONPATH=.` resolves correctly + already ignores `test_preflight.py`.)
 - Teensy `firmware/README.md` pinout table contradicted `main.cpp` (Serial2 7/8 vs real Serial1 0/1, E-stop 2 vs 5, batt 3 vs 4, OE polarity) → corrected to match code/PCB.
 - `main.cpp` NaN-in-commanded-position → `(uint16_t)NaN`=0 far-end slam. Added NaN guard at goal clamp.
 - Battery capacity 4000→6000 mAh + runtime in `power-budget.md`, `BOM.md` (primary docs).

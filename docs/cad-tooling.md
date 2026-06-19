@@ -163,7 +163,7 @@ static bodies so dims drive off real geometry:
 | Feetech STS3215 STEP (from GrabCAD / Feetech) | ✅ available at `~/codebases/NOVA/feetech_servo_models/feetech_sts3215-1.snapshot.6/feetech-sts3215/STS3215_03a v1.step` |
 | Leg V3.1 STEPs (shoulder, coax, femur, tibia, covers) | ✅ at `proj/hardware/cad/archive/leg_v3/*.step` |
 | PCB v6 STEP | 📋 KiCad away-week deliverable |
-| LiPo Ovonic 4S 4000 mAh | ⚠️ approximate box from `dimensions.md` §5 |
+| LiPo Ovonic 4S 6000 mAh 120C | ⚠️ approximate box from `dimensions.md` §5 |
 | 688ZZ bearing | ⚠️ trivial — 8 × 16 × 5 mm flat ring |
 | Pololu D42V110 / D24V22F12 / D42V55F12 | ⚠️ approximate boxes from `dimensions.md` §4 |
 | TP-Link LS105G PCB (case-removed) | ❌ caliper-measure after case removal |

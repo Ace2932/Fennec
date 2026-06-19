@@ -45,7 +45,7 @@ import cadquery as cq
 1. Printer + Material Profile (Bambu P1S, PA6-CF / PETG-CF / TPU)
 2. NovaSM3 Calibration Constants
 3. STS3215 Servo Pocket with Back-Shaft U-Bracket
-4. LiPo Battery Pocket (4S 4000mAh + XT60)
+4. LiPo Battery Pocket (4S 6000mAh + XT60)
 5. Power Connector Cutouts (XT60, XT30)
 6. Panel Cutouts (E-stop, RJ-45, USB 3.1, Barrel Jack)
 7. Signal Connector Pockets (JST-XH 2.54)
@@ -294,7 +294,7 @@ def nova_sts3215_back_bearing_seat(workplane):
 
 ## 4. LiPo Battery Pocket
 
-Dual 4S 4000mAh packs. Project requires hot-swap capability.
+Dual 4S 6000mAh packs (Ovonic 120C). Hot-swap capable. NOTE: LIPO_4S_4000 dims below are the OLD 4000mAh box -- re-measure for the larger 6000mAh pack.
 
 ```python
 LIPO_4S_4000 = {

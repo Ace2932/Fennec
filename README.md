@@ -453,7 +453,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 
 | # | Decision | Status | Notes |
 |---|----------|--------|-------|
-| 1 | Charger model | Resolved → ISDT 608AC | ~$60. AC mode ~55W ≈ 75 min for 4S 4000mAh. Charge / discharge / **storage** modes. Bag + XT60 jumper bought separately. |
+| 1 | Charger model | Resolved → ISDT 608AC | ~$60. AC mode ~55W ≈ 110 min for 4S 6000mAh. Charge / discharge / **storage** modes. Bag + XT60 jumper bought separately. |
 | 2 | WiFi on P3766 kit | Resolved → 802.11ac/ab/gn included | Confirmed from NVIDIA P3766 datasheet (Developer Kit Content): "802.11ac/ab/gn wireless network interface controller". WiFi 5, **not** 6E. Antennas implied via product photos; verify-on-unbox. |
 | 2b | Bluetooth presence on P3766 | **Resolved → BT 5.1 confirmed (Realtek)** | Verified 2026-05-17 on hardware: `hciconfig -a` shows `hci0` UP RUNNING, Manufacturer "Realtek Semiconductor Corporation", HCI Version 5.1, BD Address 9C:C7:D3:F6:AC:5C. `bluetoothctl list` confirms controller present. |
 | 3 | L2 12V tap: shared with hip rail vs dedicated buck | **Resolved → dedicated D24V22F12** (v3.4) | Combined hip+L2 load was margin-thin on D42V110F12's 9A typ at 14.8V Vin derating. Split L2 to its own buck for $19 extra. Cleaner power, more hip-rail headroom. |

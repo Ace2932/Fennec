@@ -179,13 +179,13 @@ real-world batch variation listed where known.
 
 ## 5. Battery + safety
 
-### 4S LiPo Ovonic 4000 mAh
+### 4S LiPo Ovonic 6000 mAh 120C
 **Source:** Ovonic product page
 
 | Dim | Value | Status |
 |---|---|---|
-| Pack L × W × H | 110.0 × 35.0 × 30.0 | ⚠️ REVIEW — varies ±5 mm by lot |
-| Weight | ~410 g | ⚠️ REVIEW |
+| Pack L × W × H | 110.0 × 35.0 × 30.0 (OLD 4000mAh box) | 🔴 RE-MEASURE for 6000mAh pack (physically larger) |
+| Weight | ~410 g (OLD 4000mAh) | 🔴 RE-MEASURE for 6000mAh |
 | Power lead | XT60 (Ovonic kit includes XT60 jumper + balance lead) | ✅ |
 | Balance lead | JST-XH 5-pin (4 cells + 1 GND) | ✅ |
 

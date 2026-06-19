@@ -74,7 +74,7 @@ Both boards DRC-clean → no design churn pulling new parts; pending power edits
 - On arrival: power up no-battery, verify storage-mode menu works, set LVC alarm to 3.3V/cell = 13.2V
 
 ### LiPo safe bag — ~$15 ✅ ORDERED
-- Fireproof fiberglass bag sized for 4S 4000mAh packs
+- Fireproof fiberglass bag sized for 4S 6000mAh packs (verify owned bag fits the larger pack)
 
 ### XT60 jumper (for 608AC battery input) — $0 ✅ SUPPLIED WITH OVONIC KIT
 - Confirmed in Ovonic 4S LiPo kit. Skip purchase.
