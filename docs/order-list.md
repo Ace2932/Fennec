@@ -88,6 +88,20 @@ Audited the in-progress DigiKey cart against §A. **Cart deviates — fix before
 
 Also: **delete SN74HC125D (296-1192-5-ND)** from the cart — wrong logic family.
 
+🔴 **Q1 gate-harden parts (pending board edit — add to cart):**
+| Part | DK # | Mfr P/N | Qty | Ref |
+|---|---|---|---|---|
+| 100Ω 0603 1% | 311-100HRCT-ND | RC0603FR-07100RL | 10 | R17 (gate series) |
+| 18V zener SOD-123 | (BZT52C18) | BZT52C18-7-F | 10 | D1 (gate-source clamp) |
+
+**Q1 protection decision (2026-06-18):** Q1 (IRLB3034) gate = VBAT_PROTECTED, source = BATT_NEG
+→ **Vgs ≈ VBAT (≤16.8V)**, Vgs(max) = 20V. Hot-plug LC ring on VBAT can push Vgs > 20V → gate
+oxide kill. **Fix = R17 (gate series) + D1 18V gate-source zener** — clamps Vgs directly < 20V,
+R17 drops the spike. **NOT 15V** (would conduct at the 16.8V normal gate). **NOT a VBAT TVS** —
+a TVS silent at 16.8V (Vwm ≥17V) clamps at Vc ≈ 29V (~1.6× standoff) > 20V Vgs → gate dies
+before it clamps; a unidirectional TVS can't fit the tight 17→20V window. A VBAT TVS is only
+useful as *optional board-wide* spike protection (caps/bucks), clamp ≤28V — not the gate fix.
+
 ✅ **Received since (Amazon):** M3×20 standoffs, MRBF-30 + Blue Sea 5191, 12AWG wire, ring lugs, solder wick, bench gear (PSU / logic analyzer / 1Ω loads).
 
 **Verify owned before fab:** XT30 ≥18 mating pairs · real 6000mAh pack physical dims (re-measure → `dimensions.md §5` + LiPo pocket, currently flagged).
