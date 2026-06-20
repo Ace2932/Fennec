@@ -52,6 +52,25 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
   before fab.** New parts to order: **C_gs 0.47µF 0603 X7R 25V — DK 1276-2082-1-ND (CL10B474KA8NFNC) ✅** + **D1 BZT52C18 zener — DK 4878-BZT52C18CT-ND, SOD-123F ✅** (rest owned). **Reminders when placing the edit:** use **SOD-123F** footprint for D1; soft-start (R17+C_gs) is PRIMARY, zener is BACKSTOP; SOA-check Q1; bench-validate transient before fab. 
   Sequence: eeschema place → F8 → route → DRC 0 → **regen gerbers** → fab_gate GO.
 
+  **EXACT eeschema edit — sheet `01 Battery Input + Reverse Protection`** (Q1 gate pad1 is currently
+  tied DIRECTLY to `VBAT_PROTECTED`; break that and insert the network):
+  ```
+  VBAT_PROTECTED ──[R17 10k]──┬── Q1_GATE (new net) ── Q1.pad1 (gate)
+                              ├──[C_gs 0.47µF]── BATT_NEG
+                              ├──[D1 zener ▷|]── BATT_NEG   (cathode/band → Q1_GATE)
+                              └──[R_gs 100k]── BATT_NEG
+  ```
+  - **R17** 10k 0603 (R_0603): `VBAT_PROTECTED` → `Q1_GATE`
+  - **C_gs** 0.47µF 0603 (C_0603): `Q1_GATE` → `BATT_NEG`
+  - **D1** BZT52C18 **SOD-123F**: **cathode→`Q1_GATE`**, anode→`BATT_NEG` (gate is +, band toward gate)
+  - **R_gs** 100k 0603 (R_0603): `Q1_GATE` → `BATT_NEG`
+  - **Reassign Q1 pad1 net** `VBAT_PROTECTED` → `Q1_GATE`.
+  Place all four near Q1's gate pin (Q1 TO-220 ≈ 98.5,−56.5 on board top). Then **F8** → I route the
+  4 parts + `Q1_GATE` net headless (incremental), re-pour, DRC, regen gerbers.
+  **Precharge resistor:** buy 10/22/47Ω 2–3W as insurance, but do NOT add to the board unless the SOA
+  check fails soft-start — it's an *alternative* (goes across SW1 + needs a 2-stage connect procedure),
+  not additive. Decide at bench.
+
 ## 🔴 Hard blockers (gate everything downstream)
 | # | Blocker | Owner | Gates | Notes |
 |---|---|---|---|---|
