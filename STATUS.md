@@ -71,6 +71,11 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
   check fails soft-start — it's an *alternative* (goes across SW1 + needs a 2-stage connect procedure),
   not additive. Decide at bench.
 
+## 🟠 Pending board edit — mounting-hole keepouts (pre-fab)
+- **All 4 mounting holes (H1–H4) sit in power/GND zones** (H1=BATT_NEG, H2=V7V5_LEG, H3/H4 GND/VBAT). Zone clearance ~0.25mm → copper under the ~3mm standoff flange → **metal standoff shorts the net to the standoff/logic board.** H1 (BATT_NEG) → GND on logic side = dead short across Q1.
+  - **Fix:** add Rule Area keepout (**~7mm dia, keep-out copper fill, all copper layers**) on each of H1/H2/H3/H4 → re-pour. No copper under any standoff.
+  - **+ Nylon M3×20 standoff + nylon screw at H1** (suspenders; brass M3×20 for H2–H4). Order 1 nylon standoff (Amazon).
+
 ## 🔴 Hard blockers (gate everything downstream)
 | # | Blocker | Owner | Gates | Notes |
 |---|---|---|---|---|

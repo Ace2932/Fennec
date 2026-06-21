@@ -126,6 +126,9 @@ double duty (soft-start + zener clamp current-limit).
 
 ✅ **Received since (Amazon):** M3×20 standoffs, MRBF-30 + Blue Sea 5191, 12AWG wire, ring lugs, solder wick, bench gear (PSU / logic analyzer / 1Ω loads).
 
+
+**🛒 Add (mounting-hole isolation):** 1× **nylon M3×20 standoff + nylon M3 screw** for H1 (BATT_NEG zone) — suspenders alongside the copper keepout. Amazon nylon standoff kit (~$8). Brass M3×20 (owned) for H2–H4.
+
 **Verify owned before fab:** XT30 ≥18 mating pairs · real 6000mAh pack physical dims (re-measure → `dimensions.md §5` + LiPo pocket, currently flagged).
 
 ---
