@@ -76,6 +76,10 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
   - **Fix:** add Rule Area keepout (**~7mm dia, keep-out copper fill, all copper layers**) on each of H1/H2/H3/H4 → re-pour. No copper under any standoff.
   - **Standoffs:** brass M3×20 (PATIKIL 50pc, owned) work on ALL 4 holes **once the keepout is in** (no copper under flange/barrel). Nylon at H1 = optional extra; not required. 20mm body = the mezzanine gap ✓.
 
+## ⚠️ Servo harness — dual-voltage bus (FRY-CRITICAL, pre-bringup)
+- Bus = 1 shared signal, 2 voltages, boundary **inside each leg** (hip 12V / femur+tibia 7.5V). Stock 3-wire daisy across a 12V↔7.5V transition shorts VCC → fried servo.
+  - **Need:** power per voltage segment + **VCC-isolated (signal+GND-only) links at every hip→femur transition** + **extension daisy cables for long leg runs** (Feetech/AliExpress — never received). Meter every servo VCC=correct rail before power. Spec in `hardware/wiring/README.md`. Confirm 12 servos in hand.
+
 ## 🔴 Hard blockers (gate everything downstream)
 | # | Blocker | Owner | Gates | Notes |
 |---|---|---|---|---|

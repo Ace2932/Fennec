@@ -62,6 +62,7 @@ JP_BUS_MASTER solder bridge:
   default = B (Teensy → 74HC125 → bus)
   alt     = A (FE-URT-1 → bus, for ID assignment + bench debug)
 ```
+> ⚠️ Pin numbers in the diagram above are STALE (Serial2 7/8 + 74HC125). Real = **Serial1 0/1, OE 2/3, SN74LVC125A** — see `firmware/teensy/firmware/src/main.cpp` + firmware README.
 
 **Bus integrity footprints on PCB v6 (populate per measured error rate):**
 - Series R (22-100 Ω, 0603) at 74HC125 output — slope rate-limiting
@@ -70,6 +71,16 @@ JP_BUS_MASTER solder bridge:
 - **NOT** 120 Ω differential termination — Feetech bus is single-ended TTL, not RS-485
 
 **Cable plan:** Feetech daisy-chain cables (ordered), one ferrite bead per servo entry (footprint on PCB), star ground at FE-URT-1. If errors persist after populating: drop baud 1M → 500k → 250k.
+
+**⚠️ DUAL-VOLTAGE BUS — VCC-isolated boundary links (FRY-CRITICAL, added 2026-06-22):**
+ONE shared signal, TWO power voltages, and the boundary is INSIDE each leg: hip (ID 1–4) = 12V, femur+tibia (ID 5–12) = 7.5V. A stock 3-wire Feetech cable carries GND+VCC+Signal — daisy a 12V hip servo straight to a 7.5V femur servo and the VCC wire bridges 12V↔7.5V → short / fried servo.
+
+Required harness:
+- **Power injected per voltage segment:** 12V to hips (V12_HIP), 7.5V to femur/tibia (V7V5_LEG star injection). Every servo's VCC pin must see its correct rail.
+- **At every 12V↔7.5V transition** (each hip→femur in each leg): use a **SIGNAL+GND-only link (VCC pin pulled/cut)**. NO stock 3-wire cable across a voltage boundary.
+- **Meter-verify every servo VCC = its correct rail (7.5 vs 12V) BEFORE the chain sees power.** #1 fry path on the build (pre-power-on §1c).
+
+Cables still needed: **extension daisy cables for long leg runs** (Feetech/AliExpress — the ⬜ master-bom item never received) + the **VCC-isolated boundary jumpers** (make by pulling the VCC pin from a stock cable).
 
 **Cable length:** ~2 m total harness. Community reports 12 m / 8 axes workable, so 2 m / 12 nodes is well within margin.
 
