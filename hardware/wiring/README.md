@@ -5,12 +5,12 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
 ## Power chain (4S LiPo → 4 active rails + 1 reserved)
 
 ```
-                              ┌─── Class T 30A fuse (LiPo-rated, 20 kA AIC)
+                              ┌─── MRBF-30 terminal fuse (Blue Sea 5191 block, 30A / 58V DC)
                               │
 4S LiPo 14.8V (12.8-16.8V) ──┼── MOSFET reverse-polarity protection
    (Ovonic 6000 mAh × 2)     │
                               ├── E-stop NC (Mxuteuk HB2-ES544, 22 mm latching)
-                              │        │ kills leg + hip + L2 rail EN lines
+                              │        │ kills leg + hip + L2 + arm EN (EN_BUCKS)
                               │        │ Jetson rail stays live for debug
                               │
                               ├── MOSFET hard-cutoff @ 12.4V (comparator-driven)
@@ -40,32 +40,31 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
 | Trip | Pack V | Cell V | Action |
 |------|--------|--------|--------|
 | 1 | 13.2 V | 3.30 V/cell | 608AC charger LVC alarm (user-facing beep) |
-| 2 | 13.0 V | 3.25 V/cell | LM393 comparator → Teensy GPIO pin 3 → `/battery_low` Bool → Jetson `systemctl poweroff` (clean SD unmount). ~30-60 s window. |
-| 3 | 12.4 V | 3.10 V/cell | Second LM393 stage → logic-level MOSFET (IRLB3034PBF candidate) → breaks battery feed. Autonomous backstop. |
-| — | — | — | E-stop (manual) — kills D42V110F7 + D42V110F12 + D24V22F12 EN lines. Jetson stays alive. |
+| 2 | 13.0 V | 3.25 V/cell | LM393 comparator → Teensy GPIO **pin 4** → `/battery_low` Bool → Jetson `systemctl poweroff` (clean SD unmount). ~30-60 s window. |
+| 3 | 12.4 V | 3.10 V/cell | Second LM393 stage → **BSS138 (Q2) pulls EN_BUCKS low → all bucks off** (leg/hip/L2/arm); Q4 also kills Jetson EN. Autonomous backstop. (Q1 IRLB3034 = reverse-polarity protection, separate — does NOT break the battery feed.) |
+| — | — | — | E-stop (manual, SW2 NC) — pulls EN_BUCKS low via Q3 → kills leg + hip + L2 + **arm** buck EN. Jetson stays alive. |
 
 ## Feetech TTL bus (single-ended half-duplex, 1 Mbps default)
 
 ```
-Teensy 4.1                    74HC125 (quad tri-state buffer)              Bus pad
-  Serial2 TX (pin 8) ─────────► gate 1 input ─OE(pin 6 HIGH)────┐
-  Serial2 RX (pin 7) ◄───────── gate 2 output ◄─OE(pin 5 LOW)──┤
-  GPIO TX_OE (pin 6) ─────► OE pin (gate 1)                    │
-  GPIO RX_OE (pin 5) ─────► OE pin (gate 2)                    │
-                                                                ▼
+Teensy 4.1                    SN74LVC125A (quad tri-state buffer)         Bus pad
+  Serial1 TX (pin 1) ─────────► gate1 input                           ┐
+  Serial1 RX (pin 0) ◄───────── gate2 output                          │
+  OE̅_TX (pin 2, active-LOW) ──► gate1 enable (LOW = drive TX → bus)    │
+  OE̅_RX (pin 3, active-LOW) ──► gate2 enable (LOW = listen bus → RX)   ▼
                                                        12× STS3215 daisy chain
-                                                       IDs 1-4   hips
-                                                       IDs 5-12  femur + tibia
+                                                       IDs 1-4   hips (12V)
+                                                       IDs 5-12  femur + tibia (7.5V)
                                                        IDs 13-18 reserved (Phase 4 arm)
 
 JP_BUS_MASTER solder bridge:
-  default = B (Teensy → 74HC125 → bus)
+  default = B (Teensy → SN74LVC125A → bus)
   alt     = A (FE-URT-1 → bus, for ID assignment + bench debug)
 ```
-> ⚠️ Pin numbers in the diagram above are STALE (Serial2 7/8 + 74HC125). Real = **Serial1 0/1, OE 2/3, SN74LVC125A** — see `firmware/teensy/firmware/src/main.cpp` + firmware README.
+> Source of truth for these pins = `firmware/teensy/firmware/src/main.cpp` (Serial1 0/1, OE̅ 2/3) + the `nova_pcb_v6_logic` netlist.
 
 **Bus integrity footprints on PCB v6 (populate per measured error rate):**
-- Series R (22-100 Ω, 0603) at 74HC125 output — slope rate-limiting
+- Series R (22 Ω, R1 0603) + ferrite (FB1) at SN74LVC125A output — slope rate-limiting / EMI
 - Ferrite bead at each servo entry — common-mode noise rejection
 - Star ground at FE-URT-1 connector
 - **NOT** 120 Ω differential termination — Feetech bus is single-ended TTL, not RS-485
@@ -93,15 +92,17 @@ Teensy 4.1                          I²C bus (separate from Arduino Nano aux bus
                  ▼                ▼                ▼                ▼
             INA226 0x40       INA226 0x41       INA226 0x44       INA226 0x45
             leg 7.5V          hip 12V           Jetson 12V        L2 12V
-            shunt: 0.001 Ω    shunt: 0.001 Ω    shunt: 1 mΩ stock (opt 4th)
-            (Vishay WSLP)     (Vishay WSLP)     (Adafruit breakout)
+            shunt: 2 mΩ       shunt: 2 mΩ       shunt: 2 mΩ       shunt: 2 mΩ
+            GODIY 20A R002 modules (all 4) — firmware setMaxCurrentShunt(20, 0.002)
 
   → /power_rails Float32MultiArray @ 10 Hz: [leg_v, leg_a, leg_w,
                                               hip_v, hip_a, hip_w,
                                               jetson_v, jetson_a, jetson_w]
 ```
 
-I²C pull-ups: 10 kΩ to 3.3 V on SDA + SCL at the Teensy end of the bus.
+**4th INA (0x45):** v1 → **L2 rail** (matches firmware `INA226_ADDR_L2`; enable `-D NOVA_INA226_L2`). L2 monitoring is *optional* (low-power dedicated rail, alive from its data stream) but you have the module → use it. **Arm rail (Phase-4)** is margin-thin (0.83× peak) → it wants its own INA: add a **5th off-board module at 0x46** when the arm goes in (no board change — taps the same I²C bus). The board's `U12 = arm` label is Phase-4-aspirational; for v1 wire U12's shunt into the **L2** rail.
+
+I²C pull-ups: **4.7 kΩ** to 3.3 V on SDA + SCL (R11/R12 on the power board, near the INA226s).
 
 ## Arduino Nano peripheral map (reduced per BOM v3.5 cut)
 
@@ -159,7 +160,7 @@ Switch can be pulled from its case to save ~60 % volume inside the chassis.
 |------|-------|-----|
 | 18 AWG silicone | 18 AWG | Servo power (7.5 V + 12 V rails), battery feed to bucks |
 | 22 AWG hookup | 22 AWG | Signal-level (INA226 I²C, comparator outputs, E-stop GPIO, RGB LED data) |
-| Feetech TTL daisy-chain | 28 AWG (vendor) | Servo bus signal + servo power passthrough |
+| Feetech TTL daisy-chain | 28 AWG (vendor) | Servo bus signal + power passthrough **within one voltage segment only** (see dual-voltage note — no power across 12V↔7.5V boundary) |
 
 ## Color code
 
