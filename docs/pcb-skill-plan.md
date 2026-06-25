@@ -134,7 +134,7 @@ These come straight from [`BOM.md`](../BOM.md) / [`docs/order-list.md`](./order-
 
 | Topic | What the skill knows | v6 spec § | Template file |
 |---|---|---|---|
-| Battery input + reverse-prot + Class T fuse | XT60 panel-mount in, MOSFET reverse-prot (no diode), Class T 30A fuse (20 kA AIC vs ANL's 6 kA), high-current switch | §1 | `templates/battery_input_subschematic/` |
+| Battery input + reverse-prot + MRBF fuse | XT60 panel-mount in, MOSFET reverse-prot (no diode), MRBF-30 fuse off-board (Blue Sea 5191, ~9 kA AIC @ 16.8 V; Class T superseded 2026-06-12, ANL's 6 kA rejected), high-current switch | §1 | `templates/battery_input_subschematic/` |
 | Power rails | 4S LiPo 12.8-16.8V → 5 buck rails (D42V110F7 / D42V110F12 / D24V22F12 / D42V55F12 + reserved arm-rail D42V55F7) | §2 | `templates/power_rails_subschematic/` |
 | Servo bus distribution | Single signal bus, 4 power injection points along leg trunk, 1000 µF bulk caps at each injection point, star ground at FE-URT-1, hip rail injects at chassis floor | §3 | `templates/bus_distribution_subschematic/` |
 | Bus master Pattern B / A bridge | Teensy UART → 74HC125 quad tri-state buffer (half-duplex driver) → bus pads. OE pins drive TX/RX direction. `JP_BUS_MASTER` solder bridge: B default, A fallback to FE-URT-1 direct | §4 | `templates/bus_master_subschematic/` |

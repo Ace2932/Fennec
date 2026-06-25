@@ -323,7 +323,7 @@ Use `jtop` (the `jetson-stats` Python package) rather than parsing `tegrastats` 
 
 **Option B — add a 4th INA226 on the battery feed (clean fix, ~$5 + bench time):**
 
-- The firmware already has `NOVA_INA226_L2` as a 4th-rail opt-in build flag. Same pattern: define `NOVA_INA226_BATTERY`, hook one more chip onto the existing I²C bus (address 0x45 or 0x46), wire its shunt before the Class T fuse. PCB v6 has the bus footprint; a bench-wired add-on works for v1.
+- The firmware already has `NOVA_INA226_L2` as a 4th-rail opt-in build flag. Same pattern: define `NOVA_INA226_BATTERY`, hook one more chip onto the existing I²C bus (address 0x45 or 0x46), wire its shunt before the MRBF-30 fuse. PCB v6 has the bus footprint; a bench-wired add-on works for v1.
 - Once present: actual battery current + voltage. Coulomb counting becomes meaningful (±3-5% with a few cycles of cal). Reset point becomes "voltage at rest >16.6 V → 100%."
 - **Recommend B before investing in v2 below.** Without it, every refinement is layered on top of a ±20% proxy.
 

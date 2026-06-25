@@ -51,7 +51,7 @@ Full multi-phase, both-board audit. Both boards are routed + DRC-clean (logic: 0
 - 🔴 **IDC box header 2×06 2.54 shrouded ×2** (J20 on *each* board) + **12-way ribbon** + 2 IDC receptacle ends (mezzanine link — currently have zero; pair required, two males can't mate)
 - 2.54 pin-header breakaway strip ×1 (Sullins PRPC040SAAN) — covers pwr J2/M1 + logic J10/J21/J9/JP1
 - 2.54 shorting jumpers ×3 (JP_BUS_MASTER, logic JP1)
-- 🔴 **SW1 15–20A screw block** (KF301-16A / Phoenix MKDS — kit block is 10A, SW1 carries ~15A) *(DigiKey or Amazon)*
+- ✅ **SW1 screw block → TB007-508-02BE — ORDERED ×10 (2026-06-22)** (DK 102-6203-ND, 16A UL / 18A IEC, 5.08mm, **14mm tall — fits 20mm gap**, fits TB132; replaces OOS MKDS). 1 for SW1 + spares; SW2 = existing kit block. Matches the ~18A Contura switch. Drill 1.2→1.5mm tweak queued for Q1 pass.
 
 **TVS (off-board, power rails incl. Phase-4 arm)**
 - SMBJ8.5A ×5 (2 leg + 1 arm Phase-4 + spares) · SMBJ13A ×5 (hip + L2 + spares) — cathode band to +, across injection XT30 pigtails
@@ -75,25 +75,29 @@ Audited the in-progress DigiKey cart against §A. **Cart deviates — fix before
 
 🟢 **Prior DigiKey order ($25.85, ×10 each) CONFIRMED covers:** LM393DR · BSS138 · 470µF/25V (UPW1E471MPD) · 100nF (CC0603) · **BHR-12-VUA J20 box headers** · SRR1260-220M (L1) · PRPC040 strip · full power-board 0603 R-set (10k/100k/4.7k/22k/470k/1M + **11.3k & 12.1k 1% trips**) · JST B3B-XH-A.
 
-✅ **In current cart, correct:** MKDS SW1 block (277-1263) · SMBJ8.5A/SMBJ13A TVS · Teensy/Nano sockets (PPTC241/151) · J20 ribbon (IDSD-06-D-09.00).
+✅ **ORDERED 2026-06-22:** SMBJ8.5A/SMBJ13A TVS · Teensy/Nano sockets (PPTC241/151) · J20 ribbon (IDSD-06-D-09.00).
 
-🟡 **Final add-to-cart — logic-board parts in NEITHER prior order (all DK# verified 2026-06-18):**
+⚠️ **Stock resolution (2026-06-22):**
+- **1kΩ + 22Ω 0603 — Yageo originals BACK IN STOCK** (311-1.00KHRCT-ND / 311-22.0HRCT-ND, immediate, ~$0.025 ea) → **use originals** (orig spec, cheaper). Vishay CRCW06031K00FKEAC (541-3949-1-ND) / CRCW060322R0FKEA (541-22.0HCT-ND) kept as **documented drop-in fallback** if Yageo lapses again.
+- **SW1 block — MKDS 277-1263 still OOS (17-wk)** → substitute **TB007-508-02BE — ✅ ORDERED ×10 (2026-06-22)** (102-6203-ND, $0.53 ea). 16A UL / **18A IEC**, 5.08mm, **body 14mm tall → clears 20mm mezzanine gap (edge-mounted, screw/wire in open air)**, fits TB132 — **needs SW1 drill 1.2→1.5mm tweak (Q1 board pass)**. Matches ~18A Contura switch; NOT a 30A swap (fuse is kA-short protection, switch caps path at ~18A). 1 for SW1 + 9 spares (can populate SW1 on multiple ×5 fab boards).
+
+✅ **ORDERED 2026-06-22 — logic-board parts (were in NEITHER prior order; DK# verified 2026-06-18):**
 | Part | DK # | Mfr P/N | Qty | Ref |
 |---|---|---|---|---|
 | SN74LVC125AD (SOIC-14) | 296-8453-5-ND | SN74LVC125AD | 5 | U7 (HC→LVC swap) |
-| 1kΩ 0603 1% | 311-1.00KHRCT-ND | RC0603FR-071KL | 10 | logic R2–R6 (OLED SPI) |
-| 22Ω 0603 1% | 311-22.0HRCT-ND | RC0603FR-0722RL | 10 | logic R1 (bus series) |
+| 1kΩ 0603 1% | 311-1.00KHRCT-ND | RC0603FR-071KL | 10 | logic R2–R6 (OLED SPI) — back in stock; fallback 541-3949-1-ND |
+| 22Ω 0603 1% | 311-22.0HRCT-ND | RC0603FR-0722RL | 10 | logic R1 (bus series) — back in stock; fallback 541-22.0HCT-ND |
 | 600Ω@100MHz ferrite 0603 | 490-5258-1-ND | BLM18KG601SN1D | 10 | logic FB1 (bus integrity) |
 | 2.54 shorting jumper | S9001-ND | SPC02SYAN | 10 | JP_BUS_MASTER + JP1 |
 
-Also: **delete SN74HC125D (296-1192-5-ND)** from the cart — wrong logic family.
+✅ **Confirmed NOT ordered (2026-06-22): SN74HC125D (296-1192-5-ND)** — wrong logic family; the LVC (296-8453-5-ND) is the correct part.
 
-🔴 **Q1 gate-harden parts (pending board edit — add to cart):**
+🟠 **Q1 gate-harden parts — C_gs + D1 zener ✅ ORDERED 2026-06-22 (board edit still pending):**
 | Part | DK # | Mfr P/N | Qty | Ref |
 |---|---|---|---|---|
 | 10kΩ 0603 1% | 311-10.0KHRCT-ND | RC0603FR-0710KL | ✅ prior order | R17 (gate series / soft-start) |
-| **0.47µF 0603 X7R 25V** | **1276-2082-1-ND** ✅verified | CL10B474KA8NFNC (Samsung) | 10 | **C_gs (soft-start cap) — NEW, ADD.** "474"=470nF (NOT "470"=47pF) |
-| 18V zener **SOD-123F** | **4878-BZT52C18CT-ND** ✅verified | BZT52C18 (Diotec) | 10 | D1 (gate-source clamp, backstop). 500mW, Zzt 45Ω. **Use SOD-123F footprint** (larger than SOD-123). |
+| **0.47µF 0603 X7R 25V** | **1276-2082-1-ND** ✅verified | CL10B474KA8NFNC (Samsung) | 10 ✅ordered | **C_gs (soft-start cap) — NEW.** "474"=470nF (NOT "470"=47pF) |
+| 18V zener **SOD-123F** | **4878-BZT52C18CT-ND** ✅verified | BZT52C18 (Diotec) | 10 ✅ordered | D1 (gate-source clamp, backstop). 500mW, Zzt 45Ω. **Use SOD-123F footprint** (larger than SOD-123). |
 | 100kΩ 0603 1% | 311-100KHRCT-ND | RC0603FR-07100KL | ✅ prior order | R_gs (gate bleed, optional) |
 
 **Q1 protection — ⚠️ MARGINAL, treat as backstop (2026-06-18, revised after deeper analysis):**
@@ -278,7 +282,7 @@ only sink is the bulk caps (1 J into 5000 µF from 7.5 V ≈ 21 V rail — over 
 | J8 | JST **B3B-XH-A** 1×03 2.5 mm (servo bus TTL) | 1 | DigiKey **455-2247-ND** — [link](https://www.digikey.com/en/products/detail/jst-sales-america-inc/B3B-XH-A/1651046) |
 | J2 + M1 | PinHeader 1×03 + 1×02 2.54 (UBEC aux + voltmeter) | 1 strip | Sullins **`PRPC040SAAN-RC`** 40-pin breakaway, snap to length (covers both) |
 | J20 | IDC box header **2×06 2.54 shrouded vertical THT** (interboard) | 1 | Würth WR-BHD series — [filter](https://www.digikey.com/en/product-highlight/w/wurth-electronics/wr-bhd-series-box-headers-and-idc-connectors), pick 12-pos 2.54 |
-| SW1, SW2 | TB132 footprint = **5mm pitch, 1.2mm drill = standard KF301**. 1×02 PCB screw block | 2 | ✅ **ALREADY HAVE** — Tugermoola 72pc 5mm 2/3/4-pin kit (bought 2026-05-03) has KF301-style 2-pin blocks that drop in. Use 2. ⚠️ Kit rated **10A**; SW2 (mA) fine, **SW1 carries ~15A** → undersized, runs warm. 🔴 NOT OPTIONAL (2026-06-12 review): buy a **15–20 A rated 5 mm-pitch 2-pin block** for SW1 (same KF301/TB132 footprint — search "KF301 16A" or Phoenix MKDS 1.5/2). $3, bundle with next order. |
+| SW1, SW2 | TB132 footprint = **5mm pitch, 1.2mm drill = standard KF301**. 1×02 PCB screw block | 2 | ✅ **ALREADY HAVE** — Tugermoola 72pc 5mm 2/3/4-pin kit (bought 2026-05-03) has KF301-style 2-pin blocks that drop in. Use 2. ⚠️ Kit rated **10A**; SW2 (mA) fine, **SW1 carries ~15A** → undersized, runs warm. 🔴 NOT OPTIONAL (2026-06-12 review): buy a **15–20 A rated 5 mm-pitch 2-pin block** for SW1 (same KF301/TB132 footprint — search "KF301 16A" or Phoenix MKDS 1.5/2). $3, bundle with next order. ✅ **RESOLVED 2026-06-22: TB007-508-02BE** (Same Sky, DK 102-6203-ND, $0.53, 15.8k in stock — 16A UL / **18A IEC** matches the ~18A Contura switch). Datasheet recs Ø1.6 holes vs footprint's Ø1.2; pin ~1.0mm fits 1.2 but **bump SW1 drill 1.2→1.5mm** in the Q1 board pass for clean insertion. NOT a 30A/7.62mm swap — switch caps the path at ~18A, the 30A MRBF is kA-short protection only. |
 
 ### SW1 main power switch (off-board, wires to SW1's TB132)
 - ✅ **CHOSEN (2026-06-08): Blue Sea Systems Contura SPST, "Off-on" style** ($17.40, Prime). Carling VJB1 body.

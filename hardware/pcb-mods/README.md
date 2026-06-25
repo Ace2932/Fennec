@@ -16,8 +16,8 @@ Reference: BOM v3.2 §2, §3 · [`docs/power-budget.md`](../../docs/power-budget
 
 - XT60 panel-mount input (matches Ovonic packs)
 - **MOSFET-based reverse-polarity protection** (not a diode — too much Vdrop at 10-15A continuous)
-- **Class T 30A fuse — OFF-BOARD**, inline bolt-down block in the battery→PCB lead near the pack (not a PCB footprint; F1 removed from `nova_pcb_v6` 2026-06-04). Sized for hip-rail worst case ~20A + headroom. LiPo dead-short can produce 10-20 kA peaks; ANL/MIDI's ~6 kA interrupt rating is insufficient and can "fail to interrupt" (vapor reconducts), and no common 20 kA-AIC *cable-inline* holder exists — true Class T is always a bolt-down block. 20 kA AIC = ~6.7× margin; at-source placement also protects the battery→PCB cable itself. See [`docs/research/2026-05-17-notes.md`](../../docs/research/2026-05-17-notes.md) §9 for rationale.
-- Power switch (high-current, ≥30A rated)
+- **MRBF-30 terminal fuse — OFF-BOARD**, Blue Sea 5191 block at the pack in the battery→PCB lead (not a PCB footprint; F1 removed from `nova_pcb_v6` 2026-06-04). 30A time-delay, sized for hip-rail worst case ~20A + headroom. ANL/MIDI's ~6 kA interrupt rating can "fail to interrupt" a LiPo dead-short (vapor reconducts) → rejected. Class T (20 kA) was the interim spec, but this single 4S pack's real Isc ≈ 16.8 V ÷ 6–12 mΩ ≈ **1.5–3 kA**, vs MRBF's **~9 kA AIC @ 16.8 V = 3–4× margin** at ⅓ the size/weight → **MRBF chosen 2026-06-12**. At-source placement also protects the battery→PCB cable. See [`docs/research/2026-05-17-notes.md`](../../docs/research/2026-05-17-notes.md) §9 + [`docs/order-list.md`](../../docs/order-list.md) MRBF section.
+- Power switch (off-board Blue Sea Contura SPST, **~18A @ 16.8 V DC**; 20A@12V / 15A@24V) wiring to on-board SW1 block. Sized for ~14A sustained; the SW1 terminal block matches it (15–20A class). The 30A MRBF is catastrophic-short (kA) protection, **not** the switch-path thermal limit — so SW1 block + switch are intentionally rated below the fuse.
 - Mini digital voltmeter retained for at-a-glance pack state
 
 ### 2. Four active power rails + one reserved (v3.4 split)

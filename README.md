@@ -73,13 +73,13 @@ After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgra
 
 - Arduino Nano slot for aux peripherals — **v3.5 cut**: OLED + WS2812B only (PIR / ultrasonic / MP3 / MPU-6050 removed; D456 + L2 perception stack covers their roles)
 - Battery input + reverse polarity protection geometry (replicated with MOSFET-based reverse protection instead of diode)
-- Power switch, voltmeter, fuse (Class T 30A — LiPo dead-short interrupt rating; ANL was originally specced but 6 kA AIC insufficient vs 20 kA Class T)
+- Power switch, voltmeter, fuse (MRBF-30 in Blue Sea 5191 block, OFF-board at pack — ~9 kA AIC @ 16.8 V clears this pack's ~1.5–3 kA dead-short with 3–4× margin; ANL's 6 kA rejected, Class T superseded 2026-06-12)
 
 ### What changes
 
 - All 12 PWM servo output headers removed (Feetech bus is daisy-chain TTL, doesn't use PWM)
 - XL4016 buck footprints → Pololu D42V110-class module footprints
-- Add: 74HC125 half-duplex driver (Pattern B prep), INA226 ×3, E-stop chain, hard-cutoff MOSFET, **Class T 30A fuse holder** (LiPo-rated), bulk caps at injection points, bus-integrity footprints (series R + ferrite beads), reserved arm-rail buck footprint
+- Add: 74HC125 half-duplex driver (Pattern B prep), INA226 ×3, E-stop chain, hard-cutoff MOSFET, **MRBF-30 fuse OFF-board** (Blue Sea 5191 at pack — F1 not on PCB), bulk caps at injection points, bus-integrity footprints (series R + ferrite beads), reserved arm-rail buck footprint
 
 ---
 
@@ -220,7 +220,7 @@ If (1) misses → debug Teensy firmware (DMA vs ISR, UART config). If (2) misses
 
 ```
 4S LiPo 14.8V nominal (12.8-16.8V)
-   │  Class T 30A fuse · MOSFET reverse-protection · MOSFET hard-cutoff @12.4V · E-stop NC (servo rails only)
+   │  MRBF-30 fuse (off-board) · MOSFET reverse-protection · MOSFET hard-cutoff @12.4V · E-stop NC (servo rails only)
    │
    ├── Pololu D42V110F7  ──► 7.5V/10A ──► 8× STS3215 19kg femur/tibia
    │       (star injection at 4 points along chain, bulk caps near point of load)
