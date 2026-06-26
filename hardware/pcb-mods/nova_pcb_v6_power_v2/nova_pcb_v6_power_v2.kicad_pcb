@@ -6169,7 +6169,7 @@
 				)
 			)
 		)
-		(property "Value" "Rocker_30A"
+		(property "Value" "Contura_SPST_18A"
 			(at 2.5 6.52 90)
 			(layer "F.Fab")
 			(uuid "54107576-d688-4315-93ce-9e1f193557be")
