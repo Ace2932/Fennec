@@ -100,6 +100,10 @@ Teensy 4.1                          I²C bus (separate from Arduino Nano aux bus
                                               jetson_v, jetson_a, jetson_w]
 ```
 
+**Current-sense wiring (CRITICAL — PCB carries NO shunt; R13/R14 deleted):** the INA226 reads current only if the rail flows through its onboard 2 mΩ shunt (IN+→IN−). The board exposes just I²C+power; IN+/IN− are the module's **screw terminals** → wire **inline in the harness**: rail source → IN+ → shunt → IN− → load.
+- **Hip (0x41 @ J7) / Jetson (0x44 @ J12) / L2 (0x45 @ J13):** single XT30 injection → insert the module there → full rail current. ✓
+- **Leg (0x40):** rail stars into **4× XT30 (J3–J6) on the PCB** → no single point carries total leg current. Insert at U1 buck VOUT (needs cutting VOUT→plane) for total, else measure one quarter or skip. **Total leg-current telemetry is not cleanly available as-built** (affects leg stall / over-current monitoring).
+
 **4th INA (0x45):** v1 → **L2 rail** (matches firmware `INA226_ADDR_L2`; enable `-D NOVA_INA226_L2`). L2 monitoring is *optional* (low-power dedicated rail, alive from its data stream) but you have the module → use it. **Arm rail (Phase-4)** is margin-thin (0.83× peak) → it wants its own INA: add a **5th off-board module at 0x46** when the arm goes in (no board change — taps the same I²C bus). The board's `U12 = arm` label is Phase-4-aspirational; for v1 wire U12's shunt into the **L2** rail.
 
 I²C pull-ups: **4.7 kΩ** to 3.3 V on SDA + SCL (R11/R12 on the power board, near the INA226s).

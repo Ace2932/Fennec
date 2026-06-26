@@ -85,8 +85,18 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 
 **🟡 Medium — silent failure / safety-logic inversion:**
 - [ ] **U9–U11 INA226 modules** — board connects I2C+power only (`4=SDA, 5=SCL, 6=VCC, 7=GND`).
-      Confirm (a) module header order matches your dupont wiring, (b) the inline shunt terminals
-      are on the intended rail for each, (c) **3 distinct I2C addresses** (A0/A1 straps).
+      Confirm (a) module header order matches your dupont wiring, (b) **3 distinct I2C addresses** (A0/A1 straps).
+      **⚠️ Current-sense path — PCB has NO shunt (R13/R14 removed):** rail current must pass through each
+      module's IN+/IN− screw terminals (onboard 2 mΩ), wired **inline in the harness**: source → IN+ → IN− → load.
+      **Hip (J7) / Jetson (J12) / L2 (J13) = single XT30 → clean full-current insertion. Leg (0x40) stars into
+      4× XT30 (J3–J6) ON the PCB → NO single total-leg-current point** — insert at U1 buck VOUT (cut VOUT→plane)
+      for total, or accept partial/no leg-current telemetry (affects the stall load-monitor). Decide before
+      trusting `/power_rails` leg data.
+- [ ] **U6 Teensy 4.1 socket — pad→GPIO unverified (custom footprint):** board nets are all correct
+      (RX/TX/OE_TX/OE_RX/SDA/SCL/BATT_LOW/ESTOP present), but the socket footprint's pad *positions* vs the
+      real Teensy 4.1 pinout were reconstructed (PJRC card), not bench-verified. Seat a real Teensy and confirm
+      GPIO **0/1=RX/TX, 2/3=OE_TX/OE_RX, 4=BATT_LOW, 5=ESTOP, 18/19=SDA/SCL** land on the matching traces.
+      Wrong mapping = firmware drives dead pins (no fry; silent non-function).
 - [ ] **SW2 + J21 e-stop contacts** — board expects **NC** (`SW2: GND↔EN_SW`; `J21: sense↔GND`).
       Fail-safe depends on NC, not NO. Identify the NC pairs on the Mxuteuk button; confirm it has
       a *second* NC block for J21. NO wiring → reads always-pressed or never trips.
