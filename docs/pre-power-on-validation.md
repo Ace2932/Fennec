@@ -114,6 +114,10 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 - [ ] **J9 FE-URT-1** — Pattern-A bench adapter only; confirm its data pin = MASTER_A if used.
 - [ ] **Q1 IRLB3034** — TO-220 G/D/S = pin 1/2/3 (matches footprint); confirm tab = Drain.
 
+## 🟠 1d. Power-board fixes from adversarial review (2026-06-26)
+- [ ] **U8 LM393 — NO Vcc bypass cap on the board.** Hand-tack **100nF V5_AUX↔GND across U8 pins 8↔4** (0603 or axial) at assembly. V5_AUX also sets the trip VREFs (R4/R6) → an unbypassed comparator supply risks noisy/chattering 13.0/12.4 V trips. Not on the PCB; add by hand.
+- [ ] **Solid-plane soldering tradeoff:** VBAT_PROTECTED (PWR.Cu) + GND (GND.Cu) are now **SOLID** pad-connected, and power-zone spokes widened (2.0 mm leg / 1.5 mm VBAT+HIP) — needed because the high-current pads (**SW1.2 14 A inject, U1.4 10 A leg VOUT, Q1.3 14 A GND inject**) were **thermal-relief 0.5 mm ≈ 6 A throats** (plane-only, no trace) that would overheat. Cost: those THT power pads (SW1, Q1, buck VIN/VOUT, GND THT) now **wick heat into the planes** → use a **fat tip + preheat**; a bare 60–88 W Pinecil will struggle on the big ones.
+
 ## 🟡 2. Trip-point calibration (ratiometric to V5_AUX)
 VREF tracks the UBEC, VSENSE tracks the battery. UBEC sag shifts trips LOWER (later).
 Verified-on-paper trips: BATT_LOW 13.0V, HARDCUT 12.4V (resistor math confirmed 2026-06-13).
