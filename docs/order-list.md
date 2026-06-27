@@ -205,8 +205,8 @@ Spec'd in PCB README §1 since the beginning, F1 deliberately moved OFF-BOARD 20
 unfused: a chafed wire or dropped tool across VBAT is the one fire-class failure on the robot.
 - ✅ **CHOSEN 2026-06-12: MRBF instead of Class T** — Blue Sea **5191 Surface Mount** block
   ($24) + **Bussmann MRBF-30** fuse (~$10). Engineering note: the 2026-05-17 Class T rationale
-  assumed 10–20 kA short current (large-bank figure); this single 4S 4 Ah pack's real Isc =
-  16.8 V ÷ ~6–12 mΩ ≈ **1.5–3 kA**, vs MRBF's 10 kA AIC (≈9 kA at 16.8 V) → 3–4× margin, at
+  assumed 10–20 kA short current (large-bank figure); this 4S **6 Ah pack (Ovonic ×2, used one at a
+  time — NOT paralleled)** real Isc = 16.8 V ÷ ~4–10 mΩ ≈ **1.7–4 kA**, vs MRBF's 10 kA AIC (≈9 kA at 16.8 V) → 2–5× margin, at
   ⅓ the size/weight of a Class T block — better fit for the chassis. Class T (5007 + JJN-30)
   remains the upgrade path if the pack ever grows or parallels.
 - Install: 5191 screwed to chassis near the pack; battery XT60 pigtail → 10 AWG ring → stud →

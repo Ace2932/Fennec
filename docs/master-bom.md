@@ -33,7 +33,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | JST B3B-XH-A ×10 | J8 (+logic J11) | 📦 |
 | IDC BHR-12-VUA ×10 | J20 | 📦 |
 | PRPC040 header strip | J2/M1 (+logic J9/J10/JP1) | 📦 |
-| MKDS 1,5/2-5,08 16A ×3 | SW1 | 🛒 |
+| TB007-508-02BE ×10 (Same Sky, 16A UL/18A IEC) | SW1 | ✅ ordered 2026-06-22 (MKDS 1,5/2 went OOS 17wk → this sub; needs SW1 drill 1.2→1.5mm — done on board) |
 | KF301 kit block (SW2) | SW2 | ✅ |
 | MRBF-30 fuse ×2 + Blue Sea 5191 block | inline | ✅ ordered 2026-06-12 (verify 5191 = single-MRBF terminal variant) |
 | SMBJ8.5A ×10 (leg) + SMBJ13A ×10 (hip/L2) TVS | off-board | 🛒 |
@@ -118,7 +118,7 @@ power resistors · Etekcity 800 IR gun. Scope (Rigol DHO804) deferred to Phase-5
 ## Remaining gaps (verified against Amazon order history 2026-06-13)
 Most prior unknowns RESOLVED as owned (Teensy w/pins, FE-URT-1, flux, heat-shrink, JST-XH+dupont
 kit, M3 screws, WS2812B, OLED, USB micro-B). Only these remain:
-1. **DigiKey cart** — submit (MKDS, TVS ×2, 74HC125, Teensy+Nano sockets, IDSD ribbon)
+1. **DigiKey cart** — ✅ ordered 2026-06-22 (TB007 ×10 [MKDS OOS], TVS ×2, **SN74LVC125AD** [NOT 74HC125 — not 5V-tolerant], Teensy+Nano sockets, IDSD ribbon, gate-harden C_gs+D1, Yageo 1k/22Ω)
 2. **M3 ~20 mm standoffs** — Amazon (mezzanine; Fgruh kit is screws not standoffs) — LAST Amazon item
 3. **Leg servo count** — confirm 12 active in hand
 RESOLVED 2026-06-13: wick (Lesnow), rings (AIRIC), MRBF ×2 + 5191, 12AWG wire (TUOFENG), all bench gear ordered.

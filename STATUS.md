@@ -4,7 +4,17 @@ Single-pane blockers / in-progress / next-actions. Hand-maintained; the detail
 lives in `README.md` (Open Decisions + Build Roadmap), `docs/order-list.md`,
 per-board `ROUTING_HANDOFF.md`, and memory. Update when state changes.
 
-_Last updated: 2026-06-18_
+_Last updated: 2026-06-27_
+
+## 🟢 2026-06-27 — Boards FAB-READY (supersedes the "Pending board edit" + B1 items below)
+Both boards **fab_gate GO**, branch `feat/power-board-arm-routed` (HEAD 475cdc5). The two "Pending board edit"
+sections + **B1 (U12+J14 place)** below are all **DONE**.
+- ✅ **Q1 gate-harden** placed + routed (R17/C_gs1/D1/R_gs1). Q1 = **drain BATT_NEG / source GND** (reverse-prot correct; the "source=BATT_NEG" doc label was wrong — fixed in order-list).
+- ✅ **Mounting-hole keepouts** H1–H4 (brass-safe). ✅ **SW1 drill 1.2→1.5mm** for **TB007-508-02BE** (MKDS OOS → sub ordered ×10); SW1 value → Contura_SPST_18A.
+- ✅ **VBAT_PROTECTED reroute-gap closed** · **VBAT + V12_HIP B.Cu pours** · **via annular 0.5→0.55mm** (39 vias, 2oz).
+- ✅ **Thermal-relief current-throat fix** — SW1.2/U1.4/Q1.3 (14/10/14A) were plane-only 0.5mm spokes (~6A); VBAT_PROTECTED + GND inner planes → **SOLID**, leg spokes 2.0mm.
+- ✅ **Fuse = MRBF-30** (Blue Sea 5191); Class T superseded. **Fab = PCBWay 2oz + stencils (NOT DKRed — 1oz/no-stencil).**
+- **Open before PCBWay (assembly-time, not board-file):** physical footprint verify (Teensy U6 + bucks U1–U5) · hand-tack 100nF on U8 LM393 Vcc · INA IN± inline harness (leg total-current deferred v7) · **dual-voltage servo harness (FRY-critical)**. Detail: `docs/pre-power-on-validation.md` §1c/§1d.
 
 ## 🔬 System audit 2026-06-18 (cross-domain: FW / PCB / SW / docs)
 
@@ -42,7 +52,7 @@ Multi-agent alignment pass. Core electrical contracts (INA226 addrs/shunt, bus
 
 Full audit detail in memory: [[project-system-audit-2026-06]].
 
-## 🟠 Pending board edit (pre-fab, reopens power board once)
+## ✅ DONE 2026-06-27 — Q1 gate hardening (was: Pending board edit; spec kept for reference)
 - **Q1 gate hardening — gate soft-start + zener backstop (⚠️ SOA-gated).** Q1 gate=VBAT (≤16.8V),
   Vgs(max)=20V → 3.2V headroom. **Primary = soft-start: R17 10k + C_gs 470nF** (τ=4.7ms ≫ 0.5ms LC
   ring → Q1 ramps on, bulk charges gently, no overshoot). **D1 18V zener (BZT52C18) = backstop**
@@ -71,7 +81,7 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
   check fails soft-start — it's an *alternative* (goes across SW1 + needs a 2-stage connect procedure),
   not additive. Decide at bench.
 
-## 🟠 Pending board edit — mounting-hole keepouts (pre-fab)
+## ✅ DONE 2026-06-27 — mounting-hole keepouts (was: Pending board edit)
 - **All 4 mounting holes (H1–H4) sit in power/GND zones** (H1=BATT_NEG, H2=V7V5_LEG, H3/H4 GND/VBAT). Zone clearance ~0.25mm → copper under the ~3mm standoff flange → **metal standoff shorts the net to the standoff/logic board.** H1 (BATT_NEG) → GND on logic side = dead short across Q1.
   - **Fix:** add Rule Area keepout (**~7mm dia, keep-out copper fill, all copper layers**) on each of H1/H2/H3/H4 → re-pour. No copper under any standoff.
   - **Standoffs:** brass M3×20 (PATIKIL 50pc, owned) work on ALL 4 holes **once the keepout is in** (no copper under flange/barrel). Nylon at H1 = optional extra; not required. 20mm body = the mezzanine gap ✓.
@@ -113,6 +123,6 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
 - Phase 3: Nav2 / autonomy. Phase 4: arm install + MoveIt + VLA.
 
 ## Phase snapshot
-- **Phase 0** (pre-build): ~closing — logic board fab-ready; power board pending B1.
+- **Phase 0** (pre-build): ~closing — **both boards fab-ready GO** (B1 done); open items are assembly-time only.
 - **Phase 1** (HW bring-up): firmware skeleton green (p99 1 µs, isolation), bench bring-up not started.
 - **Phase 2+** (locomotion/autonomy/arm): groundwork only (URDF + IK/gait scaffolded).

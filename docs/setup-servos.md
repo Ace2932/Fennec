@@ -2,7 +2,7 @@
 
 ID assignment, bus wiring, and bring-up. v1 scope: **12 active servos** (4 hip + 8 femur/tibia). IDs 13-18 reserved for Phase 4 arm install.
 
-Bus master in v1 is the **Teensy 4.1 (Pattern B)** via 74HC125 half-duplex driver. FE-URT-1 (Pattern A) is the bench / debug fallback selected by `JP_BUS_MASTER` solder bridge on PCB v6.
+Bus master in v1 is the **Teensy 4.1 (Pattern B)** via SN74LVC125A half-duplex driver (5V-tolerant; NOT the original 74HC125). FE-URT-1 (Pattern A) is the bench / debug fallback selected by `JP_BUS_MASTER` solder bridge on PCB v6.
 
 ## Bring-up sequence
 
