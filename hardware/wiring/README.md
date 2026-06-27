@@ -66,10 +66,10 @@ JP_BUS_MASTER solder bridge:
 **Bus integrity footprints on PCB v6 (populate per measured error rate):**
 - Series R (22 Ω, R1 0603) + ferrite (FB1) at SN74LVC125A output — slope rate-limiting / EMI
 - Ferrite bead at each servo entry — common-mode noise rejection
-- Star ground at FE-URT-1 connector
+- Star-ground reference — **implemented by the solid GND.Cu inner plane** (single low-Z return; the plane supersedes a literal star for this single-ended TTL bus — no separate star wiring at FE-URT-1)
 - **NOT** 120 Ω differential termination — Feetech bus is single-ended TTL, not RS-485
 
-**Cable plan:** Feetech daisy-chain cables (ordered), one ferrite bead per servo entry (footprint on PCB), star ground at FE-URT-1. If errors persist after populating: drop baud 1M → 500k → 250k.
+**Cable plan:** Feetech daisy-chain cables (ordered), one ferrite bead per servo entry (footprint on PCB), GND-plane reference (the GND.Cu plane is the single low-Z return — see above). If errors persist after populating: drop baud 1M → 500k → 250k.
 
 **⚠️ DUAL-VOLTAGE BUS — VCC-isolated boundary links (FRY-CRITICAL, added 2026-06-22):**
 ONE shared signal, TWO power voltages, and the boundary is INSIDE each leg: hip (ID 1–4) = 12V, femur+tibia (ID 5–12) = 7.5V. A stock 3-wire Feetech cable carries GND+VCC+Signal — daisy a 12V hip servo straight to a 7.5V femur servo and the VCC wire bridges 12V↔7.5V → short / fried servo.
@@ -102,7 +102,7 @@ Teensy 4.1                          I²C bus (separate from Arduino Nano aux bus
 
 **Current-sense wiring (CRITICAL — PCB carries NO shunt; R13/R14 deleted):** the INA226 reads current only if the rail flows through its onboard 2 mΩ shunt (IN+→IN−). The board exposes just I²C+power; IN+/IN− are the module's **screw terminals** → wire **inline in the harness**: rail source → IN+ → shunt → IN− → load.
 - **Hip (0x41 @ J7) / Jetson (0x44 @ J12) / L2 (0x45 @ J13):** single XT30 injection → insert the module there → full rail current. ✓
-- **Leg (0x40):** rail stars into **4× XT30 (J3–J6) on the PCB** → no single point carries total leg current. **DECISION 2026-06-26: DEFERRED (not needed for v1).** Leg INA = **voltage-only** (`leg_a` invalid — nothing consumes it). Leg stall/over-current is covered by **per-servo STS3215 load** (`effort[]` on the bus); hip/Jetson INA cover rail current. Adding total-leg sense (RAW/clean split + sense-loop connector at U1 VOUT) is a **v7-rev** item only if board-level total-leg-power logging is ever wanted — see scope in chat 2026-06-26.
+- **Leg (0x40):** rail stars into **4× XT30 (J3–J6) on the PCB** → no single point carries total leg current. **DECISION 2026-06-26: DEFERRED (not needed for v1).** ⚠️ Leg INA reads **nothing** unless IN−/VBUS is **tapped to the leg rail** at assembly (board wires only I²C+power; IN± = module screw terminals, VBUS tied to IN−): **tap IN− → `leg_v` valid, `leg_a` invalid** (no inline shunt) = voltage-only; **leave IN− unwired → BOTH `leg_v` and `leg_a` invalid** (not just current). Total leg current has no clean inline point (4× XT30 star) regardless. Leg stall/over-current is covered by **per-servo STS3215 load** (`effort[]` on the bus); hip/Jetson INA cover rail current. Adding total-leg sense (RAW/clean split + sense-loop connector at U1 VOUT) is a **v7-rev** item only if board-level total-leg-power logging is ever wanted — see scope in chat 2026-06-26.
 
 **4th INA (0x45):** v1 → **L2 rail** (matches firmware `INA226_ADDR_L2`; enable `-D NOVA_INA226_L2`). L2 monitoring is *optional* (low-power dedicated rail, alive from its data stream) but you have the module → use it. **Arm rail (Phase-4)** is margin-thin (0.83× peak) → it wants its own INA: add a **5th off-board module at 0x46** when the arm goes in (no board change — taps the same I²C bus). The board's `U12 = arm` label is Phase-4-aspirational; for v1 wire U12's shunt into the **L2** rail.
 
