@@ -101,9 +101,16 @@ Audited the in-progress DigiKey cart against §A. **Cart deviates — fix before
 | 100kΩ 0603 1% | 311-100KHRCT-ND | RC0603FR-07100KL | ✅ prior order | R_gs (gate bleed, optional) |
 
 **Q1 protection — ⚠️ MARGINAL, treat as backstop (2026-06-18, revised after deeper analysis):**
-Q1 (IRLB3034) gate = VBAT_PROTECTED, source = BATT_NEG → **Vgs ≈ full pack (≤16.8V)**, Vgs(max)
-= **20V** → only **3.2V headroom**. Hot-plug LC ring on VBAT (≈5470µF + lead L, no on-board TVS)
-can ring to ~22–33V → Vgs > 20V → gate-oxide kill.
+Q1 (IRLB3034) gate = VBAT_PROTECTED, **drain = BATT_NEG (tab/pin2, battery−), source = GND (pin3)** →
+Vgs = gate−source ≈ full pack (≤16.8V), Vgs(max) = **20V** → only **3.2V headroom**. Hot-plug LC ring
+on VBAT (≈5470µF + lead L, no on-board TVS) can ring to ~22–33V → Vgs > 20V → gate-oxide kill.
+
+> **⚠️ Terminal correction (2026-06-27):** earlier text said "source = BATT_NEG" — WRONG. For IRLB3034
+> (G-D-S = pin 1/2/3) the board has **drain = BATT_NEG, source = GND** = the correct low-side reverse-prot
+> orientation (body diode anode=GND/source, cathode=BATT_NEG/drain → blocks a reversed pack). ✅ Board correct.
+> The gate-harden (C_gs/D1/R_gs) ties to **BATT_NEG = drain**, not the literal source — still works: BATT_NEG ≈ GND
+> (≤21mV steady, ≤0.7V during pre-turn-on body-diode conduction) and clamping gate-to-drain bounds Vgs
+> *conservatively* (Vgd ≥ Vgs → zener trips protecting Vgs ≤ Vz). "gate-source" below = gate-to-BATT_NEG in practice.
 
 **PRIMARY fix = gate soft-start on Q1 (prevents the ring at the source):** Q1 is already the pass
 element in the path. Add **C_gs (gate-source cap)** so the gate ramps slowly through R17 → Q1 turns

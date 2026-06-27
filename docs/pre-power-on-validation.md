@@ -76,6 +76,12 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 - [ ] **J8 servo bus** — board: `1=GND, 2=V7V5_LEG, 3=BUS_SERVO`. ✅ Matches Feetech STS3215
       standard (GND/VCC/Signal). NOTE: servo uses a 5264 connector, board is JST-XH — crimp
       your own JST-XH pigtail in GND/V+/Signal order (don't assume a pre-made cable's housing mates).
+- [ ] **⚠️ DUAL-VOLTAGE SERVO HARNESS — FRY-CRITICAL, #1 fry path.** J8 provides **7.5 V** (V7V5_LEG);
+      hips run **12 V** (V12_HIP, injected at J7). The 12 V↔7.5 V boundary is INSIDE each leg (hip ID 1–4 =
+      12 V, femur+tibia ID 5–12 = 7.5 V). A stock 3-wire daisy cable bridges VCC across the boundary →
+      12 V into a 7.5 V servo = fried. Use **SIGNAL+GND-only links (VCC pin pulled) at every hip→femur
+      transition**; inject 12 V to hips / 7.5 V to legs separately; **meter every servo VCC = its correct
+      rail BEFORE the chain sees power.** Full spec: `hardware/wiring/README.md` dual-voltage section.
 - [ ] **J20 interboard ribbon** — both boards' pinouts identical (verified). A 2×6 IDC ribbon
       can be built/plugged mirrored → 5V meets GND. **Meter-check pin1↔pin1 continuity** on the
       assembled cable before first power; confirm shroud keys are consistent.
@@ -100,6 +106,9 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 - [ ] **SW2 + J21 e-stop contacts** — board expects **NC** (`SW2: GND↔EN_SW`; `J21: sense↔GND`).
       Fail-safe depends on NC, not NO. Identify the NC pairs on the Mxuteuk button; confirm it has
       a *second* NC block for J21. NO wiring → reads always-pressed or never trips.
+      **Firmware:** Teensy ESTOP = pin 5 → J21.1 (contact-to-GND, no board pull-up) → set
+      `pinMode(5, INPUT_PULLUP)` or pin 5 floats → unreliable read. (Separate sense path from the
+      *hardware* kill SW2→EN_SW→Q3→EN_BUCKS, which de-energizes the bucks regardless of firmware.)
 - [ ] **JP1 (JP_BUS_MASTER) reachable after stack-up** — single config jumper, logic board
       TOP face at (160, 86), **same face as the socketed Teensy U6 + USB** (verified from
       .kicad_pcb). That face must mount outward for USB access → JP1 should be reachable; just
