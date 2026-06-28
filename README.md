@@ -111,8 +111,8 @@ After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgra
                flip to A for ID setup)        ▼
                                   ┌───────────────────────┐
                                   │ 12× STS3215 (TTL bus) │
-                                  │  IDs 1-4:  hips       │
-                                  │  IDs 5-12: f/tib      │
+                                  │ per-leg: FL1-3 FR4-6  │
+                                  │ RL7-9 RR10-12 (h/f/t) │
                                   │  IDs 13-18: ⏸ arm    │
                                   │  (Phase 4 reserved)   │
                                   └───────────────────────┘

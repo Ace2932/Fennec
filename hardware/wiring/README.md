@@ -53,8 +53,10 @@ Teensy 4.1                    SN74LVC125A (quad tri-state buffer)         Bus pa
   OE̅_TX (pin 2, active-LOW) ──► gate1 enable (LOW = drive TX → bus)    │
   OE̅_RX (pin 3, active-LOW) ──► gate2 enable (LOW = listen bus → RX)   ▼
                                                        12× STS3215 daisy chain
-                                                       IDs 1-4   hips (12V)
-                                                       IDs 5-12  femur + tibia (7.5V)
+                                                       PER-LEG SEQ (ID = chain order):
+                                                       FL 1-3 · FR 4-6 · RL 7-9 · RR 10-12
+                                                       leg = haa,hfe,kfe — haa(1,4,7,10)=12V,
+                                                       hfe/kfe=7.5V (see joint_id_map.yaml)
                                                        IDs 13-18 reserved (Phase 4 arm)
 
 JP_BUS_MASTER solder bridge:
@@ -72,11 +74,11 @@ JP_BUS_MASTER solder bridge:
 **Cable plan:** Feetech daisy-chain cables (ordered), one ferrite bead per servo entry (footprint on PCB), GND-plane reference (the GND.Cu plane is the single low-Z return — see above). If errors persist after populating: drop baud 1M → 500k → 250k.
 
 **⚠️ DUAL-VOLTAGE BUS — VCC-isolated boundary links (FRY-CRITICAL, added 2026-06-22):**
-ONE shared signal, TWO power voltages, and the boundary is INSIDE each leg: hip (ID 1–4) = 12V, femur+tibia (ID 5–12) = 7.5V. A stock 3-wire Feetech cable carries GND+VCC+Signal — daisy a 12V hip servo straight to a 7.5V femur servo and the VCC wire bridges 12V↔7.5V → short / fried servo.
+ONE shared signal, TWO power voltages. Under the per-leg-sequential ID map, **each haa (hip) = 12V (IDs 1,4,7,10); each hfe/kfe = 7.5V**. The chain runs haa→hfe→kfe per leg, so 12V↔7.5V transitions occur BOTH within a leg (haa→hfe) AND between legs (kfe→next leg's haa). A stock 3-wire Feetech cable carries GND+VCC+Signal — daisy a 12V servo straight to a 7.5V servo and the VCC wire bridges 12V↔7.5V → short / fried servo.
 
 Required harness:
 - **Power injected per voltage segment:** 12V to hips (V12_HIP), 7.5V to femur/tibia (V7V5_LEG star injection). Every servo's VCC pin must see its correct rail.
-- **At every 12V↔7.5V transition** (each hip→femur in each leg): use a **SIGNAL+GND-only link (VCC pin pulled/cut)**. NO stock 3-wire cable across a voltage boundary.
+- **At every 12V↔7.5V transition** — haa→hfe WITHIN each leg (×4) AND kfe→next-haa BETWEEN legs (×3) = **7 boundaries** (the earlier "4 hip→femur" undercounted the 3 between-leg ones): use a **SIGNAL+GND-only link (VCC pin pulled/cut)**. Simplest + safest: make **ALL inter-servo cables signal+GND-only** and inject each servo's VCC locally from its rail — then there's no boundary to miscount. NO stock 3-wire cable across a voltage boundary.
 - **Meter-verify every servo VCC = its correct rail (7.5 vs 12V) BEFORE the chain sees power.** #1 fry path on the build (pre-power-on §1c).
 
 Cables still needed: **extension daisy cables for long leg runs** (Feetech/AliExpress — the ⬜ master-bom item never received) + the **VCC-isolated boundary jumpers** (make by pulling the VCC pin from a stock cable).

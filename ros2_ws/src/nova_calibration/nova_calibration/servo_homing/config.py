@@ -44,7 +44,7 @@ class JointHomeConfig:
     placeholder: bool = True  # True => values are guesses, node will skip
 
 
-# v1 leg fleet: 4 legs x 3 joints (coxa/femur/tibia). Names mirror the URDF
+# v1 leg fleet: 4 legs x 3 joints (haa/hfe/kfe). Names mirror the URDF
 # convention planned in nova_description (FL/FR/RL/RR + joint).
 #
 # TODO(calibration): replace placeholder search_dir / stop_to_home_raw with
@@ -52,16 +52,16 @@ class JointHomeConfig:
 # Until then `ros2 run nova_calibration servo_homing_node` will report every
 # joint as skipped.
 JOINT_CONFIGS = {
-    1:  JointHomeConfig(1,  'FL_coxa',  search_dir=+1, stop_to_home_raw=deg_to_raw(45)),
-    2:  JointHomeConfig(2,  'FL_femur', search_dir=+1, stop_to_home_raw=deg_to_raw(90)),
-    3:  JointHomeConfig(3,  'FL_tibia', search_dir=+1, stop_to_home_raw=deg_to_raw(90)),
-    4:  JointHomeConfig(4,  'FR_coxa',  search_dir=-1, stop_to_home_raw=deg_to_raw(45)),
-    5:  JointHomeConfig(5,  'FR_femur', search_dir=-1, stop_to_home_raw=deg_to_raw(90)),
-    6:  JointHomeConfig(6,  'FR_tibia', search_dir=-1, stop_to_home_raw=deg_to_raw(90)),
-    7:  JointHomeConfig(7,  'RL_coxa',  search_dir=+1, stop_to_home_raw=deg_to_raw(45)),
-    8:  JointHomeConfig(8,  'RL_femur', search_dir=+1, stop_to_home_raw=deg_to_raw(90)),
-    9:  JointHomeConfig(9,  'RL_tibia', search_dir=+1, stop_to_home_raw=deg_to_raw(90)),
-    10: JointHomeConfig(10, 'RR_coxa',  search_dir=-1, stop_to_home_raw=deg_to_raw(45)),
-    11: JointHomeConfig(11, 'RR_femur', search_dir=-1, stop_to_home_raw=deg_to_raw(90)),
-    12: JointHomeConfig(12, 'RR_tibia', search_dir=-1, stop_to_home_raw=deg_to_raw(90)),
+    1:  JointHomeConfig(1,  'FL_haa',  search_dir=+1, stop_to_home_raw=deg_to_raw(45)),
+    2:  JointHomeConfig(2,  'FL_hfe', search_dir=+1, stop_to_home_raw=deg_to_raw(90)),
+    3:  JointHomeConfig(3,  'FL_kfe', search_dir=+1, stop_to_home_raw=deg_to_raw(90)),
+    4:  JointHomeConfig(4,  'FR_haa',  search_dir=-1, stop_to_home_raw=deg_to_raw(45)),
+    5:  JointHomeConfig(5,  'FR_hfe', search_dir=-1, stop_to_home_raw=deg_to_raw(90)),
+    6:  JointHomeConfig(6,  'FR_kfe', search_dir=-1, stop_to_home_raw=deg_to_raw(90)),
+    7:  JointHomeConfig(7,  'RL_haa',  search_dir=+1, stop_to_home_raw=deg_to_raw(45)),
+    8:  JointHomeConfig(8,  'RL_hfe', search_dir=+1, stop_to_home_raw=deg_to_raw(90)),
+    9:  JointHomeConfig(9,  'RL_kfe', search_dir=+1, stop_to_home_raw=deg_to_raw(90)),
+    10: JointHomeConfig(10, 'RR_haa',  search_dir=-1, stop_to_home_raw=deg_to_raw(45)),
+    11: JointHomeConfig(11, 'RR_hfe', search_dir=-1, stop_to_home_raw=deg_to_raw(90)),
+    12: JointHomeConfig(12, 'RR_kfe', search_dir=-1, stop_to_home_raw=deg_to_raw(90)),
 }

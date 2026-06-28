@@ -43,12 +43,12 @@ Multi-agent alignment pass. Core electrical contracts (INA226 addrs/shunt, bus
 8. micro-ROS `RCCHECK` still hard-bricks on transient agent hiccup during ~30 init calls (only support-init made retry-safe).
 9. Zero first-article prints; femur Y=±24 reach + tibia placement eyeballed (B2). 6→8 mm bearing sleeve unsourced.
 
-**❓ Questions for you (gate fixes):**
-1. Which joint-ID map is canonical?
-2. Does E-stop de-energize servo rails (limp) or just stop commands (servos hold)?
-3. Do STS3215 default torque-on at power-up, or must FW enable?
-4. Is the all-stall load-monitor implemented anywhere?
-5. Intended Jetson liveness watchdog, or lean on FW watchdog + hardcut only?
+**✅ DECIDED 2026-06-27 (gate fixes — unblocks the firmware sprint):**
+1. **Joint-ID map = PER-LEG SEQUENTIAL** — leg1 coxa/femur/tibia = IDs 1-3, leg2 = 4-6, leg3 = 7-9, leg4 = 10-12. Conform `limits.py` (type-grouped) + `joint_id_map.yaml` (interleaved) to `servo_homing/config.py`'s per-leg scheme.
+2. **E-stop = LIMP** — hardware Q3 kills buck power → servos unpowered/collapse (gear-damped, not free-fall). **PLUS add a firmware graceful soft-stop** (ramp to stable crouch) for non-emergency stops.
+3. **FW always writes `REG_TORQUE_ENABLE=1` on init** — defensive, no dependence on EEPROM default.
+4. **Implement the all-stall load-monitor** — per-servo `effort[]` → back off before 4× hip stall (~20A) browns the hip rail (weak-point #6).
+5. **Implement a Jetson liveness watchdog** — consume `/heartbeat` → catch agent/Jetson death mid-motion.
 
 Full audit detail in memory: [[project-system-audit-2026-06]].
 
