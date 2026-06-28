@@ -55,6 +55,17 @@ class SafetyFSM {
     batt_low_raw_ = batt_low_now;
   }
 
+  // Trip a fault that has no raw GPIO of its own (servo stall / overload /
+  // overtemp). Latches like E-stop; cleared only via clear() (operator
+  // /safety_clear) once the jam is resolved. motion_enabled() drops and
+  // main.cpp torque-disables the fleet on entry.
+  void trip_overload() {
+    if (state_ == SAFETY_NORMAL) {
+      state_ = SAFETY_FAULT_OTHER;
+      transition_us_ = micros();
+    }
+  }
+
   // Clear latched faults — only valid when underlying signals are no
   // longer asserted. Returns true if a clear actually happened.
   bool clear() {

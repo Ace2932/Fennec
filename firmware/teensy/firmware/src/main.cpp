@@ -173,6 +173,40 @@ volatile uint32_t servo_err_bad_frame = 0;
 volatile uint32_t servo_err_servo     = 0;
 volatile uint32_t servo_read_err_count = 0;
 
+// ---------------- Stall / overload guard ----------------
+// A jammed/overloaded joint drives full stall current at its unreachable goal
+// indefinitely — fries the servo + can brown the hip rail (4× hip stall ≈ 20A
+// > buck). Detect sustained high load OR overtemp per joint and LIMP the whole
+// fleet (torque off) — same end state as the hardware E-stop. Operator clears
+// via /safety_clear once the jam is fixed. Thresholds are build-flag tunable.
+#ifndef NOVA_STALL_LOAD_RAW
+#define NOVA_STALL_LOAD_RAW 900     // of 1000 = 90% of stall torque
+#endif
+#ifndef NOVA_OVERTEMP_C
+#define NOVA_OVERTEMP_C 70          // °C — act before the servo's own ~80°C cutoff
+#endif
+#ifndef NOVA_STALL_PERSIST
+#define NOVA_STALL_PERSIST 5        // consecutive bad reads (~300 ms @ ~60 ms/joint poll)
+#endif
+uint8_t  servo_stall_count[NOVA_JOINT_COUNT] = {0};
+volatile uint16_t servo_stall_mask = 0;     // bit i set = joint i has tripped
+
+// STS3215 present-load is sign-magnitude: low 10 bits = magnitude (0..1000),
+// bit 10 = direction. Take the magnitude regardless of direction.
+static inline uint16_t load_magnitude(int16_t raw) {
+  return (uint16_t)raw & 0x03FF;
+}
+
+// Write TORQUE_ENABLE to every PRESENT servo. Blocking (~0.4 ms/servo) — only
+// called at boot, on stall-fault entry, and on fault clear; never the hot path.
+void set_fleet_torque(bool on) {
+  for (uint8_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    if (servo_present_mask & (uint16_t)(1u << i)) {
+      servo_bus.torque_enable(SERVO_ID_BASE + i, on);
+    }
+  }
+}
+
 void poll_one_servo() {
   uint8_t id = SERVO_ID_BASE + servo_rr_idx;
   // 8-byte sweep: REG_PRESENT_POSITION_L (0x38) through
@@ -194,6 +228,25 @@ void poll_one_servo() {
     servo_voltage_raw [servo_rr_idx] = buf[6];
     servo_temp_c      [servo_rr_idx] = buf[7];
     servo_present_mask |= (uint16_t)(1u << servo_rr_idx);
+
+    // Stall / overtemp guard: sustained high load OR overtemp on this joint
+    // trips a fleet LIMP (torque off) once — stops the stall current before it
+    // fries the servo or browns the hip rail. Latched; operator clears.
+    uint16_t load_mag = load_magnitude(servo_load_raw[servo_rr_idx]);
+    bool joint_bad = (load_mag >= NOVA_STALL_LOAD_RAW) ||
+                     (servo_temp_c[servo_rr_idx] >= NOVA_OVERTEMP_C);
+    if (joint_bad) {
+      if (servo_stall_count[servo_rr_idx] < 0xFF) servo_stall_count[servo_rr_idx]++;
+    } else {
+      servo_stall_count[servo_rr_idx] = 0;
+    }
+    uint16_t stall_bit = (uint16_t)(1u << servo_rr_idx);
+    if (servo_stall_count[servo_rr_idx] >= NOVA_STALL_PERSIST &&
+        !(servo_stall_mask & stall_bit)) {
+      servo_stall_mask |= stall_bit;
+      safety_fsm.trip_overload();
+      set_fleet_torque(false);   // LIMP now — first trip cuts torque fleet-wide
+    }
   } else {
     servo_read_err_count++;
     switch (rc) {
@@ -523,6 +576,12 @@ void setup() {
     }
   }
 
+  // Arm servo torque on every present servo (decision 2026-06-27: FW ALWAYS
+  // writes TORQUE_ENABLE rather than trusting each servo's EEPROM default — a
+  // torque-off EEPROM would silently ignore every goal). Skip if booting into a
+  // latched fault; the loop re-arms on clear.
+  if (safety_fsm.motion_enabled()) set_fleet_torque(true);
+
 #ifdef NOVA_USE_MICRO_ROS
   set_microros_serial_transports(Serial);
   delay(2000);  // give agent time to attach
@@ -806,6 +865,10 @@ void loop() {
     // rather than ramping from the stale pre-fault goal.
     if (curr_safety == nova::SAFETY_NORMAL && prev_safety != nova::SAFETY_NORMAL) {
       slew_init_all();
+      // Fault cleared → re-arm torque + reset the stall guard so it re-protects.
+      set_fleet_torque(true);
+      servo_stall_mask = 0;
+      for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) servo_stall_count[i] = 0;
     }
 
 #ifdef NOVA_USE_MICRO_ROS
