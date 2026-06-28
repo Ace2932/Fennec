@@ -38,10 +38,11 @@ Usage in gait controller:
     # then everywhere downstream:
     self.safe_pub.publish(joint_state)
 """
+
 import collections
 import copy
 import math
-from typing import Deque, Dict, List, Optional, Sequence
+from typing import Deque, Dict, Optional
 
 from .limits import JointLimits
 from .counters import EnvelopeCounters
@@ -64,7 +65,6 @@ _LOG_THROTTLE = 100
 
 
 class SafeJointCommandPublisher:
-
     def __init__(
         self,
         node,  # rclpy Node
@@ -83,9 +83,13 @@ class SafeJointCommandPublisher:
         # Load samples are (timestamp_ns, abs_effort) tuples; we trim to
         # _LOAD_WINDOW_SEC on each read.
         self._load_samples: Dict[int, Deque[tuple]] = collections.defaultdict(
-            lambda: collections.deque(maxlen=100))
+            lambda: collections.deque(maxlen=100)
+        )
         self._log_counts: Dict[str, Dict[int, int]] = {
-            'position': {}, 'velocity': {}, 'load': {}}
+            "position": {},
+            "velocity": {},
+            "load": {},
+        }
 
     # ---- /joint_states callback (load tracking) -----------------------
 
@@ -100,8 +104,7 @@ class SafeJointCommandPublisher:
         """
         # Use msg.header.stamp if present, else current ROS time.
         try:
-            stamp_ns = (msg.header.stamp.sec * 1_000_000_000
-                        + msg.header.stamp.nanosec)
+            stamp_ns = msg.header.stamp.sec * 1_000_000_000 + msg.header.stamp.nanosec
             if stamp_ns == 0:
                 stamp_ns = self.node.get_clock().now().nanoseconds
         except AttributeError:
@@ -109,19 +112,29 @@ class SafeJointCommandPublisher:
 
         for idx, eff in enumerate(msg.effort):
             joint_id = idx + 1
-            self._load_samples[joint_id].append((stamp_ns, abs(eff)))
+            # Keep the SIGN — the load-refusal direction check needs to know
+            # which way the joint is straining (effort is signed, normalized
+            # to ±fraction of stall torque). Was abs(): that discarded the
+            # direction, which is why the refusal couldn't tell "push harder"
+            # from "back off" and blocked both.
+            self._load_samples[joint_id].append((stamp_ns, float(eff)))
 
-    def _load_window_mean(self, joint_id: int, now_ns: int) -> Optional[float]:
-        """Mean of effort samples within _LOAD_WINDOW_SEC of now_ns.
-        Returns None if no in-window samples."""
+    def _load_window(self, joint_id: int, now_ns: int):
+        """Return (mean_abs, load_sign) over the effort samples within
+        _LOAD_WINDOW_SEC of now_ns. mean_abs = magnitude (for the threshold);
+        load_sign (+1/-1/0) = the direction the joint is straining, used to
+        allow a back-off but refuse pushing harder. (None, 0.0) if empty."""
         window_start = now_ns - int(_LOAD_WINDOW_SEC * 1e9)
         samples = self._load_samples.get(joint_id)
         if not samples:
-            return None
+            return None, 0.0
         in_window = [v for (ts, v) in samples if ts >= window_start]
         if not in_window:
-            return None
-        return sum(in_window) / len(in_window)
+            return None, 0.0
+        mean_signed = sum(in_window) / len(in_window)
+        mean_abs = sum(abs(v) for v in in_window) / len(in_window)
+        load_sign = 1.0 if mean_signed > 0 else (-1.0 if mean_signed < 0 else 0.0)
+        return mean_abs, load_sign
 
     # ---- The hot path -------------------------------------------------
 
@@ -147,12 +160,15 @@ class SafeJointCommandPublisher:
             # ---- Position clamp ----
             if not (lim.soft_lower <= goal <= lim.soft_upper):
                 clamped = max(lim.soft_lower, min(lim.soft_upper, goal))
-                self._log('position', joint_id,
-                          f'goal {math.degrees(goal):.1f}° out of soft '
-                          f'[{math.degrees(lim.soft_lower):.1f}, '
-                          f'{math.degrees(lim.soft_upper):.1f}]; '
-                          f'clamped to {math.degrees(clamped):.1f}°')
-                self.counters.increment('position', joint_id)
+                self._log(
+                    "position",
+                    joint_id,
+                    f"goal {math.degrees(goal):.1f}° out of soft "
+                    f"[{math.degrees(lim.soft_lower):.1f}, "
+                    f"{math.degrees(lim.soft_upper):.1f}]; "
+                    f"clamped to {math.degrees(clamped):.1f}°",
+                )
+                self.counters.increment("position", joint_id)
                 goal = clamped
                 cmd_msg.position[idx] = goal
 
@@ -173,32 +189,45 @@ class SafeJointCommandPublisher:
                     if abs(requested_vel) > lim.velocity:
                         sign = 1.0 if requested_vel > 0 else -1.0
                         clamped = last + sign * lim.velocity * dt
-                        clamped = max(lim.soft_lower,
-                                      min(lim.soft_upper, clamped))
-                        self._log('velocity', joint_id,
-                                  f'requested {math.degrees(requested_vel):.1f} '
-                                  f'°/s > limit {math.degrees(lim.velocity):.1f}; '
-                                  f'clamped goal {math.degrees(clamped):.1f}°')
-                        self.counters.increment('velocity', joint_id)
+                        clamped = max(lim.soft_lower, min(lim.soft_upper, clamped))
+                        self._log(
+                            "velocity",
+                            joint_id,
+                            f"requested {math.degrees(requested_vel):.1f} "
+                            f"°/s > limit {math.degrees(lim.velocity):.1f}; "
+                            f"clamped goal {math.degrees(clamped):.1f}°",
+                        )
+                        self.counters.increment("velocity", joint_id)
                         goal = clamped
                         cmd_msg.position[idx] = goal
 
             # ---- Load refusal ----
-            mean_load = self._load_window_mean(joint_id, now_ns)
-            if mean_load is not None:
-                if mean_load > _LOAD_REFUSE_THRESHOLD:
-                    # Refuse goals that would INCREASE load magnitude.
-                    # Heuristic: if new goal is further from `last` than
-                    # the current trend, assume load increases.
-                    if last is not None and abs(goal - last) > 0:
-                        # Don't move; hold at last.
-                        self._log('load', joint_id,
-                                  f'sustained load {mean_load*100:.0f}%; '
-                                  f'refusing new goal, holding at '
-                                  f'{math.degrees(last):.1f}°')
-                        self.counters.increment('load', joint_id)
-                        goal = last
-                        cmd_msg.position[idx] = goal
+            # Under sustained load, refuse ONLY motion that drives FURTHER into
+            # the load (a goal change in the same direction the joint is already
+            # straining, load_sign) — but ALLOW the opposite (load-reducing)
+            # move so it can back off a stall. Previously this refused ANY
+            # motion incl. the back-off, which could pin a joint into a stop
+            # (the firmware stall-guard would then have to limp the fleet).
+            # Fixed 2026-06-27.
+            mean_abs, load_sign = self._load_window(joint_id, now_ns)
+            if (
+                mean_abs is not None
+                and mean_abs > _LOAD_REFUSE_THRESHOLD
+                and last is not None
+                and load_sign != 0.0
+                and (goal - last) * load_sign > 0.0
+            ):
+                self._log(
+                    "load",
+                    joint_id,
+                    f"sustained load {mean_abs * 100:.0f}% "
+                    f"(dir {'+' if load_sign > 0 else '-'}); refusing "
+                    f"load-increasing move, holding at "
+                    f"{math.degrees(last):.1f}°",
+                )
+                self.counters.increment("load", joint_id)
+                goal = last
+                cmd_msg.position[idx] = goal
 
             # Remember for next iter
             self._last_cmd[joint_id] = goal
@@ -215,4 +244,5 @@ class SafeJointCommandPublisher:
         bucket[joint_id] = n + 1
         if n < _LOG_FIRST_N or (n % _LOG_THROTTLE == 0):
             self.node.get_logger().warn(
-                f'[envelope.{mode}] joint {joint_id}: {msg} (count={n+1})')
+                f"[envelope.{mode}] joint {joint_id}: {msg} (count={n + 1})"
+            )
