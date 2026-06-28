@@ -198,7 +198,7 @@ double duty (soft-start + zener clamp current-limit).
 - 1× electrolytic cap: 470 µF, 25V
 - Bundle into the next DigiKey / Mouser order to save shipping
 
-### 🔴 Class T 30A fuse + block — ~$40 (CRITICAL GAP found 2026-06-12 state-matrix review)
+### 🔴 MRBF-30 fuse + 5191 block (was: Class T) — ~$40 (CRITICAL GAP found 2026-06-12 state-matrix review)
 Spec'd in PCB README §1 since the beginning, F1 deliberately moved OFF-BOARD 2026-06-04
 (LiPo dead-short = 10–20 kA; only Class T's 20 kA AIC interrupts it — see research notes
 2026-05-17 §9) — **but it never entered this order list.** Right now the battery lead is
@@ -240,8 +240,8 @@ only sink is the bulk caps (1 J into 5000 µF from 7.5 V ≈ 21 V rail — over 
 
 ## 3. Safety + bus-master parts (PCB v6 critical-path)
 
-### 74HC125 quad tri-state buffer (Pattern B half-duplex driver) — ~$1
-- **Primary:** DigiKey / Mouser (SOIC-14, e.g. SN74HC125N)
+### SN74LVC125A quad tri-state buffer (Pattern B half-duplex driver) — ~$1
+- **Primary:** DigiKey / Mouser (SOIC-14, e.g. SN74LVC125AD (NOT plain HC — not 5V-tolerant))
 - **Why:** v1 critical-path. Drives the Feetech bus from the Teensy 4.1 UART. `JP_BUS_MASTER` solder bridge defaults to Pattern B on PCB v6. Buy 5 (cheap, easy to fry, want spares for bring-up).
 
 ### E-stop button (panel-mount, latching, NC contact) — ~$10 ✅ ORDERED
@@ -411,7 +411,7 @@ Not included: PCB v6 (~$60), arm servo top-up (~$50).
 1. **Bundle by vendor** to minimize shipping (✅ ordered items removed):
    - **Amazon:** INA226 breakouts (if not on DigiKey)
    - **Pololu direct:** D42V55F12 + D42V110F7 + D42V110F12 + D24V22F12 (one shop, free shipping over $100 — $171 bundle qualifies easily)
-   - **DigiKey or Mouser:** LC filter parts (inductor + cap), 74HC125, comparator, MOSFETs, bulk caps — single electronics order
+   - **DigiKey or Mouser:** LC filter parts (inductor + cap), SN74LVC125A, comparator, MOSFETs, bulk caps — single electronics order
    - **Feetech / AliExpress:** servo top-up (separate, slow boat)
    - **PCBWay:** PCB v6 (after design freeze)
 

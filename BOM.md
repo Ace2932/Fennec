@@ -2,7 +2,7 @@
 
 **Last updated:** May 16, 2026
 **Supersedes:** BOM v3.3
-**Status:** v1 scope narrowed to **quadruped only** (12 servos active). Arm (6 STS3215) demoted to Phase 4 future work; bus IDs 13-18 + arm-rail buck footprint reserved on PCB redesign. Power rails redesigned around Pololu modules after XL4016 capacity audit. v3.4 split L2 LiDAR off the hip rail onto a dedicated D24V22F12 buck — combined hip+L2 load was margin-thin at the F12's 9A typ @ 42V Vin (derates further at 14.8V). Full safety scope: LVC alarm + E-stop + INA226 per-rail telemetry + MOSFET hard-cutoff. **Bus master: Pattern B is v1 default** — Teensy 4.1 UART → 74HC125 half-duplex driver → bus. Pattern A (FE-URT-1 → bus) kept as bench/debug fallback via solder bridge.
+**Status:** v1 scope narrowed to **quadruped only** (12 servos active). Arm (6 STS3215) demoted to Phase 4 future work; bus IDs 13-18 + arm-rail buck footprint reserved on PCB redesign. Power rails redesigned around Pololu modules after XL4016 capacity audit. v3.4 split L2 LiDAR off the hip rail onto a dedicated D24V22F12 buck — combined hip+L2 load was margin-thin at the F12's 9A typ @ 42V Vin (derates further at 14.8V). Full safety scope: LVC alarm + E-stop + INA226 per-rail telemetry + MOSFET hard-cutoff. **Bus master: Pattern B is v1 default** — Teensy 4.1 UART → SN74LVC125A half-duplex driver → bus. Pattern A (FE-URT-1 → bus) kept as bench/debug fallback via solder bridge.
 
 ---
 
@@ -29,7 +29,7 @@
 |------|-------|--------|
 | Teensy 4.1 (with pins) | $50 | ✅ Owned |
 | Arduino Nano (ELEGOO 3-pack, CH340) | $15 | ✅ Ordered |
-| ~~NovaSM3 PCB v5.2b~~ → **NovaSM3 PCB v6 — 2-board mezzanine** (power + logic, 4-layer each) | $60 (est.) | 🆕 Design + order from PCBWay — **two stacked PCBs**: power board (`nova_pcb_v6_power`: battery / rails / servo-bus / safety) + logic board (`nova_pcb_v6_logic`: Teensy / 74HC125 / Nano), joined by the inter-board connector below. Both 4-layer, ~112×90 max. See [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md). |
+| ~~NovaSM3 PCB v5.2b~~ → **NovaSM3 PCB v6 — 2-board mezzanine** (power + logic, 4-layer each) | $60 (est.) | 🆕 Design + order from PCBWay — **two stacked PCBs**: power board (`nova_pcb_v6_power`: battery / rails / servo-bus / safety) + logic board (`nova_pcb_v6_logic`: Teensy / SN74LVC125A / Nano), joined by the inter-board connector below. Both 4-layer, ~112×90 max. See [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md). |
 | **Inter-board connector (mezzanine J20)** — 2× 2×6 shrouded box header (2.54 mm THT) + 12-way IDC ribbon | $4 | 🆕 Order — joins power↔logic across the ~20 mm stack gap. Box-header pair + ribbon, **NOT plain pin headers** (two males can't mate; a 0.1″ header can't span the gap). Carries 7 nets: V5_AUX, +3V3, BUS_SERVO, I2C_SDA/SCL, BATT_LOW, GND. |
 | FE-URT-1 USB→TTL Feetech interface | $20 | ✅ Ordered |
 | **SN74LVC125A quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — **must be LVC (5V-tolerant), NOT plain 74HC125**. Populated on PCB; v1 default active. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
@@ -38,12 +38,12 @@
 | **Comparator + MOSFET parts for hard-cutoff at 12.4V + graceful-shutdown at 13.0V** | $13 | 🆕 Order — two comparator stages. 13.0V: drives Teensy GPIO → Jetson clean shutdown. 12.4V: autonomous battery-feed cutoff if Jetson didn't shut down. ~$3 extra for the second comparator + divider. |
 
 **Feetech bus architecture: Pattern B is v1 default.**
-- **Pattern B (v1 active):** Teensy 4.1 hardware UART → 74HC125 half-duplex driver → 12-servo TTL bus. Bare-metal real-time. Jetson sends joint targets via micro-ROS over USB; Teensy translates to bus writes at 200-500 Hz. Survives Jetson restarts, kernel preemption, CUDA stalls, journald flushes — none of which affect bus servicing. Solder bridge `JP_BUS_MASTER` defaults to B.
+- **Pattern B (v1 active):** Teensy 4.1 hardware UART → SN74LVC125A half-duplex driver → 12-servo TTL bus. Bare-metal real-time. Jetson sends joint targets via micro-ROS over USB; Teensy translates to bus writes at 200-500 Hz. Survives Jetson restarts, kernel preemption, CUDA stalls, journald flushes — none of which affect bus servicing. Solder bridge `JP_BUS_MASTER` defaults to B.
 - **Pattern A (bench / debug fallback):** FE-URT-1 → USB → Jetson directly drives the bus. Flip `JP_BUS_MASTER` to A for: initial servo ID assignment from a workstation (before Teensy firmware is ready), debug if Teensy firmware misbehaves, or post-mortem inspection of bus traffic. Not the runtime path.
 
 Why B as default (revised from v3.2): Linux is not a real-time OS. USB-CDC latency on Jetson is 1-10 ms typical, 50 ms+ under load (CUDA kernel preemption, kworker spikes). What Pattern B actually buys: **bus servicing is isolated from Linux jitter** — the Teensy guarantees its UART transactions complete on time so individual servo writes/reads don't time out and the bus doesn't error-out from late ACKs. The gait controller still runs on Jetson and publishes targets at 100 Hz, so Jetson's command rate is still Linux-bounded; but the Teensy oversamples at 200-500 Hz against the *last received* target, holding it through Jetson stalls. A 100 ms Linux freeze becomes "robot pauses mid-step" not "bus dies and robot falls." Defaulting to A would force a measure-then-migrate decision in Phase 1; defaulting to B skips that for one $1 IC + Phase 1 firmware work.
 
-Cost of Pattern B as default: 74HC125 must be populated (~$1, already in §2 above) + Teensy firmware becomes a Phase 1 critical-path deliverable (was a Phase 2+ stub).
+Cost of Pattern B as default: SN74LVC125A must be populated (~$1, already in §2 above) + Teensy firmware becomes a Phase 1 critical-path deliverable (was a Phase 2+ stub).
 
 ---
 
@@ -281,7 +281,7 @@ Post-Jetson-flash install list (Phase 1):
 
 3. **Servo bring-up**
    - **ID assignment via Pattern A path** (FE-URT-1 → single servo on bench): can be done pre-PCB (Week 1-2 while waiting for PCB v6) by wiring FE-URT-1 directly to servo, or post-PCB by flipping `JP_BUS_MASTER` to A. Assign IDs **1-12 for v1** (4 hips, 8 femur/tibia), label each. IDs 13-18 reserved for future arm. Use Feetech FD (Windows) or SCServo SDK Python.
-   - **Flip `JP_BUS_MASTER` to Pattern B** (v1 default). Teensy firmware running: micro-ROS + half-duplex driver via 74HC125.
+   - **Flip `JP_BUS_MASTER` to Pattern B** (v1 default). Teensy firmware running: micro-ROS + half-duplex driver via SN74LVC125A.
    - Single-servo test via Teensy: subscribe to `/joint_commands`, publish `/joint_states`. Verify with `ros2 topic echo` from Jetson.
    - Full 12-servo daisy chain: continuity check unpowered, then ping-all powered via Teensy.
    - **Verify Phase 1 acceptance gate.** Two mandatory criteria + one sanity check:
@@ -320,7 +320,7 @@ Post-Jetson-flash install list (Phase 1):
 | LiPo safe bag | $15 | ✅ Ordered |
 | ~~XT60 jumper + charging lead~~ | $0 | ✅ Supplied with Ovonic kit |
 | E-stop (Mxuteuk HB2-ES544) | $10 | ✅ Ordered |
-| **74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 |
+| **SN74LVC125A + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 |
 | **Subtotal — committed** | **~$333** | $103 on order, $230 still to order |
 
 Savings since v3.4: −$13 (XT60 leads via Ovonic kit), −$15 (Magigoo → Bambu liquid glue), −$30 (**XL4016 ×2 returned for refund 2026-05-18** — no longer sunk), −$10 (DP adapter dropped 2026-05-21, headless SSH). Total dropped $375 → $333 committed + $30 recovered.

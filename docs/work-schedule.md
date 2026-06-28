@@ -31,7 +31,7 @@ Open option for away-week (decide by end of Week 2): leave Jetson running at hom
 **Secondary: Phase 1 prerequisites that don't need parts on hand**
 
 - [ ] Install KiCad 8.x on laptop + Pololu KiCad library
-- [ ] Download datasheet PDFs to offline cache: 74HC125, INA226, TL431/LM393, MOSFET candidates (IRLB3034 etc.), STS3215, Pololu D42V110/D42V55, Jetson Orin Nano carrier board spec
+- [ ] Download datasheet PDFs to offline cache: SN74LVC125A, INA226, TL431/LM393, MOSFET candidates (IRLB3034 etc.), STS3215, Pololu D42V110/D42V55, Jetson Orin Nano carrier board spec
 - [ ] Bookmark NovaSM3 v5.2/v5.3 PCB reference at [PCBWay community share](https://www.pcbway.com/project/shareproject/NovaSM3_v5_2.html) (no GitHub schematic available)
 - [ ] Create NVIDIA Developer account + download JetPack 6.x SD image to laptop
 - [ ] Back up LeRobot Pi SD contents to Mac before reformatting
@@ -71,7 +71,7 @@ Per [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md):
 - [ ] Schematic capture in KiCad — all 8 sections of the feature set (battery input, 4 active rails + reserved 5th, bus distribution, Pattern A/B selector, bus integrity, safety chain, aux MCU, mechanical)
 - [ ] Footprint placement on board outline
 - [ ] Power planes + 4-layer stackup (top sig, GND, PWR, bottom sig)
-- [ ] Star ground at FE-URT-1 connector
+- [ ] GND-plane reference (FE-URT-1; solid GND plane = single low-Z return)
 - [ ] DRC + ERC clean
 - [ ] Gerber export ready for PCBWay quote
 

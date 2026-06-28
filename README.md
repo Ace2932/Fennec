@@ -79,7 +79,7 @@ After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgra
 
 - All 12 PWM servo output headers removed (Feetech bus is daisy-chain TTL, doesn't use PWM)
 - XL4016 buck footprints → Pololu D42V110-class module footprints
-- Add: 74HC125 half-duplex driver (Pattern B prep), INA226 ×3, E-stop chain, hard-cutoff MOSFET, **MRBF-30 fuse OFF-board** (Blue Sea 5191 at pack — F1 not on PCB), bulk caps at injection points, bus-integrity footprints (series R + ferrite beads), reserved arm-rail buck footprint
+- Add: SN74LVC125A half-duplex driver (Pattern B prep), INA226 ×3, E-stop chain, hard-cutoff MOSFET, **MRBF-30 fuse OFF-board** (Blue Sea 5191 at pack — F1 not on PCB), bulk caps at injection points, bus-integrity footprints (series R + ferrite beads), reserved arm-rail buck footprint
 
 ---
 
@@ -100,12 +100,12 @@ After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgra
 ┌──▼───────┐ ┌▼───────────┐ ┌▼───────────┐ ┌▼─────────────────────────┐
 │ Realsense│ │ FE-URT-1   │ │ Gig switch │ │ Teensy 4.1 (BUS MASTER v1)│
 │ D456     │ │ (debug/    │ │            │ │  • Real-time gait loop    │
-│ (depth + │ │  bench     │ │ ◄─ L2 ─►   │ │  • UART → 74HC125 → bus   │
+│ (depth + │ │  bench     │ │ ◄─ L2 ─►   │ │  • UART → SN74LVC125A → bus   │
 │  RGB +   │ │  fallback) │ │            │ │  • INA226 I²C reader      │
 │  IMU)    │ │            │ └────────────┘ │  • E-stop GPIO sense      │
 └──────────┘ └────┬───────┘                │  • micro-ROS over USB     │
                   ↓                        └──┬────────────────────────┘
-              (JP_BUS_MASTER                  │ UART → 74HC125 half-duplex
+              (JP_BUS_MASTER                  │ UART → SN74LVC125A half-duplex
                solder bridge:                 │ (active v1 path)
                default = B,                   │
                flip to A for ID setup)        ▼
@@ -132,13 +132,13 @@ After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgra
 | Arm (shoulder + elbow) | 3 | STS3215 19kg | 7.4V | 13-15 | ⏸ Phase 4 — reserved |
 | Arm (wrist + gripper) | 3 | STS3215 19kg | 7.4V | 16-18 | ⏸ Phase 4 — reserved |
 
-**v1 build = 12 active servos** on a single daisy-chained TTL bus, 2 active servo-power voltage levels (7.5V leg, 12V hip) plus dedicated 12V/2.6A L2 LiDAR buck and 12V/3A Jetson buck. Bus master is the **Teensy 4.1 (Pattern B)** via a 74HC125 half-duplex driver. Bus IDs 13-18 and the 7.4V arm rail (D42V55F7 footprint) reserved on PCB v6 for Phase 4 arm install — populate-and-go.
+**v1 build = 12 active servos** on a single daisy-chained TTL bus, 2 active servo-power voltage levels (7.5V leg, 12V hip) plus dedicated 12V/2.6A L2 LiDAR buck and 12V/3A Jetson buck. Bus master is the **Teensy 4.1 (Pattern B)** via a SN74LVC125A half-duplex driver. Bus IDs 13-18 and the 7.4V arm rail (D42V55F7 footprint) reserved on PCB v6 for Phase 4 arm install — populate-and-go.
 
 ### Bus master pattern
 
 **Pattern B is v1 default.** Both paths live on PCB v6 via solder bridge `JP_BUS_MASTER`.
 
-- **Pattern B (v1 active):** Teensy 4.1 hardware UART → 74HC125 quad tri-state buffer (half-duplex driver) → TTL bus pads. Bare-metal real-time loop at 200-500 Hz. Jetson sends joint targets via micro-ROS over USB; Teensy translates to bus reads/writes. Survives Jetson restarts, kernel preemption, CUDA stalls, journald flushes — none of which affect bus servicing. Solder bridge defaults to B.
+- **Pattern B (v1 active):** Teensy 4.1 hardware UART → SN74LVC125A quad tri-state buffer (half-duplex driver) → TTL bus pads. Bare-metal real-time loop at 200-500 Hz. Jetson sends joint targets via micro-ROS over USB; Teensy translates to bus reads/writes. Survives Jetson restarts, kernel preemption, CUDA stalls, journald flushes — none of which affect bus servicing. Solder bridge defaults to B.
 - **Pattern A (bench / debug fallback):** Jetson → USB → FE-URT-1 → TTL bus. Use for: initial servo ID assignment with the Feetech FD / SCServo SDK Python tools from a workstation (simpler than booting micro-ROS for ID setup), debug if Teensy firmware misbehaves, post-mortem inspection of bus traffic. Flip `JP_BUS_MASTER` to A.
 
 **Why B as default (decision history):** Linux is not a real-time OS. USB-CDC latency on Jetson runs 1-10 ms typical, 50 ms+ under load. **What Pattern B actually buys:** bus-servicing isolation on the Teensy side — UART transactions to all 12 servos complete on time even when Jetson is jittery, so the bus doesn't time out and servos don't fault. The gait controller still runs on Jetson and publishes targets at 100 Hz, so Jetson's command rate is still Linux-bounded; the Teensy oversamples at 200-500 Hz against the last received target, holding it through Jetson stalls. A 100 ms Linux freeze becomes "robot pauses mid-step," not "bus dies and robot falls." v3.2 originally defaulted to A with "migrate if measurement forces it" — v3.3 flips to B-default because the migration cost is just populating one $1 IC + Phase 1 firmware work, and skipping the measure-then-migrate path eliminates a Phase 2 surprise. See Open Decisions row 5.
@@ -185,7 +185,7 @@ If (1) misses → debug Teensy firmware (DMA vs ISR, UART config). If (2) misses
 │        Bus Master Layer (Teensy 4.1)         │
 │  • micro-ROS client (USB transport)          │
 │  • SCServo SDK port — Feetech bus driver     │
-│  • 74HC125 half-duplex TX/RX gating          │
+│  • SN74LVC125A half-duplex TX/RX gating          │
 │  • Real-time loop @ 200-500 Hz               │
 │  • INA226 I²C reader → /diagnostics          │
 └──────────────────────────────────────────────┘
@@ -352,7 +352,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] Print parts: Bambu P1S + PA6-CF (dry 24h before each print)
 - [ ] Bench-validate Pololu D42V55F12 / D42V110F7 / D42V110F12 / D24V22F12 / UBEC 5V (per BOM §12 step 2)
 - [ ] Verify E-stop chain + MOSFET hard-cutoff @ 12.4V + INA226 I²C reads
-- [ ] **Write Teensy firmware** (Pattern B critical path) — micro-ROS client + SCServo SDK port + 74HC125 TX/RX gating
+- [ ] **Write Teensy firmware** (Pattern B critical path) — micro-ROS client + SCServo SDK port + SN74LVC125A TX/RX gating
 - [ ] ID setup pass: flip `JP_BUS_MASTER` to A (FE-URT-1), assign servo IDs **1-12** (v1 active), label each. IDs 13-18 reserved for Phase 4.
 - [ ] Flip `JP_BUS_MASTER` back to B (default). Verify Teensy firmware drives single servo, then full 12-servo chain.
 - [ ] **Acceptance gate** (two mandatory + one sanity, see "Bus master pattern" section): Teensy tick jitter p99 <100 µs + `/joint_commands` arrival ≥99% of 100 Hz + RTT median <5 ms / p99 <20 ms. Pattern A is not a workaround if (1) or (2) miss.
@@ -466,7 +466,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 10 | Power rail strategy | Resolved → 4-buck Pololu split | XL4016 8A cont. inadequate. v3.4 active rails: D42V110F7 (leg 7.5V), D42V110F12 (hip 12V only), D24V22F12 (L2 12V dedicated), D42V55F12 (Jetson 12V). Arm rail D42V55F7 footprint reserved. See [`docs/power-budget.md`](./docs/power-budget.md). |
 | 11 | Safety scope | Resolved → full | 608AC LVC alarm at 13.2V (warning) + 13.0V graceful-shutdown comparator → Jetson clean poweroff + 12.4V MOSFET hard-cutoff (autonomous backstop) + E-stop on leg/hip/L2 rail enables + INA226 ×3 per-rail telemetry. ~$37 BOM add. |
 | 12 | Phase 4 COM-shift compensation | Open (Phase 4) | Arm extension + payload mass shifts support polygon; gait controller needs arm-state input to stay stable. Design when arm install begins. |
-| 13 | Bus integrity strategy at 12 nodes / 1 Mbps | Open (measure first) | PCB v6 includes footprints for series R + ferrite beads + star ground. Single-ended TTL — **not** RS-485, so 120 Ω differential termination is not the right tool. Populate iteratively based on measured error rate; drop baud if needed. |
+| 13 | Bus integrity strategy at 12 nodes / 1 Mbps | Open (measure first) | PCB v6 includes footprints for series R + ferrite beads + GND-plane reference (GND plane = single low-Z return). Single-ended TTL — **not** RS-485, so 120 Ω differential termination is not the right tool. Populate iteratively based on measured error rate; drop baud if needed. |
 
 ---
 

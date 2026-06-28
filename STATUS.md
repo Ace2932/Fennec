@@ -29,7 +29,7 @@ Multi-agent alignment pass. Core electrical contracts (INA226 addrs/shunt, bus
 
 **🔴 Open misalignments (NOT yet fixed — need decision/bench):**
 - **Joint-ID→joint map disagrees across 3 files**: `safety_envelope/limits.py` (type-grouped 1-4/5-8/9-12) vs `nova_description/joint_id_map.yaml` (per-leg interleaved) vs `servo_homing/config.py` (per-leg coxa/femur/tibia). Wrong limits → wrong joints, silent. **BLOCKS safe envelope. Pick canonical map (folds into B2).**
-- 74HC125→SN74LVC125A stale across ~15 secondary docs (primary BOM/README/setup-servos fixed). Sweep deferred.
+- 74HC125→SN74LVC125A + "star ground"→GND-plane + Serial2→Serial1 SWEPT across active docs 2026-06-27 (historical changelog/research/weekly-checklists/deprecated-board left as-dated).
 - `dimensions.md` LiPo pocket still sized for 4000 mAh pack — needs real 6000 mAh pack dims (CAD input, B2).
 
 **🔴 Weak points / breaks (ranked, NOT fixed):**

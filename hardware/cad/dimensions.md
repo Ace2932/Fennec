@@ -109,7 +109,7 @@ real-world batch variation listed where known.
 | Mount hole pattern | 15.24 × 6.35 (approximate; see datasheet) | ⚠️ REVIEW |
 | PCB thickness | 1.6 | ✅ |
 
-### 74HC125 quad tri-state buffer (Pattern B half-duplex driver)
+### SN74LVC125A quad tri-state buffer (Pattern B half-duplex driver)
 **Source:** TI/Nexperia datasheet
 
 | Dim | Value | Status |
@@ -203,7 +203,9 @@ Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 | Contacts | 2× NC | ✅ |
 | Twist-to-release | yes | ✅ |
 
-### Class T 30 A fuse holder
+### Class T 30 A fuse holder — ⚠️ SUPERSEDED 2026-06-12 (fuse is now MRBF-30)
+> Fuse changed to **MRBF-30 in a Blue Sea 5191 terminal block** (off-board, bolts to chassis at the pack — no printed holder needed). The Class-T-holder dims below are obsolete; kept only if a Class T is ever re-adopted (e.g. paralleled packs). Same applies to the `patterns.md` Class-T-holder generator.
+
 **Source:** Bussmann Class T standard
 **Mounting: OFF-BOARD (2026-06-04)** — inline bolt-down block in the battery→PCB XT60 lead near the pack; **not a PCB footprint** (F1 removed from `nova_pcb_v6`). At-source placement protects the battery cable too. Dimensions below are for chassis/lead mounting, not a board cutout.
 
