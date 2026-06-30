@@ -1398,13 +1398,13 @@
 	)
 	(wire
 		(pts
-			(xy 43.18 60.96) (xy 59.69 60.96)
+			(xy 41.91 55.88) (xy 41.91 58.42)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "18fd5496-9e96-45c2-88ee-34a28d53d831")
+		(uuid "1a0b33a4-e23e-4797-ac30-819b01811bbc")
 	)
 	(wire
 		(pts
@@ -1428,16 +1428,6 @@
 	)
 	(wire
 		(pts
-			(xy 43.18 63.5) (xy 57.15 63.5)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "2a9a37f6-02a6-408f-8f7f-97e13eb8a1a7")
-	)
-	(wire
-		(pts
 			(xy 92.71 59.69) (xy 92.71 60.96)
 		)
 		(stroke
@@ -1455,6 +1445,16 @@
 			(type default)
 		)
 		(uuid "3b2884dd-2986-451a-8ac7-cf831cc99b7d")
+	)
+	(wire
+		(pts
+			(xy 41.91 60.96) (xy 59.69 60.96)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "45d771dc-4b47-4127-a982-85969a055ab0")
 	)
 	(wire
 		(pts
@@ -1638,6 +1638,16 @@
 	)
 	(wire
 		(pts
+			(xy 48.26 55.88) (xy 41.91 55.88)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e908fef7-5967-480d-ac3b-856829fcef38")
+	)
+	(wire
+		(pts
 			(xy 137.16 43.18) (xy 127 43.18)
 		)
 		(stroke
@@ -1667,12 +1677,12 @@
 		(uuid "42ab8e23-513d-4d4f-b2d0-df0e842516b0")
 	)
 	(label "BATT_NEG"
-		(at 57.15 63.5 270)
+		(at 48.26 55.88 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify left bottom)
 		)
 		(uuid "577a3eee-0b10-4846-b0f9-0a8975f57ff9")
 	)
@@ -2056,7 +2066,7 @@
 	)
 	(symbol
 		(lib_id "Connector_Generic:Conn_01x02")
-		(at 38.1 60.96 0)
+		(at 36.83 58.42 0)
 		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
@@ -2065,7 +2075,7 @@
 		(dnp no)
 		(uuid "4c71ae88-640b-4ca6-8d93-87ed9b66f13a")
 		(property "Reference" "J1"
-			(at 38.1 54.61 0)
+			(at 36.83 52.07 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2073,7 +2083,7 @@
 			)
 		)
 		(property "Value" "XT60_4S_IN"
-			(at 38.1 67.31 0)
+			(at 36.83 64.77 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2081,7 +2091,7 @@
 			)
 		)
 		(property "Footprint" "Connector_AMASS:AMASS_XT60-M_1x02_P7.20mm_Vertical"
-			(at 38.1 60.96 0)
+			(at 36.83 58.42 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2090,7 +2100,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 38.1 60.96 0)
+			(at 36.83 58.42 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2099,7 +2109,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 38.1 60.96 0)
+			(at 36.83 58.42 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2107,7 +2117,7 @@
 			)
 		)
 		(property "Manufacturer" "AMASS"
-			(at 0 -2.54 0)
+			(at -1.27 -5.08 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2116,7 +2126,7 @@
 			)
 		)
 		(property "MPN" "XT60H-M"
-			(at 0 -2.54 0)
+			(at -1.27 -5.08 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2125,7 +2135,7 @@
 			)
 		)
 		(property "AssemblyOrder" "12 THT XT60 (snap cover off first)"
-			(at 0 -2.54 0)
+			(at -1.27 -5.08 0)
 			(effects
 				(font
 					(size 1.27 1.27)

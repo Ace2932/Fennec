@@ -661,12 +661,12 @@
 	)
 	(global_label "I2C_SDA"
 		(shape bidirectional)
-		(at 138.43 104.14 0)
+		(at 138.43 104.14 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "13d3af6a-12a9-4613-ac71-4c80cd44da89")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
@@ -681,12 +681,12 @@
 	)
 	(global_label "V5_AUX"
 		(shape bidirectional)
-		(at 138.43 96.52 0)
+		(at 138.43 96.52 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "249efb70-8912-4d8f-98a0-08b08186f32f")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
@@ -701,12 +701,12 @@
 	)
 	(global_label "BATT_LOW"
 		(shape bidirectional)
-		(at 138.43 106.68 0)
+		(at 138.43 106.68 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "4930e4e6-f683-414f-9a6b-e4081984b74a")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
@@ -741,12 +741,12 @@
 	)
 	(global_label "GND"
 		(shape bidirectional)
-		(at 138.43 99.06 0)
+		(at 138.43 99.06 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "58a2a1eb-4467-4269-8a0c-64e46922295f")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
@@ -841,12 +841,12 @@
 	)
 	(global_label "+3V3"
 		(shape bidirectional)
-		(at 138.43 101.6 0)
+		(at 138.43 101.6 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "c7abce13-acb2-4298-8d26-bf3c73ab5216")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
@@ -881,12 +881,12 @@
 	)
 	(global_label "GND"
 		(shape bidirectional)
-		(at 138.43 109.22 0)
+		(at 138.43 109.22 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "da2019d1-6b8c-417a-acb0-921868b2b943")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
