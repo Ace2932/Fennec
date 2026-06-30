@@ -87,11 +87,13 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
       assembled cable before first power; confirm shroud keys are consistent.
 - [ ] **U1–U5 Pololu bucks** (off-board, XT30 + EN wire) — board: `VIN=VBAT_PROTECTED, GND,
       EN=EN_BUCKS/EN_JET, VOUT`. Reverse VIN into a Pololu = dead module. Match each buck's
-      VIN/GND/VOUT/EN silk to the wiring.
+      VIN/GND/VOUT/EN silk to the wiring. **⚠️ Fixed-output variant per slot is a FRY RISK the board
+      can't enforce — confirm F7 vs F12 on each physical module (see §1e).** Terminal rect pad = + .
 
 **🟡 Medium — silent failure / safety-logic inversion:**
-- [ ] **U9–U11 INA226 modules** — board connects I2C+power only (`4=SDA, 5=SCL, 6=VCC, 7=GND`).
-      Confirm (a) module header order matches your dupont wiring, (b) **3 distinct I2C addresses** (A0/A1 straps).
+- [ ] **U9–U12 INA226 modules** — board connects I2C+power only (`4=SDA, 5=SCL, 6=VCC, 7=GND`).
+      Confirm (a) module header order matches your dupont wiring, (b) **a unique I2C address per module via the
+      A0/A1 solder bead — see the §1e table** (4 modules on one bus = must differ, or collision).
       **⚠️ Current-sense path — PCB has NO shunt (R13/R14 removed):** rail current must pass through each
       module's IN+/IN− screw terminals (onboard 2 mΩ), wired **inline in the harness**: source → IN+ → IN− → load.
       **Hip (J7) / Jetson (J12) / L2 (J13) = single XT30 → clean full-current insertion. Leg (0x40) stars into
@@ -118,7 +120,7 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
       (bulk caps Ø10×17 mm, INA226 modules) clear the M3×20 standoff gap (≤~17 mm target).
 
 **🟢 Low — protected or bench-only:**
-- [ ] **J1 XT60** — `1=VBAT(+), 2=BATT_NEG(−)`. Q1 reverse-prot covers a slip, but confirm.
+- [ ] **J1 XT60** — post-polarity-fix: `pad1=BATT_NEG(−)/chamfer side, pad2=VBAT(+)/flat side` (see §1e — was reversed, fixed 2026-06-29). Q1 reverse-prot covers a slip, but confirm flat=+.
 - [ ] **SW1** — confirm the physical switch is rated for full pack current (~15–18 A).
 - [ ] **J9 FE-URT-1** — Pattern-A bench adapter only; confirm its data pin = MASTER_A if used.
 - [ ] **Q1 IRLB3034** — TO-220 G/D/S = pin 1/2/3 (matches footprint); confirm tab = Drain.
@@ -126,6 +128,27 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 ## 🟠 1d. Power-board fixes from adversarial review (2026-06-26)
 - [ ] **U8 LM393 — NO Vcc bypass cap on the board.** Hand-tack **100nF V5_AUX↔GND across U8 pins 8↔4** (0603 or axial) at assembly. V5_AUX also sets the trip VREFs (R4/R6) → an unbypassed comparator supply risks noisy/chattering 13.0/12.4 V trips. Not on the PCB; add by hand.
 - [ ] **Solid-plane soldering tradeoff:** VBAT_PROTECTED (PWR.Cu) + GND (GND.Cu) are now **SOLID** pad-connected, and power-zone spokes widened (2.0 mm leg / 1.5 mm VBAT+HIP) — needed because the high-current pads (**SW1.2 14 A inject, U1.4 10 A leg VOUT, Q1.3 14 A GND inject**) were **thermal-relief 0.5 mm ≈ 6 A throats** (plane-only, no trace) that would overheat. Cost: those THT power pads (SW1, Q1, buck VIN/VOUT, GND THT) now **wick heat into the planes** → use a **fat tip + preheat**; a bare 60–88 W Pinecil will struggle on the big ones.
+
+## 🟠 1e. Assembly config — connector polarity, buck variants, INA addressing (2026-06-29)
+
+**Connector polarity (FIXED this date, commit bc6e3af — all 9 keyed XT connectors).** Standard KiCad `Connector_AMASS` footprints number **pad1 = chamfer side = NEGATIVE, pad2 = flat side = POSITIVE** (NOT pad1=+). The board originally had +V on pad1 → every XT reverse-wired → would have fed +V to the − terminal and **fried the Jetson/servos/arm**. Corrected so **+V is on the flat-side pad**. At assembly, build every XT cable **+ (red) → flat side**; the keyed housing then enforces it. Affected: J1 (XT60 battery), J3–J7 (rail injection), J12–J14 (Jetson/L2/arm out). Pololu buck terminals are **non-keyed** (pad1 = rect marker = +V) — you set their polarity by hand to the rect pad.
+
+- [ ] **Buck voltage variant per slot (FRY RISK — board can't enforce fixed output).** Read the part number printed ON each physical module:
+  - U1 leg → D42V110**F7** (7.5V) · U2 hip → D42V110**F12** (12V) · U3 L2 → D24V22**F12** (12V) · U4 Jetson → D42V55**F12** (12V) · U5 arm → D42V55**F7** (7.5V)
+  - **F7 = 7.5V, F12 = 12V.** An F12 on the leg/arm rail → 12V into 7.5V servos = fry. Confirm the suffix on all five before wiring.
+- [ ] **Buck pin map + polarity:** board terminal **rect pad = +** (VBAT_PROTECTED in / Vout out / EN), circle pad = GND. Wire cables 1:1 to the module's VIN/GND/VOUT/EN per its datasheet; + to the rect pad.
+- [ ] **INA226 I2C address per module — set the A0/A1 solder bead** (4 modules, one bus → must be unique; matches `firmware/teensy/firmware/src/ina226_telemetry.h`):
+
+  | rail | address | A1 tie | A0 tie | bead action |
+  |---|---|---|---|---|
+  | leg 7.5V | 0x40 | GND | GND | **default — no move** |
+  | hip 12V | 0x41 | GND | VS | A0 → VS |
+  | Jetson 12V | 0x44 | VS | GND | A1 → VS |
+  | 4th 12V | 0x45 | VS | VS | A0 + A1 → VS |
+
+  Chip-level table — **map to YOUR module's silk legend; don't assume pad order.** Leg stays default; the other three each get a bead moved.
+- [ ] **RESOLVE before beading: is the 4th INA on L2 or ARM?** Firmware names `0x45 = INA226_ADDR_L2` and it is **OFF unless built with `-D NOVA_INA226_L2`**. Phase-4 added an ARM INA (U12), but there are **5 rails and only 4 modules** → one rail goes unmonitored. Pick the 4 monitored rails, set the firmware address labels + the build flag to match, *then* set the beads.
+- [ ] **INA current-sense wiring** (per §1 medium): each module's IN+/IN− must be wired inline to its rail (PCB has no shunt); leaving IN± fully unwired makes **both** current AND voltage invalid (needs an IN−/VBUS tap even for voltage-only).
 
 ## 🟡 2. Trip-point calibration (ratiometric to V5_AUX)
 VREF tracks the UBEC, VSENSE tracks the battery. UBEC sag shifts trips LOWER (later).
