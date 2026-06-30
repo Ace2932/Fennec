@@ -491,10 +491,15 @@ inline void joint_state_bind(sensor_msgs__msg__JointState* m,
 }
 #endif
 
-// Power-rails snapshot buffer — 9 floats (V, A, W per rail × leg/hip/jetson).
+// Power-rails snapshot buffer — V, A, W per rail. leg/hip/jetson = 9 floats;
+// +3 (l2_v, l2_a, l2_w) when NOVA_INA226_L2 is enabled → 12 floats total.
 // Filled every POWER_RAILS_PERIOD_MS from INA226 Rail samples regardless of
 // micro-ROS build; the Float32MultiArray publish itself is ifdef'd.
+#ifdef NOVA_INA226_L2
+constexpr size_t POWER_RAILS_FIELDS = 12;
+#else
 constexpr size_t POWER_RAILS_FIELDS = 9;
+#endif
 float power_rails_data[POWER_RAILS_FIELDS];
 
 // Per-joint voltage + temperature buffers — see servo_voltage_msg /
@@ -986,8 +991,7 @@ void loop() {
     power_rails_ms = 0;
     // Pull the latest per-rail samples into the Float32MultiArray buffer.
     // Order: leg_v leg_a leg_w hip_v hip_a hip_w jetson_v jetson_a jetson_w
-    // (4th L2 rail intentionally omitted from this msg even when
-    // NOVA_INA226_L2 is defined — host-side consumers expect 9-float layout).
+    // (+ l2_v l2_a l2_w at [9..11] when NOVA_INA226_L2 → 12-float layout).
     const nova::RailSample& s_leg    = rail_leg.sample();
     const nova::RailSample& s_hip    = rail_hip.sample();
     const nova::RailSample& s_jetson = rail_jetson.sample();
@@ -1000,6 +1004,12 @@ void loop() {
     power_rails_data[6] = s_jetson.bus_voltage_v;
     power_rails_data[7] = s_jetson.current_a;
     power_rails_data[8] = s_jetson.power_w;
+#ifdef NOVA_INA226_L2
+    const nova::RailSample& s_l2 = rail_l2.sample();
+    power_rails_data[9]  = s_l2.bus_voltage_v;
+    power_rails_data[10] = s_l2.current_a;
+    power_rails_data[11] = s_l2.power_w;
+#endif
 #ifdef NOVA_USE_MICRO_ROS
     RCSOFTCHECK(rcl_publish(&power_rails_pub, &power_rails_msg, NULL));
 #endif

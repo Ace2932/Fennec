@@ -147,7 +147,7 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
   | 4th 12V | 0x45 | VS | VS | A0 + A1 → VS |
 
   Chip-level table — **map to YOUR module's silk legend; don't assume pad order.** Leg stays default; the other three each get a bead moved.
-- [ ] **RESOLVE before beading: is the 4th INA on L2 or ARM?** Firmware names `0x45 = INA226_ADDR_L2` and it is **OFF unless built with `-D NOVA_INA226_L2`**. Phase-4 added an ARM INA (U12), but there are **5 rails and only 4 modules** → one rail goes unmonitored. Pick the 4 monitored rails, set the firmware address labels + the build flag to match, *then* set the beads.
+- [x] **RESOLVED 2026-06-30 — 4th INA = L2 LiDAR (0x45), not arm.** LiDAR is live + nav-critical/brownout-sensitive; the arm rail is DNP (Phase-4) so an INA there would read nothing. Firmware enabled: `-D NOVA_INA226_L2` in `platformio.ini` `[env]` + publish expanded to 12 floats (`/power_rails[9..11]` = l2 v/a/w). **Arm INA deferred to a 5th module when the arm is built.** So bead the 4th module to **0x45 (A0+A1→VS)** and wire its IN± to the **L2 rail**.
 - [ ] **INA current-sense wiring** (per §1 medium): each module's IN+/IN− must be wired inline to its rail (PCB has no shunt); leaving IN± fully unwired makes **both** current AND voltage invalid (needs an IN−/VBUS tap even for voltage-only).
 
 ## 🟡 2. Trip-point calibration (ratiometric to V5_AUX)

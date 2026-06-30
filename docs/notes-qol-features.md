@@ -68,7 +68,7 @@ Ordering is roughly highest-payoff-per-hour first within each group. All paths a
 /servo_err_timeout                  # 1 Hz
 /servo_err_bad_frame                # 1 Hz
 /servo_err_servo                    # 1 Hz
-/power_rails                        # 10 Hz Float32MultiArray (9 floats — leg/hip/jetson V/A/W)
+/power_rails                        # 10 Hz Float32MultiArray (9 floats leg/hip/jetson V/A/W; 12 with -D NOVA_INA226_L2 → +l2 at [9..11]. Indices 0-8 stable)
 /estop                              # edge — Bool, raw GPIO
 /battery_low                        # edge — Bool, raw GPIO
 /safety_state                       # edge — Int32, latched FSM (0=NORMAL 1=ESTOP 2=BATT_LOW 3=FAULT)
