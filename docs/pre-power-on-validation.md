@@ -76,12 +76,24 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 - [ ] **J8 servo bus** — board: `1=GND, 2=V7V5_LEG, 3=BUS_SERVO`. ✅ Matches Feetech STS3215
       standard (GND/VCC/Signal). NOTE: servo uses a 5264 connector, board is JST-XH — crimp
       your own JST-XH pigtail in GND/V+/Signal order (don't assume a pre-made cable's housing mates).
-- [ ] **⚠️ DUAL-VOLTAGE SERVO HARNESS — FRY-CRITICAL, #1 fry path.** J8 provides **7.5 V** (V7V5_LEG);
-      hips run **12 V** (V12_HIP, injected at J7). The 12 V↔7.5 V boundary is INSIDE each leg (hip ID 1–4 =
-      12 V, femur+tibia ID 5–12 = 7.5 V). A stock 3-wire daisy cable bridges VCC across the boundary →
-      12 V into a 7.5 V servo = fried. Use **SIGNAL+GND-only links (VCC pin pulled) at every hip→femur
-      transition**; inject 12 V to hips / 7.5 V to legs separately; **meter every servo VCC = its correct
-      rail BEFORE the chain sees power.** Full spec: `hardware/wiring/README.md` dual-voltage section.
+      Under the harness plan below, **J8's VCC pin (2) feeds nothing** — chain entry uses only
+      GND + Signal; every servo's VCC arrives from its XT30 rail spur instead.
+- [ ] **⚠️ DUAL-VOLTAGE SERVO HARNESS — FRY-CRITICAL, #1 fry path.** J8's bus signal is shared by all
+      12 servos, but power is TWO voltages: **each haa (hip) = 12 V (IDs 1,4,7,10 — per-leg-sequential
+      map, `joint_id_map.yaml`); each hfe/kfe = 7.5 V**. The chain runs haa→hfe→kfe per leg, so
+      12 V↔7.5 V transitions occur WITHIN each leg (haa→hfe ×4) AND between legs (kfe→next haa ×3) =
+      **7 boundaries**. A stock 3-wire daisy cable bridges VCC across a boundary → 12 V into a 7.5 V
+      servo = fried. Plan (removes all 7 boundaries): **NO cable carries VCC servo-to-servo.**
+      **How each servo gets power despite that:** the STS3215's two 3-pin ports are internally
+      paralleled, and the servo doesn't care where each wire came from — so each servo-side plug is
+      built from three sources: **VCC = spur from its local XT30 injection** (7.5 V J3–J6 for hfe/kfe,
+      12 V from J7 for haa), **GND = common** (star ground), **Data = daisy from the previous servo**.
+      Build recipe per link: take a stock Feetech 3-wire cable, **pull the VCC pin from the upstream
+      end**, crimp the XT30-fed VCC branch into the servo-side housing (5264, NOT JST-XH). **Keep GND
+      continuous through every daisy link** — it is both power return and the data line's signal
+      reference; a GND that follows the signal wire = less noise. **Meter every servo VCC = its
+      correct rail BEFORE the chain sees power** (§1c hard gate). Full spec:
+      `hardware/wiring/README.md` dual-voltage section.
 - [ ] **J20 interboard ribbon** — both boards' pinouts identical (verified). A 2×6 IDC ribbon
       can be built/plugged mirrored → 5V meets GND. **Meter-check pin1↔pin1 continuity** on the
       assembled cable before first power; confirm shroud keys are consistent.

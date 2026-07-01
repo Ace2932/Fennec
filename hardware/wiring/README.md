@@ -81,6 +81,25 @@ Required harness:
 - **At every 12V↔7.5V transition** — haa→hfe WITHIN each leg (×4) AND kfe→next-haa BETWEEN legs (×3) = **7 boundaries** (the earlier "4 hip→femur" undercounted the 3 between-leg ones): use a **SIGNAL+GND-only link (VCC pin pulled/cut)**. Simplest + safest: make **ALL inter-servo cables signal+GND-only** and inject each servo's VCC locally from its rail — then there's no boundary to miscount. NO stock 3-wire cable across a voltage boundary.
 - **Meter-verify every servo VCC = its correct rail (7.5 vs 12V) BEFORE the chain sees power.** #1 fry path on the build (pre-power-on §1c).
 
+**Per-link build recipe (how a servo gets power when no cable carries VCC servo-to-servo):**
+The STS3215's two 3-pin ports are internally paralleled (all 3 pins bussed straight through), and
+the servo doesn't know where each wire came from — power and signal merge **in the connector**, not
+on the servo. Each servo-side plug is assembled from three sources:
+
+| pin | comes from |
+|---|---|
+| VCC | spur off the servo's **local XT30 injection** — 7.5V (J3–J6) for hfe/kfe, 12V (J7) for haa |
+| GND | common star ground — **AND kept continuous through every daisy link** (it's both power return and the data line's signal reference; GND following the signal wire = less noise) |
+| Data | daisy chain from the previous servo (chain entry = J8 pin 3) |
+
+Steps per link: stock Feetech 3-wire cable → **pull the VCC pin from the upstream end** → crimp the
+XT30-fed VCC branch into the servo-side housing. Result: signal path unbroken J8→servo1→…→servo12,
+power a star from the XT30s, and a 12V↔7.5V boundary is physically impossible to miscount.
+
+**Connector housings — don't mix:** servo ports are **Molex 5264-style 2.54mm** (Feetech standard);
+**JST-XH is the board side only** (J8 pigtail). Don't crimp XH housings for servo ends. Chain entry
+from J8 uses **GND + Signal only** — J8's VCC pin (V7V5_LEG) feeds nothing under this plan.
+
 Cables still needed: **extension daisy cables for long leg runs** (Feetech/AliExpress — the ⬜ master-bom item never received) + the **VCC-isolated boundary jumpers** (make by pulling the VCC pin from a stock cable).
 
 **Cable length:** ~2 m total harness. Community reports 12 m / 8 axes workable, so 2 m / 12 nodes is well within margin.
