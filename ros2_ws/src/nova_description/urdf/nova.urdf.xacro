@@ -34,10 +34,17 @@
   <xacro:property name="hip_to_upper_x" value="0.0"/>    <!-- TODO-CAD -->
   <xacro:property name="hip_to_upper_y" value="0.045"/>  <!-- TODO-CAD coax horn -> femur axis -->
   <xacro:property name="hip_to_upper_z" value="0.0"/>    <!-- TODO-CAD -->
-  <xacro:property name="upper_to_lower_x" value="0.0"/>  <!-- TODO-CAD -->
-  <xacro:property name="upper_to_lower_z" value="-0.11"/><!-- TODO-CAD femur length -->
-  <xacro:property name="lower_to_foot_x" value="0.0"/>   <!-- TODO-CAD -->
-  <xacro:property name="lower_to_foot_z" value="-0.13"/> <!-- TODO-CAD tibia length -->
+  <!-- MEASURED 2026-07-01 from original NovaSM3 STLs (leg_v5 keeps stock pivots).
+       Femur: hfe horn axis (49.5, z10) -> kfe bore (-56.71, z22.02) in
+       SM3_Frame_LeftFemur.stl = 106.9 mm axis-to-axis (the 12 mm in-plane kink
+       is absorbed into hfe zero-calibration; IK uses the scalar length).
+       Tibia: kfe spline (62.5, 0) -> foot post center (-66.5, 3.3) in
+       SM3_Frame_RightTibia.stl = 129.0 mm (toe tip extreme = 138.0 mm).
+       Method: trimesh slice-circle bore detection, hardware/cad/dimensions.md §leg. -->
+  <xacro:property name="upper_to_lower_x" value="0.0"/>
+  <xacro:property name="upper_to_lower_z" value="-0.1069"/><!-- MEASURED femur length -->
+  <xacro:property name="lower_to_foot_x" value="0.0"/>
+  <xacro:property name="lower_to_foot_z" value="-0.1290"/> <!-- MEASURED tibia length -->
 
   <!-- ===================== masses (kg) ===================== -->
   <!-- TODO-CAD: weigh / compute from CAD. STS3215 ≈ 0.06 kg each. -->

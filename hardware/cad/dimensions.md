@@ -239,6 +239,20 @@ Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 
 ## 6. Mechanical hardware
 
+### Leg kinematics — axis-to-axis link lengths (B2 pass, 2026-07-01)
+**Source:** original NovaSM3 STLs (leg_v5 preserves stock pivots) via trimesh
+slice-circle bore detection (1 mm slice steps, circle fit σ<0.15 mm). Feeds
+`nova.urdf.xacro` + `leg_ik.LegParams` (guarded by `test_urdf_sync`).
+
+| Dim | Value | Status |
+|---|---|---|
+| Femur length (hfe→kfe axis) | **106.9** | ✅ hfe = STS horn axis (49.5, z10) in LeftFemur local (cavity spline, user-confirmed overlay); kfe = knee bore (−56.71, z22.02) + M2.5-square pattern ctr (−56.72, z22.05). In-plane components Δx 106.21 / Δz 12.02 — 12 mm kink absorbed into hfe zero-cal |
+| Tibia length (kfe→foot post ctr) | **129.0** | ✅ kfe = STS spline (62.5, 0) in RightTibia local (confirmed placement); foot = Ø7 post at (−66.5, 3.3), full-height cylinder z 0–19.3 |
+| Tibia toe-tip extreme (kfe→tip) | 138.0 | ✅ vertex (−75.46, 0.47); foot cap radius ≈ 9 over post ctr |
+| Max leg reach (femur+tibia) | 235.9 | ✅ derived |
+| Hip lateral offset (haa→hfe, "d") | 45 (placeholder) | ⚠️ REVIEW — needs assembled-hip measurement or Onshape assembly; haa axis measured in LeftCoax local: horn axis along Y at (X −11.6, Z 16.3), matches Ø20 relief circle at (−11, 17.5) |
+| Joint ranges haa/hfe/kfe | 0.7 / 1.5 / 2.2 rad | ⚠️ REVIEW — conservative placeholders, verify vs collision in sim/first-article |
+
 ### 688ZZ ball bearing
 **Source:** standard deep-groove ball bearing
 

@@ -24,8 +24,8 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class LegParams:
     hip_offset: float = 0.045  # d  — HAA axis to HFE axis along leg +y  (TODO-CAD)
-    femur: float = 0.11  # a1 — HFE to KFE                          (TODO-CAD)
-    tibia: float = 0.13  # a2 — KFE to foot                         (TODO-CAD)
+    femur: float = 0.1069  # a1 — HFE to KFE   MEASURED 2026-07-01 (STL bores, 106.9 mm)
+    tibia: float = 0.1290  # a2 — KFE to foot  MEASURED 2026-07-01 (STL foot-post ctr)
     # joint limits (rad), conservative placeholders (TODO-CAD mechanical travel)
     haa_range: float = 0.7
     hfe_range: float = 1.5
