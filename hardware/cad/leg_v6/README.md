@@ -24,10 +24,16 @@ correct: those were blocks, not leg designs).
 | Part | Status | Notes |
 |---|---|---|
 | `leg_v6_common.scad` | ✅ | pocket / horn-couple / idler-boss / yoke modules |
-| `femur.scad` | ✅ first article ready | HFE pocket + knee yoke; verified: horn seat @ x=106.9±0.07, BCD ±4.95, idler M3 @ knee + hip pad w/ heat-set bore; watertight; prints flat, no pocket supports |
-| tibia | ⬜ next | KFE pocket + blade to Ø7 foot pin @129 (reuse SM3_Foot rubber) + 30.5 lateral jog |
-| coax | ⬜ | HAA pocket (axis ⊥) + yoke for femur horn; preserves 24.6 lateral + 9.5 drop |
-| shoulder interface | ⬜ | stock shoulder frame + BCD14 adapter for STS horn (stock cutout is 25t-hobby sized) |
+| `femur.scad` (+`_L`) | ✅ verified | HFE pocket + knee yoke; horn seat @ x=106.9, BCD ±4.95, idler M3 + hip pad w/ heat-set; watertight; prints flat, no pocket supports |
+| `tibia.scad` (+`_L`) | ✅ verified | KFE pocket + straight blade; Ø7 foot post @ x=129.0 exact, post z −21..−40 → center −30.5 = measured jog (stock SM3_Foot rubber slips on); zip anchors |
+| `coax.scad` (+`_L`) | ✅ verified | HAA pocket (horn −Y to shoulder, insert from front, rear countersunk M2.5 + rear pad/heat-set for the shoulder's yoke); femur yoke on X: horn seat (11.6, −9.5) inboard arm, M3 idler outboard, bridge clears full femur-disc sweep; femur mid-plane @ 33.8 |
+| shoulder interface | ⬜ next | stock shoulder frame + BCD14 adapter for STS horn (stock cutout is 25t-hobby sized) + rear idler arm |
+
+**v6 lateral chain** (URDF updated, sum still 64.3 = IK d): haa→femur-mid **33.8** ·
+femur/tibia coplanar **0** · foot post **30.5**. Stock split was 24.6/9.2/30.5.
+
+Full-leg fit view: `preview_leg_assembly.scad` (coax + femur + tibia + ghost servos).
+`./build_all.sh` renders all 6 STLs (R+L).
 
 ## Hardware per joint
 4× M2.5×8 countersunk (floor) · 4× M2.5×8 (horn) · 1× M3×8 shoulder/cap (idler)
