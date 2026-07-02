@@ -27,13 +27,21 @@
   <xacro:property name="kfe_range" value="2.2"/>   <!-- TODO-CAD -->
 
   <!-- ===================== link offsets (m) ===================== -->
-  <!-- TODO-CAD: every value below is a placeholder SpotMicro-class guess. -->
-  <xacro:property name="body_half_x" value="0.10"/>  <!-- TODO-CAD half trunk length -->
-  <xacro:property name="body_half_y" value="0.05"/>  <!-- TODO-CAD half trunk width  -->
-  <xacro:property name="mount_z"     value="0.0"/>   <!-- TODO-CAD hip row height -->
-  <xacro:property name="hip_to_upper_x" value="0.0"/>    <!-- TODO-CAD -->
-  <xacro:property name="hip_to_upper_y" value="0.045"/>  <!-- TODO-CAD coax horn -> femur axis -->
-  <xacro:property name="hip_to_upper_z" value="0.0"/>    <!-- TODO-CAD -->
+  <!-- MEASURED 2026-07-02 from the official Assembly_NOVA_SM3 Fusion share
+       (A360 viewer instance-tree world transforms; servo-horn instances mark
+       the joint axes). Numbers + method: hardware/cad/dimensions.md §6.
+       Hip grid: haa axes 282.4 mm fore-aft x 78.1 mm lateral; hfe sits
+       24.6 mm outboard + 9.5 mm below haa; kfe a further 9.2 mm outboard;
+       the tibia S-curve puts the foot 30.5 mm outboard of kfe.
+       Total haa->foot lateral = 64.3 mm = LegParams.hip_offset. -->
+  <xacro:property name="body_half_x" value="0.1412"/> <!-- MEASURED half hip-grid length -->
+  <xacro:property name="body_half_y" value="0.0390"/> <!-- MEASURED half hip-grid width  -->
+  <xacro:property name="mount_z"     value="0.0380"/> <!-- hip row above chassis-mesh origin; ⚠ REVIEW-visual (trunk-node bbox polluted by children) -->
+  <xacro:property name="hip_to_upper_x" value="0.0"/>
+  <xacro:property name="hip_to_upper_y" value="0.0246"/> <!-- MEASURED haa axis -> femur horn plane -->
+  <xacro:property name="hip_to_upper_z" value="-0.0095"/><!-- MEASURED hfe drop below haa -->
+  <xacro:property name="upper_to_lower_y" value="0.0092"/><!-- MEASURED hfe->kfe outboard shift -->
+  <xacro:property name="lower_to_foot_y"  value="0.0305"/><!-- MEASURED tibia S-curve outboard shift -->
   <!-- MEASURED 2026-07-01 from original NovaSM3 STLs (leg_v5 keeps stock pivots).
        Femur: hfe horn axis (49.5, z10) -> kfe bore (-56.71, z22.02) in
        SM3_Frame_LeftFemur.stl = 106.9 mm axis-to-axis (the 12 mm in-plane kink

@@ -4,7 +4,10 @@ own (TODO-CAD placeholder) copies; this test fails loudly if a CAD refinement
 updates one and not the other.
 
 Mapping (URDF xacro property -> LegParams field):
-  hip_to_upper_y  -> hip_offset
+  hip_to_upper_y + upper_to_lower_y + lower_to_foot_y -> hip_offset
+    (the URDF distributes the lateral offset per joint — haa->hfe, the
+     hfe->kfe shift, and the tibia S-curve; the planar IK folds all three
+     into one d. Measured 2026-07-02 from the A360 assembly.)
   |upper_to_lower_z| -> femur
   |lower_to_foot_z|  -> tibia
 """
@@ -42,8 +45,14 @@ def _prop(text, name):
 def test_leg_lengths_match_urdf():
     text = open(_URDF).read()
     p = LegParams()
-    assert _prop(text, "hip_to_upper_y") == pytest.approx(p.hip_offset), (
-        "hip_offset diverged from URDF hip_to_upper_y"
+    lateral = (
+        _prop(text, "hip_to_upper_y")
+        + _prop(text, "upper_to_lower_y")
+        + _prop(text, "lower_to_foot_y")
+    )
+    assert lateral == pytest.approx(p.hip_offset), (
+        "hip_offset diverged from URDF lateral offset sum "
+        "(hip_to_upper_y + upper_to_lower_y + lower_to_foot_y)"
     )
     assert abs(_prop(text, "upper_to_lower_z")) == pytest.approx(p.femur), (
         "femur diverged from URDF upper_to_lower_z"

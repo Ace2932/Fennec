@@ -58,7 +58,7 @@
     <joint name="${leg}_kfe" type="revolute">
       <parent link="${leg}_upper"/>
       <child  link="${leg}_lower"/>
-      <origin xyz="${upper_to_lower_x} 0 ${upper_to_lower_z}" rpy="0 0 0"/>
+      <origin xyz="${upper_to_lower_x} ${reflect*upper_to_lower_y} ${upper_to_lower_z}" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
       <limit lower="${-kfe_range}" upper="${kfe_range}"
              effort="${eff_leg}" velocity="${vel_servo}"/>
@@ -77,7 +77,7 @@
     <joint name="${leg}_foot_joint" type="fixed">
       <parent link="${leg}_lower"/>
       <child  link="${leg}_foot"/>
-      <origin xyz="${lower_to_foot_x} 0 ${lower_to_foot_z}" rpy="0 0 0"/>
+      <origin xyz="${lower_to_foot_x} ${reflect*lower_to_foot_y} ${lower_to_foot_z}" rpy="0 0 0"/>
     </joint>
     <link name="${leg}_foot">
       <visual>

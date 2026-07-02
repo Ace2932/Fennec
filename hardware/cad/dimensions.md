@@ -250,7 +250,10 @@ slice-circle bore detection (1 mm slice steps, circle fit σ<0.15 mm). Feeds
 | Tibia length (kfe→foot post ctr) | **129.0** | ✅ kfe = STS spline (62.5, 0) in RightTibia local (confirmed placement); foot = Ø7 post at (−66.5, 3.3), full-height cylinder z 0–19.3 |
 | Tibia toe-tip extreme (kfe→tip) | 138.0 | ✅ vertex (−75.46, 0.47); foot cap radius ≈ 9 over post ctr |
 | Max leg reach (femur+tibia) | 235.9 | ✅ derived |
-| Hip lateral offset (haa→hfe, "d") | 45 (placeholder) | ⚠️ REVIEW — needs assembled-hip measurement or Onshape assembly; haa axis measured in LeftCoax local: horn axis along Y at (X −11.6, Z 16.3), matches Ø20 relief circle at (−11, 17.5) |
+| Hip lateral offset chain (haa→foot plane, IK "d") | **64.3** = 24.6 (haa→hfe) + 9.2 (hfe→kfe) + 30.5 (tibia S-curve) | ✅ MEASURED 2026-07-02 from the official **Assembly_NOVA_SM3 Fusion/A360 share** (novaspotmicro.com embeds it) via viewer instance-tree world transforms — the 25t servo-horn instances mark every joint axis. Front-right leg: haa horn (−31.6, −185.4, −98.6) axis∥Y · hfe horn (−56.2, −155.4, −108.1) axis∥X · kfe horn (−65.4, −79.8, −182.3) · foot ctr (−95.9, −149.5, −285.9) |
+| hfe drop below haa | 9.5 | ✅ same source |
+| Hip grid: haa fore-aft × lateral spacing | **282.4 × 78.1** (half: 141.2 / 39.05) | ✅ same source; front/rear + left/right symmetric about (7.45, −14.2) |
+| Assembly cross-check of femur length | 105.9 (vs 106.9 bore-metric) | ✅ bbox-center precision ±0.7 — bore metric kept |
 | Joint ranges haa/hfe/kfe | 0.7 / 1.5 / 2.2 rad | ⚠️ REVIEW — conservative placeholders, verify vs collision in sim/first-article |
 
 ### 688ZZ ball bearing

@@ -23,7 +23,10 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class LegParams:
-    hip_offset: float = 0.045  # d  — HAA axis to HFE axis along leg +y  (TODO-CAD)
+    hip_offset: float = 0.0643  # d — HAA axis to FOOT plane along leg +y.
+    # MEASURED 2026-07-02 (A360 assembly): 24.6 (haa→hfe) + 9.2 (hfe→kfe)
+    # + 30.5 (tibia S-curve, kfe→foot) mm. The URDF splits it per joint;
+    # test_urdf_sync checks the SUM equals this.
     femur: float = 0.1069  # a1 — HFE to KFE   MEASURED 2026-07-01 (STL bores, 106.9 mm)
     tibia: float = 0.1290  # a2 — KFE to foot  MEASURED 2026-07-01 (STL foot-post ctr)
     # joint limits (rad), conservative placeholders (TODO-CAD mechanical travel)
