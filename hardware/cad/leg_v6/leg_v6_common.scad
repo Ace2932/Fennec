@@ -61,7 +61,7 @@ WHEEL_WIN_D  = 21.5;                     // floor window (wheel Ø20 + boss Ø19
 WHEEL_BOSS_D = 19.0;                     // yoke bottom-arm boss through it
 // yoke arm planes (contact, bolted):
 YOKE_TOP_IN = HORN_Z1;                   // 17.2  top-arm underside ON horn
-YOKE_BOT_IN = FLOOR_BOT - 0.2;           // -22.4 bottom-arm plate top face
+YOKE_BOT_IN = FLOOR_BOT - 0.4;           // -22.6 bottom-arm plate top (0.4: PA6-CF shrink robustness)
 
 // =============================================================================
 // MODULES — SPLINE AXIS = Z THROUGH ORIGIN. Case body extends toward -X.

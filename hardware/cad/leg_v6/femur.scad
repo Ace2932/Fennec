@@ -43,14 +43,18 @@ module femur_v6() {
             for (sy = [-1, 1])
                 translate([26, min(sy*12.6, sy*16.6), SLAB_Z1 - EPS])
                     cube([10, 4, 3.2 + EPS]);
-            // knee fork block (top arm 17.2..21.2, bottom arm -26.4..-22.4)
+            // knee fork block, top = FLAT SHELF at 17.2: the top arm is a
+            // separate bolt-on plate (knee_arm.scad) so its horn-seat face
+            // prints on the bed (the integral arm printed over supports —
+            // rough seat). Bonus: femur now prints with zero bridging and
+            // the tibia drops in from above.
             hull() {
                 translate([FORK_X0, 0, YOKE_BOT_IN - ARM_THK])
                     cylinder(r = TIP_R,
-                             h = (YOKE_TOP_IN + ARM_THK) - (YOKE_BOT_IN - ARM_THK));
+                             h = YOKE_TOP_IN - (YOKE_BOT_IN - ARM_THK));
                 translate([FEMUR_LEN, 0, YOKE_BOT_IN - ARM_THK])
                     cylinder(r = TIP_R,
-                             h = (YOKE_TOP_IN + ARM_THK) - (YOKE_BOT_IN - ARM_THK));
+                             h = YOKE_TOP_IN - (YOKE_BOT_IN - ARM_THK));
             }
                 }
                 // ---- knee yoke slot ----
@@ -66,10 +70,12 @@ module femur_v6() {
         rotate([0, 0, 180]) sts_pocket_neg();
 
         // ---- KFE couplings at x = FEMUR_LEN ----
-        translate([FEMUR_LEN, 0, 0]) {
-            horn_couple_neg();     // top arm: horn recess + BCD + center
+        translate([FEMUR_LEN, 0, 0])
             wheel_couple_neg();    // bottom arm + boss: wheel screws
-        }
+        // knee-arm plate mounting: 4x M3 heat-sets in the shelf top
+        for (hx = [65, 75], hy = [-8, 8])
+            translate([hx, hy, YOKE_TOP_IN - HEATSET_L])
+                cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
 
         // side-wall vent windows (servo heat relief; hips hold ~22%% torque
         // continuously). Chords keep ~80%% wall stiffness.

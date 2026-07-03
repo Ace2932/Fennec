@@ -7,6 +7,7 @@ module sts3215_real() {
         import("/Users/afox/codebases/NOVA/feetech_servo_models/converted_stl/servo.stl", convexity = 6);
 }
 use <femur.scad>
+use <knee_arm.scad>
 use <tibia.scad>
 use <coax.scad>
 
@@ -19,6 +20,8 @@ color([0.2,0.4,1,0.45])  // haa servo ghost
 // femur hangs straight down from the hfe axis
 translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0,0,180]) rotate([0,90,0]) {
   femur_v6();
+  // bolt-on knee arm (knee_arm.scad prints separately; placed here)
+  color([0.9,0.8,0.3]) translate([59, 0, 17.2]) import("knee_arm.stl");
   color([1,0.2,0.2,0.45]) rotate([0,0,180]) sts3215_real();
   // tibia at the knee
   translate([FEMUR_LEN,0,0]) {

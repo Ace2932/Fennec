@@ -181,6 +181,13 @@ volatile uint32_t servo_read_err_count = 0;
 // via /safety_clear once the jam is fixed. Thresholds are build-flag tunable.
 #ifndef NOVA_STALL_LOAD_RAW
 #define NOVA_STALL_LOAD_RAW 900     // of 1000 = 90% of stall torque
+// Fleet dynamics written on EVERY arm (RAM regs reset on servo power-cycle):
+// torque limit 600 permille — gait stance needs ~45% of the 19kg servos, so
+// 60% keeps 1.3x headroom while a trip/jam saturates at 60% instead of full
+// stall through the gears (leg_v6 movement review, 2026-07-03). Goal acc 50
+// (x100 steps/s^2) softens torque-on snap and commanded steps.
+#define NOVA_TORQUE_LIMIT_RAW 600
+#define NOVA_GOAL_ACC 50
 #endif
 #ifndef NOVA_OVERTEMP_C
 #define NOVA_OVERTEMP_C 70          // °C — act before the servo's own ~80°C cutoff
@@ -202,7 +209,13 @@ static inline uint16_t load_magnitude(int16_t raw) {
 void set_fleet_torque(bool on) {
   for (uint8_t i = 0; i < NOVA_JOINT_COUNT; i++) {
     if (servo_present_mask & (uint16_t)(1u << i)) {
-      servo_bus.torque_enable(SERVO_ID_BASE + i, on);
+      uint8_t id = SERVO_ID_BASE + i;
+      if (on) {
+        // dynamics BEFORE enable so the first held pose is already limited
+        servo_bus.set_torque_limit(id, NOVA_TORQUE_LIMIT_RAW);
+        servo_bus.set_goal_acc(id, NOVA_GOAL_ACC);
+      }
+      servo_bus.torque_enable(id, on);
     }
   }
 }
