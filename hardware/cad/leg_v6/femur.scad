@@ -75,16 +75,18 @@ module femur_v6() {
         strap_pilot_neg(31, 14.25, SLAB_Z1 + 3.2);
 
         // ---- cable management (review 2026-07-03) ----
-        // shallow groove along the underside: tunnel exit -> fork (the
-        // coax-bound run lies in it, zip-tied at the anchors)
-        translate([40, -8, SLAB_Z0 - EPS]) cube([26, 16, 2]);
-        // zip anchors: flank the tunnel exit + mid-run
+        // NOTE: the fork-block hull footprint spans x 56.15..122.75 at full
+        // depth (-26.4) — underside features must stay x < 56 or cut the
+        // block/arm faces explicitly.
+        // groove along the open underside: tunnel exit -> block edge
+        translate([40, -8, SLAB_Z0 - EPS]) cube([16, 16, 2]);
+        // zip anchors: flank the tunnel exit + at the block edge
         zip_pair_neg(44, 0, SLAB_Z0 - 1, 12);
-        zip_pair_neg(60, 0, SLAB_Z0 - 1, 12);
-        // knee-crossing guide: notch through the fork throat wall close to
-        // the knee axis (bundle hugs the axis -> small service loop)
-        translate([73.5, -8, SLAB_Z0 - 1]) cube([5, 16, 8]);
-        zip_pair_neg(70, 0, SLAB_Z0 - 1, 12);
+        zip_pair_neg(52, 0, SLAB_Z0 - 1, 12);
+        // knee-crossing anchors: through the yoke BOTTOM ARM plate near the
+        // axis (23mm out) — the bundle ties here, then a short loop jumps
+        // to the tibia's tunnel anchors
+        zip_pair_neg(84, 0, YOKE_BOT_IN - ARM_THK - 1, ARM_THK + 2);
     }
 }
 
