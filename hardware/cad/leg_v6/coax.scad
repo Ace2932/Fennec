@@ -61,11 +61,11 @@ module coax_v6() {
             // outboard-arm boss reaching the femur wheel (56.2 -> 51.5)
             translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0])
                 wheel_boss_pos();
-            // front strap bosses (0.8 proud: the case top cap ridge stands
-            // 0.2 proud of the horn-face plane)
+            // front strap pads (0.8 proud: the case top cap ridge stands
+            // 0.2 proud of the horn-face plane); full wall-width blocks
             for (sx = [-1, 1])
-                translate([sx*14.25, BLK_Y0 + EPS, -31]) rotate([90, 0, 0])
-                    cylinder(d = 7, h = 0.8);
+                translate([min(sx*12.6, sx*16.6), BLK_Y0 - 0.8, -36])
+                    cube([4, 0.8 + EPS, 10]);
         }
 
         // ---- HAA pocket: spline = Y axis, horn -Y, bulk down ----

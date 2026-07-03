@@ -37,10 +37,12 @@ module femur_v6() {
                 slab(FORK_X0 + SLAB_W, SLAB_W, SLAB_Z1 - SLAB_Z0);
             // pocket front platform (rings the wheel window)
             rotate([0, 0, 180]) pocket_platform_pos();
-            // strap bosses: raised so the strap clears the case top cap
+            // strap pads: full-width rim blocks (a Ø7 post on a 3.2 wall
+            // overhangs + splits under a self-tapper); raised so the strap
+            // clears the case's rear top cap ridge
             for (sy = [-1, 1])
-                translate([31, sy*14.25, SLAB_Z1 - EPS])
-                    cylinder(d = 7, h = 3.2);
+                translate([26, min(sy*12.6, sy*16.6), SLAB_Z1 - EPS])
+                    cube([10, 4, 3.2 + EPS]);
             // knee fork block (top arm 17.2..21.2, bottom arm -26.4..-22.4)
             hull() {
                 translate([FORK_X0, 0, YOKE_BOT_IN - ARM_THK])

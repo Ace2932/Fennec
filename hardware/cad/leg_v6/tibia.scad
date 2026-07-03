@@ -9,15 +9,15 @@
 // case-column screws, strap bosses, rear cable tunnel toward the foot.
 //
 // FOOT = stock toe outline (toe_profile.scad, mesh-extracted with both
-// shoe-key notches) extruded 20.1 — but jogged INBOARD (+z, the horn side),
-// the OPPOSITE of stock: foot plane lands 33.8-30.5 = 3.3mm from the haa
-// roll axis => near-zero standing roll torque on the hip servos (stock's
-// outboard jog costs ~0.77 N*m/hip holding, 26% of rating). Wide stance is
-// recovered on demand by rolling the hips out. Swept-verified: tab+shoe
-// orbit the knee at r>=114.7, femur fork reaches r<=15.85 -> clear at any
-// fold; inboard tab z-band (20.45..40.55) never overlaps the femur slab.
+// shoe-key notches) extruded 20.1, jogged 30.5 OUTBOARD like stock: legs
+// hang straight with feet directly under the leg columns, semi-wide track
+// (~207mm) — the right call for quasi-static v1 bring-up. Costs ~0.6 N*m
+// holding per hip (stock paid the same; overtemp limp guard covers it).
+// An INBOARD jog (foot 3.3mm from the roll axis, near-zero holding torque,
+// narrow 84mm track) was evaluated 2026-07-02 and shelved until a balance
+// controller exists — see nova-proj/project-b2-cad-pass memory.
 //
-// Print: pocket rim (+Z) up, flat on -Z; supports under the raised tab.
+// Print: tab face (-Z) down; support pillars under the blade slab.
 
 include <leg_v6_common.scad>
 include <toe_profile.scad>
@@ -31,7 +31,7 @@ TIP_R       = SLAB_W/2;
 FOOT_HOLE_D = 7.0;     // stock boot plug hole (measured 6.98)
 FOOT_JOG    = 30.5;    // tab mid-plane outboard of kfe plane (MEASURED)
 TAB_THK     = 20.1;    // stock toe tab thickness
-TAB_Z0      =  FOOT_JOG - TAB_THK/2;   // +20.45 (INBOARD jog, see header)
+TAB_Z0      = -FOOT_JOG - TAB_THK/2;   // -40.55 (outboard, stock stance)
 FOOT_R      = 9.0;
 POCKET_END_X = 40;
 
@@ -50,17 +50,17 @@ module tibia_v6() {
             hull() {
                 translate([POCKET_END_X, 0, SLAB_Z0])
                     cylinder(r = TIP_R, h = SLAB_Z1 - SLAB_Z0);
-                translate([112, 0, SLAB_Z1 - 13])
-                    cylinder(r = FOOT_R, h = 13);   // taper keeps the TOP flush
-                                                    // (jog + web are above now)
+                translate([112, 0, SLAB_Z0])
+                    cylinder(r = FOOT_R, h = 13);   // taper keeps the BOTTOM
+                                                    // flush (jog is below)
             }
             // toe tab: EXACT stock outline
             translate([0, 0, TAB_Z0])
                 linear_extrude(TAB_THK) polygon(TOE_PROFILE);
-            // angled web: blade top -> tab underside
+            // angled web: blade bottom -> tab top face
             hull() {
-                translate([106, 0, SLAB_Z1 - 12]) cylinder(r = FOOT_R, h = 12);
-                translate([122, 0, TAB_Z0]) cylinder(r = 12, h = 4);
+                translate([106, 0, SLAB_Z0]) cylinder(r = FOOT_R, h = 12);
+                translate([122, 0, TAB_Z0 + TAB_THK - 4]) cylinder(r = 12, h = 4);
             }
         }
 

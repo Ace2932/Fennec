@@ -23,11 +23,11 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class LegParams:
-    hip_offset: float = 0.0033  # d — HAA axis to FOOT plane along leg +y.
-    # v6 rev2 (2026-07-02): 33.8 (haa→femur mid) + 0 − 30.5 (toe tab jogs
-    # INBOARD, opposite of stock) = 3.3mm — foot lands ~under the roll axis,
-    # near-zero standing roll torque. URDF splits it per joint;
-    # test_urdf_sync checks the SUM equals this.
+    hip_offset: float = 0.0643  # d — HAA axis to FOOT plane along leg +y.
+    # v6 = stock stance: 33.8 (haa→femur mid) + 0 + 30.5 (toe tab outboard)
+    # = 64.3mm — straight vertical legs, semi-wide track. URDF splits it
+    # per joint; test_urdf_sync checks the SUM equals this. (Inboard
+    # variant d=3.3 shelved until a balance controller exists.)
     femur: float = 0.1069  # a1 — HFE to KFE   MEASURED 2026-07-01 (STL bores, 106.9 mm)
     tibia: float = 0.1290  # a2 — KFE to foot  MEASURED 2026-07-01 (STL foot-post ctr)
     # joint limits (rad), conservative placeholders (TODO-CAD mechanical travel)
