@@ -62,6 +62,9 @@ module femur_v6() {
             idler_screw_neg(-YOKE_BOT_IN);  // bottom arm: M3 idler pivot
         }
 
+        // retention-strap pilots (strap.scad screws over the servo tail)
+        strap_pilot_neg(31);
+
         // ---- wire channel: pocket exit continues open-top to the fork ----
         translate([36, -7, SLAB_Z1 - 6])
             cube([FORK_X0 - 36 + 8, 14, 12.1]);

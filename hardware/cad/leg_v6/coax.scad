@@ -101,6 +101,12 @@ module coax_v6() {
                 cylinder(d = 6.4, h = 2);
         }
 
+        // retention-strap pilots: strap screws across the FRONT opening over
+        // the servo's lower end (z=-33), pilots into the side-wall front faces
+        for (sx = [-1, 1])
+            translate([sx*(BLK_X - 1.6), BLK_Y0 - EPS, -33]) rotate([-90, 0, 0])
+                cylinder(d = 2.05, h = 8);
+
         // femur swept clearance: full revolve of the femur hip disc + slab
         // between the arms (keeps the bridge from intruding)
         translate([ARM_IN_X1 + EPS, HFE_Y, HFE_Z]) rotate([0, 90, 0])

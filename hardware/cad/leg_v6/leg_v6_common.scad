@@ -57,7 +57,7 @@ WALL        = 3.2;   // side/end walls
 FLOOR       = 3.0;   // pocket floor (M2.5 pass-through into case threads)
 ARM_THK     = 4.0;   // yoke arm thickness
 IDLER_PAD_H = 2.0;   // raised pivot pad under the floor at the spline axis
-IDLER_PAD_D = 10.0;
+IDLER_PAD_D = 8.6;   // clears the countersunk floor-screw heads at r7
 HEATSET_D   = 4.6;   // M3 x D4.6 heat-set insert
 HEATSET_L   = 5.7;
 // yoke inner faces, measured from the DRIVEN servo's body mid-plane (z=0):
@@ -78,11 +78,15 @@ module servo_pocket_neg(extra_top = 30) {
         translate([0, 0, extra_top/2])
             cube([SERVO_L + 2*c, SERVO_W + 2*c, SERVO_H + 2*c + extra_top],
                  center = true);
-        // 4x M2.5 floor holes into case bottom threads
-        // (use COUNTERSUNK M2.5 — cap heads would foul the yoke arm plane)
-        for (hx = CASE_HOLE_X, hy = CASE_HOLE_Y)
+        // 4x COUNTERSUNK M2.5 floor holes into case bottom threads, with
+        // countersink cones at the floor's outer face so heads sit FLUSH
+        // (a proud head fouls the mating yoke-arm plane)
+        for (hx = CASE_HOLE_X, hy = CASE_HOLE_Y) {
             translate([hx, hy, -(SERVO_H/2 + FLOOR + IDLER_PAD_H + 1)])
                 cylinder(d = M25_CLEAR, h = FLOOR + IDLER_PAD_H + 2);
+            translate([hx, hy, -(SERVO_H/2 + FLOOR) - EPS])
+                cylinder(d1 = 5.6, d2 = M25_CLEAR, h = 1.6);
+        }
         // back-shaft relief (Ø6 x 1.2 stub on the case bottom)
         translate([SPLINE_X, 0, -(SERVO_H/2 + 1.6)])
             cylinder(d = 6 + 0.5, h = 1.7);
@@ -125,6 +129,19 @@ module idler_screw_neg(z0) {
         cylinder(d = M3_CLEAR, h = ARM_THK + 2*EPS);
         cylinder(d = 6.4, h = 1.8);   // M3 cap-head counterbore
     }
+}
+
+// Retention-strap pilot holes NEGATIVE: 2x Ø2.05 self-tap pilots into the
+// pocket side-wall rims at x = strap_x, straddling the servo tail. The strap
+// (strap.scad) screws down over the servo top — positive lock against
+// lift-out; the yoke arm covers the horn end. Placed in SERVO POCKET frame
+// (same translate/rotate as servo_pocket_neg).
+// Call in the LINK frame: x0 over the servo tail, wall_y = side-wall
+// centerline (±14.25 for the standard slab), rim_z = pocket rim top.
+module strap_pilot_neg(x0 = 31, wall_y = 14.25, rim_z = SERVO_H/2) {
+    for (sy = [-1, 1])
+        translate([x0, sy*wall_y, rim_z - 8])
+            cylinder(d = 2.05, h = 8 + EPS);
 }
 
 // STS3215 solid (preview / interference eyeball) — same as leg_v5.

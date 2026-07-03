@@ -67,6 +67,9 @@ module tibia_v6() {
         // knee idler heat-set bore
         idler_heatset_neg(SLAB_Z0);
 
+        // retention-strap pilots (strap.scad screws over the servo tail)
+        strap_pilot_neg(31);
+
         // wire exit channel: open-top groove continuing the pocket slot
         translate([38, -7, SLAB_Z1 - 6]) cube([18, 14, 12.1]);
 

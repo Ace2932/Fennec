@@ -35,9 +35,18 @@ femur/tibia coplanar **0** · foot post **30.5**. Stock split was 24.6/9.2/30.5.
 Full-leg fit view: `preview_leg_assembly.scad` (coax + femur + tibia + ghost servos).
 `./build_all.sh` renders all 6 STLs (R+L).
 
+## Servo retention (per pocket)
+- 4× **countersunk** M2.5×8 through the floor into the case bottom threads —
+  countersink cones modeled, heads flush (proud heads would foul the yoke arm)
+- 1× **retention strap** (`strap.scad`, print 4+) screwed over the servo tail
+  with 2× M2.5 self-tappers into Ø2.05 rim pilots — positive lock against
+  lift-out; the mating yoke arm covers the horn end. Strap position (x=31 /
+  coax front z=−33) verified clear of the mating part's full swing (arm sweep
+  r≤16 vs strap at r≥25).
+
 ## Hardware per joint
 4× M2.5×8 countersunk (floor) · 4× M2.5×8 (horn) · 1× M3×8 shoulder/cap (idler)
-· 1× M3 × D4.6 × L5.7 heat-set.
+· 1× M3 × D4.6 × L5.7 heat-set · 2× M2.5 self-tap + 1 printed strap (retention).
 
 ## Verify (first-article print, before batching)
 1. Pocket drop-in fit (CLR_POCKET 0.25/side, PA6-CF) — servo should seat with
