@@ -8,3 +8,4 @@ for p in femur tibia coax; do
   $OS -o ${p}_L.stl ${p}_L.scad
 done
 ls -la *_R.stl *_L.stl
+../../../.venv/bin/python check_fit.py

@@ -56,6 +56,13 @@ the horn/wheel discs). rev 2, from `feetech_servo_models/converted_stl/servo.stl
 4× M2 ≈stock+3mm (case columns, countersunk) · 4+1× M2.5×6 (horn + M3 center)
 · 4+1× M2.5×8 (wheel, through boss, counterbored) · 2× M2.5 self-tap + strap.
 
+## Fit gate (run after every geometry change)
+`../../../.venv/bin/python check_fit.py` — places the REAL servo mesh
+(`feetech_servo_models/converted_stl/servo.stl`) at each pocket pose and
+samples 21k points against the part solid; any point inside = the part cuts
+the servo. Wired into `build_all.sh`. Caught the bay-width error the box
+model missed (real bay = full case width).
+
 ## Verify (first-article print, before batching)
 1. Pocket drop-in fit (CLR_POCKET 0.25/side, PA6-CF) — servo should seat with
    light push, no rock.

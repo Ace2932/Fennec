@@ -79,9 +79,11 @@ module sts_pocket_neg(extra_top = 30) {
                    (CASE_BOT - c + CASE_TOP + extra_top)/2])
             cube([CASE_X1 - CASE_X0 + 2*c, 2*(CASE_HW + c),
                   CASE_TOP - CASE_BOT + extra_top + c], center = true);
-        // connector bay void (rear-bottom step)
+        // connector bay void (rear-bottom step) — FULL case width: the real
+        // bay spans y ±12.35 (fit-gate finding 2026-07-02; the earlier -2mm
+        // guess cut 1.7mm into the servo sides on every pocket)
         translate([(CASE_X0 + BAY_X1)/2, 0, (BAY_BOT - c + CASE_BOT + 1)/2])
-            cube([BAY_X1 - CASE_X0 + 2*c, 2*(CASE_HW - 2 + c),
+            cube([BAY_X1 - CASE_X0 + 2*c, 2*(CASE_HW + c),
                   CASE_BOT - BAY_BOT + 1 + 2*c], center = true);
         // wheel window through the floor (bottom-arm boss enters here)
         translate([0, 0, FLOOR_BOT - EPS])
