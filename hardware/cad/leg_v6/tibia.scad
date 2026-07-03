@@ -20,6 +20,7 @@
 // pocket still prints support-free.
 
 include <leg_v6_common.scad>
+include <toe_profile.scad>
 
 TIBIA_LEN   = 129.0;   // kfe axis -> foot pin axis (MEASURED, B2)
 SLAB_W      = SERVO_W + 2*WALL + 2*CLR_POCKET;   // 31.7
@@ -47,13 +48,10 @@ module tibia_v6() {
                 translate([112, 0, SLAB_Z0])
                     cylinder(r = FOOT_R, h = 13);
             }
-            // toe tab (stock clone): wide at the hole, rounded tip r6
-            // ending 9 past the hole; thickness 20.1 centered on the jog
-            hull() {
-                translate([120, 0, TAB_Z0]) cylinder(r = 14, h = TAB_THK);
-                translate([124, 0, TAB_Z0]) cylinder(r = 14, h = TAB_THK);
-                translate([TIBIA_LEN + 3, 0, TAB_Z0]) cylinder(r = 6, h = TAB_THK);
-            }
+            // toe tab: EXACT stock outline (toe_profile.scad, mesh-extracted)
+            // so the SM3_Foot crescent shoe keys on unmodified
+            translate([0, 0, TAB_Z0])
+                linear_extrude(TAB_THK) polygon(TOE_PROFILE);
             // angled web: blade end -> tab inboard face
             hull() {
                 translate([106, 0, SLAB_Z0]) cylinder(r = FOOT_R, h = 12);
