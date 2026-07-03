@@ -13,6 +13,11 @@ import sys
 import numpy as np
 import trimesh
 
+# servo.stl = STS3215_03a v1 (same snapshot as the canonical
+# "STS3215_03a v1.3mf") INCLUDING the output horn + bottom wheel bodies the
+# 3mf omits. Cross-checked 2026-07-03: the 3mf's bare case matches this
+# mesh's case body feature-for-feature (pins/screw bores/spline boss/cap)
+# within 0.1mm after a +1.0mm z-origin shift.
 SERVO = '/Users/afox/codebases/NOVA/feetech_servo_models/converted_stl/servo.stl'
 
 
