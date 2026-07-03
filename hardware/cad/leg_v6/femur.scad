@@ -73,6 +73,18 @@ module femur_v6() {
 
         // strap pilots (into the raised bosses)
         strap_pilot_neg(31, 14.25, SLAB_Z1 + 3.2);
+
+        // ---- cable management (review 2026-07-03) ----
+        // shallow groove along the underside: tunnel exit -> fork (the
+        // coax-bound run lies in it, zip-tied at the anchors)
+        translate([40, -8, SLAB_Z0 - EPS]) cube([26, 16, 2]);
+        // zip anchors: flank the tunnel exit + mid-run
+        zip_pair_neg(44, 0, SLAB_Z0 - 1, 12);
+        zip_pair_neg(60, 0, SLAB_Z0 - 1, 12);
+        // knee-crossing guide: notch through the fork throat wall close to
+        // the knee axis (bundle hugs the axis -> small service loop)
+        translate([73.5, -8, SLAB_Z0 - 1]) cube([5, 16, 8]);
+        zip_pair_neg(70, 0, SLAB_Z0 - 1, 12);
     }
 }
 

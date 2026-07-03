@@ -70,7 +70,10 @@ module tibia_v6() {
         // strap pilots (into the raised bosses)
         strap_pilot_neg(31, 14.25, SLAB_Z1 + 3.2);
 
-        // zip-tie anchors through the blade
+        // zip anchors: flank the tunnel exit (strain relief before the
+        // plug — cable tension must never reach the servo socket), plus
+        // the original pair along the blade
+        zip_pair_neg(44, 0, SLAB_Z0 - 1, 12);
         for (zx = [62, 84])
             translate([zx, 0, SLAB_Z0 - 1]) cylinder(d = 3.2, h = 40);
 

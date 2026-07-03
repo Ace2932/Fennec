@@ -151,6 +151,14 @@ module wheel_couple_neg() {
     }
 }
 
+// Zip-tie anchor NEGATIVE: Ø3.2 through-hole pair, spacing 10, for
+// strain-relieving the cable bundle (daisy link + VCC spur) at tunnel
+// exits and along runs. Axis along Z at (x0, y0), full depth h from z0.
+module zip_pair_neg(x0, y0 = 0, z0 = -30, h = 60, spacing = 10) {
+    for (s = [-1, 1])
+        translate([x0, y0 + s*spacing/2, z0]) cylinder(d = 3.2, h = h);
+}
+
 // Retention-strap pilots: 2x Ø2.05 self-tap into the side-wall rims (LINK
 // frame; wall_y = wall centerline, rim_z = pocket rim = CASE_TOP).
 module strap_pilot_neg(x0 = 31, wall_y = 14.25, rim_z = CASE_TOP) {
