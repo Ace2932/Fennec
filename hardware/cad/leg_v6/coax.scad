@@ -95,6 +95,10 @@ module coax_v6() {
             wheel_couple_neg();
         }
 
+        // vent window, OUTBOARD (-X) wall only (the inboard wall carries
+        // the femur-yoke arm root)
+        translate([-BLK_X - 1, -8, -30]) cube([4.5, 16, 24]);
+
         // zip anchors flanking the bottom cable-tunnel exit (hip service
         // loop anchors here; the femur's first anchor takes the other end)
         for (sy = [-1, 1])

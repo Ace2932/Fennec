@@ -63,13 +63,26 @@ samples 21k points against the part solid; any point inside = the part cuts
 the servo. Wired into `build_all.sh`. Caught the bay-width error the box
 model missed (real bay = full case width).
 
+## Assembly order (constraint, not preference)
+1. Bolt femur↔coax (hfe horn + wheel) — the horn screws are driven THROUGH
+   the empty haa pocket; 2. plug + drop the haa servo, floor screws + strap;
+   3. tibia↔femur anytime; 4. shoulder last. Servicing hfe = pull haa servo.
+Cable loops: ≥8mm bend radius, zero tension at plugs (anchors take it).
+Keep 2-3 spare horn discs (hard falls can strip a spline).
+
+## Pre-walk firmware gates (from movement review)
+Boot-settle ramp (PR #17) · servo torque limits written (open audit item —
+trip backdrive protection) · stand-up keeps feet under knees (knee ≤80%
+rating with splayed push-up).
+
 ## Verify (first-article print, before batching)
 1. Pocket drop-in fit (CLR_POCKET 0.25/side, PA6-CF) — servo should seat with
    light push, no rock.
 2. Horn seat depth: horn face flush with arm underside ±0.2.
 3. M2.5 countersink flush (heads must NOT proud into the yoke arm plane).
 4. Heat-set bore Ø4.6 — check insert purchase in PA6-CF at 5.7 deep.
-5. Yoke gap: tibia slab + pad slides in with ≤0.6 total play.
+5. Yoke gap: tibia end floats with 0.2-0.6 play. PA6-CF shrinks 0.2-0.8% —
+   if the gap CLAMPS the discs, sand the arm faces or reprint at +0.3% Z.
 
 ## Build
 ```bash

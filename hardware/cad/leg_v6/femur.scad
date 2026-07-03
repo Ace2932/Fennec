@@ -71,6 +71,10 @@ module femur_v6() {
             wheel_couple_neg();    // bottom arm + boss: wheel screws
         }
 
+        // side-wall vent windows (servo heat relief; hips hold ~22%% torque
+        // continuously). Chords keep ~80%% wall stiffness.
+        translate([2, -17, -8]) cube([22, 34, 16]);
+
         // strap pilots (into the raised bosses)
         strap_pilot_neg(31, 14.25, SLAB_Z1 + 3.2);
 
