@@ -26,7 +26,7 @@ class TrotParams:
     step_height: float = 0.03  # swing apex lift (m)
     stand_height: float = 0.18  # nominal hip-to-foot drop (m) — 76% of measured
     # full reach (femur 106.9 + tibia 129.0 = 235.9 mm), knee bent ~81°. OK.
-    stand_y: float = 0.0643  # lateral foot offset = hip_offset (m), MEASURED 2026-07-02
+    stand_y: float = 0.0033  # lateral foot offset = hip_offset (m), v6 inboard jog
     duty: float = 0.5  # fraction of cycle in stance (0.5 = trot)
 
 

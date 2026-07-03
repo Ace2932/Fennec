@@ -38,13 +38,15 @@
   <xacro:property name="body_half_y" value="0.0390"/> <!-- MEASURED half hip-grid width  -->
   <xacro:property name="mount_z"     value="0.0380"/> <!-- hip row above chassis-mesh origin; ⚠ REVIEW-visual (trunk-node bbox polluted by children) -->
   <xacro:property name="hip_to_upper_x" value="0.0"/>
-  <!-- v6 legs (leg_v6/) redistribute the SAME 64.3mm total: femur mid-plane
-       at 33.8 from haa (coax yoke), femur/tibia coplanar (0), foot post 30.5.
-       Stock-part values were 24.6 / 9.2 / 30.5. Total unchanged -> IK d valid. -->
+  <!-- v6 legs (leg_v6/): femur mid-plane 33.8 from haa (coax yoke), femur/
+       tibia coplanar (0), and the toe tab jogs 30.5 INBOARD (v6 rev2 decision
+       2026-07-02 — opposite of stock) so the foot lands 3.3mm from the haa
+       roll axis: near-zero standing roll torque (stock's outboard jog cost
+       ~0.77 N·m/hip holding). Wide stance on demand via hip roll. -->
   <xacro:property name="hip_to_upper_y" value="0.0338"/> <!-- haa axis -> femur mid-plane (v6) -->
   <xacro:property name="hip_to_upper_z" value="-0.0095"/><!-- MEASURED hfe drop below haa -->
   <xacro:property name="upper_to_lower_y" value="0.0"/>  <!-- v6: femur/tibia coplanar -->
-  <xacro:property name="lower_to_foot_y"  value="0.0305"/><!-- foot post offset (v6 = stock jog) -->
+  <xacro:property name="lower_to_foot_y"  value="-0.0305"/><!-- toe tab jog, INBOARD (v6) -->
   <!-- MEASURED 2026-07-01 from original NovaSM3 STLs (leg_v5 keeps stock pivots).
        Femur: hfe horn axis (49.5, z10) -> kfe bore (-56.71, z22.02) in
        SM3_Frame_LeftFemur.stl = 106.9 mm axis-to-axis (the 12 mm in-plane kink
