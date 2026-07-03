@@ -28,7 +28,7 @@ def servo_mesh():
 
 
 def sample_points(m, n_surface=15000, n_volume=6000):
-    surf = m.sample(n_surface)
+    surf, _ = trimesh.sample.sample_surface(m, n_surface, seed=0)
     lo, hi = m.bounds
     vol = np.random.default_rng(0).uniform(lo, hi, (n_volume * 4, 3))
     vol = vol[m.contains(vol)][:n_volume]
@@ -46,17 +46,83 @@ def coax_pose():
     return ry @ rx
 
 
+def mirror_z():
+    m = np.eye(4); m[2, 2] = -1
+    return m
+
+
+def mirror_x():
+    m = np.eye(4); m[0, 0] = -1
+    return m
+
+
 CASES = [
     ('femur_R.stl', rot_z180(), 'HFE servo in femur pocket'),
     ('tibia_R.stl', rot_z180(), 'KFE servo in tibia pocket'),
     ('coax_R.stl',  coax_pose(), 'HAA servo in coax pocket'),
+    # left parts are Z-mirrors (coax: X-mirror) — servo pose mirrors with them
+    ('femur_L.stl', mirror_z() @ rot_z180(), 'HFE servo in femur_L pocket'),
+    ('tibia_L.stl', mirror_z() @ rot_z180(), 'KFE servo in tibia_L pocket'),
+    ('coax_L.stl',  mirror_x() @ coax_pose(), 'HAA servo in coax_L pocket'),
 ]
+
+
+def rot_about(angle_deg, axis, point):
+    return trimesh.transformations.rotation_matrix(
+        np.radians(angle_deg), axis, point)
+
+
+def sweep_checks(servo, pts0):
+    """Pose sweeps: knee fold (tibia+servo vs femur+knee_arm) and hip pitch
+    (femur+arm+servo vs coax). Software limits kfe ±126°, hfe ±86° — any
+    contact INSIDE those = design bug (mech stops computed at ~141/~91)."""
+    bad = False
+    femur = trimesh.load('femur_R.stl')
+    arm = trimesh.load('knee_arm.stl')
+    arm.apply_transform(trimesh.transformations.translation_matrix([59, 0, 17.2]))
+    tibia = trimesh.load('tibia_R.stl')
+    tib_pts = np.vstack([trimesh.sample.sample_surface(tibia, 6000, seed=0)[0],
+                         trimesh.transform_points(pts0, rot_z180())])
+    T_knee = trimesh.transformations.translation_matrix([106.9, 0, 0])
+    print('-- knee fold sweep (tibia+servo vs femur+knee_arm)')
+    print('   (points within r13 of the joint axis excluded: the bolted')
+    print('    disc/boss interfaces overlap BY DESIGN, rotation-symmetric)')
+    for ang in [-109, -90, -60, 60, 90, 109, 118]:  # sw limit 1.9rad=109; 118 = measured mech stop (expect HIT, documents it)
+        T = T_knee @ trimesh.transformations.rotation_matrix(
+            np.radians(ang), [0, 0, 1])
+        p = trimesh.transform_points(tib_pts, T)
+        p = p[np.linalg.norm(p[:, :2] - [106.9, 0], axis=1) > 13]
+        n = int(femur.contains(p).sum()) + int(arm.contains(p).sum())
+        status = 'OK ' if n == 0 else 'HIT'
+        if n and abs(ang) <= 109: bad = True   # hits beyond sw limit are the mech stop
+        print(f'   {status} kfe {ang:+4d}deg: {n} pts')
+    coax = trimesh.load('coax_R.stl')
+    fem_asm = np.vstack([trimesh.sample.sample_surface(femur, 5000, seed=0)[0],
+                         trimesh.sample.sample_surface(arm, 1500, seed=0)[0],
+                         trimesh.transform_points(pts0, rot_z180())])
+    M = (trimesh.transformations.translation_matrix([33.8, 11.6, -9.5])
+         @ rot_z180()
+         @ trimesh.transformations.rotation_matrix(np.pi/2, [0, 1, 0]))
+    print('-- hip pitch sweep (femur assembly vs coax)')
+    for ang in [-86, -60, -30, 30, 60, 86]:
+        S = rot_about(ang, [1, 0, 0], [33.8, 11.6, -9.5])
+        # place femur (M), then rotate about the hfe axis (S)
+        p = trimesh.transform_points(
+            trimesh.transform_points(fem_asm, M), S)
+        # exclude the designed disc/boss interface about the hfe X-axis
+        p = p[np.linalg.norm(p[:, 1:] - [11.6, -9.5], axis=1) > 13]
+        n = int(coax.contains(p).sum())
+        status = 'OK ' if n == 0 else 'HIT'
+        if n: bad = True
+        print(f'   {status} hfe {ang:+4d}deg: {n} pts')
+    return bad
 
 
 def main():
     servo = servo_mesh()
     pts0 = sample_points(servo)
     bad = False
+    do_sweep = '--sweep' in sys.argv
     for part_file, T, label in CASES:
         part = trimesh.load(part_file)
         pts = trimesh.transform_points(pts0, T)
@@ -74,6 +140,8 @@ def main():
         order = np.argsort(-counts)
         for u, c in list(zip(uniq[order], counts[order]))[:8]:
             print(f'        cluster @ ({u[0]:+.0f},{u[1]:+.0f},{u[2]:+.0f})  {c} pts')
+    if do_sweep:
+        bad = sweep_checks(servo, pts0) or bad
     sys.exit(1 if bad else 0)
 
 

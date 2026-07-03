@@ -24,7 +24,7 @@
   <xacro:property name="vel_servo" value="6.0"/>
   <xacro:property name="haa_range" value="0.7"/>   <!-- TODO-CAD mechanical travel -->
   <xacro:property name="hfe_range" value="1.5"/>   <!-- TODO-CAD -->
-  <xacro:property name="kfe_range" value="2.2"/>   <!-- TODO-CAD -->
+  <xacro:property name="kfe_range" value="1.9"/>   <!-- sweep-gate: mech stop ~118 deg (tibia flank vs fork throat); 109 sw = margin. Deep-sit = v7 offset-plane option -->
 
   <!-- ===================== link offsets (m) ===================== -->
   <!-- MEASURED 2026-07-02 from the official Assembly_NOVA_SM3 Fusion share

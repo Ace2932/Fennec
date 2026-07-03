@@ -107,10 +107,18 @@ module sts_pocket_neg(extra_top = 30) {
 // at CASE_BOT so the platform survives; the wheel window re-cuts it).
 module pocket_platform_pos() {
     difference() {
-        translate([BAY_X1, -(CASE_HW + CLR_POCKET), FLOOR_TOP - EPS])
-            cube([CASE_X1 - BAY_X1 + CLR_POCKET + WALL,
-                  2*(CASE_HW + CLR_POCKET),
-                  CASE_BOT - 0.1 - FLOOR_TOP]);
+        intersection() {
+            translate([BAY_X1, -(CASE_HW + CLR_POCKET), FLOOR_TOP - EPS])
+                cube([CASE_X1 - BAY_X1 + CLR_POCKET + WALL,
+                      2*(CASE_HW + CLR_POCKET),
+                      CASE_BOT - 0.1 - FLOOR_TOP]);
+            // corners rounded to r16.1 about the joint axis: the platform
+            // corners at r18.6 grazed the mating part's bridge (sweep-gate
+            // find); the servo case corner itself is r16.05, so nothing is
+            // lost seating-wise
+            translate([0, 0, FLOOR_BOT - 2])
+                cylinder(r = 16.1, h = CASE_BOT - FLOOR_BOT + 4);
+        }
         translate([0, 0, FLOOR_BOT - 1]) cylinder(d = WHEEL_WIN_D, h = 30);
     }
 }

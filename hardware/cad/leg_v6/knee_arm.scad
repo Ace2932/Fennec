@@ -18,9 +18,13 @@ difference() {
         translate([0, -TIP_R, 0]) cube([80 - X0, 2*TIP_R, ARM_THK]);
         translate([KNEE_X, 0, 0]) cylinder(r = TIP_R, h = ARM_THK);
     }
-    // 4x M3 clearance + head counterbores (femur-frame 65/75, ±8)
+    // 4x M3 + head counterbores (femur-frame 65/75, ±8). The DIAGONAL pair
+    // is close-fit Ø3.1 — the screws register the plate (clearance holes
+    // alone let the knee axis wander under cyclic shear).
     for (hx = [65 - X0, 75 - X0], hy = [-8, 8]) {
-        translate([hx, hy, -EPS]) cylinder(d = M3_CLEAR, h = ARM_THK + 2*EPS);
+        dowel = (hx == 65 - X0 && hy == -8) || (hx == 75 - X0 && hy == 8);
+        translate([hx, hy, -EPS])
+            cylinder(d = dowel ? 3.1 : M3_CLEAR, h = ARM_THK + 2*EPS);
         translate([hx, hy, ARM_THK - 1.8]) cylinder(d = 6.4, h = 2);
     }
     // horn coupling at the knee: locating recess on the UNDERSIDE + screws

@@ -33,7 +33,7 @@ class LegParams:
     # joint limits (rad), conservative placeholders (TODO-CAD mechanical travel)
     haa_range: float = 0.7
     hfe_range: float = 1.5
-    kfe_range: float = 2.2
+    kfe_range: float = 1.9  # sweep-gate: mech stop ~118deg; see URDF note
 
 
 class Unreachable(ValueError):

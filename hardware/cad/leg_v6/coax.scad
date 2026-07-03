@@ -34,7 +34,7 @@ ARM_IN_X1  = FEMUR_MID - HORN_Z1;            // 16.6 (contacts femur horn face)
 ARM_OUT_X0 = FEMUR_MID - YOKE_BOT_IN;        // 56.2 (femur floor bottom +0.2)
 ARM_OUT_X1 = ARM_OUT_X0 + ARM_THK;           // 60.2
 ARM_HALF_YZ = 16;
-BRIDGE_Z0  = 6.9;                            // femur disc sweep tops at 6.35
+BRIDGE_Z0  = 7.4;                            // femur disc sweep tops at 6.35; raised 0.5 after a corner graze at the sweep gate
 
 module arm_plate(x0, x1) {
     hull() {
@@ -63,9 +63,11 @@ module coax_v6() {
                 wheel_boss_pos();
             // front strap pads (0.8 proud: the case top cap ridge stands
             // 0.2 proud of the horn-face plane); full wall-width blocks
+            // outboard edge held to x15.6: at 16.6 it grazed the femur rim
+            // plane at full hip swing (sweep-gate find)
             for (sx = [-1, 1])
-                translate([min(sx*12.6, sx*16.6), BLK_Y0 - 0.8, -36])
-                    cube([4, 0.8 + EPS, 10]);
+                translate([min(sx*12.6, sx*15.6), BLK_Y0 - 0.8, -36])
+                    cube([3, 0.8 + EPS, 10]);
         }
 
         // ---- HAA pocket: spline = Y axis, horn -Y, bulk down ----
