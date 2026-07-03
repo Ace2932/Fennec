@@ -35,18 +35,26 @@ femur/tibia coplanar **0** · foot post **30.5**. Stock split was 24.6/9.2/30.5.
 Full-leg fit view: `preview_leg_assembly.scad` (coax + femur + tibia + ghost servos).
 `./build_all.sh` renders all 6 STLs (R+L).
 
-## Servo retention (per pocket)
-- 4× **countersunk** M2.5×8 through the floor into the case bottom threads —
-  countersink cones modeled, heads flush (proud heads would foul the yoke arm)
-- 1× **retention strap** (`strap.scad`, print 4+) screwed over the servo tail
-  with 2× M2.5 self-tappers into Ø2.05 rim pilots — positive lock against
-  lift-out; the mating yoke arm covers the horn end. Strap position (x=31 /
-  coax front z=−33) verified clear of the mating part's full swing (arm sweep
-  r≤16 vs strap at r≥25).
+## rev 2 — pocket + joints rebuilt against the full servo model
+The original "case bottom thread square" was a misread (those holes belong to
+the horn/wheel discs). rev 2, from `feetech_servo_models/converted_stl/servo.stl`:
+- **Mounting:** the servo's own 4 case-screw columns — replace the stock
+  self-tappers with **longer M2 screws through the pocket floor** (countersunk;
+  measure stock length at first article, spec ≈ stock + 3mm). SO-ARM style.
+- **Joints bolted BOTH sides:** yoke top arm on the Ø20 horn (4× M2.5 BCD14 +
+  M3 center); yoke bottom arm's **Ø19 boss reaches through the Ø21.5 floor
+  window and bolts the Ø20 BOTTOM WHEEL** (standard-fitted; 4× M2.5 + M2.5
+  center, head counterbores modeled). No heat-set/idler-boss hack.
+- **Cables:** the case's rear-bottom connector bay (3.9 deep) is seated by the
+  floor; sockets face rearward mid-body — **plug before drop-in**, wires lie in
+  the bay and exit the end-wall tunnel (femur/tibia: toward the joint below;
+  coax: out the bottom).
+- **Strap:** retention strap over the servo tail on raised rim bosses (the
+  case's rear top cap ridge stands 2.7 proud of the rim plane).
 
 ## Hardware per joint
-4× M2.5×8 countersunk (floor) · 4× M2.5×8 (horn) · 1× M3×8 shoulder/cap (idler)
-· 1× M3 × D4.6 × L5.7 heat-set · 2× M2.5 self-tap + 1 printed strap (retention).
+4× M2 ≈stock+3mm (case columns, countersunk) · 4+1× M2.5×6 (horn + M3 center)
+· 4+1× M2.5×8 (wheel, through boss, counterbored) · 2× M2.5 self-tap + strap.
 
 ## Verify (first-article print, before batching)
 1. Pocket drop-in fit (CLR_POCKET 0.25/side, PA6-CF) — servo should seat with
