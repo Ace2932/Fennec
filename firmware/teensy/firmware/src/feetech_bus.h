@@ -183,6 +183,15 @@ class Bus {
     return err ? ERR_SERVO : OK;
   }
 
+  // Feetech one-key MID CALIBRATION: writing 128 to REG_TORQUE_ENABLE sets
+  // the CURRENT position as 2048 (mid). Do at assembly with the joint held
+  // at its nominal pose, torque off — guarantees the mechanical ROM
+  // (max +/-126 deg = +/-1434 counts) never crosses the 4095<->0 encoder
+  // wrap, which otherwise makes present-position jump mid-motion.
+  Result calibrate_mid(uint8_t id, uint32_t timeout_us = 1500) {
+    return write_byte(id, REG_TORQUE_ENABLE, 128, timeout_us);
+  }
+
   // Goal acceleration (RAM 0x29, 1 byte, units of 100 steps/s^2; 0 = max).
   // Non-zero softens torque-on snap and gait accelerations.
   Result set_goal_acc(uint8_t id, uint8_t acc, uint32_t timeout_us = 1500) {

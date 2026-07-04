@@ -81,6 +81,10 @@ module femur_v6() {
         // continuously). Chords keep ~80%% wall stiffness.
         translate([2, -17, -8]) cube([22, 34, 16]);
 
+        // side marker: 1 dot = RIGHT (the L mirror wrapper adds a 2nd —
+        // mirrored parts are otherwise near-identical at assembly)
+        translate([22, 10, SLAB_Z1 - 0.8]) cylinder(d = 3, h = 1);
+
         // strap pilots (into the raised bosses)
         strap_pilot_neg(31, 14.25, SLAB_Z1 + 3.2);
 

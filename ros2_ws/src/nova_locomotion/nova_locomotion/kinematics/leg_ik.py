@@ -12,8 +12,8 @@ FK is the unambiguous reference; IK is the closed-form inverse and is validated
 by FK(IK(p)) == p round-trips in test_leg_kinematics.py — so a sign error in IK
 fails the tests rather than silently shipping bad kinematics.
 
-NOTE: a1/a2/d default to the nova_description placeholder lengths (TODO-CAD).
-The MATH is correct; the NUMBERS need CAD measurement before real gait use.
+All targets are in the CANONICAL (left-leg) hip frame; use solve_side()
+to get physical joint angles — it owns the left/right mirror (haa sign).
 """
 
 from __future__ import annotations
@@ -92,6 +92,27 @@ def inverse_kinematics(foot, p: LegParams, knee_forward: bool = True):
     t2 = phi - beta
     t2 = math.atan2(math.sin(t2), math.cos(t2))
     return (t1, t2, t3)
+
+
+def solve_side(side: str, foot, p: LegParams, knee_forward: bool = True):
+    """IK for a physical leg. `side` = 'left' | 'right'.
+
+    THE ONE MIRRORING BOUNDARY. foot_target() and inverse_kinematics()
+    both work in the CANONICAL (left-leg) hip frame — +y is outboard for
+    every leg. Right legs are physical mirrors: same canonical target,
+    haa sign flipped on the way out. Do NOT mirror anywhere else
+    (researched failure: SpotMicro-class builds crash hips on silent
+    left/right reversals).
+    """
+    t1, t2, t3 = inverse_kinematics(foot, p, knee_forward)
+    if side == 'right':
+        return (-t1, t2, t3)
+    if side != 'left':
+        raise ValueError(f"side must be 'left'|'right', got {side!r}")
+    return (t1, t2, t3)
+
+
+LEG_SIDE = {"FL": "left", "FR": "right", "RL": "left", "RR": "right"}
 
 
 def within_limits(theta, p: LegParams) -> bool:

@@ -74,3 +74,22 @@ def test_workspace_reach_matches_links():
     foot = forward_kinematics((0.0, 0.0, 0.0), P)
     reach = math.hypot(foot[0], foot[2])  # sagittal distance from hip in x-z
     assert abs(reach - (P.femur + P.tibia)) < 1e-9
+
+
+def test_solve_side_mirrors_haa_only():
+    from nova_locomotion.kinematics.leg_ik import (
+        LegParams, solve_side, forward_kinematics)
+    p = LegParams()
+    foot = (0.03, p.hip_offset + 0.01, -0.17)
+    l = solve_side('left', foot, p)
+    r = solve_side('right', foot, p)
+    assert r[0] == -l[0] and r[1] == l[1] and r[2] == l[2]
+    # canonical FK of the left solution reproduces the target
+    assert forward_kinematics(l, p) == __import__('pytest').approx(foot)
+
+
+def test_solve_side_rejects_unknown():
+    import pytest
+    from nova_locomotion.kinematics.leg_ik import LegParams, solve_side
+    with pytest.raises(ValueError):
+        solve_side('starboard', (0, 0.07, -0.17), LegParams())

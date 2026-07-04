@@ -97,6 +97,9 @@ module coax_v6() {
             wheel_couple_neg();
         }
 
+        // side marker: 1 dot = RIGHT (L wrapper adds a 2nd)
+        translate([6, BLK_Y0 - EPS, 8]) rotate([-90, 0, 0]) cylinder(d = 3, h = 1);
+
         // vent window, OUTBOARD (-X) wall only (the inboard wall carries
         // the femur-yoke arm root)
         translate([-BLK_X - 1, -8, -30]) cube([4.5, 16, 24]);
