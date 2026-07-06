@@ -274,7 +274,7 @@ def main():
     print('   chassis-safe: hfe -86..+50 sw AND inboard haa <= 15 sw')
     worst = 0
     for hfe in (-86, -45, 0, 45, 50, 55, 70, 86):
-        for kfe in (-109, 0, 109):
+        for kfe in (-109, -55, 0, 55, 109):
             cloud = leg_cloud(hfe, kfe)
             for haa in (-40, -25, -15, 0, 15, 25, 40):
                 for label, base in coax_to_trunk_bases():

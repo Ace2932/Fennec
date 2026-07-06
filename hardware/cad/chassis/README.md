@@ -162,7 +162,30 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 8. **Caliper list (one session, before the next prints)**: Jetson heatsink
    height · Blue Sea 5191 block · D456 rear pattern + body · L2 pigtail
    RJ45/DC plug heads · HB2-ES544 depth · pack true dims · stack true
-   height incl. Teensy.
+   height incl. Teensy · buck/switch true heights (see 9).
+
+## Thermal + motion review (2026-07-06)
+
+9. **Bucks + switch placement RESOLVED-ON-PAPER**: the outline's "on the
+   floor beside the stack" predates the plate — no floor space exists.
+   Disposition: power board on ~16 mm standoffs, bucks (13-15 tall) +
+   de-cased switch UNDERNEATH on the plate; recomputed stack ≈ 57 ≤ 58
+   budget. Constraints: keep bucks off the pack shadow (y ±23 — LiPo
+   below the floor) where possible; floor plate gets a mounting rev with
+   the boards in hand. The riser now carries a LOW vent row (z 33..45)
+   because the buck pocket (z 6..22, ~6-10 W) had zero airflow.
+10. **L2 rear-down blindness (quantified, v1-accepted)**: the hood (~z 107)
+   will block the rear sector below ~−19° elevation (cone edge −45°) →
+   rear ground inside ~0.4 m is invisible to the L2 and NOTHING else looks
+   rearward (D456 faces front). Affects reverse maneuvers.
+11. **Build order (hard constraint)**: floor plate + battery tray bolt
+   BEFORE the mezzanine — all six battery screws sit under the stack.
+12. **Leg-vs-leg crossing is in-ROM** (front hfe +50 extended + rear −50
+   extended overlap in the same y-plane, x ∓40). Not a chassis-parts
+   issue; the URDF/sim lane must enable self-collision checking + the
+   gait planner must respect it.
+13. Sweep grid densified: kfe now {−109, −55, 0, 55, 109}; link flex
+   (~1-2 mm at the foot) is well inside the 4-9 mm contact margins.
 
 ## Service (unchanged from the outline table)
 

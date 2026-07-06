@@ -92,12 +92,18 @@ PAD_Z0 = 64.4; PAD_Z1 = 70.4;
 D456_Y = [-21, -7, 7, 21];                           // head-shell bore row
 D456_Z = 67.4;                                       // (shell also bears on the
                                                      //  wall face — screws clamp)
-USB_GROMMET = [0, 61.5];   // 10 x 6 slot, front wall — the D456 USB-C
+USB_GROMMET = [14, 61.5];  // 10 x 6 slot, front wall — the D456 USB-C
                            // plug (overmold ~10.5 x 6) pre-feeds from the
-                           // trunk side; sits under the bore row (67.4)
-                           // and above the flange notch edge (57.55)
+                           // trunk side; sits under the bore row (67.4),
+                           // above the flange notch edge (57.55), and at
+                           // y 14 to line up with the head-bracket stem
+                           // CHANNEL (a y-0 grommet was unreachable — the
+                           // stem blocked the cable path; review catch)
 HOOD_X = [-50, 35]; HOOD_Z = 67;                     // side-wall hood pads
-VENT_X0 = -28; VENT_N = 6; VENT_PITCH = 8;           // z 52..66, 3 wide
+VENT_X0 = -28; VENT_N = 6; VENT_PITCH = 8;           // 3 wide; TWO rows:
+VENT_Z = [[52, 14], [33, 12]];  // [z0, height] — upper row at logic level,
+                                // LOW row at the under-board buck pocket
+                                // (z 6..22 had no airflow; thermal review)
 
 // underslung heat-set bosses: 2.6 tall — bottoms at z 65.3, which caps the
 // mezzanine at 63.9 (58 stack + 2.0 floor-boss budget, margin 1.4). Insert
@@ -190,11 +196,11 @@ module riser_bay() {
             translate([hx, sy * (OUT_Y + EPS), HOOD_Z])
                 rotate([sy * 90, 0, 0])
                     cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
-        // vent slots (both side skirts)
-        for (sy = [-1, 1], i = [0 : VENT_N - 1])
+        // vent slots (both side skirts, two rows)
+        for (sy = [-1, 1], i = [0 : VENT_N - 1], v = VENT_Z)
             translate([VENT_X0 + i * VENT_PITCH - 1.5,
-                       sy * (OUT_Y - WALL / 2) - (WALL / 2 + EPS), 52])
-                cube([3, WALL + 2 * EPS, 14]);
+                       sy * (OUT_Y - WALL / 2) - (WALL / 2 + EPS), v[0]])
+                cube([3, WALL + 2 * EPS, v[1]]);
         // end-plane guard: nothing may protrude past x +/-63.35 — the
         // Ø9 mast bosses at (60, +/-14) poked 1.15 through the flange
         // notch into the D456 periscope stem (gate catch 2026-07-06)

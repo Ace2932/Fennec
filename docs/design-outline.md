@@ -31,10 +31,13 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
   splay direction fully clean; chassis gate).
 - **Trunk**: stock bottom shell KEPT (leg/shoulder interfaces intact); lid
   replaced by the riser bay (stack is 58 tall vs 40 interior).
-- **Electronics**: mezzanine power+logic stack inside; Teensy USB + JP1 face
-  up; 4 off-board bucks + switch on the floor; wiring drops through 4
-  leg-corner grommets to the coax bays (front bays face the trunk; rear
-  bays face rearward — all-forward horn config).
+- **Electronics**: mezzanine power+logic stack inside on the part-5 floor
+  plate (stack ctr x −3.5); Teensy USB + JP1 face up; **4 off-board bucks +
+  de-cased switch UNDER the power board** (~16mm standoffs — the "beside
+  the stack" floor space never existed, 2026-07-06 thermal review; riser
+  low-vent row cools the pocket); leg wiring exits through the shoulder
+  flange grommets (front bays face the trunk; rear bays face rearward —
+  all-forward horn config).
 - **Power**: belly battery (lowest CoM, swap without tools) → MRBF-30 at the
   pack → SW1 → boards. Dual-voltage servo harness per
   `hardware/wiring/README.md` (VCC-pulled daisy links + local XT30 spurs).

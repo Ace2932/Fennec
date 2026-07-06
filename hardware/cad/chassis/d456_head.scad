@@ -23,9 +23,10 @@
 // shoulder-flange center notch against the riser front wall; cross-plate
 // (x 65.5..69.5, y +/-58, z 80..101) carries the camera on its front
 // face. Plate top 101 clears the mast flare (x < 63.8 below z 101).
-// Cable: RIGHT-ANGLE USB-C (BOM) through the plate window (y +/-13,
-// z 86..99), drops in front of the stem, into the riser wall's 10x6
-// grommet slot at (0, 61.5).
+// Cable: RIGHT-ANGLE USB-C (BOM) through the plate window (y 2..19,
+// z 86..99), down the STEM CHANNEL (y 11..17.5 — the solid stem blocked
+// a center path entirely; review catch), into the riser wall's 10x6
+// grommet slot at (14, 61.5). Channel clears both row bores by 1.8.
 // Mount: 4x M3x10 into the riser row (y -21/-7/+7/+21, z 67.4) — heads
 // proud on the stem face, driver passes UNDER the camera (bottom 80.5).
 // Camera bolts to the bracket ON THE BENCH first (rear screws are
@@ -63,9 +64,12 @@ module d456_head() {
         for (sy = [-1, 1], row = SLOT_ROWS) hull() for (rz = row)
             translate([PLT_X0 - EPS, sy * SLOT_Y, rz]) rotate([0, 90, 0])
                 cylinder(d = M3_CLEAR, h = PLT_X1 - PLT_X0 + 2 * EPS);
-        // cable window
-        translate([PLT_X0 - EPS, -13, 86])
-            cube([PLT_X1 - PLT_X0 + 2 * EPS, 26, 13]);
+        // cable window (aligned over the stem channel)
+        translate([PLT_X0 - EPS, 2, 86])
+            cube([PLT_X1 - PLT_X0 + 2 * EPS, 17, 13]);
+        // stem cable channel down to the riser grommet at (14, 61.5)
+        translate([STEM_X0 - EPS, 11, 58 - EPS])
+            cube([STEM_X1 - STEM_X0 + 2 * EPS, 6.5, 80 - 58 + 2 * EPS]);
     }
 }
 
