@@ -118,6 +118,53 @@ def sweep_checks(servo, pts0):
     return bad
 
 
+def shoulder_checks(servo, pts0):
+    """Shoulder vs the swinging leg about the haa axis (Y-line at x=39.05,
+    z=0). Right hip; the left is the mirror. Leg assembly = coax (+its
+    servo) + femur + tibia + knee_arm, mounted horn-forward (mirror-Y of
+    the coax frame — see the chirality note in the design memory)."""
+    bad = False
+    sh = trimesh.load('shoulder.stl')
+    pl = trimesh.load('shoulder_plate.stl')
+    coax = trimesh.load('coax_R.stl')
+    femur = trimesh.load('femur_R.stl')
+    tibia = trimesh.load('tibia_R.stl')
+    arm = trimesh.load('knee_arm.stl')
+    arm.apply_transform(trimesh.transformations.translation_matrix([59, 0, 17.2]))
+    # leg points in COAX frame (coax + haa servo + femur/tibia/arm assembly)
+    M_f = (trimesh.transformations.translation_matrix([33.8, 11.6, -9.5])
+           @ rot_z180()
+           @ trimesh.transformations.rotation_matrix(np.pi/2, [0, 1, 0]))
+    T_t = trimesh.transformations.translation_matrix([106.9, 0, 0])
+    leg = np.vstack([
+        trimesh.sample.sample_surface(coax, 6000, seed=0)[0],
+        trimesh.transform_points(pts0, coax_pose()),                # haa servo
+        trimesh.transform_points(
+            trimesh.sample.sample_surface(femur, 4000, seed=0)[0], M_f),
+        trimesh.transform_points(
+            trimesh.sample.sample_surface(arm, 1000, seed=0)[0], M_f),
+        trimesh.transform_points(
+            trimesh.sample.sample_surface(tibia, 3000, seed=0)[0], M_f @ T_t),
+    ])
+    # coax frame -> shoulder frame: mirror Y (horn -Yc -> +Ys, yoke +X kept),
+    # then translate the spline point to the right hip station
+    MIR = np.eye(4); MIR[1, 1] = -1
+    HIP = trimesh.transformations.translation_matrix([39.05, 0, 0])
+    base = HIP @ MIR
+    print('-- haa roll sweep (leg assembly vs shoulder + plate)')
+    for ang in [-45, -40, -25, 0, 25, 40, 45]:
+        S = rot_about(ang, [0, 1, 0], [39.05, 0, 0])
+        p = trimesh.transform_points(trimesh.transform_points(leg, base), S)
+        # exclude the designed disc/boss interface about the haa Y-axis
+        keep = np.sqrt((p[:, 0] - 39.05)**2 + p[:, 2]**2) > 13
+        p = p[keep]
+        n = int(sh.contains(p).sum()) + int(pl.contains(p).sum())
+        status = 'OK ' if n == 0 else 'HIT'
+        if n and abs(ang) <= 40: bad = True   # beyond 40 = documenting stops
+        print(f'   {status} haa {ang:+4d}deg: {n} pts')
+    return bad
+
+
 def main():
     servo = servo_mesh()
     pts0 = sample_points(servo)
@@ -142,6 +189,8 @@ def main():
             print(f'        cluster @ ({u[0]:+.0f},{u[1]:+.0f},{u[2]:+.0f})  {c} pts')
     if do_sweep:
         bad = sweep_checks(servo, pts0) or bad
+    if '--shoulder' in sys.argv or do_sweep:
+        bad = shoulder_checks(servo, pts0) or bad
     sys.exit(1 if bad else 0)
 
 

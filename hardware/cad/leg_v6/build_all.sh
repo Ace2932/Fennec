@@ -4,6 +4,9 @@ set -e
 cd "$(dirname "$0")"
 OS=/opt/homebrew/bin/openscad
 $OS -o knee_arm.stl knee_arm.scad
+$OS -o shoulder.stl shoulder.scad
+$OS -o shoulder_plate.stl shoulder_plate.scad
+$OS -o shoulder_plate_L.stl shoulder_plate_L.scad
 for p in femur tibia coax; do
   $OS -o ${p}_R.stl ${p}.scad
   $OS -o ${p}_L.stl ${p}_L.scad
