@@ -68,24 +68,32 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
 | Gait | pure-math trot + IK green | gait node (`foot_target` → `solve_side` → `/joint_commands`) |
 
 ## Interface chain (leg → shoulder → body) + fastener map
-**Leg ↔ shoulder (haa joint).** Horns face OUTWARD (front legs forward, rear
-legs backward — symmetric, so front/rear shoulders are THE SAME PART).
-The coax's floor window + connector bay face the trunk (cable plugs at the
-chassis ✓). Shoulder = crossmember per trunk end carrying, per side:
-- INNER arm (trunk side): Ø19 boss through the coax floor window, bolts the
-  haa WHEEL (4× M2.5 + ctr, counterbored) — assembled once.
-- OUTER arm = **BOLT-ON PLATE** (knee_arm pattern: prints seat-face-down,
+**Leg ↔ shoulder (haa joint).** Horns ALL face FORWARD (the stock
+configuration, VERIFIED in the A360 assembly: front horn planes ≈171mm
+fwd of grid center, rear ≈111 — translation symmetry). This matches the
+URDF (four identical translated legs) and `solve_side` (L/R mirror only),
+keeps one coax chirality per SIDE at all corners, and all knees bend the
+same way. (An "outward" variant was rejected 2026-07-06: it silently
+chirality-swaps the rear legs vs the URDF/IK.) Trunk-end→hip-station is
+77.7mm at BOTH ends → front/rear shoulders are THE SAME PART, translated.
+Per side the shoulder carries:
+- REARWARD arm: Ø19 boss through the coax floor window, bolts the haa
+  WHEEL (4× M2.5 + ctr, counterbored) — assembled once.
+- FORWARD arm = **BOLT-ON PLATE** (knee_arm pattern: prints seat-face-down,
   4× M3 into crossmember heat-sets, diagonal pair close-fit): bolts the haa
-  HORN. **A whole leg detaches in 4 M3 + one cable unplug** — the horn stays
-  on its plate, the wheel stays bolted; no joint re-calibration on refit.
+  HORN. **A whole leg detaches in 4 M3 + one cable unplug** — horn stays on
+  its plate, wheel stays bolted; no re-calibration on refit. (Front plates
+  sit outboard of the trunk; rear plates sit in the 78mm trunk-to-hip gap —
+  driver access verified by the gap size.)
+- Cables: FRONT coax bays face the trunk; REAR bays face rearward — both
+  reachable; rear leg bundles enter through rear-shoulder grommets.
 **Shoulder ↔ trunk.** Shoulder foot-plate bolts to the STOCK bottom shell's
 end wall + a 20mm under-floor lip (4-6× M3 into shoulder-side heat-sets,
 screws through the shell — measure the stock end-face hole pattern from the
 ChassisTrunk mesh at design time). Legs load the bottom shell ONLY — the
 riser is never structural, so it lifts off with the robot standing.
 **Body stack (bottom-up).** belly battery pocket (bolts under the shell) →
-STOCK bottom shell (kept: all leg/stock geometry preserved) → shoulders ×2
-(same part) → riser bay (6× M3 down into shell bosses) → Jetson tray hood +
+STOCK bottom shell (kept; reprint in PA6-CF later if the stock print proves soft) → shoulders ×2 (same part) → riser bay (6× M3 down into shell bosses) → Jetson tray hood +
 L2 mast + D456 head shell (each 2-4× M3 onto the riser/head boss).
 
 ## P1S print plan (bed 256×256×256 — everything fits flat)
@@ -106,7 +114,7 @@ PA6-CF dried + annealed, 0.2mm, ≥4 walls, ≥40% infill (doctrine).
 | Jetson | tray hood on the riser top | 2-4 |
 | L2 | mast base | 4 |
 | One whole leg | shoulder outer plate + unplug at coax bay | 4 |
-| One servo | its leg off → that joint's yoke discs → strap/columns | ~14 |
+| One servo | its leg off → that joint's yoke discs → strap/columns | ~15-20 |
 | Shoulder | its 2 legs off → trunk screws | 4-6 |
 | D456 | head shell | 2 |
 
