@@ -115,21 +115,56 @@ def leg_cloud(hfe, kfe):
 
 
 def load_leg_parts():
+    """Leg point cloud INCLUDING assembly aids — straps and cable-loop
+    proxies. The 2026-07-05 leg_v6 lesson (femur strap was never swept and
+    died) repeated here on the first chassis review: the original cloud was
+    bare parts, so the ROM caps carried no allowance for the ~5mm-proud
+    coax strap or the ~O16-18 service loops. Proxies are conservative
+    spheres/boxes at the documented anchor/exit zones."""
     T = trimesh.transformations.translation_matrix
     servo = trimesh.load(SERVO)
     servo.apply_translation([-12.5, 0, 0])
     arm = trimesh.load(f'{LEG}/knee_arm.stl')
     arm.apply_transform(T([59, 0, 17.2]))
     tib = trimesh.load(f'{LEG}/tibia_R.stl')
-    tib_pts = trimesh.sample.sample_surface(tib, 4000, seed=0)[0]
+    coax_mesh = trimesh.load(f'{LEG}/coax_R.stl')
+    cb = coax_mesh.bounds
+    rng = np.random.default_rng(1)
+
+    def sphere_pts(c, r, n=120):
+        v = rng.normal(size=(n, 3))
+        v /= np.linalg.norm(v, axis=1)[:, None]
+        return np.asarray(c) + r * v
+
+    def box_pts(x0, x1, y0, y1, z0, z1, n=150):
+        return rng.uniform([x0, y0, z0], [x1, y1, z1], (n, 3))
+
+    coax_extra = np.vstack([
+        # front strap + screw heads (~5 proud of the coax front face)
+        box_pts(-18, 18, cb[0][1] - 5, cb[0][1] + 0.1, -38, -24),
+        # bottom cable-tunnel exit loop
+        sphere_pts([(cb[0][0] + cb[1][0]) / 2,
+                    (cb[0][1] + cb[1][1]) / 2, cb[0][2] - 9], 9),
+        # hfe service loop (bay-side bulge + sag; exits ~25 off-axis)
+        sphere_pts([33.8, 36.6, -9.5], 9),
+        sphere_pts([33.8, 24, -30], 9),
+    ])
+    femur_extra = np.vstack(
+        [sphere_pts([x, 0, -28], 8) for x in (15, 45, 75)]     # underside run
+        + [sphere_pts([84, 0, -30], 9), sphere_pts([96, 0, -26], 9)])  # knee loop
+    tibia_extra = np.vstack([
+        box_pts(26, 36, -18, 18, 14.5, 22.5),   # tibia strap + heads
+        sphere_pts([44, 0, -28], 9),            # tibia tunnel loop
+    ])
     return dict(
-        coax=trimesh.sample.sample_surface(
-            trimesh.load(f'{LEG}/coax_R.stl'), 5000, seed=0)[0],
+        coax=np.vstack([trimesh.sample.sample_surface(coax_mesh, 5000, seed=0)[0],
+                        coax_extra]),
         servo=trimesh.sample.sample_surface(servo, 5000, seed=0)[0],
-        femur=trimesh.sample.sample_surface(
-            trimesh.load(f'{LEG}/femur_R.stl'), 4000, seed=0)[0],
+        femur=np.vstack([trimesh.sample.sample_surface(
+            trimesh.load(f'{LEG}/femur_R.stl'), 4000, seed=0)[0], femur_extra]),
         arm=trimesh.sample.sample_surface(arm, 1000, seed=0)[0],
-        tibia=tib_pts,
+        tibia=np.vstack([trimesh.sample.sample_surface(tib, 4000, seed=0)[0],
+                         tibia_extra]),
     )
 
 

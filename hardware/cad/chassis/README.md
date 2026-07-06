@@ -44,11 +44,13 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
   (z 29.0) — two full-length rails = primary datum. End walls (x ±60.15..63.35)
   stop 0.1 above the wedge plateaus. Lateral register: 4 tabs inside the wall
   inner faces at x ±40 (0.45 clearance, drop-in doctrine).
-- **Hold-down (NO stock-shell mods)**: 4× M3×10 horizontal through the
+- **Hold-down (NO stock-shell mods)**: 4× **M3×12** horizontal through the
   shoulder flanges into heat-set pads in the riser end walls at (y ±40,
   z 67.4 — the end-wall pad band z 64.4..70.4 sits above the stack envelope
   and fuses into the deck; a z-65-centered pad protruded into the stack
-  corners, gate catch).
+  corners, gate catch). Inserts press from the pad's INNER face (from
+  below, pre-mount) so screw tension seats them deeper — outer-face press
+  was extraction-loaded (design-review fix).
   Fore-aft location = these screws (±0.15), leg-doctrine style. The riser is
   NEVER structural.
 - **Deck top z 71.9** (= trunk top + 25, outline-locked) and FLAT: every
@@ -56,7 +58,9 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 - **Jetson Orin Nano devkit**: grid 96.5 × 75.4 at bores
   (−58.25/+38.25, −47.4/+28.0); carrier spans x −60..+40, y −49.4..+30,
   **ports face +y**, plugs drop through the deck slot (x −53..−44, y 26..46).
-  Rear fin + mast stay clear of the plug row. Board plane z 78.2 (6.3 spacers).
+  Rear fin + mast stay clear of the plug row. Board plane z 78.2
+  (6.3 spacers, **M3×14** — ×16 grazes the stack envelope, ×12 only bites
+  3.2mm).
 - **L2 mast base**: 4× M3 heat-sets on a 16 × 28 rectangle at (44/60, ±14) —
   riser↔mast interface is OURS (the 22.5 mm square is L2↔mast, in the mast
   part). Ø11 cable drop at (52, 0). Mast unbolts without touching the Jetson.
@@ -82,13 +86,16 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
   bottom −39.2; cavity 156.6 × 47.6 × 35.8 (pack + 0.8/side, **listing dims
   — caliper the real pack at first article**). Pack overhangs the trunk
   ~14.8/end, 0.25 under the shoulder flange bottoms.
-- Rear-loading: pack slides in from −x; velcro strap fences the opening
-  through 16×5 side-wall slots + a 2-deep under-pack groove at x −72.
-  Battery swap = strap only, 0 tools (outline service table).
-- Mount: 6× M3×12 from inside the trunk through the 3.9 floor into rim-boss
-  inserts at (x ±40/0, y ±26.5). Floor has no holes there — **drill Ø3.4 at
-  first assembly; the part-5 plate adopts the same pattern** (screw sandwich:
-  plate + floor + tray). Inserts press from below → tension seats them.
+- Rear-loading: pack slides in from −x; velcro strap wraps the pack's REAR
+  CORNER (slots at x −77..−61 — direct tension against slide-out, not
+  friction; design-review fix; shake-test at first article). Battery swap =
+  strap only, 0 tools.
+- Mount: 6× M3×12 from inside the trunk through the 3.9 floor into
+  full-height boss columns at (x ±40/0, y ±26.5) with side-loaded **M3 nut
+  traps** at z −8.2 (review fix: printable columns + a nut beats an insert
+  at the pocket's highest-load joint). Floor has no holes there — **drill
+  Ø3.4 at first assembly; the part-5 plate adopts the same pattern**
+  (screw sandwich: plate + floor + tray).
 - Leads: exit the pack rear face behind the trunk end, rise at x ~−70,
   enter through the **shoulder flange bottom notch** (y ±10 to z 12) to the
   MRBF-30 / 5191 block inside (block mount = part-5, ⚠ dims unmeasured).
@@ -100,13 +107,21 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
   x 44..63.3 × y ±9 (Jetson edge gap 2.3; deck-extension fin gap 0.2), cable
   bore 13×9 — passes the RJ45 plug head. Plate 38×38, L2 seat z 114.4 →
   optical center ≈ trunk top + 100.
-- **Assembly order (constraint)**: L2 bolts to the plate FIRST (4× M3×8
-  from below at (42.25/64.75, ±11.25) — clear of the shaft), then mast+L2
-  mounts by the 4 flange screws (ball-end key under the L2, 42.5 mm room).
-  L2 service = those 4 screws; Jetson untouched.
+- **Assembly order (design-review fix — the reverse deadlocks)**: BARE
+  mast bolts to the deck first (**M3×10** — longer punctures the stack
+  envelope; Ø7 head wells open to the sky), THEN the L2 bolts on from
+  BELOW the plate (M3×8 at (42.25/64.75, ±11.25), 38.5 mm of driver room).
+  L2 service = those 4 plate screws; mast + Jetson untouched. Cable bore
+  13×11 / deck slot 14×12 — must pass BOTH the RJ45 head and the ~Ø10 DC
+  plug (⚠ caliper the real plugs).
 
 ## Findings the gate must keep honest
 
+0a. **ROM caps re-verified with the ASSEMBLED state swept** (design review
+   2026-07-06): the sweep cloud now carries the coax + tibia straps and
+   cable-loop proxies (the leg_v6 "straps never sampled" lesson had
+   repeated). Result: caps HOLD — hfe clean through +52, inboard haa clean
+   through 15 with contact from ~18. No allowance change needed.
 0b. **Inboard haa capped at +15° sw per leg (battery pocket)**: the pack
    hangs 39 below the shell; an inboard roll sweeps the folded leg under
    it — contact from ~18–20° at any hfe fold ≥ 15–30 (hfe ≤ 0 clean at
@@ -137,6 +152,17 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
    designing the hood; L2 gap currently 7.6 above heatsink+hood.
 5. Front cable lanes: D456 USB3 runs inside the riser ceiling gap
    (stack-top → deck-underside is 6.0 with max bosses) to the deck slot.
+6. **E-stop has no home yet (system gap)**: Ø22 panel + ~50 below-panel
+   body fits nowhere at deck/wall level (the stack owns every column).
+   Only viable volume = a pod ABOVE the deck rear strip beside the hood —
+   design it with the hood part. ⚠ caliper the real HB2-ES544 depth.
+7. **CoM sits ~+8 mm forward** of the hip-grid center (L2 + camera + mast
+   forward moments vs the centered stack). Cheap trim: shift the mezzanine
+   −8 fore-aft when placing the part-5 floor-plate bosses.
+8. **Caliper list (one session, before the next prints)**: Jetson heatsink
+   height · Blue Sea 5191 block · D456 rear pattern + body · L2 pigtail
+   RJ45/DC plug heads · HB2-ES544 depth · pack true dims · stack true
+   height incl. Teensy.
 
 ## Service (unchanged from the outline table)
 

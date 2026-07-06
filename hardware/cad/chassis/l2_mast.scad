@@ -5,19 +5,23 @@
 // 230g, bottom mount 4x M3 on 22.5 square, thread depth 6 (dimensions.md).
 //
 // Stack: base flange on the riser deck (bolts the underslung deck inserts
-// at (44/60, +/-14), M3x16 from ABOVE, counterbored) -> hollow shaft ->
-// 38 x 38 top plate at z 110.4..114.4. L2 bottom seats at 114.4 -> optical
-// center ~146.9 = trunk top + 100 (sees over the Jetson hood).
+// at (44/60, +/-14), **M3x10** from ABOVE, counterbored — LONGER SCREWS
+// PUNCTURE THE STACK ENVELOPE: an M3x16 tip lands at z 59.9, 4mm into the
+// mezzanine's headroom; M3x10 tip = 65.9 with 5.1 of insert engagement)
+// -> hollow shaft -> top plate at z 110.4..114.4. L2 bottom seats at
+// 114.4 -> optical center ~146.9 = trunk top + 100.
 //
 // Cable: the L2 pigtail (RJ45 + power barrel) feeds DOWN through the plate
-// slot (15 x 11) -> shaft bore (13 x 9 — passes the 11.7 x 8 RJ45 plug
-// head) -> the riser deck's 14 x 10 slot at (53.5, 0) -> trunk interior.
+// slot (15 x 12) -> shaft bore (13 x 11 — passes the 11.7 x 8 RJ45 plug
+// head flat AND the ~O10 DC barrel plug; ⚠ caliper the real plugs) ->
+// the riser deck's 14 x 12 slot at (53.5, 0) -> trunk interior.
 //
-// Assembly ORDER (constraint): bolt L2 to the top plate FIRST (4x M3x8 from
-// below — the plate holes at (42.25/64.75, +/-11.25) clear the shaft
-// walls), THEN drop the mast+L2 onto the deck and drive the 4 flange
-// screws with a ball-end/stubby L-key under the L2 body (42.5mm of room).
-// L2 off = those same 4 screws — Jetson stays untouched.
+// Assembly ORDER (design-review fix — the reverse order deadlocks): bolt
+// the BARE MAST to the deck first (the O7 head wells are open to the sky),
+// THEN bolt the L2 on from BELOW the plate: its holes at (42.25/64.75,
+// +/-11.25) clear the shaft, with 38.5mm of under-plate driver room
+// (ball-end L-key, M3x8 up into the L2 base threads). L2 off = those same
+// 4 plate screws — mast and Jetson stay untouched.
 //
 // Clearances (gate-enforced): shaft front wall x 44 vs Jetson carrier edge
 // x 41.7 (2.3); flange rear edge x 63.3 vs the shoulder deck-extension fin
@@ -35,7 +39,8 @@ FLG_Z0 = 71.9; FLG_T = 4;          // flange on the deck
 FLG = [38, 63.3, -20, 20];         // x0 x1 y0 y1
 MAST_BX = [44, 60]; MAST_BY = 14;  // riser deck insert positions
 SHAFT = [44, 63.3, -9, 9];         // outer x0 x1 y0 y1
-BORE  = [13, 9];                   // cable bore (RJ45 plug head 11.7 x 8)
+BORE  = [13, 11];                  // cable bore: RJ45 head 11.7x8 flat +
+                                   // ~O10 DC plug (review fix; ⚠ caliper)
 PLATE_Z0 = 110.4; PLATE_T = 4;     // L2 seat plane = 114.4
 PLATE_HALF = 19;
 PLATE_X1 = 69.1;   // rear edge pulled in: the flare's top corner grazed
@@ -80,15 +85,15 @@ module l2_mast() {
         // cable bore, full height (plate slot 15x11 down to the flange)
         translate([CTR - BORE[0] / 2, -BORE[1] / 2, FLG_Z0 - EPS])
             cube([BORE[0], BORE[1], PLATE_Z0 + PLATE_T - FLG_Z0 + 2 * EPS]);
-        translate([CTR - 7.5, -5.5, PLATE_Z0 - 6])
-            cube([15, 11, PLATE_T + 6 + EPS]);
-        // flange screws: M3x16 down into the riser deck inserts, csk-free
-        // counterbores (heads below the flare)
+        translate([CTR - 7.5, -6, PLATE_Z0 - 6])
+            cube([15, 12, PLATE_T + 6 + EPS]);
+        // flange screws: M3x10 down into the riser deck inserts (see
+        // header — longer screws puncture the stack envelope)
         for (bx = MAST_BX, sy = [-1, 1]) {
             translate([bx, sy * MAST_BY, FLG_Z0 - EPS])
                 cylinder(d = M3_CLEAR, h = FLG_T + 12);
             translate([bx, sy * MAST_BY, FLG_Z0 + FLG_T])
-                cylinder(d = 6.2, h = 30);   // head well through the flare
+                cylinder(d = 7, h = 30);     // head well (finger-start room)
         }
         // L2 bolt pattern: 4x M3x8 from BELOW the plate into the L2 base
         for (sx = [-1, 1], sy = [-1, 1])

@@ -54,13 +54,6 @@ module d456_head() {
             // cross-plate (camera rear face seats on x 69.5)
             translate([PLT_X0, -HALF_W, PLT_Z0])
                 cube([PLT_X1 - PLT_X0, 2 * HALF_W, PLT_Z1 - PLT_Z0]);
-            // 45-deg wing gussets under the plate ends (print + stiffness)
-            for (sy = [-1, 1]) hull() {
-                translate([PLT_X0, sy * 25.5 - (sy < 0 ? 0 : 0), PLT_Z0 - EPS])
-                    cube([PLT_X1 - PLT_X0, EPS, EPS]);
-                translate([PLT_X0, min(sy * HALF_W, sy * 25.5), PLT_Z0])
-                    cube([PLT_X1 - PLT_X0, HALF_W - 25.5, EPS]);
-            }
         }
         // riser-row screw channels
         for (ry = ROW_Y)

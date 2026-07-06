@@ -78,8 +78,8 @@ M3_CLEAR   = 3.4;
 // ---- fixture positions ---------------------------------------------------------
 JET_BX = [-58.25, 38.25];  JET_BY = [-47.4, 28.0];   // 96.5 x 75.4 grid
 MAST_BX = [44, 60];        MAST_BY = [-14, 14];      // riser<->mast (our choice)
-L2_DROP = [53.5, 0];   // 14 x 10 slot — the L2 pigtail's RJ45 plug head
-                       // (11.7 x 8) must pass through deck + mast shaft
+L2_DROP = [53.5, 0];   // 14 x 12 slot — the L2 pigtail's RJ45 plug head
+                       // (11.7 x 8) AND ~O10 DC plug pass deck + shaft
 SLOT = [-53, -44, 26, 46];                           // x0 x1 y0 y1
 SMA  = [[-15, 44], [25, 44]];                        // O6.5
 // End-wall pads live in the z 64.4..70.4 band: above the stack envelope
@@ -160,16 +160,23 @@ module riser_bay() {
         for (bx = JET_BX, by = JET_BY) deck_bore(bx, by);
         for (bx = MAST_BX, by = MAST_BY) deck_bore(bx, by);
         rounded_slot(L2_DROP[0] - 7, L2_DROP[0] + 7,
-                     L2_DROP[1] - 5, L2_DROP[1] + 5, 3);
+                     L2_DROP[1] - 6, L2_DROP[1] + 6, 3);
         rounded_slot(SLOT[0], SLOT[1], SLOT[2], SLOT[3], 4);
         for (p = SMA)
             translate([p[0], p[1], DECK_BOT - EPS])
                 cylinder(d = 6.5, h = DECK_T + 2 * EPS);
-        // riser<->flange heat-set bores (axis x, pressed from the outer face)
-        for (sx = [-1, 1], fy = FLG_Y)
+        // riser<->flange heat-set bores (axis x). Pressed from the PAD's
+        // INNER face (reachable from below, pre-mount) so screw tension
+        // seats the insert DEEPER — outer-face press was extraction-loaded
+        // (design-review fix). O3.4 continues to the outer face. M3x12.
+        for (sx = [-1, 1], fy = FLG_Y) {
+            translate([sx * (OUT_X - WALL - 5 - EPS), fy, FLG_Z])
+                rotate([0, sx * 90, 0])
+                    cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
             translate([sx * (OUT_X + EPS), fy, FLG_Z])
                 rotate([0, -sx * 90, 0])
-                    cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
+                    cylinder(d = M3_CLEAR, h = 8.2 + 2 * EPS);
+        }
         // D456 bore row (axis x, from the front face)
         for (dy = D456_Y)
             translate([OUT_X + EPS, dy, D456_Z])

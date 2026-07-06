@@ -1,6 +1,7 @@
 // Jetson standoff spacer — 4 needed + spares (print 8). Sits between the
-// flat riser deck and the Orin Nano carrier at each mount bore; M3x16
-// passes through carrier + spacer + deck into the underslung heat-set.
+// flat riser deck and the Orin Nano carrier at each mount bore; **M3x14**
+// through carrier + spacer + deck into the underslung heat-set (5.2mm
+// engagement; x16 would graze the stack envelope, x12 only bites 3.2).
 // 6.3 tall -> carrier board plane at trunk z 78.2: clears the mast base
 // flange corner under the Jetson edge AND lifts the port row over the
 // deck slot (see riser_bay.scad header).

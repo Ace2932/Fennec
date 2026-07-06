@@ -63,26 +63,34 @@ module battery_pocket() {
             // front wall
             translate([CAV_X, -CAV_Y - WALL, BOT_Z])
                 cube([WALL, 2 * (CAV_Y + WALL), -BOT_Z + RIM_Z]);
-            // rim mount bosses (outboard of the walls, 8 deep)
+            // rim mount bosses: FULL-HEIGHT columns fused to the wall
+            // outer faces (a hanging 8-deep boss overhung its print
+            // orientation — design-review fix; columns print from the bed)
             for (bx = BOSS_X, sy = [-1, 1])
-                translate([bx, sy * BOSS_Y, RIM_Z - 8])
-                    cylinder(d = 8.5, h = 8);
+                translate([bx, sy * BOSS_Y, BOT_Z])
+                    cylinder(d = 8.5, h = -BOT_Z + RIM_Z);
             // rim flange tying bosses to the wall tops
             for (sy = [-1, 1])
                 translate([-45, min(sy * (BOSS_Y + 4.25), sy * CAV_Y), RIM_Z - 4])
                     cube([90, BOSS_Y + 4.25 - CAV_Y, 4]);
         }
-        // boss bores: O3.4 from the top 2 deep, then O4.0 insert bore from
-        // below (insert pressed from BELOW -> tension seats it deeper)
+        // boss fastening: O3.4 down the column into a side-loaded M3 NUT
+        // TRAP at z -8.2 (design-review fix: a full-height column can't
+        // take a heat-set from either end, and a nut beats an insert for
+        // the pocket's highest-load joint anyway). Nut slides in from the
+        // outboard face; M3x12 from inside the trunk engages it fully.
         for (bx = BOSS_X, sy = [-1, 1]) {
-            translate([bx, sy * BOSS_Y, RIM_Z - 2 - EPS])
-                cylinder(d = M3_CLEAR, h = 2 + 2 * EPS);
-            translate([bx, sy * BOSS_Y, RIM_Z - 8 - EPS])
-                cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
+            translate([bx, sy * BOSS_Y, RIM_Z - 8.6])
+                cylinder(d = M3_CLEAR, h = 8.6 + EPS);
+            translate([bx - 2.85, min(sy * (BOSS_Y + 4.3), sy * (BOSS_Y - 2.7)),
+                       RIM_Z - 8.3])
+                cube([5.7, 7, 2.7]);
         }
-        // strap slots near the rear opening (velcro fence), both walls
+        // strap slots AT the rear opening: the strap wraps the pack's REAR
+        // CORNER (direct tension against slide-out — friction-only
+        // retention was a design-review finding; shake-test at FA)
         for (sy = [-1, 1])
-            translate([-72, sy * (CAV_Y + WALL / 2) - (WALL / 2 + EPS),
+            translate([-77, sy * (CAV_Y + WALL / 2) - (WALL / 2 + EPS),
                        BOT_Z + 6])
                 cube([16, WALL + 2 * EPS, 5]);
         // (lead path: the pack's rear face sits at x -78.3, BEHIND the
@@ -91,7 +99,7 @@ module battery_pocket() {
         //  trunk z 12, shoulder.scad rev) to the MRBF block inside.)
         // strap under-pack groove: strap wraps the pack INSIDE the rear
         // opening; groove across the bottom lets it pass under the pack
-        translate([-72, -CAV_Y - WALL - EPS, CAV_Z0 - 2])
+        translate([-77, -CAV_Y - WALL - EPS, CAV_Z0 - 2])
             cube([16, 2 * (CAV_Y + WALL) + 2 * EPS, 2 + EPS]);
     }
 }
