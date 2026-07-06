@@ -1,6 +1,10 @@
 # Leg V5 — Original NovaSM3 Shape + STS3215 Cavity
 
-Built 2026-05-26. **Canonical leg design.** Earlier attempts (V2/V3/V4) are in
+> ⚠️ **SUPERSEDED by [`../leg_v6/`](../leg_v6/README.md) (2026-07-02).** The carved
+> cavities have no insertion path, no retention, and no serviceable joints —
+> kept for the shell-carve technique + stock-STL provenance only.
+
+Built 2026-05-26. Earlier attempts (V2/V3/V4) are in
 `../archive/` — see that folder's README for why V5 won.
 
 Strategy: preserve the original NovaSM3 STL outer shape exactly, carve an

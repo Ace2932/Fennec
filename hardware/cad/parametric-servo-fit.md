@@ -7,6 +7,11 @@
 > but the OnShape `leg-vars` parametric workflow describes the rejected V4 doc.
 > Keep this for the clearance method + tolerance reasoning; ignore the OnShape
 > Variable-Studio mechanics unless building chassis parts in OnShape.
+>
+> **leg_v6 note (2026-07-05):** v6 pockets use `CLR_POCKET = 0.45` **drop-in**
+> (servo located by its case-column screws, walls only guide) — deliberately
+> looser than the 0.30 press calibration here, which applies to v5-style
+> carved press pockets and bearing seats only.
 
 How to design your own brackets in OnShape that **stay fit-correct** when STS3215 dims change (e.g., new servo batch arrives with ±0.1 mm tolerance shift). Built around the existing `leg-vars` Variable Studio in `NovaSM3-Leg-V4` doc.
 

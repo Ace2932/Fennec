@@ -1,5 +1,9 @@
 # Leg V5 — Screw-Lock variant
 
+> ⚠️ **SUPERSEDED by [`../leg_v6/`](../leg_v6/README.md) (2026-07-02)** — the added
+> screws threaded into what turned out to be the horn/wheel disc pattern, not
+> case threads (see leg_v6 rev-2 notes). Historical only.
+
 Copy of `../leg_v5/` (coax, femur, tibia) that adds the **screw features the
 canonical cavity lacks**, so the STS3215 can be bolted in and locked instead of
 relying on the press-fit pocket alone. Originals in `../leg_v5/` are untouched.

@@ -20,23 +20,27 @@ real-world batch variation listed where known.
 ## 1. Actuators
 
 ### Feetech STS3215 servo (12V 30 kg + 7.4V 19 kg share same body)
-**Source:** STEP file at `~/codebases/NOVA/feetech_servo_models/feetech_sts3215-1.snapshot.6/feetech-sts3215/STS3215_03a v1.step`
+**AUTHORITY (2026-07-02 rev 2): the mesh-verified spline-frame table in
+`leg_v6/leg_v6_common.scad`** (from `feetech_servo_models/converted_stl/servo.stl`,
+= `STS3215_03a v1` incl. horn+wheel bodies). Spline-relative, shaft = +Z, case
+extends −X:
 
 | Dim | Value | Status |
 |---|---|---|
-| Body length (long X axis) | 45.40 | ✅ |
-| Body width (Y) | 24.80 | ✅ |
-| Body height (Z, shaft direction, between horn-disc faces) | 34.30 | ✅ (STEP 2026-05-24, top horn Z=+18.7 − bottom horn Z=−15.6 = 34.3) |
-| Total bbox Z (body + both horn discs) | 39.60 | ✅ (STEP 2026-05-24, Z range −19.4 to +20.2) |
-| Spline X offset from body center | **+12.50** | ✅ (CRITICAL — coaxial with bottom shaft) |
-| Spline OD | 6.0 | ✅ |
-| Top horn boss OD × thickness | 8.0 × ~1.0 | ✅ |
-| Top horn disc OD × thickness | 20.0 × 8.8 | ✅ |
-| Bottom horn disc / reaction OD × thickness | 20.0 × 2.1 | ✅ |
-| Bottom reaction shaft OD | 6.0 | ✅ |
-| Horn screw pattern | 4× M2.5 on 13.86 mm BCD, ±45° from cardinal | ✅ (STEP 2026-05-24, holes r=1.25 mm = M2.5 clearance, NOT M3) |
-| Body mount screws | 4× M2.5, **9.9 × 9.9 mm square** centered on spline axis (x=12.5, y=0); holes at (x,y) = {7.55, 17.45}×{±4.95}; present on BOTH shaft-normal faces | ✅ (STEP 2026-06-07, 18× r=1.25 circles extracted; see note 9) |
-| Batch tolerance on body dims | ±0.10 | ✅ (manufacturer spec) |
+| Case box | x −35.2..+10.2 · y ±12.4 · z −15.5..+14.7 | ✅ mesh 2026-07-02 |
+| Rear top cap ridge | to z 17.4 (x −34.8..−28.5, y ±7) | ✅ mesh |
+| Output HORN disc | Ø20 × 2.5, z 14.7..17.2 (+boss to 20.2) | ✅ mesh |
+| Bottom WHEEL disc | Ø20 × 2.1, z −17.7..−15.6 — **standard-fitted** | ✅ mesh |
+| Disc screw pattern (BOTH discs) | 4× M2.5 on Ø14 BCD ±45° + center (horn ctr M3, wheel ctr M2.5) | ✅ mesh |
+| Connector bay | rear-bottom to z −19.4 over x<−5.3, **FULL width ±12.35**; 2× 3-pin sockets mid-body facing rear | ✅ mesh (fit-gate catch) |
+| **REAL case mounting** | the 4 case-screw columns (Ø2 self-tap, heads at the bay): (−8.3, ±10.2) & (−32.8, ±10.25) — use longer M2 through the printed floor | ✅ mesh |
+| Spline offset from body center | +12.50 along the long axis | ✅ |
+| Batch tolerance | ±0.10 | ✅ manufacturer |
+
+> ⚠️ **Corrected 2026-07-02:** the earlier "body mount screws 9.9×9.9 square on
+> both faces" row was a MISREAD of the STEP — those r1.25 circles are the
+> horn/wheel **disc** holes (BCD14 at ±45° ≡ ±4.95 square). Screws driven there
+> thread into nothing. Cost one full pocket redesign; see leg_v6 README rev 2.
 
 ---
 

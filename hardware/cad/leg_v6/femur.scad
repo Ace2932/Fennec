@@ -37,12 +37,11 @@ module femur_v6() {
                 slab(FORK_X0 + SLAB_W, SLAB_W, SLAB_Z1 - SLAB_Z0);
             // pocket front platform (rings the wheel window)
             rotate([0, 0, 180]) pocket_platform_pos();
-            // strap pads: full-width rim blocks (a Ø7 post on a 3.2 wall
-            // overhangs + splits under a self-tapper); raised so the strap
-            // clears the case's rear top cap ridge
-            for (sy = [-1, 1])
-                translate([26, min(sy*12.6, sy*16.6), SLAB_Z1 - EPS])
-                    cube([10, 4, 3.2 + EPS]);
+            // NO strap on the femur (sweep-gate find 2026-07-05): anything
+            // above the rim at x 26..36 sits inside the COAX's swept
+            // envelope (block corners reach r~41 about the hfe axis).
+            // Retention = the 4 case-column screws (the SO-ARM standard);
+            // once the coax yoke bolts the horn+wheel the servo is captive.
             // knee fork block, top = FLAT SHELF at 17.2: the top arm is a
             // separate bolt-on plate (knee_arm.scad) so its horn-seat face
             // prints on the bed (the integral arm printed over supports —
@@ -84,9 +83,6 @@ module femur_v6() {
         // side marker: 1 dot = RIGHT (the L mirror wrapper adds a 2nd —
         // mirrored parts are otherwise near-identical at assembly)
         translate([22, 10, SLAB_Z1 - 0.8]) cylinder(d = 3, h = 1);
-
-        // strap pilots (into the raised bosses)
-        strap_pilot_neg(31, 14.25, SLAB_Z1 + 3.2);
 
         // ---- cable management (review 2026-07-03) ----
         // NOTE: the fork-block hull footprint spans x 56.15..122.75 at full

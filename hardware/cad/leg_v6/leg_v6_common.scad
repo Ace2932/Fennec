@@ -47,7 +47,12 @@ WHEEL_OD  = 20.0;
 COL_PTS   = [[-8.3, 10.2], [-8.3, -10.2], [-32.8, 10.25], [-32.8, -10.25]];
 
 // ---- fits / hardware ---------------------------------------------------------
-CLR_POCKET = 0.25;
+CLR_POCKET = 0.45;   // DROP-IN slip fit. NOT the 0.30 press calibration
+                     // (parametric-servo-fit.md — that's for v5-style
+                     // carved pockets). Location comes from the 4 column
+                     // screws (O2 in O2.3 = +/-0.15), walls only guide;
+                     // 0.25 was tighter than the calibrated press = servo
+                     // would not drop in.
 CLR_HORN   = 0.15;
 M2_CLEAR   = 2.3;    // case-column replacement screws (M2 self-tap)
 M25_CLEAR  = 2.9;    // horn / wheel disc screws

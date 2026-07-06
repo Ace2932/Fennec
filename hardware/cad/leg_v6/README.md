@@ -23,11 +23,17 @@ correct: those were blocks, not leg designs).
 
 | Part | Status | Notes |
 |---|---|---|
-| `leg_v6_common.scad` | ✅ | pocket / horn-couple / idler-boss / yoke modules |
-| `femur.scad` (+`_L`) | ✅ verified | HFE pocket + knee yoke; horn seat @ x=106.9, BCD ±4.95, idler M3 + hip pad w/ heat-set; watertight; prints flat, no pocket supports |
-| `tibia.scad` (+`_L`) | ✅ verified | KFE pocket + straight blade; Ø7 foot post @ x=129.0 exact, post z −21..−40 → center −30.5 = measured jog (stock SM3_Foot rubber slips on); zip anchors |
-| `coax.scad` (+`_L`) | ✅ verified | HAA pocket (horn −Y to shoulder, insert from front, rear countersunk M2.5 + rear pad/heat-set for the shoulder's yoke); femur yoke on X: horn seat (11.6, −9.5) inboard arm, M3 idler outboard, bridge clears full femur-disc sweep; femur mid-plane @ 33.8 |
-| shoulder interface | ⬜ next | stock shoulder frame + BCD14 adapter for STS horn (stock cutout is 25t-hobby sized) + rear idler arm |
+| `leg_v6_common.scad` | ✅ rev 2 | mesh-verified servo frame, pocket/platform/horn-couple/wheel-boss/strap/zip modules; CLR_POCKET 0.45 DROP-IN |
+| `femur.scad` (+`_L`) | ✅ gated | HFE pocket, knee fork w/ FLAT SHELF (top arm is bolt-on), wheel boss, vents, cable groove+anchors, strap pads, side dots; **zero bridging** |
+| `knee_arm.scad` (print 4) | ✅ gated | bolt-on knee top arm — horn-seat face prints ON BED; 4× M3 into shelf heat-sets, diagonal pair Ø3.1 close-fit (registration) |
+| `tibia.scad` (+`_L`) | ✅ gated | KFE pocket + blade + EXACT stock toe outline (`toe_profile.scad`, both shoe-key notches) @129.0, jog −30.5 outboard (stock stance); vents, anchors, dots |
+| `coax.scad` (+`_L`) | ✅ gated | HAA pocket (horn −Y, front insert), femur yoke (horn arm 16.6 / wheel boss →51.5, bridge 7.4), front strap pads, vent, bottom cable tunnel |
+| `strap.scad` (print 4+) | ✅ | servo tail retention, 2× M2.5 self-tap into rim-pad pilots |
+| shoulder | ⬜ NEXT | full v6 redesign (design-outline): crossmember per trunk end, haa yokes at the hip grid, sweeps haa×hfe, keeps coax bay reachable |
+
+**ROM (sweep-gate verified):** kfe ±109° sw / ~118° mech · hfe ±86° sw ·
+haa ±40° = shoulder input. `./build_all.sh` runs the full gate (6 pockets +
+pose sweeps) on every build. Side dots: **1 = RIGHT, 2 = LEFT**.
 
 **v6 lateral chain** (URDF updated, sum still 64.3 = IK d): haa→femur-mid **33.8** ·
 femur/tibia coplanar **0** · foot post **30.5**. Stock split was 24.6/9.2/30.5.
@@ -76,9 +82,11 @@ trip backdrive protection) · stand-up keeps feet under knees (knee ≤80%
 rating with splayed push-up).
 
 ## Verify (first-article print, before batching)
-1. Pocket drop-in fit (CLR_POCKET 0.25/side, PA6-CF) — servo should seat with
-   light push, no rock.
-2. Horn seat depth: horn face flush with arm underside ±0.2.
+1. Pocket DROP-IN fit (CLR_POCKET 0.45/side) — servo drops in under gravity
+   plus a wiggle, no force; location comes from the 4 column screws, not the
+   walls. (0.30/side = the v5 press-fit calibration — do NOT "fix" it back.)
+2. Knee-arm plate: seats flat on the shelf, diagonal Ø3.1 screws register
+   snugly BEFORE the clearance pair; horn face flush under the plate ±0.2.
 3. M2.5 countersink flush (heads must NOT proud into the yoke arm plane).
 4. Heat-set bore Ø4.6 — check insert purchase in PA6-CF at 5.7 deep.
 5. Yoke gap: tibia end floats with 0.2-0.6 play. PA6-CF shrinks 0.2-0.8% —
