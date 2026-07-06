@@ -26,7 +26,9 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
 - **Legs**: `hardware/cad/leg_v6/` — designed, gated, ROM-verified. d=64.3
   stock stance; kfe ±109° sw (118 mech), hfe −86..**+50°** (toward-trunk
   fold capped by the riser skirt — chassis gate 2026-07-06; contact from
-  ~+55 at kfe-folded + haa −40; crouch needs only ~+40).
+  ~+55 at kfe-folded; crouch needs only ~+40), haa **inboard +15° sw** /
+  outboard 40 (belly pack — contact from ~18-20° inboard when folded;
+  splay direction fully clean; chassis gate).
 - **Trunk**: stock bottom shell KEPT (leg/shoulder interfaces intact); lid
   replaced by the riser bay (stack is 58 tall vs 40 interior).
 - **Electronics**: mezzanine power+logic stack inside; Teensy USB + JP1 face
@@ -64,9 +66,9 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
 | PCBs | ✅ fabbed (JLCPCB, arriving) | assembly hand-mods (U8 100nF, INA harness) |
 | Legs (leg_v6) | ✅ designed + gated | **v6 shoulder** (haa yoke ↔ trunk, sweeps haa×hfe, keeps coax bay reachable) |
 | Firmware safety | ✅ torque limits, limp, LVC | boot-settle PR #17 · stand-up choreography |
-| Chassis | ✅ riser bay designed + gated (`hardware/cad/chassis/`) | tray hood + L2 mast + D456 head (interfaces reserved on the riser); hand-trim of 4 trunk slab ends when boards arrive |
-| Chassis | — | belly battery pocket (155×46×35; gate at crouch) |
-| Chassis | — | L2 mast (4×M3 @22.5 sq) + D456 head (pick mount face) |
+| Chassis | ✅ riser bay designed + gated (`hardware/cad/chassis/`) | hand-trim of 4 trunk slab ends when boards arrive |
+| Chassis | ✅ belly battery pocket + L2 mast designed + gated | battery leads route through the shoulder-flange bottom notch; L2 bolts to the mast BEFORE mounting |
+| Chassis | — | tray hood (⚠ caliper Jetson heatsink first) · D456 head (**pick mount face**) · floor boss plate (adopts the battery 6-hole pattern, carries the MRBF block) |
 | Kinematics | ✅ measured (B2) | masses from prints → URDF; joint ranges = sweep gate values |
 | Gait | pure-math trot + IK green | gait node (`foot_target` → `solve_side` → `/joint_commands`) |
 

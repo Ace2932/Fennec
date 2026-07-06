@@ -124,6 +124,12 @@ module shoulder_v6() {
         for (sx = [-1, 1])
             translate([sx*40, FLANGE_Y0 - 1, 29.35]) rotate([-90, 0, 0])
                 cylinder(d = 3.4, h = FLANGE_Y1 - FLANGE_Y0 + 2);
+        // battery-lead notch: flange bottom center, x +/-10 up to z -26
+        // (trunk z 12). The belly pack's leads rise behind the trunk end
+        // and enter here to the MRBF block (battery_pocket.scad). Kept on
+        // both ends — same part.
+        translate([-10, FLANGE_Y0 - 0.1, -38.1])
+            cube([20, FLANGE_Y1 - FLANGE_Y0 + 0.2, 12.1]);
     }
 }
 

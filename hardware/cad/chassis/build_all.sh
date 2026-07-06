@@ -7,8 +7,10 @@ cd "$(dirname "$0")"
 OS=/opt/homebrew/bin/openscad
 $OS -o riser_bay.stl riser_bay.scad
 $OS -o spacer.stl spacer.scad
+$OS -o battery_pocket.stl battery_pocket.scad
+$OS -o l2_mast.stl l2_mast.scad
 $OS -o ../leg_v6/shoulder.stl ../leg_v6/shoulder.scad
-ls -la riser_bay.stl spacer.stl
+ls -la riser_bay.stl spacer.stl battery_pocket.stl l2_mast.stl
 ../../../.venv/bin/python check_fit.py
 echo "chassis gate clean — now re-gate leg_v6 (shoulder rev):"
 (cd ../leg_v6 && ../../../.venv/bin/python check_fit.py --sweep)

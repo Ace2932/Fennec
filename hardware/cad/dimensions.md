@@ -197,6 +197,13 @@ extends −X:
 ### ISDT 608AC LiPo charger
 Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 
+### Blue Sea 5191 MRBF terminal block (battery-lead fuse holder)
+
+| Dim | Value | Status |
+|---|---|---|
+| Body L × W × H | ~51 × 38 × 42 (est.) | ❌ MEASURE — needed for the part-5 floor plate mount |
+| Mount | 2× #10 screws (est.) | ❌ MEASURE |
+
 ### Mxuteuk HB2-ES544 panel-mount E-stop
 **Source:** Mxuteuk product page
 

@@ -78,7 +78,8 @@ M3_CLEAR   = 3.4;
 // ---- fixture positions ---------------------------------------------------------
 JET_BX = [-58.25, 38.25];  JET_BY = [-47.4, 28.0];   // 96.5 x 75.4 grid
 MAST_BX = [44, 60];        MAST_BY = [-14, 14];      // riser<->mast (our choice)
-L2_DROP = [52, 0];                                   // O11
+L2_DROP = [53.5, 0];   // 14 x 10 slot — the L2 pigtail's RJ45 plug head
+                       // (11.7 x 8) must pass through deck + mast shaft
 SLOT = [-53, -44, 26, 46];                           // x0 x1 y0 y1
 SMA  = [[-15, 44], [25, 44]];                        // O6.5
 // End-wall pads live in the z 64.4..70.4 band: above the stack envelope
@@ -155,8 +156,8 @@ module riser_bay() {
         // deck through-features
         for (bx = JET_BX, by = JET_BY) deck_bore(bx, by);
         for (bx = MAST_BX, by = MAST_BY) deck_bore(bx, by);
-        translate([L2_DROP[0], L2_DROP[1], DECK_BOT - EPS])
-            cylinder(d = 11, h = DECK_T + 2 * EPS);
+        rounded_slot(L2_DROP[0] - 7, L2_DROP[0] + 7,
+                     L2_DROP[1] - 5, L2_DROP[1] + 5, 3);
         rounded_slot(SLOT[0], SLOT[1], SLOT[2], SLOT[3], 4);
         for (p = SMA)
             translate([p[0], p[1], DECK_BOT - EPS])

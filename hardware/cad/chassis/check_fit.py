@@ -15,6 +15,9 @@ point inside the designed part = the part cuts its counterpart. Cases:
      (rear end + left side are mirror placements — chirality is irrelevant
      for a swept-envelope check against the y-symmetric riser solid)
   5. static fixture asserts (service access, stack headroom, L2/Jetson gaps)
+  6. belly battery pocket + pack envelope vs trunk / shoulders / crouch legs
+  7. L2 mast vs riser (designed flange seat excluded), Jetson + plug
+     envelopes, the shoulder deck-extension fin, and the seated L2 body
 
 Exit 0 = clean, 1 = interference. Run via build_all.sh after every change.
 """
@@ -148,10 +151,20 @@ def coax_to_trunk_bases():
     return bases
 
 
+def make_box(x0, x1, y0, y1, z0, z1):
+    return trimesh.creation.box(
+        extents=[x1 - x0, y1 - y0, z1 - z0],
+        transform=trimesh.transformations.translation_matrix(
+            [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2]))
+
+
 def main():
     bad = False
     riser = trimesh.load('riser_bay.stl')
     trunk = trimesh.load(TRUNK)
+    pocket = trimesh.load('battery_pocket.stl')
+    mast = trimesh.load('l2_mast.stl')
+    pack = make_box(-77.5, 77.5, -23, 23, -35.9, -0.9)   # 0.1 lift off tray
 
     # ---- 1. riser <-> trunk --------------------------------------------------
     rp = sample(riser)
@@ -196,46 +209,104 @@ def main():
         hits = near[riser.contains(near)] if len(near) else near
         bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs riser', hits)
 
-    # ---- 4. CROUCH-pose leg sweep vs riser --------------------------------------
+    # ---- 4. CROUCH-pose leg sweep vs riser + battery ------------------------------
     # CHASSIS-SAFE ROM (this gate is the authority, like the leg_v6 sweep
-    # limits): hfe toward-trunk fold **+50 sw** — the folded tibia/knee
-    # flank (tibia jogs 30.5 back inboard) starts grazing the riser side
-    # skirt at ~+55 with kfe folded + haa -40. Crouch itself needs only
-    # ~+40 (kfe 109 chord math). Away-trunk -86 stays fully clean. Feeds
-    # the URDF joint ranges + firmware clamps ("joint ranges = sweep gate
-    # values", design-outline). Poses beyond +50 are printed as HIT to
-    # document the stop, and do NOT fail the gate.
+    # limits — feeds URDF joint ranges + firmware clamps):
+    #   * hfe toward-trunk fold **+50 sw** — the folded tibia/knee flank
+    #     (tibia jogs 30.5 back inboard) grazes the riser side skirt from
+    #     ~+55 with kfe folded. Away-trunk -86 fully clean. Crouch needs
+    #     only ~+40 (kfe-109 chord math).
+    #   * **INBOARD haa +15 sw** (per leg; outboard splay keeps the full
+    #     40) — the belly pack hangs 39 below the shell, and an inboard
+    #     roll sweeps the folded leg under it: contact from ~18-20 deg at
+    #     any hfe fold >= 30. Splay/stand-up choreography unaffected
+    #     (outboard direction verified clean to 40). Inboard >15 has no
+    #     use case anyway: the foot crosses the robot centerline.
+    # Poses beyond either cap are printed as HIT (documented stops), and
+    # do NOT fail the gate.
     global LEGPTS
     LEGPTS = load_leg_parts()
-    print('-- crouch sweep (haa x hfe x kfe at all four hips vs riser)')
-    print('   chassis-safe hfe: -86..+50 sw (contact from ~+55: documented)')
+    print('-- crouch sweep (haa x hfe x kfe at all four hips vs riser/battery)')
+    print('   chassis-safe: hfe -86..+50 sw AND inboard haa <= 15 sw')
     worst = 0
     for hfe in (-86, -45, 0, 45, 50, 55, 70, 86):
-        inside_rom = hfe <= 50
         for kfe in (-109, 0, 109):
             cloud = leg_cloud(hfe, kfe)
-            for haa in (-40, -25, 0, 25, 40):
+            for haa in (-40, -25, -15, 0, 15, 25, 40):
                 for label, base in coax_to_trunk_bases():
+                    # inboard = negative haa for right legs, positive for
+                    # left (toe-crossing-centerline direction, verified)
+                    inboard = -haa if label[1] == 'R' else haa
+                    inside_rom = hfe <= 50 and inboard <= 15
                     # haa axis runs fore-aft (trunk x) through the hip
                     Sx = rot(haa, [1, 0, 0],
                              [HIP_FA if label[0] == 'F' else -HIP_FA,
                               HIP_LAT if label[1] == 'R' else -HIP_LAT, HIP_Z])
                     p = tf(tf(cloud, base), Sx)
-                    near = p[(np.abs(p[:, 0]) < 70) & (np.abs(p[:, 1]) < 58)
-                             & (p[:, 2] > 25) & (p[:, 2] < 75)]
-                    if not len(near):
-                        continue
-                    worst = max(worst, len(near))
-                    n = int(riser.contains(near).sum())
-                    if n and inside_rom:
-                        bad = True
-                        print(f'   CUT {label} haa{haa:+d} hfe{hfe:+d} '
-                              f'kfe{kfe:+d}: {n} pts  (INSIDE safe ROM!)')
-                    elif n:
-                        print(f'   HIT {label} haa{haa:+d} hfe{hfe:+d} '
-                              f'kfe{kfe:+d}: {n} pts  (beyond sw limit — '
-                              f'documents the stop)')
+                    for tname, target, near in (
+                        ('riser', riser,
+                         p[(np.abs(p[:, 0]) < 70) & (np.abs(p[:, 1]) < 58)
+                           & (p[:, 2] > 25) & (p[:, 2] < 75)]),
+                        ('pocket', pocket,
+                         p[(np.abs(p[:, 0]) < 95) & (np.abs(p[:, 1]) < 35)
+                           & (p[:, 2] > -45) & (p[:, 2] < 5)]),
+                        ('pack', pack,
+                         p[(np.abs(p[:, 0]) < 90) & (np.abs(p[:, 1]) < 30)
+                           & (p[:, 2] > -40) & (p[:, 2] < 1)]),
+                    ):
+                        if not len(near):
+                            continue
+                        worst = max(worst, len(near))
+                        n = int(target.contains(near).sum())
+                        if n and inside_rom:
+                            bad = True
+                            print(f'   CUT {label} haa{haa:+d} hfe{hfe:+d} '
+                                  f'kfe{kfe:+d} vs {tname}: {n} pts  '
+                                  f'(INSIDE safe ROM!)')
+                        elif n:
+                            print(f'   HIT {label} haa{haa:+d} hfe{hfe:+d} '
+                                  f'kfe{kfe:+d} vs {tname}: {n} pts  '
+                                  f'(beyond sw limit — documents the stop)')
     print(f'   sweep done (max {worst} near-riser pts in any pose)')
+
+    # ---- 6. battery pocket + pack ------------------------------------------------
+    pp = sample(pocket, 8000, 2000)
+    hits = pp[trunk.contains(pp)]
+    bad |= report('battery pocket vs trunk', hits)
+    kp = sample(pack, 6000, 1500)
+    hits = kp[trunk.contains(kp)]
+    bad |= report('battery pack vs trunk', hits)
+    sh_pts = trimesh.sample.sample_surface(
+        trimesh.load(f'{LEG}/shoulder.stl'), 8000, seed=0)[0]
+    for end in (1, -1):
+        S2T = np.array([[0, end, 0, end * HIP_FA],
+                        [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
+        p = tf(sh_pts, S2T)
+        near = p[p[:, 2] < 5]
+        for label, target in (('pocket', pocket), ('pack', pack)):
+            hits = near[target.contains(near)] if len(near) else near
+            bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs '
+                          f'{label}', hits)
+
+    # ---- 7. L2 mast ---------------------------------------------------------------
+    mp = sample(mast, 8000, 2000)
+    seat = (np.abs(mp[:, 2] - DECK_TOP) < 0.35)          # designed flange seat
+    mp_f = mp[~seat]
+    hits = mp_f[riser.contains(mp_f)]
+    bad |= report('mast vs riser (seat excluded)', hits)
+    jet = make_box(-60, 40, -49.4, 30, 78.2, 101.3)
+    plugs = make_box(-55, 35, 30, 48, 78.2, 92)
+    fin_f = make_box(63.5, 109, -59.4, 59.4, 73.05, 79.55)
+    l2 = make_box(53.5 - 37.5, 53.5 + 37.5, -37.5, 37.5, 114.5, 179.4)
+    for label, env in (('Jetson envelope', jet), ('Jetson plug zone', plugs),
+                       ('shoulder deck-extension fin', fin_f)):
+        hits = mp[env.contains(mp)]
+        bad |= report(f'mast vs {label}', hits)
+    lp = sample(l2, 5000, 1000)
+    hits = lp[mast.contains(lp)]
+    bad |= report('seated L2 body vs mast', hits)
+    hits = lp[jet.contains(lp)]
+    bad |= report('seated L2 body vs Jetson envelope', hits)
 
     # ---- 5. static fixture asserts ----------------------------------------------
     jet_top = DECK_TOP + 6.3 + 1.6 + 21.5     # spacer + pcb + heatsink (REVIEW)

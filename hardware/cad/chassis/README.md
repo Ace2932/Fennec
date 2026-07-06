@@ -30,10 +30,12 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 
 | Part | Status | Notes |
 |---|---|---|
-| `riser_bay.scad` | designed, gated | one print, 126.7 × 110 × 42.9 (z 29.0..71.9) |
+| `riser_bay.scad` | designed, gated | one print, 126.7 × 110 × 42.9 (z 29.0..71.9); L2 cable drop = 14×10 slot @ (53.5,0) — passes the RJ45 plug head |
 | `spacer.scad` | designed | Jetson standoff washers Ø8 × 6.3, print 8 |
-| `../leg_v6/shoulder.scad` | **rev'd** | + center notch (x ±26 above z 19.5) + 2× Ø3.4 riser holes (x ±40, z 26.95); leg_v6 gate re-run |
-| tray hood / L2 mast / D456 head shell | next (plate 5) | interfaces reserved below |
+| `battery_pocket.scad` | designed, gated | rear-loading belly tray, 6× M3 sandwich mount through the floor (**part-5 plate must adopt the (±40/0, ±26.5) pattern**; drill the floor at first assembly), velcro fence at the rear opening |
+| `l2_mast.scad` | designed, gated | flange→shaft→plate; **bolt L2 to the plate BEFORE mounting** (plate holes clear the shaft); flange screws driven under the L2 with a ball-end key |
+| `../leg_v6/shoulder.scad` | **rev'd ×2** | + center notch (x ±26 above z 19.5) + 2× Ø3.4 riser holes (x ±40, z 29.35) + **battery-lead bottom notch** (x ±10 to z −26 = trunk z 12); leg_v6 gate re-run |
+| tray hood / D456 head shell / floor boss plate | blocked | hood: ⚠ Jetson heatsink caliper · head: D456 mount-face decision · plate: PCB drill coords + must adopt the battery 6-hole pattern + carry the MRBF 5191 block (⚠ dims unmeasured) |
 
 ## Riser design (all trunk-frame numbers)
 
@@ -69,8 +71,44 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
   (x −50/+35, z 67) — hood straddles the deck, screws from free air.
 - **Vents**: 6× 3 mm slots per side, z 52..66.
 
+## Battery pocket (`battery_pocket.scad`, trunk-frame numbers)
+
+- Open-top tray under the shell (shell floor caps it); rim at z −0.2, tray
+  bottom −39.2; cavity 156.6 × 47.6 × 35.8 (pack + 0.8/side, **listing dims
+  — caliper the real pack at first article**). Pack overhangs the trunk
+  ~14.8/end, 0.25 under the shoulder flange bottoms.
+- Rear-loading: pack slides in from −x; velcro strap fences the opening
+  through 16×5 side-wall slots + a 2-deep under-pack groove at x −72.
+  Battery swap = strap only, 0 tools (outline service table).
+- Mount: 6× M3×12 from inside the trunk through the 3.9 floor into rim-boss
+  inserts at (x ±40/0, y ±26.5). Floor has no holes there — **drill Ø3.4 at
+  first assembly; the part-5 plate adopts the same pattern** (screw sandwich:
+  plate + floor + tray). Inserts press from below → tension seats them.
+- Leads: exit the pack rear face behind the trunk end, rise at x ~−70,
+  enter through the **shoulder flange bottom notch** (y ±10 to z 12) to the
+  MRBF-30 / 5191 block inside (block mount = part-5, ⚠ dims unmeasured).
+
+## L2 mast (`l2_mast.scad`)
+
+- Flange (x 38..63.3, y ±20) on the deck, M3×16 into the riser's underslung
+  inserts at (44/60, ±14), head wells through the flare. Shaft outer
+  x 44..63.3 × y ±9 (Jetson edge gap 2.3; deck-extension fin gap 0.2), cable
+  bore 13×9 — passes the RJ45 plug head. Plate 38×38, L2 seat z 114.4 →
+  optical center ≈ trunk top + 100.
+- **Assembly order (constraint)**: L2 bolts to the plate FIRST (4× M3×8
+  from below at (42.25/64.75, ±11.25) — clear of the shaft), then mast+L2
+  mounts by the 4 flange screws (ball-end key under the L2, 42.5 mm room).
+  L2 service = those 4 screws; Jetson untouched.
+
 ## Findings the gate must keep honest
 
+0b. **Inboard haa capped at +15° sw per leg (battery pocket)**: the pack
+   hangs 39 below the shell; an inboard roll sweeps the folded leg under
+   it — contact from ~18–20° at any hfe fold ≥ 15–30 (hfe ≤ 0 clean at
+   full ±40). Outboard splay keeps the full 40 (verified clean — stand-up
+   choreography unaffected; FR toe at haa −40 crosses the centerline, so
+   >15 inboard had no use case anyway). Gate-derived, feeds URDF/firmware
+   together with 0.
 0. **hfe toward-trunk fold capped at +50° sw (chassis-safe ROM)**: with the
    tibia folded (kfe −109) and haa −40, the tibia/knee flank (tibia jogs
    30.5 back inboard) grazes the riser side skirt from hfe ≈ +55. Clean
