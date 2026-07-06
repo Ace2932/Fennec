@@ -1,5 +1,7 @@
 # CAD
 
+> Top-level design: [`docs/design-outline.md`](../../docs/design-outline.md)
+
 Three tracks, deliberately split. **Full setup guide:** [`docs/cad-tooling.md`](../../docs/cad-tooling.md).
 
 - **OpenSCAD functional legs — `leg_v6/`** — **CANONICAL leg design** (coax, femur + bolt-on knee arm, tibia, straps). Ground-up designed-for-assembly parts around the real STS3215 mesh: drop-in pockets, both-discs-bolted joints, cable management, vents, side dots; every build runs the real-mesh fit gate + pose-sweep collision checks (`leg_v6/check_fit.py`). See [`leg_v6/README.md`](./leg_v6/README.md). `leg_v5/` (shell-carve) + `leg_v5_screwlock/` are SUPERSEDED — kept for the shape-preserving carve technique and the stock-STL provenance; V2-V4 in [`archive/`](./archive/README.md).

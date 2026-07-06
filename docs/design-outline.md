@@ -67,6 +67,56 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
 | Kinematics | ✅ measured (B2) | masses from prints → URDF; joint ranges = sweep gate values |
 | Gait | pure-math trot + IK green | gait node (`foot_target` → `solve_side` → `/joint_commands`) |
 
+## Interface chain (leg → shoulder → body) + fastener map
+**Leg ↔ shoulder (haa joint).** Horns face OUTWARD (front legs forward, rear
+legs backward — symmetric, so front/rear shoulders are THE SAME PART).
+The coax's floor window + connector bay face the trunk (cable plugs at the
+chassis ✓). Shoulder = crossmember per trunk end carrying, per side:
+- INNER arm (trunk side): Ø19 boss through the coax floor window, bolts the
+  haa WHEEL (4× M2.5 + ctr, counterbored) — assembled once.
+- OUTER arm = **BOLT-ON PLATE** (knee_arm pattern: prints seat-face-down,
+  4× M3 into crossmember heat-sets, diagonal pair close-fit): bolts the haa
+  HORN. **A whole leg detaches in 4 M3 + one cable unplug** — the horn stays
+  on its plate, the wheel stays bolted; no joint re-calibration on refit.
+**Shoulder ↔ trunk.** Shoulder foot-plate bolts to the STOCK bottom shell's
+end wall + a 20mm under-floor lip (4-6× M3 into shoulder-side heat-sets,
+screws through the shell — measure the stock end-face hole pattern from the
+ChassisTrunk mesh at design time). Legs load the bottom shell ONLY — the
+riser is never structural, so it lifts off with the robot standing.
+**Body stack (bottom-up).** belly battery pocket (bolts under the shell) →
+STOCK bottom shell (kept: all leg/stock geometry preserved) → shoulders ×2
+(same part) → riser bay (6× M3 down into shell bosses) → Jetson tray hood +
+L2 mast + D456 head shell (each 2-4× M3 onto the riser/head boss).
+
+## P1S print plan (bed 256×256×256 — everything fits flat)
+| Plate | Parts | Note |
+|---|---|---|
+| 1 | coax R+L, femur R+L | flat, zero supports (femur), tree under coax bridge |
+| 2 | tibia R+L, 4× knee_arm, 8× strap | supports under tibia blades |
+| 3 | shoulder ×2 + 4× outer horn plates | plates seat-face-down |
+| 4 | riser bay | largest part 127×110×~30 |
+| 5 | battery pocket, L2 mast, D456 head, tray hood | |
+PA6-CF dried + annealed, 0.2mm, ≥4 walls, ≥40% infill (doctrine).
+
+## Service paths (design requirement: reach anything without teardown)
+| To service | Remove | Screws |
+|---|---|---|
+| Battery swap | strap only | 0 |
+| Teensy USB / JP1 / SD / boards | riser bay lifts off | ~6 |
+| Jetson | tray hood on the riser top | 2-4 |
+| L2 | mast base | 4 |
+| One whole leg | shoulder outer plate + unplug at coax bay | 4 |
+| One servo | its leg off → that joint's yoke discs → strap/columns | ~14 |
+| Shoulder | its 2 legs off → trunk screws | 4-6 |
+| D456 | head shell | 2 |
+
+## Doc graph (start → detail)
+`docs/design-outline.md` (this) → `hardware/cad/leg_v6/README.md` (legs) ·
+`hardware/cad/dimensions.md` (every mating dim) · `hardware/wiring/README.md`
+(harness + dual-voltage) · `docs/pre-power-on-validation.md` (hard gates) ·
+`hardware/cad/README.md` (CAD tracks) · memories `~/claude-memory/nova-proj/`
+(design reasoning). Each detail doc back-links here.
+
 ## Print + assembly gates
 - PA6-CF dried + annealed, 0.2mm layers, ≥4 walls, ≥40% infill.
 - First-article checklists in `hardware/cad/leg_v6/README.md`.

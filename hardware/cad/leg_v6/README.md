@@ -1,5 +1,7 @@
 # Leg V6 — functional STS3215 leg (designed-for-assembly)
 
+> Top-level design: [`docs/design-outline.md`](../../../docs/design-outline.md)
+
 Started 2026-07-02. Supersedes the leg_v5 carve-a-cavity approach, which had no
 servo insertion path, no retention, and no serviceable joints (user call —
 correct: those were blocks, not leg designs).
