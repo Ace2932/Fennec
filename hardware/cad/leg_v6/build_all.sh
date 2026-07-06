@@ -13,3 +13,4 @@ for p in femur tibia coax; do
 done
 ls -la *_R.stl *_L.stl
 ../../../.venv/bin/python check_fit.py --sweep
+../../../.venv/bin/python check_shoe.py

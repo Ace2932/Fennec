@@ -28,7 +28,7 @@ correct: those were blocks, not leg designs).
 | `leg_v6_common.scad` | ✅ rev 2 | mesh-verified servo frame, pocket/platform/horn-couple/wheel-boss/strap/zip modules; CLR_POCKET 0.45 DROP-IN |
 | `femur.scad` (+`_L`) | ✅ gated | HFE pocket, knee fork w/ FLAT SHELF (top arm is bolt-on), wheel boss, vents, cable groove+anchors, strap pads, side dots; **zero bridging** |
 | `knee_arm.scad` (print 4) | ✅ gated | bolt-on knee top arm — horn-seat face prints ON BED; 4× M3 into shelf heat-sets, diagonal pair Ø3.1 close-fit (registration) |
-| `tibia.scad` (+`_L`) | ✅ gated | KFE pocket + blade + EXACT stock toe outline (`toe_profile.scad`, both shoe-key notches) @129.0, jog −30.5 outboard (stock stance); vents, anchors, dots |
+| `tibia.scad` (+`_L`) | ✅ gated | KFE pocket + blade + **toe_v2 designed seat** (disc/boss/key-pockets, mates the SM3_Foot crescent — `check_shoe.py` gated) @129.0, jog −30.5 outboard (stock stance); vents, anchors, dots |
 | `coax.scad` (+`_L`) | ✅ gated | HAA pocket (horn −Y, front insert), femur yoke (horn arm 16.6 / wheel boss →51.5, bridge 7.4), front strap pads, vent, bottom cable tunnel |
 | `strap.scad` (print 4+) | ✅ | servo tail retention, 2× M2.5 self-tap into rim-pad pilots |
 | shoulder | ✅ gated (rev 2026-07-06) | v6 crossmember per trunk end; **riser interface rev**: flange center notch (x ±26 above z 19.5) + 2× Ø3.4 riser hold-down holes (x ±40, z 26.95) — see `../chassis/README.md` |
@@ -88,7 +88,7 @@ Every mate, its fit, and who provides location:
 | 13 | knee arm ↔ shelf | flat + 2× Ø3.1 dowel-fit M3 (0.12) + 2× Ø3.4 | dowel screws |
 | 14 | M3 heat-sets | **bore Ø4.0** (insert OD 4.6 — a 4.6 bore drops through; audit catch). ⚠ 2026-07-06: `HEATSET_D/L` were referenced but NEVER DEFINED — OpenSCAD silently dropped every insert bore from femur + shoulder STLs; now defined in `leg_v6_common.scad`, STLs rebuilt. If a printed femur/shoulder predates this, its shelf/deck has NO bores — reprint | — |
 | 15 | strap ↔ pads | Ø2.05 pilots, M2.5 self-tap; pad top 17.6+, cap gap ≥0.2 | — |
-| 16 | toe tab ↔ SM3_Foot | EXACT stock outline + Ø7 hole, ±0 by construction. The shoe = a **tread crescent about the POST** (the IK foot point): contact stays plumb under the post across the whole stance/stride lean range by construction (dimensions.md SM3_Foot v2, 2026-07-06 — an earlier "pad setback" reading was wrong, retracted). Keep the exact crescent + notches when reprinting in TPU | shoe notches |
+| 16 | toe_v2 seat ↔ SM3_Foot | **designed seat** (2026-07-06, replaces the stock outline — it never mated the crescent, sloppy ring): core disc r12.35×14.2 on the shoe's inner face r12.53 (0.18 clr), boss r10.15 under the edge lips (r10.35), 2 sector key pockets take the mid-band tabs (tips r6.88); θ = 54 exactly, ±~2° slop. Contact plumb under the post by construction (dimensions.md SM3_Foot **v3**). **Gated: `check_shoe.py`** (0 penetration, seat gap median 0.28) | key pockets |
 | 17 | cable plugs ↔ tunnel | 19×5.9 vs 2× 5264 plugs (17×4.5) | — |
 First-article: run an M3 through the Ø3.1 dowel pair (prints ~3.0), M2 through
 columns, insert purchase test at Ø4.0 before committing the knee arms.

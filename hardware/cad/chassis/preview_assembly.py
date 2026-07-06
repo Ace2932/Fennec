@@ -33,13 +33,12 @@ def leg_mesh():
     servo.apply_translation([-12.5, 0, 0])
     arm = trimesh.load(f'{LEG}/knee_arm.stl')
     arm.apply_transform(T([59, 0, 17.2]))
-    # SM3_Foot tread crescent on the tibia toe (corrected 2026-07-06 v2,
-    # user photo): the shoe wraps the toe's round end IN the swing plane,
-    # horns keyed into the outline's two notches; crescent center at
-    # shoe-local (0,7) -> the O7 post. theta 105 +/-10 (keys self-align
-    # on the real print). dimensions.md SM3_Foot section.
+    # SM3_Foot tread crescent on the toe_v2 seat (mesh survey v3): crescent
+    # center shoe-local (0,7) -> the O7 post; theta = 54 EXACTLY (band ctr
+    # 270 + 54 = stance-plumb -36; the toe_v2 key pockets now fix it).
+    # dimensions.md SM3_Foot section; gate: leg_v6/check_shoe.py.
     shoe = trimesh.load(f'{NOVA}/original_body_files/SM3_Foot.stl')
-    M_shoe = (T([129, 0, -30.5]) @ rot(105, [0, 0, 1]) @ T([0, -7.0, 0]))
+    M_shoe = (T([129, 0, -30.5]) @ rot(54, [0, 0, 1]) @ T([0, -7.0, 0]))
     shoe.apply_transform(M_shoe)
     coax_pose = rot(-90, [0, 1, 0]) @ rot(90, [1, 0, 0])
     M_f = T([33.8, 11.6, -9.5]) @ rot(180, [0, 0, 1]) @ rot(90, [0, 1, 0])
@@ -59,7 +58,19 @@ def leg_mesh():
     return trimesh.util.concatenate(out)
 
 
+def foot_preview():
+    """toe_v2 <-> shoe closeup: tibia_R + SM3_Foot in tibia-local frame."""
+    tib = trimesh.load(f'{LEG}/tibia_R.stl')
+    shoe = trimesh.load(f'{NOVA}/original_body_files/SM3_Foot.stl')
+    shoe.apply_transform(
+        T([129, 0, -30.5]) @ rot(54, [0, 0, 1]) @ T([0, -7.0, 0]))
+    asm = trimesh.util.concatenate([tib, shoe])
+    asm.export('foot_assembly_preview.stl')
+    print('foot_assembly_preview.stl', asm.bounds.round(1).tolist())
+
+
 def main():
+    foot_preview()
     parts = [trimesh.load(f'{NOVA}/original_body_files/SM3_Frame_ChassisTrunk.stl'),
              trimesh.load('riser_bay.stl'),
              trimesh.load('battery_pocket.stl'),

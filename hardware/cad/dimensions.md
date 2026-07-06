@@ -268,33 +268,38 @@ slice-circle bore detection (1 mm slice steps, circle fit σ<0.15 mm). Feeds
 | Assembly cross-check of femur length | 105.9 (vs 106.9 bore-metric) | ✅ bbox-center precision ±0.7 — bore metric kept |
 | Joint ranges haa/hfe/kfe | 0.7 / 1.5 / 2.2 rad | ⚠️ REVIEW — conservative placeholders, verify vs collision in sim/first-article |
 
-### SM3_Foot shoe (stock TREAD CRESCENT on the v6 tibia toe)
-**Source:** mesh survey 2026-07-06 v2 (`SM3_Foot.stl`, corrected against
-the novaspotmicro render — an earlier same-day analysis misread a spurious
-Ø7 fit and invented a "pad setback"; RETRACTED, this section supersedes)
+### SM3_Foot shoe (stock TREAD CRESCENT on the toe_v2 seat)
+**Source:** mesh survey 2026-07-06 **v3** (`SM3_Foot.stl`, polar slice
+sweep — scripted, supersedes v2's eyeballed radii; v2's "pad setback"
+story remains RETRACTED). Shoe local frame: crescent center (0, +7),
+band axis = z. Angles below = azimuth about the crescent center.
 
 | Dim | Value | Status |
 |---|---|---|
 | Shoe envelope | 37 × 20 × 20 | ✅ mesh |
-| Form | **tread crescent in the SWING plane**: wraps the toe's round end, horns + 2 key tabs engage the outline's notches; toe post hole stays exposed | ✅ mesh + photo |
-| Crescent center (shoe local x,y) | (0, +7.0) → mounts ON the Ø7 post (129, 0) | ✅ mesh (ring fit) |
-| Inner face radius | ≈ 12.5 (grips the outline's high spots + notches) | ✅ mesh |
+| Form | tread crescent in the SWING plane; THREE mating features: inner face, edge lips, 2 key tabs; post hole stays exposed | ✅ mesh + photo |
+| Crescent center (shoe local x,y) | (0, +7.0) → mounts ON the Ø7 post (129, 0) | ✅ mesh |
+| Inner face (core band) | **r 12.53** (min 12.529, p50 12.60), spans z ±7.3 | ✅ mesh v3 |
+| Retention lips | **r 10.35–10.42**, both band edges (z ±7.3..±10), az 209–330 only (band bottom); snap over the seat-disc faces | ✅ mesh v3 |
+| Key tabs (2, L-hooks) | mid-band only, z ±2.4 (4.8 tall); tips reach **r 6.88**; centers at band-ctr ±80.4° (shoe az 189.4 / 350.2); material spans 34.6° / 31° | ✅ mesh v3 |
 | Tread outer radius | ≈ 16.0–16.8 (ribbed) | ✅ mesh |
-| Band angular span | 208° (opening faces the blade neck) | ✅ mesh |
-| Outline key notches | at 120° & 280° about the post, r ≈ 6.5 (toe_profile.scad) | ✅ |
+| Band angular span | 208° (az 166→14, ctr 270; opening faces the blade neck) | ✅ mesh v3 |
 | Band width | 20 = toe tab thickness 20.1 (flush) | ✅ |
 
-> **Why the contact point is right (the real answer to the stance-lean
-> question): the tread is a ~constant-radius band about the POST — the IK
-> foot point. Contact is plumb under the post for any forward lean up to
-> ~80°+, entire stance/stride range, by construction.** No pad centering
-> exists or is needed; keep the exact stock crescent + notches when
-> reprinting in TPU 95A.
+> **toe_v2 seat (tibia.scad)**: core disc r 12.35 × 14.2 (0.18 / 0.2-side
+> clearance, rim-chamfered 1.0 for snap-over) + full-width boss r 10.15
+> under the lips + two sector key pockets (floor r 6.6, half-angle 19°,
+> 6.0 tall, symmetrized about band center so L-mirror fits the same shoe).
+> **Gate: `leg_v6/check_shoe.py`** (sampled shoe mesh vs tibia solid: zero
+> penetration + seat-gap median < 0.4; in build_all.sh).
 >
-> Mount (v6 tibia local): `T(129, 0, −30.5) · rotZ(θ) · T(0, −7, 0)` with
-> **θ = 105° ± 10** — the mesh fit is θ-insensitive (shoe touches only at
-> keys/high spots) and the physics is too (constant-radius band); the
-> notches self-align the real print. Photograph + pin θ at first article.
+> Contact stays plumb under the post (the IK foot point) for any forward
+> lean to ~80°: the tread is a constant-radius band about the post, by
+> construction. Reprint in TPU 95A keeps the same interface.
+>
+> Mount (v6 tibia local): `T(129, 0, −30.5) · rotZ(54°) · T(0, −7, 0)` —
+> **θ = 54 EXACTLY** now (band ctr 270 + 54 = −36 = stance-plumb; the key
+> pockets fix it; residual rotational slop ±~2°).
 
 ### 688ZZ ball bearing
 **Source:** standard deep-groove ball bearing
