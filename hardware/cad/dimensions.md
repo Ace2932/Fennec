@@ -287,6 +287,14 @@ slice-circle bore detection (1 mm slice steps, circle fit σ<0.15 mm). Feeds
 > stance. v1 plan: reprint the SAME geometry in TPU 95A. IK note: the toe
 > POST is the IK foot point; real contact wanders ≤5 mm through the
 > stride — below gait tolerance.
+>
+> **Mount transform (v6 tibia local, derived 2026-07-06 — EXACT 90°):**
+> `T(129, 0, −30.5) · rotZ(90°) · rotX(−90°) · T(−13.0, 0, −5.93)`
+> (shoe hole axis → the lateral post; the shoe is a C-clip wrapping the
+> toe outline IN-PLANE, tab 20.1 exactly fills the shoe's 20 width; keyed
+> rotation is a designed quarter-turn — the pad-under-post-at-36.2°
+> property falls out exactly). Zero-clearance keyed fit → sampled-surface
+> "contact" in sims is expected; physical check at first article.
 
 ### 688ZZ ball bearing
 **Source:** standard deep-groove ball bearing

@@ -33,17 +33,25 @@ def leg_mesh():
     servo.apply_translation([-12.5, 0, 0])
     arm = trimesh.load(f'{LEG}/knee_arm.stl')
     arm.apply_transform(T([59, 0, 17.2]))
+    # SM3_Foot shoe on the tibia toe: post (129,0,-30.5 jog), keyed at an
+    # EXACT 90 deg (derived 2026-07-06 — pad grounds under the post at the
+    # 36.2 deg stance lean; dimensions.md SM3_Foot section)
+    shoe = trimesh.load(f'{NOVA}/original_body_files/SM3_Foot.stl')
+    M_shoe = (T([129, 0, -30.5]) @ rot(90, [0, 0, 1])
+              @ rot(-90, [1, 0, 0]) @ T([-13.0, 0, -5.93]))
+    shoe.apply_transform(M_shoe)
     coax_pose = rot(-90, [0, 1, 0]) @ rot(90, [1, 0, 0])
     M_f = T([33.8, 11.6, -9.5]) @ rot(180, [0, 0, 1]) @ rot(90, [0, 1, 0])
     S = rot(HFE, [1, 0, 0], [33.8, 11.6, -9.5])
     Tk = T([106.9, 0, 0])
+    M_tib = S @ M_f @ Tk @ rot(KFE, [0, 0, 1])
     out = []
     for m, Tm in [(trimesh.load(f'{LEG}/coax_R.stl'), np.eye(4)),
                   (servo, coax_pose),
                   (trimesh.load(f'{LEG}/femur_R.stl'), S @ M_f),
                   (arm, S @ M_f),
-                  (trimesh.load(f'{LEG}/tibia_R.stl'),
-                   S @ M_f @ Tk @ rot(KFE, [0, 0, 1]))]:
+                  (trimesh.load(f'{LEG}/tibia_R.stl'), M_tib),
+                  (shoe, M_tib)]:
         c = m.copy()
         c.apply_transform(Tm)
         out.append(c)
