@@ -184,8 +184,9 @@ real-world batch variation listed where known.
 
 | Dim | Value | Status |
 |---|---|---|
-| Pack L × W × H | 110.0 × 35.0 × 30.0 (OLD 4000mAh box) | 🔴 RE-MEASURE for 6000mAh pack (physically larger) |
-| Weight | ~410 g (OLD 4000mAh) | 🔴 RE-MEASURE for 6000mAh |
+| Pack L × W × H | 155.0 × 46.0 × 35.0 | ✅ Ovonic 6000mAh listing 2026-07-05 (user-confirmed); caliper-verify at pocket first-article |
+| Weight | 510 g | ✅ listing (1.12 lb) |
+| Balance lead | JST-XHR-5P (4S) | ✅ listing |
 | Power lead | XT60 (Ovonic kit includes XT60 jumper + balance lead) | ✅ |
 | Balance lead | JST-XH 5-pin (4 cells + 1 GND) | ✅ |
 
