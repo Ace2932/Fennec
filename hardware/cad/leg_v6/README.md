@@ -88,7 +88,7 @@ Every mate, its fit, and who provides location:
 | 13 | knee arm ↔ shelf | flat + 2× Ø3.1 dowel-fit M3 (0.12) + 2× Ø3.4 | dowel screws |
 | 14 | M3 heat-sets | **bore Ø4.0** (insert OD 4.6 — a 4.6 bore drops through; audit catch). ⚠ 2026-07-06: `HEATSET_D/L` were referenced but NEVER DEFINED — OpenSCAD silently dropped every insert bore from femur + shoulder STLs; now defined in `leg_v6_common.scad`, STLs rebuilt. If a printed femur/shoulder predates this, its shelf/deck has NO bores — reprint | — |
 | 15 | strap ↔ pads | Ø2.05 pilots, M2.5 self-tap; pad top 17.6+, cap gap ≥0.2 | — |
-| 16 | toe tab ↔ SM3_Foot | EXACT stock outline + Ø7 hole, ±0 by construction. The shoe's pad center sits 11.6 aft / 15.8 below the post = grounds pad-center-under-post at 36° tibia tilt — the stock shoe is PRE-ROTATED for stance lean (verified 2026-07-06, dimensions.md); keep the geometry when reprinting in TPU | shoe notches |
+| 16 | toe tab ↔ SM3_Foot | EXACT stock outline + Ø7 hole, ±0 by construction. The shoe = a **tread crescent about the POST** (the IK foot point): contact stays plumb under the post across the whole stance/stride lean range by construction (dimensions.md SM3_Foot v2, 2026-07-06 — an earlier "pad setback" reading was wrong, retracted). Keep the exact crescent + notches when reprinting in TPU | shoe notches |
 | 17 | cable plugs ↔ tunnel | 19×5.9 vs 2× 5264 plugs (17×4.5) | — |
 First-article: run an M3 through the Ø3.1 dowel pair (prints ~3.0), M2 through
 columns, insert purchase test at Ø4.0 before committing the knee arms.

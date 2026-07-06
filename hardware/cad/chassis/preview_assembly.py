@@ -33,12 +33,13 @@ def leg_mesh():
     servo.apply_translation([-12.5, 0, 0])
     arm = trimesh.load(f'{LEG}/knee_arm.stl')
     arm.apply_transform(T([59, 0, 17.2]))
-    # SM3_Foot shoe on the tibia toe: post (129,0,-30.5 jog), keyed at an
-    # EXACT 90 deg (derived 2026-07-06 — pad grounds under the post at the
-    # 36.2 deg stance lean; dimensions.md SM3_Foot section)
+    # SM3_Foot tread crescent on the tibia toe (corrected 2026-07-06 v2,
+    # user photo): the shoe wraps the toe's round end IN the swing plane,
+    # horns keyed into the outline's two notches; crescent center at
+    # shoe-local (0,7) -> the O7 post. theta 105 +/-10 (keys self-align
+    # on the real print). dimensions.md SM3_Foot section.
     shoe = trimesh.load(f'{NOVA}/original_body_files/SM3_Foot.stl')
-    M_shoe = (T([129, 0, -30.5]) @ rot(90, [0, 0, 1])
-              @ rot(-90, [1, 0, 0]) @ T([-13.0, 0, -5.93]))
+    M_shoe = (T([129, 0, -30.5]) @ rot(105, [0, 0, 1]) @ T([0, -7.0, 0]))
     shoe.apply_transform(M_shoe)
     coax_pose = rot(-90, [0, 1, 0]) @ rot(90, [1, 0, 0])
     M_f = T([33.8, 11.6, -9.5]) @ rot(180, [0, 0, 1]) @ rot(90, [0, 1, 0])
