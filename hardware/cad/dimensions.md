@@ -535,6 +535,37 @@ mounts. Dims kept here only for future re-introduction reference.
 
 ---
 
+## 11. Stock trunk shell — SM3_Frame_ChassisTrunk
+
+**Source:** mesh survey 2026-07-06 (`chassis/measure_trunk.py` on
+`original_body_files/SM3_Frame_ChassisTrunk.stl`). Frame: floor bottom z=0,
++x = FRONT (the printed "F" arrow), y lateral. **The old "~118×100×40
+interior" assumption was WRONG — the trunk is an open frame, not a tub.**
+The ends are open above the floor (closed at assembly by the v6 shoulder
+flanges); nothing exists above z 29.0 except the four corner wedges.
+
+| Dim | Value | Status |
+|---|---|---|
+| Outer envelope | 127.0 × 110.0 × 46.91 | ✅ mesh |
+| Floor slab top | z 3.9 (large rear + corner cutouts below) | ✅ mesh |
+| Side walls | 6.0 thick; inner faces y ±48.93; **top z 29.0** | ✅ mesh |
+| Side-wall notch | x 18.2..31.2 down to z 12.5, BOTH walls | ✅ mesh |
+| Interior clear width | 97.86 (mezzanine 90 fits, 3.9/side) | ✅ mesh |
+| Corner wedges | 4× leaning slabs (~35°, ~5.7 thick), wall top → plateau | ✅ mesh |
+| Wedge plateau tabs | z 46.91, x ±(53.3..63.5), y ±(29.9..36.0) | ✅ mesh |
+| Wedge windows | ~9.4 × 6.4 under each tab @ ctr (y ±34.5, z 43.5) — stock cover hooks, unused | ✅ mesh |
+| Shoulder bolt bores | Ø3.16 along x at (y ±51.75, z 5.0 & 24.0), 6.5 deep, both ends | ✅ mesh (matches shoulder.scad) |
+| Floor holes (stock mounts) | 3× Ø4 @ (−37.9/−32.9/−27.9, +43.8) · 2× Ø4 @ (−9.1, +28/+33) | ✅ mesh |
+
+> ⚠ **Stack-corner conflict:** the 112-long mezzanine's corners intersect the
+> leaning slabs at |x| 53.3..56 over the slabs' FULL height (z 29..46.9).
+> Disposition: hand-trim the four slab inner ends back to |x| ≥ 56.5 when
+> the fabbed boards arrive (slabs only ever supported the stock covers; the
+> riser seats on the wall tops + plateau tabs). `chassis/check_fit.py`
+> enforces the zone.
+
+---
+
 ## CRITICAL CORRECTIONS
 
 These differ from values currently in `patterns.md` or `nova_sm3_patterns.md`:

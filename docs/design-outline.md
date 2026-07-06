@@ -24,7 +24,9 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
 ```
 
 - **Legs**: `hardware/cad/leg_v6/` — designed, gated, ROM-verified. d=64.3
-  stock stance; kfe ±109° sw (118 mech), hfe ±86°.
+  stock stance; kfe ±109° sw (118 mech), hfe −86..**+50°** (toward-trunk
+  fold capped by the riser skirt — chassis gate 2026-07-06; contact from
+  ~+55 at kfe-folded + haa −40; crouch needs only ~+40).
 - **Trunk**: stock bottom shell KEPT (leg/shoulder interfaces intact); lid
   replaced by the riser bay (stack is 58 tall vs 40 interior).
 - **Electronics**: mezzanine power+logic stack inside; Teensy USB + JP1 face
@@ -62,7 +64,7 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
 | PCBs | ✅ fabbed (JLCPCB, arriving) | assembly hand-mods (U8 100nF, INA harness) |
 | Legs (leg_v6) | ✅ designed + gated | **v6 shoulder** (haa yoke ↔ trunk, sweeps haa×hfe, keeps coax bay reachable) |
 | Firmware safety | ✅ torque limits, limp, LVC | boot-settle PR #17 · stand-up choreography |
-| Chassis | outline locked | riser bay + Jetson tray + mast base (fit-gate vs stack, Jetson, CROUCH legs) |
+| Chassis | ✅ riser bay designed + gated (`hardware/cad/chassis/`) | tray hood + L2 mast + D456 head (interfaces reserved on the riser); hand-trim of 4 trunk slab ends when boards arrive |
 | Chassis | — | belly battery pocket (155×46×35; gate at crouch) |
 | Chassis | — | L2 mast (4×M3 @22.5 sq) + D456 head (pick mount face) |
 | Kinematics | ✅ measured (B2) | masses from prints → URDF; joint ranges = sweep gate values |
@@ -94,8 +96,12 @@ screws through the shell — measure the stock end-face hole pattern from the
 ChassisTrunk mesh at design time). Legs load the bottom shell ONLY — the
 riser is never structural, so it lifts off with the robot standing.
 **Body stack (bottom-up).** belly battery pocket (bolts under the shell) →
-STOCK bottom shell (kept; reprint in PA6-CF later if the stock print proves soft) → shoulders ×2 (same part) → riser bay (6× M3 down into shell bosses) → Jetson tray hood +
-L2 mast + D456 head shell (each 2-4× M3 onto the riser/head boss).
+STOCK bottom shell (kept; reprint in PA6-CF later if the stock print proves soft) → shoulders ×2 (same part) → riser bay (seats on the wall-top rails
+z 29 + corner plateau tabs; **4× M3×10 horizontal through the shoulder
+flanges into riser heat-sets** — the imagined "shell bosses" don't exist,
+mesh-measured 2026-07-06, `hardware/cad/chassis/README.md`) → Jetson tray
+hood + L2 mast + D456 head shell (each 2-4× M3 onto reserved riser bosses;
+head shell ceiling trunk z 72.8 — the shoulder deck extension is above).
 
 ## P1S print plan (bed 256×256×256 — everything fits flat)
 | Plate | Parts | Note |
@@ -103,7 +109,7 @@ L2 mast + D456 head shell (each 2-4× M3 onto the riser/head boss).
 | 1 | coax R+L, femur R+L | flat, zero supports (femur), tree under coax bridge |
 | 2 | tibia R+L, 4× knee_arm, 8× strap | supports under tibia blades |
 | 3 | shoulder ×2 + 4× outer horn plates | plates seat-face-down |
-| 4 | riser bay | largest part 127×110×~30 |
+| 4 | riser bay + 8× Jetson spacer | largest part 126.7×110×42.9 |
 | 5 | battery pocket, L2 mast, D456 head, tray hood | |
 PA6-CF dried + annealed, 0.2mm, ≥4 walls, ≥40% infill (doctrine).
 
@@ -111,7 +117,7 @@ PA6-CF dried + annealed, 0.2mm, ≥4 walls, ≥40% infill (doctrine).
 | To service | Remove | Screws |
 |---|---|---|
 | Battery swap | strap only | 0 |
-| Teensy USB / JP1 / SD / boards | riser bay lifts off | ~6 |
+| Teensy USB / JP1 / SD / boards | D456 head off + riser lifts (Jetson/mast/L2 ride along) | 2+4 |
 | Jetson | tray hood on the riser top | 2-4 |
 | L2 | mast base | 4 |
 | One whole leg | shoulder outer plate + unplug at coax bay | 4 |

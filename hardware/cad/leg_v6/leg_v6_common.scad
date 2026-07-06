@@ -57,6 +57,13 @@ CLR_HORN   = 0.15;
 M2_CLEAR   = 2.3;    // case-column replacement screws (M2 self-tap)
 M25_CLEAR  = 2.9;    // horn / wheel disc screws
 M3_CLEAR   = 3.4;    // horn center (fits M3; wheel center is M2.5 -> 2.9)
+HEATSET_D  = 4.0;    // Ruthex M3 insert BORE — insert OD is 4.6, bore must
+                     // be 4.0 (tolerance audit). Referenced by femur +
+                     // shoulder but NEVER DEFINED until 2026-07-06: OpenSCAD
+                     // warned and silently dropped every heat-set bore, so
+                     // femur_?.stl + shoulder.stl on disk had NO insert
+                     // bores (chassis-lane catch; STLs rebuilt).
+HEATSET_L  = 6.2;    // bore depth: 5.7 insert + 0.5 seat
 WALL       = 3.2;
 FLOOR      = 2.5;    // under the bay seat
 FLOOR_TOP  = BAY_BOT - 0.3;              // -19.7 bay seat plane

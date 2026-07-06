@@ -1,0 +1,14 @@
+#!/bin/bash
+# chassis — render the riser bay (+ spacers) and run the full fit gate.
+# shoulder.scad carries the riser interface (notch + hold-down holes), so a
+# shoulder re-render + the leg_v6 gate run here too.
+set -e
+cd "$(dirname "$0")"
+OS=/opt/homebrew/bin/openscad
+$OS -o riser_bay.stl riser_bay.scad
+$OS -o spacer.stl spacer.scad
+$OS -o ../leg_v6/shoulder.stl ../leg_v6/shoulder.scad
+ls -la riser_bay.stl spacer.stl
+../../../.venv/bin/python check_fit.py
+echo "chassis gate clean — now re-gate leg_v6 (shoulder rev):"
+(cd ../leg_v6 && ../../../.venv/bin/python check_fit.py --sweep)

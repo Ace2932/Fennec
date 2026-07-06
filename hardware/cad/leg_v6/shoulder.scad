@@ -111,6 +111,19 @@ module shoulder_v6() {
         // deck lightening/vent window between the hips
         translate([-16, -14, DECK_Z0 - 1])
             cube([32, 26, DECK_Z1 - DECK_Z0 + 2]);
+
+        // ---- riser-bay interface (chassis lane, 2026-07-06) ----
+        // center notch: flange + deck-extension strip x +/-26 above z 19.5
+        // (trunk z 57.55). Front end: the D456 head bosses + USB3 grommet on
+        // the riser front wall reach through here; kept on BOTH ends so the
+        // shoulder stays ONE part. Horn plates start at x 27 — untouched.
+        translate([-26, FLANGE_Y0 - 0.1, 19.5])
+            cube([52, REAR_W0 - FLANGE_Y0 + 0.1 + EPS, DECK_Z1 - 19.5 + 0.1]);
+        // riser hold-down holes: M3x10 from outside into heat-sets in the
+        // riser end walls at (x +/-40, z 29.35) = trunk (y +/-40, z 67.4)
+        for (sx = [-1, 1])
+            translate([sx*40, FLANGE_Y0 - 1, 29.35]) rotate([-90, 0, 0])
+                cylinder(d = 3.4, h = FLANGE_Y1 - FLANGE_Y0 + 2);
     }
 }
 

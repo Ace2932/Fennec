@@ -31,7 +31,7 @@ correct: those were blocks, not leg designs).
 | `tibia.scad` (+`_L`) | ✅ gated | KFE pocket + blade + EXACT stock toe outline (`toe_profile.scad`, both shoe-key notches) @129.0, jog −30.5 outboard (stock stance); vents, anchors, dots |
 | `coax.scad` (+`_L`) | ✅ gated | HAA pocket (horn −Y, front insert), femur yoke (horn arm 16.6 / wheel boss →51.5, bridge 7.4), front strap pads, vent, bottom cable tunnel |
 | `strap.scad` (print 4+) | ✅ | servo tail retention, 2× M2.5 self-tap into rim-pad pilots |
-| shoulder | ⬜ NEXT | full v6 redesign (design-outline): crossmember per trunk end, haa yokes at the hip grid, sweeps haa×hfe, keeps coax bay reachable |
+| shoulder | ✅ gated (rev 2026-07-06) | v6 crossmember per trunk end; **riser interface rev**: flange center notch (x ±26 above z 19.5) + 2× Ø3.4 riser hold-down holes (x ±40, z 26.95) — see `../chassis/README.md` |
 
 **ROM (sweep-gate verified):** kfe ±109° sw / ~118° mech · hfe ±86° sw ·
 haa ±40° = shoulder input. `./build_all.sh` runs the full gate (6 pockets +
@@ -82,7 +82,7 @@ Every mate, its fit, and who provides location:
 | 11 | tibia disc r16.05 ↔ slot | 1.0/side | bolted discs |
 | 12 | femur disc r16.05 ↔ coax void r16.7 | 0.65 radial (was 0.35 — under print tol, widened) | — |
 | 13 | knee arm ↔ shelf | flat + 2× Ø3.1 dowel-fit M3 (0.12) + 2× Ø3.4 | dowel screws |
-| 14 | M3 heat-sets | **bore Ø4.0** (insert OD 4.6 — a 4.6 bore drops through; audit catch) | — |
+| 14 | M3 heat-sets | **bore Ø4.0** (insert OD 4.6 — a 4.6 bore drops through; audit catch). ⚠ 2026-07-06: `HEATSET_D/L` were referenced but NEVER DEFINED — OpenSCAD silently dropped every insert bore from femur + shoulder STLs; now defined in `leg_v6_common.scad`, STLs rebuilt. If a printed femur/shoulder predates this, its shelf/deck has NO bores — reprint | — |
 | 15 | strap ↔ pads | Ø2.05 pilots, M2.5 self-tap; pad top 17.6+, cap gap ≥0.2 | — |
 | 16 | toe tab ↔ SM3_Foot | EXACT stock outline + Ø7 hole, ±0 by construction | shoe notches |
 | 17 | cable plugs ↔ tunnel | 19×5.9 vs 2× 5264 plugs (17×4.5) | — |
