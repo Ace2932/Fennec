@@ -10,6 +10,9 @@
 
 ---
 
+
+> **Design outline:** [`docs/design-outline.md`](./docs/design-outline.md) — the canonical top-level design document (architecture, doctrines, lane status). Start there.
+
 ## Table of Contents
 
 1. [Project Overview](#project-overview)
