@@ -36,7 +36,8 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 | `l2_mast.scad` | designed, gated | flange→shaft→plate; **bolt L2 to the plate BEFORE mounting** (plate holes clear the shaft); flange screws driven under the L2 with a ball-end key |
 | `d456_head.scad` | designed, gated (**v3 periscope**) | screw-in (user call): camera on its REAR 4×M3 corner pattern (⚠ unverified — tall slots at y ±54, CALIPER before printing) at z 80.5..109.5, above the shoulder deck extension, below the L2; **right-angle USB-C required** (BOM). v1 died on the shoulder webs, v2 under-chin died on the folded front femur (bar through the volume from hfe ~+35) |
 | `../leg_v6/shoulder.scad` | **rev'd ×3** | + center notch (x ±26 above z 19.5) + 2× Ø3.4 riser holes (x ±40, z 29.35) + **battery-lead bottom notch** (x ±10 to z −26 = trunk z 12); leg_v6 gate re-run |
-| tray hood / floor boss plate | blocked | hood: ⚠ Jetson heatsink caliper · plate: PCB drill coords + must adopt the battery 6-hole pattern + carry the MRBF 5191 block (⚠ dims unmeasured) |
+| `floor_plate.scad` | designed, gated | 2.0 plate = mezzanine seat (top 5.9) + battery-sandwich csk pattern + **drill template** for all 10 floor holes; stack pilots at (−40.5/+33.5, ±33) from the power_v2 fab file (74×66); **stack ctr x −3.5** (rear edge 0.5 off the trunk corner posts, front corners clear the front slabs by 0.8) → rear-only slab trim + CoM −3.5; corner clips for the post base flare; front edge x 45 clears the raised stock "F"; 5191 slots ⚠ finalize at caliper |
+| tray hood | blocked | ⚠ Jetson heatsink caliper first |
 
 ## Riser design (all trunk-frame numbers)
 
@@ -137,15 +138,14 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
    URDF joint ranges + firmware clamps; the gate prints beyond-limit poses
    as documented HITs. It's an anti-gravity pose (knee lifted over the
    deck), not a collapse direction — software limit is the artifact fix.
-1. **Stack corners vs trunk corner slabs (KNOWN, documented in the gate)**:
-   the 112×90 mezzanine's four corners intersect the leaning slabs at
-   x ±(53.3..56), y ±(42..47), z 29..33. The slabs only ever supported the
-   stock covers (riser seats on wall tops + plateaus instead) → **hand-trim
-   the four slab lower ends below z 34 when the fabbed boards arrive**, or
-   confirm the real logic-board corners are bare and clear. Gate fails on
-   any stack hit OUTSIDE that zone.
-2. **Mezzanine floor-boss budget ≤ 4.0** (stack top 61.9 + boss ≤ deck
-   underside 67.9 − 2.0). Constrains part 5 (floor boss plate).
+1. **REAR stack corners vs trunk slabs (KNOWN, documented in the gate)**:
+   with the stack at ctr x −4 (floor plate), only the two REAR corners
+   intersect the leaning slabs → **hand-trim the two rear slab inner ends
+   to x ≤ −60.5 when the boards arrive**; front slabs stay stock. Gate
+   fails on any hit outside that zone (front hits included). The slabs
+   only ever supported the stock covers.
+2. **Mezzanine seat = the 2.0 floor plate, top z 5.9; stack top 64.0**
+   (deck-boss bottoms 65.3 → 1.3 clear; deck underside 67.9 → 3.9).
 3. Shoulder flanges rise to z 79.55 — 7.65 proud of the deck at both ends
    (they close the end gaps; Jetson x −60.. keeps 5.5 clear of the rear fin).
 4. Jetson heatsink height 21.5 is ⚠ REVIEW in dimensions.md — caliper before

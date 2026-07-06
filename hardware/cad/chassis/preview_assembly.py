@@ -55,7 +55,8 @@ def main():
              trimesh.load('riser_bay.stl'),
              trimesh.load('battery_pocket.stl'),
              trimesh.load('l2_mast.stl'),
-             trimesh.load('d456_head.stl')]
+             trimesh.load('d456_head.stl'),
+             trimesh.load('floor_plate.stl')]
     sh = trimesh.load(f'{LEG}/shoulder.stl')
     for end in (1, -1):
         S2T = np.array([[0, end, 0, end * HIP_FA],
@@ -75,7 +76,7 @@ def main():
     FL = FR.copy(); FL.apply_transform(MY)
     RL = RR.copy(); RL.apply_transform(MY)
     parts += [FR, RR, FL, RL]
-    parts += [box(-56, 56, -45, 45, 5.9, 63.9),        # stack + boss budget
+    parts += [box(-59.5, 52.5, -45, 45, 6.0, 64.0),    # stack on plate, ctr -3.5
               box(-60, 40, -49.4, 30, 78.2, 101.3),    # Jetson + heatsink
               box(16, 91, -37.5, 37.5, 114.4, 179.4),  # L2 body
               box(-77.5, 77.5, -23, 23, -35.9, -0.9),  # pack (inside pocket)

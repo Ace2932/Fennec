@@ -69,7 +69,8 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
 | Chassis | ✅ riser bay designed + gated (`hardware/cad/chassis/`) | hand-trim of 4 trunk slab ends when boards arrive |
 | Chassis | ✅ belly battery pocket + L2 mast designed + gated | battery leads route through the shoulder-flange bottom notch; assembly: BARE mast to deck first (M3×10!), L2 from below second |
 | Chassis | ✅ D456 head designed + gated (**PERISCOPE**, rear-pattern screw-in — user call) | camera z 80.5..109.5 above the shoulder deck extension: the ONLY leg-safe home for the 124-wide body (under-chin dies on the folded front femur; riser-wall dies on the shoulder webs). ⚠ rear 4×M3 pattern unverified — caliper before printing |
-| Chassis | — | tray hood (⚠ caliper Jetson heatsink first) · floor boss plate (adopts the battery 6-hole pattern, carries the MRBF block ❌ unmeasured) |
+| Chassis | ✅ floor plate designed + gated | mezzanine seat + battery sandwich + drill template; stack ctr x −3.5 (power_v2 fab-file holes); rear-only slab trim; 5191 slots ⚠ caliper |
+| Chassis | — | tray hood — the LAST chassis part (⚠ caliper Jetson heatsink first) + E-stop pod decision rides with it |
 | Kinematics | ✅ measured (B2) | masses from prints → URDF; joint ranges = sweep gate values |
 | Gait | pure-math trot + IK green | gait node (`foot_target` → `solve_side` → `/joint_commands`) |
 

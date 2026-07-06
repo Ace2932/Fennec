@@ -37,24 +37,33 @@ LEG = f'{NOVA}/proj/hardware/cad/leg_v6'
 WALL_TOP, PLATEAU_Z = 29.0, 46.91
 DECK_BOT, DECK_TOP = 67.9, 71.9
 FLOOR_TOP = 3.9
-STACK = dict(x=56.0, y=45.0, z0=FLOOR_TOP, z1=FLOOR_TOP + 58.0)  # measured stack
-BOSS_BUDGET = 2.0        # mezzanine floor-boss cap (part 5: countersunk plate)
+PLATE_T = 2.0            # part-5 floor plate: mezzanine seat plane 5.9
+# stack (112 x 90 x 58 measured) CENTERED AT x = -3.5 on the plate: front
+# corners clear the front slabs (0.8), rear board edge 0.5 off the trunk's
+# corner posts, CoM pulls 3.5 rearward. 0.1 seat gap above the plate.
+STACK_BOX = (-59.5, 52.5, -45.0, 45.0, 6.0, 64.0)
 HIP_FA, HIP_LAT, HIP_Z = 141.2, 39.05, 38.05
 
-# stack corners vs the trunk's leaning corner slabs — known + documented.
-# The slabs lean inward with height, so the overlap with the 112-long stack
-# runs their FULL height at |x| 53.3..56. Disposition: trim the four slab
-# inner ends back to |x| >= 56.5 (full height) when the fabbed boards
-# arrive — the slabs only ever supported the stock covers.
-EXPECTED_STACK_ZONE = dict(x=(53.0, 56.6), y=(28.5, 48.5), z=(24.5, 47.2))
+# REAR stack corners vs the trunk's leaning corner slabs — known +
+# documented. Disposition: trim the two REAR slab inner ends back to
+# x <= -60.5 (full height) when the fabbed boards arrive — the slabs only
+# ever supported the stock covers. Front slabs stay untouched; any front
+# hit fails the gate. SIGNED x range.
+EXPECTED_STACK_ZONE = dict(x=(-60.0, -52.9), y=(28.5, 48.5), z=(24.5, 47.2))
 
 
 def sample(m, n_surf=12000, n_vol=4000, seed=0):
     surf, _ = trimesh.sample.sample_surface(m, n_surf, seed=seed)
     lo, hi = m.bounds
-    vol = np.random.default_rng(seed).uniform(lo, hi, (n_vol * 4, 3))
+    rng = np.random.default_rng(seed)
+    vol = rng.uniform(lo, hi, (n_vol * 4, 3))
     vol = vol[m.contains(vol)][:n_vol]
-    return np.vstack([surf, vol])
+    pts = np.vstack([surf, vol])
+    # 0.02 jitter: points sampled exactly ON axis-aligned faces fire
+    # trimesh's fixed-direction containment rays through the (also
+    # axis-aligned) counterpart tangentially -> stable false "inside"
+    # verdicts (floor-plate case, 2026-07-06). Far below any clearance.
+    return pts + rng.uniform(-0.02, 0.02, pts.shape)
 
 
 def report(label, hits, bad=True):
@@ -81,7 +90,7 @@ def seat_mask(p):
 
 
 def in_zone(p, z):
-    return ((np.abs(p[:, 0]) > z['x'][0]) & (np.abs(p[:, 0]) < z['x'][1]) &
+    return ((p[:, 0] > z['x'][0]) & (p[:, 0] < z['x'][1]) &
             (np.abs(p[:, 1]) > z['y'][0]) & (np.abs(p[:, 1]) < z['y'][1]) &
             (p[:, 2] > z['z'][0]) & (p[:, 2] < z['z'][1]))
 
@@ -216,24 +225,19 @@ def main():
     hits = tp[riser.contains(tp)]
     bad |= report('trunk points inside riser', hits)
 
-    # ---- 2. stack envelope (lifted whole by the floor-boss budget) -------------
-    z0 = STACK['z0'] + BOSS_BUDGET
-    z1 = STACK['z1'] + BOSS_BUDGET
-    box = trimesh.creation.box(
-        extents=[2 * STACK['x'], 2 * STACK['y'], z1 - z0],
-        transform=trimesh.transformations.translation_matrix(
-            [0, 0, (z0 + z1) / 2]))
+    # ---- 2. stack envelope (seated on the part-5 plate, ctr x -4) ---------------
+    box = make_box(*STACK_BOX)
     sp = sample(box, 10000, 3000)
     hits = sp[riser.contains(sp)]
     bad |= report('stack envelope vs riser', hits)
     hits = sp[trunk.contains(sp)]
     known = in_zone(hits, EXPECTED_STACK_ZONE) if len(hits) else np.array([], bool)
     if len(hits) and known.all():
-        print(f'HIT   stack vs trunk corner slabs: {len(hits)} pts — KNOWN '
-              f'(trim the 4 slab inner ends to |x| >= 56.5, full height, '
-              f'when the boards arrive)')
+        print(f'HIT   stack vs trunk REAR corner slabs: {len(hits)} pts — '
+              f'KNOWN (trim the two rear slab inner ends to x <= -60.5 when '
+              f'the boards arrive; front slabs stay)')
     else:
-        bad |= report('stack vs trunk OUTSIDE the known slab zone',
+        bad |= report('stack vs trunk OUTSIDE the known rear-slab zone',
                       hits[~known] if len(hits) else hits)
 
     # ---- 3. shoulders vs riser -------------------------------------------------
@@ -389,11 +393,23 @@ def main():
             hits = cp[target.contains(cp)]
         bad |= report(f'camera envelope vs {label}', hits)
 
+    # ---- 9. floor plate ------------------------------------------------------------
+    plate = trimesh.load('floor_plate.stl')
+    fp = sample(plate, 6000, 1500)
+    seatp = np.abs(fp[:, 2] - FLOOR_TOP) < 0.3        # designed floor seat
+    fp_f = fp[~seatp]
+    hits = fp_f[trunk.contains(fp_f)]
+    bad |= report('floor plate vs trunk (seat excluded)', hits)
+    hits = fp[box.contains(fp)]
+    bad |= report('floor plate vs stack envelope', hits)
+    hits = fp[pack.contains(fp)]
+    bad |= report('floor plate vs battery pack', hits)
+
     # ---- 5. static fixture asserts ----------------------------------------------
     jet_top = DECK_TOP + 6.3 + 1.6 + 21.5     # spacer + pcb + heatsink (REVIEW)
     checks = [
-        ('stack + boss headroom vs deck underside',
-         STACK['z1'] + BOSS_BUDGET <= DECK_BOT - 2.0),
+        ('stack + plate headroom vs deck underside',
+         STACK_BOX[5] <= DECK_BOT - 2.0),
         ('mast bores clear of the Jetson footprint (driver access)',
          44 - 40.0 >= 3.0),
         ('L2 body bottom clears Jetson top + hood',
