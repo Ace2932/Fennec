@@ -89,6 +89,12 @@ Every mate, its fit, and who provides location:
 First-article: run an M3 through the Ø3.1 dowel pair (prints ~3.0), M2 through
 columns, insert purchase test at Ø4.0 before committing the knee arms.
 
+**Corner identity:** only TWO leg variants exist (L/R — front and rear are the
+same parts translated). An ASSEMBLED leg becomes corner-specific via its servo
+IDs (FL 1-3 · FR 4-6 · RL 7-9 · RR 10-12): after ID assignment + centering,
+LABEL the coax (tape/marker: corner + IDs). Two assembled left legs are
+physically identical — swapping FL↔RL scrambles the gait with zero visual cue.
+
 ## Fit gate (run after every geometry change)
 `../../../.venv/bin/python check_fit.py` — places the REAL servo mesh
 (`feetech_servo_models/converted_stl/servo.stl`) at each pocket pose and
