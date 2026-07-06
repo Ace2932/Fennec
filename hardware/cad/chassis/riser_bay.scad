@@ -92,7 +92,10 @@ PAD_Z0 = 64.4; PAD_Z1 = 70.4;
 D456_Y = [-21, -7, 7, 21];                           // head-shell bore row
 D456_Z = 67.4;                                       // (shell also bears on the
                                                      //  wall face — screws clamp)
-USB_GROMMET = [0, 65];                               // O9, front wall
+USB_GROMMET = [0, 61.5];   // 10 x 6 slot, front wall — the D456 USB-C
+                           // plug (overmold ~10.5 x 6) pre-feeds from the
+                           // trunk side; sits under the bore row (67.4)
+                           // and above the flange notch edge (57.55)
 HOOD_X = [-50, 35]; HOOD_Z = 67;                     // side-wall hood pads
 VENT_X0 = -28; VENT_N = 6; VENT_PITCH = 8;           // z 52..66, 3 wide
 
@@ -171,9 +174,10 @@ module riser_bay() {
         for (dy = D456_Y)
             translate([OUT_X + EPS, dy, D456_Z])
                 rotate([0, -90, 0]) cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
-        // USB3 grommet (front wall)
-        translate([OUT_X + EPS, USB_GROMMET[0], USB_GROMMET[1]])
-            rotate([0, -90, 0]) cylinder(d = 9, h = WALL + 2 * EPS);
+        // USB3 grommet slot (front wall): 10 x 6 rounded
+        hull() for (dy = [-2, 2])
+            translate([OUT_X + EPS, USB_GROMMET[0] + dy, USB_GROMMET[1]])
+                rotate([0, -90, 0]) cylinder(d = 6, h = WALL + 5 + 2 * EPS);
         // hood heat-set bores (axis y, from the side faces)
         for (sy = [-1, 1], hx = HOOD_X)
             translate([hx, sy * (OUT_Y + EPS), HOOD_Z])
@@ -184,6 +188,12 @@ module riser_bay() {
             translate([VENT_X0 + i * VENT_PITCH - 1.5,
                        sy * (OUT_Y - WALL / 2) - (WALL / 2 + EPS), 52])
                 cube([3, WALL + 2 * EPS, 14]);
+        // end-plane guard: nothing may protrude past x +/-63.35 — the
+        // Ø9 mast bosses at (60, +/-14) poked 1.15 through the flange
+        // notch into the D456 periscope stem (gate catch 2026-07-06)
+        for (sx = [-1, 1])
+            translate([sx > 0 ? OUT_X : -OUT_X - 10, -OUT_Y - 5, 20])
+                cube([10, 2 * (OUT_Y + 5), 60]);
     }
 }
 

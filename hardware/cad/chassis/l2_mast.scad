@@ -38,6 +38,9 @@ SHAFT = [44, 63.3, -9, 9];         // outer x0 x1 y0 y1
 BORE  = [13, 9];                   // cable bore (RJ45 plug head 11.7 x 8)
 PLATE_Z0 = 110.4; PLATE_T = 4;     // L2 seat plane = 114.4
 PLATE_HALF = 19;
+PLATE_X1 = 69.1;   // rear edge pulled in: the flare's top corner grazed
+                   // the periscope camera envelope (rear face 69.7);
+                   // L2 bolt at x 64.75 keeps 4.35 washer room
 L2_BCD = 22.5 / 2;                 // 11.25
 M3_CLEAR = 3.4;
 
@@ -68,11 +71,11 @@ module l2_mast() {
                       PLATE_Z0 - FLG_Z0 + EPS]);
             // shaft -> plate flare
             flare(SHAFT[0], SHAFT[1], SHAFT[2], SHAFT[3],
-                  CTR - PLATE_HALF, CTR + PLATE_HALF, -PLATE_HALF, PLATE_HALF,
+                  CTR - PLATE_HALF, PLATE_X1, -PLATE_HALF, PLATE_HALF,
                   100.5, PLATE_Z0 + EPS);
             // top plate (L2 seat)
             translate([CTR - PLATE_HALF, -PLATE_HALF, PLATE_Z0])
-                cube([2 * PLATE_HALF, 2 * PLATE_HALF, PLATE_T]);
+                cube([PLATE_X1 - (CTR - PLATE_HALF), 2 * PLATE_HALF, PLATE_T]);
         }
         // cable bore, full height (plate slot 15x11 down to the flange)
         translate([CTR - BORE[0] / 2, -BORE[1] / 2, FLG_Z0 - EPS])

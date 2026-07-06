@@ -34,8 +34,9 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 | `spacer.scad` | designed | Jetson standoff washers Ø8 × 6.3, print 8 |
 | `battery_pocket.scad` | designed, gated | rear-loading belly tray, 6× M3 sandwich mount through the floor (**part-5 plate must adopt the (±40/0, ±26.5) pattern**; drill the floor at first assembly), velcro fence at the rear opening |
 | `l2_mast.scad` | designed, gated | flange→shaft→plate; **bolt L2 to the plate BEFORE mounting** (plate holes clear the shaft); flange screws driven under the L2 with a ball-end key |
-| `../leg_v6/shoulder.scad` | **rev'd ×2** | + center notch (x ±26 above z 19.5) + 2× Ø3.4 riser holes (x ±40, z 29.35) + **battery-lead bottom notch** (x ±10 to z −26 = trunk z 12); leg_v6 gate re-run |
-| tray hood / D456 head shell / floor boss plate | blocked | hood: ⚠ Jetson heatsink caliper · head: D456 mount-face decision · plate: PCB drill coords + must adopt the battery 6-hole pattern + carry the MRBF 5191 block (⚠ dims unmeasured) |
+| `d456_head.scad` | designed, gated (**v3 periscope**) | screw-in (user call): camera on its REAR 4×M3 corner pattern (⚠ unverified — tall slots at y ±54, CALIPER before printing) at z 80.5..109.5, above the shoulder deck extension, below the L2; **right-angle USB-C required** (BOM). v1 died on the shoulder webs, v2 under-chin died on the folded front femur (bar through the volume from hfe ~+35) |
+| `../leg_v6/shoulder.scad` | **rev'd ×3** | + center notch (x ±26 above z 19.5) + 2× Ø3.4 riser holes (x ±40, z 29.35) + **battery-lead bottom notch** (x ±10 to z −26 = trunk z 12); leg_v6 gate re-run |
+| tray hood / floor boss plate | blocked | hood: ⚠ Jetson heatsink caliper · plate: PCB drill coords + must adopt the battery 6-hole pattern + carry the MRBF 5191 block (⚠ dims unmeasured) |
 
 ## Riser design (all trunk-frame numbers)
 
@@ -61,12 +62,16 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
   part). Ø11 cable drop at (52, 0). Mast unbolts without touching the Jetson.
 - **SMA bulkheads**: 2× Ø6.5 at (−15, +44) and (+25, +44) — 40 apart (MIMO).
   ⚠ verify the U.FL pigtail reach on the real board.
-- **D456 head interface**: 4× M3 heat-set ROW in the front wall at
-  y −21/−7/+7/+21, z 67.4 (screws clamp; the shell bears on the wall face
-  for moment) + Ø9 USB3 grommet at (0, 65), reached through the
-  shoulder-flange center notch. **Head-shell ceiling: trunk z 72.8** — the
-  shoulder deck extension plate spans z 73.05..79.55 over x 63.5..109 at
-  both ends.
+- **D456 head interface (periscope)**: bracket stem rises through the
+  shoulder-flange center notch to the riser wall row (4× M3 at y ∓21/∓7,
+  z 67.4 — driver passes UNDER the camera, bottom 80.5); cross-plate
+  carries the camera's rear pattern at z 80.5..109.5. USB grommet slot
+  10×6 at (0, 61.5). **Camera placement is corridor-forced**: the only
+  leg-safe, shoulder-safe home for a 124-wide body is above the deck
+  extension (79.55) and below the L2 (114.4). Known cost: the camera's
+  top-front corner clips the L2's −45° bottom cone ~3.5° in the forward
+  sector (ground 150–165 mm ahead — D456's own prime zone). Camera bolts
+  to the bracket ON THE BENCH; installed, its rear screws are unreachable.
 - **Hood interface**: 4× M3 horizontal heat-sets in the side walls at
   (x −50/+35, z 67) — hood straddles the deck, screws from free air.
 - **Vents**: 6× 3 mm slots per side, z 52..66.

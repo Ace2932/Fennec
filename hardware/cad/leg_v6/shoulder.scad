@@ -73,6 +73,13 @@ module shoulder_v6() {
             for (sx = [-1, 1])
                 translate([min(sx*51, sx*55), FLANGE_Y0, WALL_Z0])
                     cube([4, REAR_W0 - FLANGE_Y0 + EPS, DECK_Z1 - WALL_Z0]);
+            // D456 head-bracket insert pads: thicken the flange to 7 on
+            // its inner face around the 4 bores (bracket = chassis lane;
+            // hangs in the open trunk-end aperture, riser end wall is at
+            // z >= 47 trunk). Both ends — same part.
+            for (sx = [-1, 1])
+                translate([sx*18 - 5, FLANGE_Y0 - 3, -27.05])
+                    cube([10, 3 + EPS, 22]);
         }
 
         // ---- wheel couplings, drilled straight along Y ----
@@ -126,10 +133,17 @@ module shoulder_v6() {
                 cylinder(d = 3.4, h = FLANGE_Y1 - FLANGE_Y0 + 2);
         // battery-lead notch: flange bottom center, x +/-10 up to z -26
         // (trunk z 12). The belly pack's leads rise behind the trunk end
-        // and enter here to the MRBF block (battery_pocket.scad). Kept on
-        // both ends — same part.
+        // and enter here to the MRBF block (battery_pocket.scad); at the
+        // FRONT end the D456's right-angle USB-C uses the same notch.
+        // Kept on both ends — same part.
         translate([-10, FLANGE_Y0 - 0.1, -38.1])
             cube([20, FLANGE_Y1 - FLANGE_Y0 + 0.2, 12.1]);
+        // D456 head-bracket heat-set bores: (x +/-18, z -22.05 & -10.05)
+        // = trunk (y +/-18, z 16 & 28), pressed from the outer face; the
+        // rear pads (union below) thicken the 4mm flange to 7 there
+        for (sx = [-1, 1], hz = [-22.05, -10.05])
+            translate([sx*18, FLANGE_Y1 + EPS, hz]) rotate([90, 0, 0])
+                cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
     }
 }
 

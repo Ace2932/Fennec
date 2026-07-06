@@ -18,6 +18,9 @@ point inside the designed part = the part cuts its counterpart. Cases:
   6. belly battery pocket + pack envelope vs trunk / shoulders / crouch legs
   7. L2 mast vs riser (designed flange seat excluded), Jetson + plug
      envelopes, the shoulder deck-extension fin, and the seated L2 body
+  8. D456 head bracket + camera envelope (UNDER-CHIN, z -16.5..12.5 —
+     the v1 riser-wall position died on the shoulder shear webs) vs
+     trunk/riser/pocket/pack/shoulders + the crouch sweep
 
 Exit 0 = clean, 1 = interference. Run via build_all.sh after every change.
 """
@@ -164,7 +167,9 @@ def main():
     trunk = trimesh.load(TRUNK)
     pocket = trimesh.load('battery_pocket.stl')
     mast = trimesh.load('l2_mast.stl')
+    head = trimesh.load('d456_head.stl')
     pack = make_box(-77.5, 77.5, -23, 23, -35.9, -0.9)   # 0.1 lift off tray
+    cam = make_box(69.7, 95.7, -62, 62, 80.5, 109.5)     # D456, periscope
 
     # ---- 1. riser <-> trunk --------------------------------------------------
     rp = sample(riser)
@@ -253,6 +258,14 @@ def main():
                         ('pack', pack,
                          p[(np.abs(p[:, 0]) < 90) & (np.abs(p[:, 1]) < 30)
                            & (p[:, 2] > -40) & (p[:, 2] < 1)]),
+                        ('head', head,
+                         p[(p[:, 0] > 60) & (p[:, 0] < 73)
+                           & (np.abs(p[:, 1]) < 61) & (p[:, 2] > 55)
+                           & (p[:, 2] < 104)]),
+                        ('camera', cam,
+                         p[(p[:, 0] > 66) & (p[:, 0] < 99)
+                           & (np.abs(p[:, 1]) < 65) & (p[:, 2] > 77)
+                           & (p[:, 2] < 113)]),
                     ):
                         if not len(near):
                             continue
@@ -296,10 +309,13 @@ def main():
     bad |= report('mast vs riser (seat excluded)', hits)
     jet = make_box(-60, 40, -49.4, 30, 78.2, 101.3)
     plugs = make_box(-55, 35, 30, 48, 78.2, 92)
-    fin_f = make_box(63.5, 109, -59.4, 59.4, 73.05, 79.55)
+    # deck-extension fin, MINUS the flange center notch strip (y +/-26)
+    fin_l = make_box(63.5, 109, 26, 59.4, 73.05, 79.55)
+    fin_r = make_box(63.5, 109, -59.4, -26, 73.05, 79.55)
     l2 = make_box(53.5 - 37.5, 53.5 + 37.5, -37.5, 37.5, 114.5, 179.4)
     for label, env in (('Jetson envelope', jet), ('Jetson plug zone', plugs),
-                       ('shoulder deck-extension fin', fin_f)):
+                       ('deck-ext fin (left)', fin_l),
+                       ('deck-ext fin (right)', fin_r)):
         hits = mp[env.contains(mp)]
         bad |= report(f'mast vs {label}', hits)
     lp = sample(l2, 5000, 1000)
@@ -307,6 +323,36 @@ def main():
     bad |= report('seated L2 body vs mast', hits)
     hits = lp[jet.contains(lp)]
     bad |= report('seated L2 body vs Jetson envelope', hits)
+
+    # ---- 8. D456 head bracket + camera (periscope) --------------------------------
+    hp = sample(head, 8000, 2000)
+    for label, target in (('trunk', trunk), ('riser', riser),
+                          ('mast', mast), ('deck-ext fin (left)', fin_l),
+                          ('deck-ext fin (right)', fin_r),
+                          ('Jetson envelope', jet)):
+        hits = hp[target.contains(hp)]
+        bad |= report(f'head bracket vs {label}', hits)
+    for end in (1, -1):
+        S2T = np.array([[0, end, 0, end * HIP_FA],
+                        [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
+        p = tf(sh_pts, S2T)
+        near = p[np.abs(p[:, 0]) < 112]
+        for label, target in (('head bracket', head), ('camera', cam)):
+            hits = near[target.contains(near)] if len(near) else near
+            bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs '
+                          f'{label}', hits)
+    cp = sample(cam, 5000, 1000)
+    for label, target in (('riser', riser), ('mast', mast),
+                          ('deck-ext fin (left)', fin_l),
+                          ('deck-ext fin (right)', fin_r),
+                          ('L2 body', l2), ('head bracket', head)):
+        # camera rear seats on the plate face x 69.5: designed contact
+        if label == 'head bracket':
+            cp_f = cp[np.abs(cp[:, 0] - 69.6) > 0.3]
+            hits = cp_f[target.contains(cp_f)]
+        else:
+            hits = cp[target.contains(cp)]
+        bad |= report(f'camera envelope vs {label}', hits)
 
     # ---- 5. static fixture asserts ----------------------------------------------
     jet_top = DECK_TOP + 6.3 + 1.6 + 21.5     # spacer + pcb + heatsink (REVIEW)
