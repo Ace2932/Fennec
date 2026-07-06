@@ -199,13 +199,19 @@ Switch can be pulled from its case to save ~60 % volume inside the chassis.
 ## Strain relief + routing notes
 
 - Feetech daisy chain follows the opposite chassis edge from the high-current servo power (reduces capacitive coupling)
-- L2 Ethernet cable routes through a TPU strain-relief grommet at chassis pass-through (printed pattern in [`../cad/patterns.md`](../cad/patterns.md) §8b)
+- L2 pigtail feeds DOWN the mast bore into the riser deck's 14×12 slot
+  (`../cad/chassis/`); add a TPU strain-relief insert (patterns.md §8b
+  pattern) into the slot AFTER feeding the RJ45/DC plugs through
 - Servo wire entry at each leg gets a TPU strain relief (same source)
-- Battery leads: short + thick (18 AWG silicone), routed inside a Kapton-wrapped channel near the LiPo pocket
-- E-stop button on chassis side panel, kept clear of moving leg envelope
+- Battery leads: 18 AWG silicone, exit the pack's REAR face behind the
+  trunk end, rise through the shoulder-flange bottom notch (y ±10 →
+  z 12) to the MRBF block on the floor plate (`../cad/chassis/README.md`)
+- ~~E-stop button on chassis side panel~~ **side panel is impossible** —
+  the mezzanine owns every wall-depth column (chassis review 2026-07-06).
+  E-stop = pod ABOVE the riser deck rear strip, designed with the hood.
 
 ## Outstanding wiring decisions
 
 - Exact USB hub config on Jetson — likely only 4 USB-A ports on P3766, may need a powered hub for D456 + Teensy + FE-URT-1 concurrent. Verify on bench.
-- Whether to integrate the lighted rocker switch into PCB v6 or panel-mount via flying lead (see `hardware/pcb-mods/README.md` open questions)
+- Whether to integrate the lighted rocker switch into PCB v6 or panel-mount via flying lead (see `hardware/pcb-mods/README.md` open questions). If flying-lead: candidate home = the riser's FRONT-GAP zone (x 52.5..63 interior column is free; rocker through the side skirt at ~(x 57, z 45) or down through the deck front strip) — ⚠ caliper the rocker before committing (chassis README panel-components list).
 - L2 LiDAR cable routing past the rotating sensor head — needs flex strain relief to survive scans

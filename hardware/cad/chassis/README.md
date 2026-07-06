@@ -187,11 +187,28 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 13. Sweep grid densified: kfe now {−109, −55, 0, 55, 109}; link flex
    (~1-2 mm at the foot) is well inside the 4-9 mm contact margins.
 
-## Service (unchanged from the outline table)
+## Panel components + small actives (grounding audit 2026-07-06)
 
-battery 0 screws · boards/Teensy/JP1 = D456 head off (2) + 4 flange screws,
-riser lifts with Jetson/mast/L2 attached, robot standing · Jetson = hood off
-· L2 = 4 mast-base screws · legs/shoulders per leg_v6.
+Homeless items found by cross-checking the memory docs — all ACTIVE in the
+v1 BOM, none had a chassis home:
+
+| Item | Home | Status |
+|---|---|---|
+| E-stop (Ø22 × ~50 ⚠) | pod above the deck rear strip | design with the hood |
+| SW1 lighted rocker (flying lead, ⚠ dims) | riser FRONT-GAP zone (x 52.5..63 interior column is free): through the side skirt ~(x 57, z 45) or the deck front strip | ⚠ caliper, then a riser boolean rev |
+| SSD1331 OLED (31×28×11, remote on J10) | hood FRONT face (cable up the deck slot) | hood requirement |
+| WS2812B strip (10 mm pitch) | riser skirt perimeter, adhesive; cable enters through a vent slot | assembly-time, no CAD |
+
+BOM additions flagged: right-angle USB-C cable (D456), velcro strap
+(battery), TPU grommet insert for the deck slot (printed).
+
+## Service
+
+battery 0 screws · boards/Teensy/JP1 = **4 flange screws + 2 plugs at the
+Jetson** — the riser lifts with Jetson/mast/L2/D456 ALL attached, robot
+standing · Jetson = hood off · L2 = 4 plate screws under it · D456 bracket
+= 4 riser-row screws (camera↔bracket is bench-only) · legs/shoulders per
+leg_v6.
 
 ## Build + gate
 

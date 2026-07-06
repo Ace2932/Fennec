@@ -16,7 +16,7 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
    ┌──┴─────────────┴┴───────────────────────────────┴──┐
    │ shoulder │  STOCK TRUNK BOTTOM 127×110             │ shoulder │
    │ v6 (new) │  mezzanine stack 112×90×58, Teensy up   │ v6 (new) │
-   │          │  bucks + de-cased switch beside          │          │
+   │          │  bucks + de-cased switch UNDER the stack │          │
    └──────────┴──────────┬───────────────┬───────────────┴─────────┘
         legs: leg_v6     │ BELLY BATTERY │   155×46×35, 510g
         (coax/femur/     │ + MRBF block  │   ~104mm off ground
@@ -30,7 +30,8 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
   outboard 40 (belly pack — contact from ~18-20° inboard when folded;
   splay direction fully clean; chassis gate).
 - **Trunk**: stock bottom shell KEPT (leg/shoulder interfaces intact); lid
-  replaced by the riser bay (stack is 58 tall vs 40 interior).
+  replaced by the riser bay (stack is 58 tall vs the open frame's 29-tall
+  walls — the trunk is NOT a tub, dimensions.md §11).
 - **Electronics**: mezzanine power+logic stack inside on the part-5 floor
   plate (stack ctr x −3.5); Teensy USB + JP1 face up; **4 off-board bucks +
   de-cased switch UNDER the power board** (~16mm standoffs — the "beside
@@ -124,13 +125,13 @@ PA6-CF dried + annealed, 0.2mm, ≥4 walls, ≥40% infill (doctrine).
 | To service | Remove | Screws |
 |---|---|---|
 | Battery swap | strap only | 0 |
-| Teensy USB / JP1 / SD / boards | D456 head off + riser lifts (Jetson/mast/L2 ride along) | 2+4 |
+| Teensy USB / JP1 / SD / boards | riser lifts — Jetson/mast/L2/D456 ALL ride along (4 flange screws + unplug 2 cables at the Jetson) | 4 |
 | Jetson | tray hood on the riser top | 2-4 |
-| L2 | mast base | 4 |
+| L2 | 4× plate screws under the L2 (mast + Jetson stay) | 4 |
 | One whole leg | shoulder outer plate + unplug at coax bay | 4 |
 | One servo | its leg off → that joint's yoke discs → strap/columns | ~15-20 |
 | Shoulder | its 2 legs off → trunk screws | 4-6 |
-| D456 | head shell | 2 |
+| D456 | camera rides the periscope bracket: bracket off = 4 riser-row screws (camera↔bracket = bench-only) | 4 |
 
 ## Doc graph (start → detail)
 `docs/design-outline.md` (this) → `hardware/cad/leg_v6/README.md` (legs) ·

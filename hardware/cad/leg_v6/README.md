@@ -33,9 +33,13 @@ correct: those were blocks, not leg designs).
 | `strap.scad` (print 4+) | ✅ | servo tail retention, 2× M2.5 self-tap into rim-pad pilots |
 | shoulder | ✅ gated (rev 2026-07-06) | v6 crossmember per trunk end; **riser interface rev**: flange center notch (x ±26 above z 19.5) + 2× Ø3.4 riser hold-down holes (x ±40, z 26.95) — see `../chassis/README.md` |
 
-**ROM (sweep-gate verified):** kfe ±109° sw / ~118° mech · hfe ±86° sw ·
-haa ±40° = shoulder input. `./build_all.sh` runs the full gate (6 pockets +
-pose sweeps) on every build. Side dots: **1 = RIGHT, 2 = LEFT**.
+**ROM (sweep-gate verified, LEG-LOCAL):** kfe ±109° sw / ~118° mech ·
+hfe ±86° sw · haa ±40° = shoulder input. **CHASSIS-SAFE caps are tighter**
+(`../chassis/check_fit.py` is the authority for the assembled robot):
+hfe toward-trunk +50 sw · haa INBOARD +15 sw (outboard keeps 40) — these
+feed the URDF/firmware, not the leg-local numbers. `./build_all.sh` runs
+the full gate (6 pockets + pose sweeps) on every build. Side dots:
+**1 = RIGHT, 2 = LEFT**.
 
 **v6 lateral chain** (URDF updated, sum still 64.3 = IK d): haa→femur-mid **33.8** ·
 femur/tibia coplanar **0** · foot post **30.5**. Stock split was 24.6/9.2/30.5.
