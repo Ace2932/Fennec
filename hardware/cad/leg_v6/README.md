@@ -64,6 +64,31 @@ the horn/wheel discs). rev 2, from `feetech_servo_models/converted_stl/servo.stl
 4× M2 ≈stock+3mm (case columns, countersunk) · 4+1× M2.5×6 (horn + M3 center)
 · 4+1× M2.5×8 (wheel, through boss, counterbored) · 2× M2.5 self-tap + strap.
 
+## Connection & tolerance map (audited 2026-07-06)
+Every mate, its fit, and who provides location:
+
+| # | Connection | Nominal fit | Locates via |
+|---|---|---|---|
+| 1 | servo body ↔ pocket walls | 0.45/side DROP-IN slip | — (guide only) |
+| 2 | case columns ↔ floor holes | M2 in Ø2.3 (+csk Ø4.6 cone) | the 4 screws, ±0.15 → THE servo locator |
+| 3 | case front-bottom ↔ platform | 0.1 axial seat gap | — |
+| 4 | bay ↔ bay seat | 0.3 axial | — |
+| 5 | horn Ø20 ↔ arm recess | Ø+0.3 (CLR_HORN 0.15), 0.4 deep | recess + 4×M2.5 BCD |
+| 6 | horn face ↔ arm underside | bolted contact | — |
+| 7 | wheel Ø20 ↔ boss face | flat clamp, NO radial feature (impossible: boss 19 < wheel 20) | the 5 screws, ±0.2 |
+| 8 | boss Ø19 ↔ floor window Ø21.5 | 1.25/side swing | — |
+| 9 | wheel Ø20 ↔ window Ø21.5 | 0.75/side spin | — |
+| 10 | tibia in femur slot (axial) | horn contact top / 0.4 bottom gap | bolted discs |
+| 11 | tibia disc r16.05 ↔ slot | 1.0/side | bolted discs |
+| 12 | femur disc r16.05 ↔ coax void r16.7 | 0.65 radial (was 0.35 — under print tol, widened) | — |
+| 13 | knee arm ↔ shelf | flat + 2× Ø3.1 dowel-fit M3 (0.12) + 2× Ø3.4 | dowel screws |
+| 14 | M3 heat-sets | **bore Ø4.0** (insert OD 4.6 — a 4.6 bore drops through; audit catch) | — |
+| 15 | strap ↔ pads | Ø2.05 pilots, M2.5 self-tap; pad top 17.6+, cap gap ≥0.2 | — |
+| 16 | toe tab ↔ SM3_Foot | EXACT stock outline + Ø7 hole, ±0 by construction | shoe notches |
+| 17 | cable plugs ↔ tunnel | 19×5.9 vs 2× 5264 plugs (17×4.5) | — |
+First-article: run an M3 through the Ø3.1 dowel pair (prints ~3.0), M2 through
+columns, insert purchase test at Ø4.0 before committing the knee arms.
+
 ## Fit gate (run after every geometry change)
 `../../../.venv/bin/python check_fit.py` — places the REAL servo mesh
 (`feetech_servo_models/converted_stl/servo.stl`) at each pocket pose and

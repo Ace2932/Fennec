@@ -146,9 +146,10 @@ module horn_couple_neg() {
 module wheel_boss_pos() {
     translate([0, 0, YOKE_BOT_IN - EPS]) {
         cylinder(d = WHEEL_BOSS_D, h = WHEEL_Z0 - YOKE_BOT_IN + EPS);
-        // shallow locating recess lip around the wheel
-        translate([0, 0, WHEEL_Z0 - YOKE_BOT_IN - 0.4])
-            cylinder(d = WHEEL_BOSS_D, h = 0.4);
+        // NOTE: no radial locating feature is POSSIBLE here (boss Ø19 must
+        // stay under the wheel's Ø20 inside the Ø21.5 window) — the joint's
+        // radial location comes from the 5 screws (Ø2.9 clear on M2.5,
+        // ±0.2). Flat-on-flat clamp only.
     }
 }
 module wheel_couple_neg() {

@@ -112,7 +112,7 @@ module coax_v6() {
 
         // femur swept clearance between the arms (stops at the boss face)
         translate([ARM_IN_X1 + EPS, HFE_Y, HFE_Z]) rotate([0, 90, 0])
-            cylinder(r = 16.4, h = (FEMUR_MID - WHEEL_Z0) - ARM_IN_X1 - 0.1);
+            cylinder(r = 16.7, h = (FEMUR_MID - WHEEL_Z0) - ARM_IN_X1 - 0.1);   // disc r16.05 + 0.65 (was 16.4/0.35 — under print tol)
     }
 }
 
