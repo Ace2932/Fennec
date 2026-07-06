@@ -29,7 +29,8 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
   replaced by the riser bay (stack is 58 tall vs 40 interior).
 - **Electronics**: mezzanine power+logic stack inside; Teensy USB + JP1 face
   up; 4 off-board bucks + switch on the floor; wiring drops through 4
-  leg-corner grommets to the coax bays (which face the trunk).
+  leg-corner grommets to the coax bays (front bays face the trunk; rear
+  bays face rearward — all-forward horn config).
 - **Power**: belly battery (lowest CoM, swap without tools) → MRBF-30 at the
   pack → SW1 → boards. Dual-voltage servo harness per
   `hardware/wiring/README.md` (VCC-pulled daisy links + local XT30 spurs).
