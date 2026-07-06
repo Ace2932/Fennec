@@ -268,6 +268,26 @@ slice-circle bore detection (1 mm slice steps, circle fit σ<0.15 mm). Feeds
 | Assembly cross-check of femur length | 105.9 (vs 106.9 bore-metric) | ✅ bbox-center precision ±0.7 — bore metric kept |
 | Joint ranges haa/hfe/kfe | 0.7 / 1.5 / 2.2 rad | ⚠️ REVIEW — conservative placeholders, verify vs collision in sim/first-article |
 
+### SM3_Foot shoe (stock, keyed to the v6 tibia toe tab)
+**Source:** mesh survey 2026-07-06 (`SM3_Foot.stl`) + B2 A360 stance
+
+| Dim | Value | Status |
+|---|---|---|
+| Shoe envelope | 37 × 20 × 20 | ✅ mesh |
+| Ø7 post hole ctr (shoe local) | (+13.0, +5.9) | ✅ mesh (cylinder fit, 165 verts) |
+| Sole flat pad | 20 long, ctr (+1.4, −9.9); rocker curl at both ends | ✅ mesh |
+| **Pad-ctr setback from the post** | **11.6 aft / 15.8 down → pad grounds under the post at 36.2° tibia tilt** | ✅ derived |
+| Stock stance tibia tilt (A360, B2) | 33.9° | ✅ |
+| v6 stance band (foot under hip, h 160-180) | 36-42° | ✅ derived |
+| Contact excursion through a ±12° stride | ±5 mm, stays ON the flat at every stance height | ✅ computed 2026-07-06 |
+
+> The stock shoe is PRE-ROTATED for the stance lean (the pad-center
+> setback ≈ the stance tilt) — do NOT "fix" the foot by re-centering the
+> pad under the post; that would put the contact on the rocker edge at
+> stance. v1 plan: reprint the SAME geometry in TPU 95A. IK note: the toe
+> POST is the IK foot point; real contact wanders ≤5 mm through the
+> stride — below gait tolerance.
+
 ### 688ZZ ball bearing
 **Source:** standard deep-groove ball bearing
 
