@@ -110,8 +110,18 @@ model missed (real bay = full case width).
 1. Bolt femur↔coax (hfe horn + wheel) — the horn screws are driven THROUGH
    the empty haa pocket; 2. plug + drop the haa servo, floor screws + strap;
    3. tibia↔femur anytime; 4. shoulder last. Servicing hfe = pull haa servo.
-Cable loops: ≥8mm bend radius, zero tension at plugs (anchors take it).
 Keep 2-3 spare horn discs (hard falls can strip a spline).
+
+### Cable dressing (backlog #18 — `cable_clip.scad`, TPU 95A, print 20)
+Each flex zone gets a **clip at BOTH loop ends** (the existing zip tie
+threads the leg's Ø3.2 pair AND the clip's matching holes — no leg mods):
+- HIP loop (haa+hfe flex): coax tunnel-exit pair + femur x44 pair
+- KNEE loop (kfe flex): femur x84 (yoke plate) + tibia x44 pair
+Rules: loop radius **≥40 mm** (8× the Ø5 bundle) between clips — the
+clip's bell-mouths control the exit bend, the spiral wrap (Ø6, BOM)
+covers the free loop; zero tension at any plug (clips+ties take it);
+**tug-test all 24 connector ends + every anchor** at assembly (#25).
+femur x52 pair stays a bare-tie spare anchor.
 
 ## Pre-walk firmware gates (from movement review)
 Boot-settle ramp (PR #17) · servo torque limits written (open audit item —
