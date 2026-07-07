@@ -355,7 +355,25 @@ void broadcast_servo_commands() {
 
     uint16_t out;
     if (last_cmd_goal[i] == SLEW_UNINIT) {
-      out = target;                 // first write — accept as-is
+      // ANTI-SNAP (clean-movement lane 2026-07-06, closes the boot-settle
+      // ramp intent of PR #17): on the FIRST broadcast after boot or a
+      // fault clear, seed the slew from the servo's PRESENT position
+      // (polled at 50 Hz) instead of accepting the target verbatim —
+      // verbatim meant the servo jumped from wherever it physically was
+      // to the target at its own max speed (goal-acc-limited only): the
+      // boot lurch, and the lurch after every E-stop clear. Seeded, the
+      // same slew rate (176 deg/s) ramps it in. Servos that never
+      // answered a poll (present bit clear) keep verbatim behavior —
+      // nothing real moves on an absent servo.
+      if (servo_present_mask & (uint16_t)(1u << i)) {
+        int32_t seeded = (int32_t)servo_position_raw[i];
+        int32_t delta = (int32_t)target - seeded;
+        if (delta >  (int32_t)NOVA_SLEW_MAX_DELTA) delta =  (int32_t)NOVA_SLEW_MAX_DELTA;
+        if (delta < -(int32_t)NOVA_SLEW_MAX_DELTA) delta = -(int32_t)NOVA_SLEW_MAX_DELTA;
+        out = (uint16_t)(seeded + delta);
+      } else {
+        out = target;               // absent servo — verbatim is harmless
+      }
     } else {
       int32_t delta = (int32_t)target - (int32_t)last_cmd_goal[i];
       if (delta >  (int32_t)NOVA_SLEW_MAX_DELTA) delta =  (int32_t)NOVA_SLEW_MAX_DELTA;

@@ -30,9 +30,15 @@ class LegParams:
     # variant d=3.3 shelved until a balance controller exists.)
     femur: float = 0.1069  # a1 — HFE to KFE   MEASURED 2026-07-01 (STL bores, 106.9 mm)
     tibia: float = 0.1290  # a2 — KFE to foot  MEASURED 2026-07-01 (STL foot-post ctr)
-    # joint limits (rad), conservative placeholders (TODO-CAD mechanical travel)
-    haa_range: float = 0.7
-    hfe_range: float = 1.5
+    # joint limits (rad) = the CAD fit-gate ROM (2026-07-06, replaces the
+    # TODO-CAD placeholders; single source: nova.urdf.xacro + limits.py):
+    haa_range: float = 0.262  # ±15° conservative symmetric — the chassis
+    # gate's INBOARD cap (belly-pack contact from ~18°). The asymmetric
+    # 15-inboard/40-outboard range unlocks when HAA_INBOARD_SIGN is
+    # filled at homing calibration (nova_ops limits.py).
+    hfe_min: float = -1.501  # −86° away-trunk (gate)
+    hfe_max: float = 0.873  # +50° toward-trunk fold cap (riser graze).
+    # ⚠ leg-local→canonical sign mapping VERIFY IN SIM (URDF note).
     kfe_range: float = 1.9  # sweep-gate: mech stop ~118deg; see URDF note
 
 
@@ -105,20 +111,35 @@ def solve_side(side: str, foot, p: LegParams, knee_forward: bool = True):
     left/right reversals).
     """
     t1, t2, t3 = inverse_kinematics(foot, p, knee_forward)
-    if side == 'right':
+    if side == "right":
         return (-t1, t2, t3)
-    if side != 'left':
+    if side != "left":
         raise ValueError(f"side must be 'left'|'right', got {side!r}")
     return (t1, t2, t3)
 
 
 LEG_SIDE = {"FL": "left", "FR": "right", "RL": "left", "RR": "right"}
 
+# Knee configuration — X-CONFIG (DECIDED 2026-07-06, docs/knee-config-
+# analysis.md): rear knees mirrored (dog layout). Pure software: this is
+# the IK elbow branch per leg; foot targets stay canonical. Rear crouch
+# margin 46° vs 10°, robot-level fore/aft symmetry. Gait planners must
+# keep a >=40 mm front<->rear foot exclusion (X worst-case convergence).
+KNEE_FORWARD = {"FL": True, "FR": True, "RL": False, "RR": False}
 
-def within_limits(theta, p: LegParams) -> bool:
+
+def within_limits(theta, p: LegParams, knee_forward: bool = True) -> bool:
+    """Check CANONICAL-frame angles against the gate ROM.
+
+    The asymmetric hfe window (−86 away-trunk .. +50 toward-trunk) is
+    LEG-LOCAL: a mirrored-knee leg (X-config rear, knee_forward=False)
+    maps canonical pitch to leg-local NEGATED, so its canonical window
+    flips to [−hfe_max, −hfe_min]. Pass the leg's KNEE_FORWARD flag.
+    """
     t1, t2, t3 = theta
+    lo, hi = (p.hfe_min, p.hfe_max) if knee_forward else (-p.hfe_max, -p.hfe_min)
     return (
         abs(t1) <= p.haa_range + 1e-9
-        and abs(t2) <= p.hfe_range + 1e-9
+        and lo - 1e-9 <= t2 <= hi + 1e-9
         and abs(t3) <= p.kfe_range + 1e-9
     )

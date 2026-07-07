@@ -23,7 +23,21 @@ cd ros2_ws/src/nova_locomotion && PYTHONPATH=. python -m pytest test/ -q
   span, and **every gait foot target over a full cycle is IK-reachable + within
   joint limits**.
 
-## ⚠️ Geometry is placeholder (TODO-CAD)
+## Modules (added 2026-07-06, clean-movement lane)
+- `choreo/stand.py` — min-jerk stand/sit sequencer: keyframes (lie/crouch/
+  stand, feet under hips) -> joint-space quintic blends, zero vel+acc at
+  ends; `stand_up(start_pose=...)` accepts the real current pose (post-
+  E-stop recovery never assumes a keyframe). 50 Hz output.
+- `KNEE_FORWARD` (leg_ik) — **X-CONFIG decided 2026-07-06**: rear knee
+  branch mirrored; `within_limits` flips the asymmetric hfe window for
+  mirrored legs. Gait planners: keep >=40 mm front<->rear foot exclusion.
+
+## ⚠️ Geometry status (updated 2026-07-06)
+Link lengths + hip offset MEASURED (106.9/129.0/64.3). Joint limits =
+the CAD gate ROM (haa ±15 conservative until homing fills the inboard
+signs; hfe −86..+50 leg-local; kfe ±109). Masses still CAD estimates.
+
+## old note (superseded)
 `LegParams` (femur/tibia/hip_offset, joint ranges) and `TrotParams`
 (stand_height etc.) default to the same SpotMicro-class placeholders as
 `nova_description`. **The math is correct and tested; the numbers need CAD

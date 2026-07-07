@@ -1,0 +1,114 @@
+"""Choreo: min-jerk stand/sit sequences — smoothness, limits, X-config."""
+
+import math
+
+from nova_locomotion.choreo import (
+    ChoreoParams,
+    min_jerk,
+    pose_for,
+    sequence,
+    sit_down,
+    stand_up,
+)
+from nova_locomotion.kinematics.leg_ik import (
+    KNEE_FORWARD,
+    LEG_SIDE,
+    forward_kinematics,
+    within_limits,
+)
+
+P = ChoreoParams()
+LEGS = ("FL", "FR", "RL", "RR")
+
+
+def _canon(leg, theta):
+    return (-theta[0], theta[1], theta[2]) if LEG_SIDE[leg] == "right" else theta
+
+
+# ---- min-jerk primitive -------------------------------------------------
+
+
+def test_min_jerk_endpoints_and_monotonic():
+    assert min_jerk(0.0) == 0.0 and min_jerk(1.0) == 1.0
+    xs = [min_jerk(i / 100) for i in range(101)]
+    assert all(b >= a - 1e-12 for a, b in zip(xs, xs[1:]))
+    # zero end velocity: tiny steps at the ends barely move
+    assert min_jerk(0.02) < 1e-4 and 1.0 - min_jerk(0.98) < 1e-4
+
+
+# ---- keyframes ----------------------------------------------------------
+
+
+def test_keyframes_within_rom_all_legs_x_config():
+    for name in ("lie", "crouch", "stand"):
+        pose = pose_for(name, P)
+        for leg in LEGS:
+            assert within_limits(_canon(leg, pose[leg]), P.leg, KNEE_FORWARD[leg]), (
+                name,
+                leg,
+            )
+
+
+def test_x_config_rear_knees_mirrored():
+    stand = pose_for("stand", P)
+    # front and rear kfe have OPPOSITE signs (X-config), same magnitude
+    assert stand["FL"][2] > 0 and stand["RL"][2] < 0
+    assert math.isclose(stand["FL"][2], -stand["RL"][2], abs_tol=1e-9)
+    # and hfe mirrors with the knee branch
+    assert math.isclose(stand["FL"][1], -stand["RL"][1], abs_tol=1e-9)
+
+
+def test_keyframe_feet_under_hips():
+    for name in ("lie", "crouch", "stand"):
+        pose = pose_for(name, P)
+        for leg in ("FL", "RL"):  # canonical legs, x = fore-aft
+            x, y, z = forward_kinematics(pose[leg], P.leg)
+            assert abs(x) < 1e-9, (name, leg, x)  # feet under hips rule
+
+
+# ---- sequences ----------------------------------------------------------
+
+
+def _max_step(seq):
+    poses = list(seq)
+    worst = 0.0
+    for a, b in zip(poses, poses[1:]):
+        for leg in LEGS:
+            for j in range(3):
+                worst = max(worst, abs(b[leg][j] - a[leg][j]))
+    return poses, worst
+
+
+def test_stand_up_smooth_and_bounded():
+    poses, worst = _max_step(stand_up(P))
+    # velocity bound: worst per-dt step under the tightest envelope
+    # velocity limit (haa 180 deg/s = 3.14 rad/s * dt)
+    assert worst < 3.14 * P.dt, worst
+    # endpoints exact
+    assert poses[-1] == pose_for("stand", P)
+    # every sample within ROM
+    for pose in poses[::5]:
+        for leg in LEGS:
+            assert within_limits(_canon(leg, pose[leg]), P.leg, KNEE_FORWARD[leg])
+
+
+def test_sit_down_reaches_lie():
+    poses, worst = _max_step(sit_down(P))
+    assert poses[-1] == pose_for("lie", P)
+    assert worst < 3.14 * P.dt
+
+
+def test_stand_up_from_arbitrary_start():
+    # e.g. post-E-stop pose, deeper than the lie keyframe on one leg
+    start = pose_for("lie", P)
+    start = {leg: (t[0], t[1], t[2] * 1.02) for leg, t in start.items()}
+    poses = list(stand_up(P, start_pose=start))
+    assert poses[0] == start
+    assert poses[-1] == pose_for("stand", P)
+
+
+def test_sequence_duration_mismatch_raises():
+    import pytest
+
+    with pytest.raises(ValueError):
+        list(sequence([pose_for("lie", P)], [1.0], P))
