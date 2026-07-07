@@ -59,6 +59,13 @@
 $fn = 64;
 EPS = 0.05;
 M3_CLEAR = 3.4;
+STYLE = false;   // FENNEC fox styling (ears + muzzle brow + cheeks + antenna
+                 // bores). ⚠ WIP first pass: the ears currently COLLIDE the
+                 // seated L2 (no head structure outside the L2's footprint to
+                 // root them) — needs the ear-placement decision (rear-of-L2
+                 // = LiDAR-safe, vs beside-L2 = sacrifices a side sector).
+                 // Default false = the gate-clean functional head.
+EAR_T = 6;       // ear/cheek blade thickness
 
 // ---- REAR LOBE : L2 tower (reuses l2_mast.scad values) -----------------------
 CTR       = 53.5;                 // L2 / column center x (UNCHANGED vs mast)
@@ -143,6 +150,35 @@ module head() {
             translate(CAM_M) rotate([0, TILT, 0])
                 translate([-FACE_T, -FACE_HALF_Y, -FACE_HALF_Z])
                     cube([FACE_T, 2 * FACE_HALF_Y, 2 * FACE_HALF_Z]);
+
+            // ===== FENNEC styling (angular robot-fox, first pass 2026-07-07) =
+            // Cosmetic + antenna housing; does NOT move any sensor mount.
+            if (STYLE) {
+                // EARS: big triangular blades. Base ROOTS on the crown
+                // (y±19 footprint) then splays out+up to a tip, so they read
+                // as fennec ears yet occlude ONLY the rear LiDAR sector. Each
+                // houses an SMA antenna (bore cut below).
+                for (sy = [-1, 1])
+                    hull() {
+                        translate([30, sy * 12 - EAR_T / 2, CROWN_Z0 - 3])
+                            cube([22, EAR_T, 4]);                  // base ON crown
+                        translate([20, sy * 44 - EAR_T / 2, 196])
+                            cube([9, EAR_T, 3]);                   // splayed tip
+                    }
+                // MUZZLE BROW: angular hood rooted on the face PILLAR
+                // (x63.45..70 solid), tapering forward to a "nose" over the
+                // camera top — frames the lens (open front), reads as a snout.
+                hull() {
+                    translate([64, -34, 114]) cube([2, 68, 6]);   // brow root on pillar
+                    translate([104, -11, 92]) cube([2, 22, 5]);   // nose tip
+                }
+                // cheeks: angular side plates from the pillar down the flanks
+                for (sy = [-1, 1])
+                    hull() {
+                        translate([64, sy * 30, 100]) cube([2, EAR_T, 18]); // root on pillar/stem
+                        translate([100, sy * 12, 86]) cube([2, EAR_T, 8]);  // toward the nose
+                    }
+            }
         }
         // --- L2 cable bore + crown pigtail slot ---
         translate([CTR - BORE[0] / 2, -BORE[1] / 2, FLG_Z0 - EPS])
@@ -176,6 +212,11 @@ module head() {
         // stem channel down to the riser wall grommet at (14, 61.5)
         translate([STEM_X0 - EPS, 8, ROW_Z - 3 - EPS])
             cube([STEM_X1 - STEM_X0 + 2 * EPS, 9, 92 - (ROW_Z - 3)]);
+        // --- FENNEC: SMA antenna bore up each ear (Ø6.5, U.FL->SMA) ---
+        if (STYLE)
+            for (sy = [-1, 1])
+                translate([32, sy * 30, CROWN_Z0 - 4])
+                    cylinder(d = 6.5, h = 70);
     }
 }
 
