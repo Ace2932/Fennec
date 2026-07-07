@@ -59,13 +59,14 @@
 $fn = 64;
 EPS = 0.05;
 M3_CLEAR = 3.4;
-STYLE = false;   // FENNEC fox styling (ears + muzzle brow + cheeks + antenna
+STYLE = true;   // FENNEC fox styling (ears + muzzle brow + cheeks + antenna
                  // bores). ⚠ WIP first pass: the ears currently COLLIDE the
                  // seated L2 (no head structure outside the L2's footprint to
                  // root them) — needs the ear-placement decision (rear-of-L2
                  // = LiDAR-safe, vs beside-L2 = sacrifices a side sector).
                  // Default false = the gate-clean functional head.
-EAR_T = 6;       // ear/cheek blade thickness
+EAR_T = 6;       // ear blade thickness
+EAR_ROOT_Y = 14; // ear-root half-span on the rear skull shelf (behind L2)
 
 // ---- REAR LOBE : L2 tower (reuses l2_mast.scad values) -----------------------
 CTR       = 53.5;                 // L2 / column center x (UNCHANGED vs mast)
@@ -154,30 +155,29 @@ module head() {
             // ===== FENNEC styling (angular robot-fox, first pass 2026-07-07) =
             // Cosmetic + antenna housing; does NOT move any sensor mount.
             if (STYLE) {
-                // EARS: big triangular blades. Base ROOTS on the crown
-                // (y±19 footprint) then splays out+up to a tip, so they read
-                // as fennec ears yet occlude ONLY the rear LiDAR sector. Each
-                // houses an SMA antenna (bore cut below).
+                // ===== FENNEC anatomy (D456=eyes / L2=forehead / snout below) =
+                // REAR SKULL SHELF: extends the crown (x34.5) rearward to
+                // x-2, BEHIND the L2 body (x16..91) so the ears root clear of
+                // its footprint. z118..124 sits under/behind the L2 (z122+),
+                // no collision. Overlaps the crown to stay one body.
+                translate([-2, -EAR_ROOT_Y, CROWN_Z0 - 2])
+                    cube([38, 2 * EAR_ROOT_Y, 5.4]);   // top 121.4 < L2 122
+                // EARS: big splayed triangular blades rising from the rear
+                // shelf — behind the L2, so they touch only the rear sector.
+                // Each houses an SMA antenna (bore cut below). EAR_SIDE param
+                // could re-root them beside the L2 (costs a side sector).
                 for (sy = [-1, 1])
                     hull() {
-                        translate([30, sy * 12 - EAR_T / 2, CROWN_Z0 - 3])
-                            cube([22, EAR_T, 4]);                  // base ON crown
-                        translate([20, sy * 44 - EAR_T / 2, 196])
-                            cube([9, EAR_T, 3]);                   // splayed tip
+                        translate([-2, sy * (EAR_ROOT_Y - EAR_T), CROWN_Z0 - 2])
+                            cube([16, EAR_T, 5]);                  // base on shelf
+                        translate([-6, sy * 46 - EAR_T / 2, 202])
+                            cube([9, EAR_T, 3]);                   // tall splayed tip
                     }
-                // MUZZLE BROW: angular hood rooted on the face PILLAR
-                // (x63.45..70 solid), tapering forward to a "nose" over the
-                // camera top — frames the lens (open front), reads as a snout.
-                hull() {
-                    translate([64, -34, 114]) cube([2, 68, 6]);   // brow root on pillar
-                    translate([104, -11, 92]) cube([2, 22, 5]);   // nose tip
-                }
-                // cheeks: angular side plates from the pillar down the flanks
-                for (sy = [-1, 1])
-                    hull() {
-                        translate([64, sy * 30, 100]) cube([2, EAR_T, 18]); // root on pillar/stem
-                        translate([100, sy * 12, 86]) cube([2, EAR_T, 8]);  // toward the nose
-                    }
+                // (NO SNOUT: the lower head is boxed in — front shoulder
+                //  deck-ext at z79.55 directly below the eyes, front-leg
+                //  sweep forward (x≤100). No room for a projecting muzzle.
+                //  The fox reads from the EARS + the wide D456 EYE BAND;
+                //  a nose accent could live ON the eye-band lower edge later.)
             }
         }
         // --- L2 cable bore + crown pigtail slot ---
