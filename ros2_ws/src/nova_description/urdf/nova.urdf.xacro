@@ -22,8 +22,20 @@
   <xacro:property name="eff_hip"  value="2.9"/>
   <xacro:property name="eff_leg"  value="1.8"/>
   <xacro:property name="vel_servo" value="6.0"/>
-  <xacro:property name="haa_range" value="0.7"/>   <!-- TODO-CAD mechanical travel -->
-  <xacro:property name="hfe_range" value="1.5"/>   <!-- TODO-CAD -->
+  <!-- ROM = the CAD fit gates (chassis check_fit crouch sweep = authority,
+       2026-07-06; replaces the TODO-CAD placeholders):
+       haa: OUTBOARD 40 sw / INBOARD 15 sw (belly-pack contact from ~18
+            inboard at any fold >= 30). Inboard for a RIGHT leg (y<0) =
+            +roll about the +x axis; LEFT = -roll — per-side via reflect
+            in leg.macro.
+       hfe: toward-trunk fold +50 sw (tibia flank grazes the riser skirt
+            from ~+55) / away-trunk -86 sw. ⚠ SIGN MAPPING gate->URDF
+            assumed +hfe = toward-trunk, same for all four legs (knees
+            translated, one convention) — VERIFY IN SIM before gait. -->
+  <xacro:property name="haa_in"   value="0.262"/>  <!-- 15 deg inboard -->
+  <xacro:property name="haa_out"  value="0.698"/>  <!-- 40 deg outboard -->
+  <xacro:property name="hfe_fold" value="0.873"/>  <!-- +50 toward trunk -->
+  <xacro:property name="hfe_ext"  value="1.501"/>  <!-- -86 away -->
   <xacro:property name="kfe_range" value="1.9"/>   <!-- sweep-gate: mech stop ~118 deg (tibia flank vs fork throat); 109 sw = margin. Deep-sit = v7 offset-plane option -->
 
   <!-- ===================== link offsets (m) ===================== -->
@@ -60,12 +72,20 @@
   <xacro:property name="lower_to_foot_z" value="-0.1290"/> <!-- MEASURED tibia length -->
 
   <!-- ===================== masses (kg) ===================== -->
-  <!-- TODO-CAD: weigh / compute from CAD. STS3215 ≈ 0.06 kg each. -->
-  <xacro:property name="m_base"  value="1.2"/>
-  <xacro:property name="m_hip"   value="0.12"/>
-  <xacro:property name="m_upper" value="0.16"/>
-  <xacro:property name="m_lower" value="0.08"/>
-  <xacro:property name="m_foot"  value="0.02"/>
+  <!-- CAD-volume estimates 2026-07-06 (leg_v6 STL volume x 1.17 g/cm3
+       PA6-CF x 0.7 infill factor) + STS3215 0.055 each; servo rides the
+       link whose pocket houses it (coax=HAA, femur=HFE, tibia=KFE).
+       hip = coax 27g + servo; upper = femur 61 + knee_arm 6 + servo +
+       hardware; lower = tibia 70 + servo + strap; foot = TPU shoe.
+       ⚠ ESTIMATES — weigh the printed set at the next print batch
+       (backlog #5) and replace. m_base = mass budget 4.2 minus legs
+       (trunk+riser+shoulders+Jetson+battery+boards+L2+D456), the
+       roughest number here. -->
+  <xacro:property name="m_base"  value="2.83"/>
+  <xacro:property name="m_hip"   value="0.082"/>
+  <xacro:property name="m_upper" value="0.127"/>
+  <xacro:property name="m_lower" value="0.130"/>
+  <xacro:property name="m_foot"  value="0.005"/>
 
   <!-- crude box inertia helper (TODO-CAD: replace with real tensors) -->
   <xacro:macro name="link_inertial" params="mass">

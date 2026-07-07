@@ -104,6 +104,15 @@ module shoulder_v6() {
                     linear_extrude(4) polygon([
                         [FLANGE_Y1 - 0.5, 6], [FLANGE_Y1 - 0.5, DECK_Z0 + 0.5],
                         [FLANGE_Y1 + 29, DECK_Z0 + 0.5]]);
+            // LOWER trunk-bolt insert bosses (backlog #1): the 6.2 insert
+            // bore breaks through the 4-thick flange; the UPPER bores are
+            // already backed by the shear webs (x 51..55 spans z -25..41.5)
+            // but the lower pair (z -33.05) sits below the web bottom —
+            // pad to 7 for full engagement (97 N prying SF 2.5 -> ~5).
+            for (sx = [-1, 1])
+                translate([sx*TRUNK_HOLE_X - 4.5, FLANGE_Y1 - EPS,
+                           TRUNK_HOLE_Z[0] - 4.5])
+                    cube([9, 3 + EPS, 9]);
             // D456 head-bracket insert pads: thicken the flange to 7 on
             // its inner face around the 4 bores (bracket = chassis lane;
             // hangs in the open trunk-end aperture, riser end wall is at

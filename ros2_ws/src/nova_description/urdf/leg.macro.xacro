@@ -21,7 +21,11 @@
       <child  link="${leg}_hip"/>
       <origin xyz="${mount_x} ${mount_y} ${mount_z}" rpy="0 0 0"/>
       <axis xyz="1 0 0"/>
-      <limit lower="${-haa_range}" upper="${haa_range}"
+      <!-- asymmetric gate ROM: inboard 15 / outboard 40 (chassis gate).
+           +roll swings feet toward +y: inboard for RIGHT (reflect -1),
+           outboard for LEFT (reflect +1). -->
+      <limit lower="${-haa_in if reflect == 1 else -haa_out}"
+             upper="${haa_out if reflect == 1 else haa_in}"
              effort="${eff_hip}" velocity="${vel_servo}"/>
     </joint>
     <link name="${leg}_hip">
@@ -41,7 +45,9 @@
       <child  link="${leg}_upper"/>
       <origin xyz="${hip_to_upper_x} ${reflect*hip_to_upper_y} ${hip_to_upper_z}" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
-      <limit lower="${-hfe_range}" upper="${hfe_range}"
+      <!-- gate ROM: away-trunk -86 .. toward-trunk +50 (sign mapping
+           ⚠ VERIFY IN SIM — see nova.urdf.xacro) -->
+      <limit lower="${-hfe_ext}" upper="${hfe_fold}"
              effort="${eff_leg}" velocity="${vel_servo}"/>
     </joint>
     <link name="${leg}_upper">

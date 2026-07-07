@@ -49,6 +49,13 @@ class JointLimit:
 # crash linkages at first walk.
 def _hip_abduction() -> JointLimit:
     # ±45 deg lateral splay around neutral
+    # ⚠ LOOSER THAN THE CAD GATE (2026-07-06): the chassis fit gate caps
+    # INBOARD roll at 15 deg sw (belly-pack contact from ~18 deg at any
+    # hfe fold >= 30); outboard 40 is fine. URDF now carries the
+    # asymmetric range per side (nova_description). Tightening THIS
+    # table needs the per-ID homing direction map (which servo sign is
+    # inboard, servo_homing/config.py) — do it in the firmware-limits
+    # lane (improvement-backlog #9) before any crouch+roll choreography.
     return JointLimit(
         lower=math.radians(-45.0),
         upper=math.radians(45.0),

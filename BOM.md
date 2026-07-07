@@ -163,6 +163,9 @@ Switch can be pulled out of its case to save ~60% volume inside the chassis if n
 | **Mezzanine standoffs — 4× M3 × 20 mm M-F brass + 8× M3 screws** | $6 | 🆕 Order — set the power↔logic board gap (clears 16 mm bulk caps + ~15 mm Pololu bucks with margin). Total stack ≈ 41 mm < 46.9 mm trunk. Specific length, separate from the assorted standoffs above. |
 | **Threadlocker (Loctite 243 blue)** | **$8** | 🆕 Order |
 | **Electrical tape + Kapton tape** | **$10** | 🆕 Order |
+| **NYLON M3×10 screws (PA66, ~25 pk)** | **$6** | 🆕 Order — **breakaway fuses** (backlog #2): 4× L2-mast flange (deck inserts) + 4× D456 bracket row. Break ~350 N each → mount pops at ~10 N·m in a faceplant instead of the sensor/riser dying; both stay cable-tethered. HAND-TIGHT only (nylon strips), no threadlocker. Spares = the rest of the pack |
+| **M3 flat washers (DIN 125, ~50 pk)** | **$4** | 🆕 Order — under EVERY head that bears on the stock trunk shell (8× shoulder-flange bolts, 4× foot bolts from below, battery-sandwich heads): spreads load into unknown-material print (load-analysis §6) |
+| **M3×14 countersunk + M3 nyloc ×4** | **$3** | 🆕 Order — shoulder rev4 flange floor feet: csk head flush under the floor, nyloc + washer on the pad (drill Ø3.2 + csk the 4 floor holes at first assembly, floor_plate template) |
 
 ---
 
