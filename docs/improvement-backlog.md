@@ -75,6 +75,18 @@ Verified fine this pass: pocket vents (coax/femur/tibia all vented), joint
 idler sides ride the Feetech wheel bearing, standoffs, bulk-cap placement.
 Still open from leg_v6 doctrine: 25T horn-disc kit variant (blocker-grade).
 
+## Stress audit both-directions (2026-07-06 fifth pass — real STL sections)
+
+Tibia blade section-verified (9 stations, Green's-theorem props from the
+mesh): peak 1.3 MPa bending + 1.6 MPa jog torsion, tip deflection 0.08 mm
+at 60 N → SF ≈ 35, web clip cost nothing. Full member table in the pass
+notes; only two actionable findings:
+
+| # | Item | Why | Status |
+|---|---|---|---|
+| 26 | **Coax yoke arm root +50% section** | ONLY plastic member below SF 15: 14 MPa at the 4 mm root (20 N lateral/turning), SF ~3 wet and **~1.9 against PA6 fatigue** on a per-stride cyclic load. Root 4→6 + fillet → ~6 MPa | **NEXT** coax reprint |
+| 27 | **Mass diet targets + first-article static test** | LESS is safe in: tibia infill 40→25% (SF 35; ~8-10 g/leg), shoulder flange mid-panel windows (SF>150; ~15 g ×2), riser thin walls at PETG reprint (~25 g). NEVER: leg walls, femur (10 MPa, 2nd-tightest), coax, toe pocket ring. And calcs can't see a bad print: **first-article static test — 12 kg (3× robot) hung off one tibia toe + 5 N·m on a shoulder joint** before first walk | **GATED**: print batch / first article |
+
 ## Process debt
 
 | # | Item | Why | Status |
