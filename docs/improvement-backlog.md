@@ -93,6 +93,19 @@ notes; only two actionable findings:
 |---|---|---|---|
 | 28 | Arm go/no-go + prep flags | POSSIBLE (boards carry J14 + arm buck footprint + U12 INA + EN regate; IDs 13-18 + limits placeholders exist). Physics: +650 g (+15%), hips 22→~26% continuous (thermal), ~250 g payload @300 mm on the 7.5 V rail, extended-arm CoM shift ~45 mm. **GOOD IDEA ONLY behind two gates: stable trot, then balance controller** (which also unlocks inboard-jog = buys back the thermal cost). Design rules when it lands: mount over CoM, hard STOW pose enforced for all locomotion, consider lighter distal servos. Firmware: arrays 12→18 + joint_limits 36 floats (build flag). **⚠ CHECK at board bring-up: arm INA U12 address (memory says 0x45 = collides with the optional L2 INA)** | **GATED**: trot + balance controller |
 
+## Integration audit (2026-07-06 — captivity / fit / wiring)
+
+| # | Item | Why | Status |
+|---|---|---|---|
+| 29 | **Battery rattle + flange chafe** | 0.8 mm/side design slack all axes, strap only stops slide-out → 510 g rattles at trot; 0.25 gap to the shoulder flange bottoms (± print tol) = possible LiPo chafe on a structural edge | **DONE (BOM)**: 3 mm EVA pad on the tray floor (preload+damping) + felt/kapton on the flange bottom edges; pack caliper stays ⚠ |
+| 30 | **Grommet chafe** | O12 flange grommets = bare printed PA6 edges carrying MOVING leg cables (haa swing, ~1e5 cycles/hr) | **DONE**: `leg_v6/grommet_insert.scad` TPU liner ×6 (slit = wraps a routed bundle), rounded lips both faces |
+| 31 | **Inside-trunk harness plan** | stack↔grommets↔MRBF dressing unspecified — rat's nest risk; 5191 placement drives it | **GATED**: part-5/caliper session |
+| — | Watch items | riser lateral tabs 0.45 slack (shake test at FA); nylon-fuse mounts = low preload (check L2 point-cloud wobble at bring-up, VHB underlay if visible); **E-stop pod must exist before FIRST BUS POWER** (rides with hood — sequence the caliper session accordingly) | first-article / bring-up |
+
+Captivity verified: stack/Jetson/riser/shoulders/servos all bolted;
+switch (de-cased, under power board), bucks, MRBF all have designed homes.
+Fit: all gated except the 5 known caliper unknowns.
+
 ## Process debt
 
 | # | Item | Why | Status |

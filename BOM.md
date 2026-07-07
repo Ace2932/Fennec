@@ -168,6 +168,7 @@ Switch can be pulled out of its case to save ~60% volume inside the chassis if n
 | **M3×14 countersunk + M3 nyloc ×4** | **$3** | 🆕 Order — shoulder rev4 flange floor feet: csk head flush under the floor, nyloc + washer on the pad (drill Ø3.2 + csk the 4 floor holes at first assembly, floor_plate template) |
 | **ICM-42688-P breakout (SPI/I²C)** | **$12** | 🆕 Order — **dedicated gait IMU near CoM** (backlog #14): D456/L2 IMUs are mast-mounted (high, vibey, breakaway-fused, USB/Ethernet latency) — wrong tool for the 1 kHz balance loop. Rides the existing INA226 I²C bus (0x68, 4 wires) on the mezzanine at x −3.5 ≈ CoM; permanent footprint → v7 respin |
 | **Spiral cable wrap Ø6, 2 m** | **$5** | 🆕 Order — covers the free service loops between cable clips (backlog #18, `leg_v6/cable_clip.scad`); hip + knee loops ×4 legs |
+| **EVA foam 3 mm adhesive sheet + felt/kapton tape** | **$8** | 🆕 Order — battery tray floor pad (preloads the 0.8 mm slide-in slack against the shell floor, kills the 510 g rattle) + chafe strips on the shoulder-flange bottom edges over the pack (0.25 gap, integration audit #29) |
 | **100 Ω 5 W resistor (precharge)** | **$2** | 🆕 Order — bridge the main switch (backlog #19): spares the switch contacts from cap-inrush arcing on every battery connect |
 
 ---
