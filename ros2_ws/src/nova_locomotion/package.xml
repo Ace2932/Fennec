@@ -10,6 +10,13 @@
 
   <buildtool_depend>ament_python</buildtool_depend>
 
+  <!-- gait_node glue only; the pure-math modules stay dependency-free -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nova_ops</exec_depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
