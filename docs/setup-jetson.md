@@ -568,6 +568,46 @@ ros2 topic pub --once /safety_state std_msgs/msg/Int32 '{data: 2}'
 
 ---
 
+## 16. Watchdogs (system-audit "Jetson watchdog", closed 2026-07-06)
+
+Three layers — each catches what the one below cannot (details:
+`ros2_ws/src/nova_ops/nova_ops/watchdog/__init__.py`):
+
+| Layer | Catches | Mechanism |
+|---|---|---|
+| `Restart=on-failure` | bringup crash | `deploy/nova-bringup.service` |
+| `WatchdogSec=15` + `watchdog_node` | ROS stack hang/deadlock | systemd kills + restarts the tree when WATCHDOG=1 stops |
+| `RuntimeWatchdogSec=10` | kernel/systemd hang | Tegra SoC HW watchdog reboots the board |
+
+```bash
+# 1. bringup service (runs profile=walk at boot, watchdog-armed)
+sudo cp ~/nova-proj/deploy/nova-bringup.service /etc/systemd/system/   # adjust repo path
+sudo systemctl daemon-reload
+sudo systemctl enable nova-bringup     # start on boot; start now only when the bus is wired
+# 2. hardware watchdog (kernel hang -> reboot)
+sudo sed -i 's/^#\?RuntimeWatchdogSec=.*/RuntimeWatchdogSec=10/' /etc/systemd/system.conf
+sudo systemctl daemon-reexec
+cat /proc/watchdog 2>/dev/null; ls /dev/watchdog*   # expect /dev/watchdog present
+```
+
+Verify the hang-recovery path on the bench (robot on stands / E-stop in):
+
+```bash
+systemctl status nova-bringup                     # active, WATCHDOG_USEC visible in env
+ros2 topic echo --once /watchdog_fed              # counter > 0 and climbing
+# simulate a wedge: SIGSTOP the launch tree, expect systemd restart in ~15s
+sudo pkill -STOP -f 'bringup.launch.py'; sleep 20; systemctl status nova-bringup | head -3
+```
+
+Notes: the feeder signals *Jetson-stack* health only — Teensy health is the
+liveness node's `/system_ok` (deliberately NOT wired into the watchdog: an
+unplugged Teensy must not reboot-loop the Jetson). Restart storms are capped
+(4 in 2 min, then the unit stays down for the operator). The firmware's own
+command-staleness failsafe freezes the robot the moment commands stop, so a
+watchdog restart happens on a frozen — not runaway — robot.
+
+---
+
 ## Next (separate sessions — Phase 1 plan)
 
 - NVMe install + rootfs migration **(deferred — NAND shortage, see BOM §1; run from 128 GB microSD until prices recover)**

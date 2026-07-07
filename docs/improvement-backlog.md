@@ -35,7 +35,7 @@ load analysis). Ranked within group. Status legend: **NOW** (this batch),
 |---|---|---|---|
 | 9 | Firmware servo torque limits + E-stop limp | protects joints + servos better than plastic | **DONE 2026-07-06** (this lane): E-stop/battery latch now LIMPS the fleet; firmware per-joint raw ROM table (`joint_limits` topic, wide-open until post-homing publish via `safety_envelope/firmware_limits.py`); wrapper wires per-joint `effort`; haa default tightened ±45→±15 conservative (asymmetric 15/40 unlocks when `HAA_INBOARD_SIGN` filled at homing). Torque-limit 600‰ was already in firmware. **Remaining at calibration**: fill inboard signs + urdf_signs, publish the table |
 | 10 | Contact detection from servo current | no foot sensors needed; pairs with per-leg INA (v7) | **GATED**: v7 boards (current-only version possible from servo telemetry sooner) |
-| 11 | Jetson watchdog + joint-ID map | audit opens | **NEXT** (firmware/ops lane) |
+| 11 | Jetson watchdog + joint-ID map | audit opens | **DONE 2026-07-06**: 3-layer watchdog (Restart=on-failure / WatchdogSec+`watchdog_node` sd_notify feeder / Tegra RuntimeWatchdogSec) — `deploy/nova-bringup.service` + setup-jetson §16; liveness+watchdog nodes added to the walk profile. Joint-ID map: `nova_ops/joint_map.py` loader + consistency tests locking yaml ↔ homing config ↔ limits grouping ↔ URDF. **At Jetson**: install the unit + RuntimeWatchdogSec, bench-verify the SIGSTOP restart |
 
 ## Process debt
 

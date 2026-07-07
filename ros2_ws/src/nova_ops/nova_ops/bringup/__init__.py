@@ -15,54 +15,62 @@ Each profile is a sequence of "actions":
 # exist yet — stubs that print a TODO log and exit cleanly are noted
 # below. Each profile is documented even if not fully composable today.
 PROFILES = {
-    'bench': {
-        'description': 'Teensy uROS bridge + preflight only — desk firmware iteration',
-        'preflight': True,
-        'actions': [
+    "bench": {
+        "description": "Teensy uROS bridge + preflight only — desk firmware iteration",
+        "preflight": True,
+        "actions": [
             # micro_ros_agent runs detached via setup-jetson.md §14.7 setsid.
             # The launch file does NOT spawn it — it's started by ops, not by us.
             # We just include preflight here so you can validate the chain.
-            ('launch', 'nova_ops', 'preflight.launch.py', {}),
+            ("launch", "nova_ops", "preflight.launch.py", {}),
         ],
     },
-
-    'sensors': {
-        'description': 'RealSense + L2 + dashcam — sensor smoke tests + data collection',
-        'preflight': False,   # sensors don't need servo bus
-        'actions': [
-            ('launch', 'realsense2_camera', 'rs_launch.py', {
-                'enable_color': 'true',
-                'enable_depth': 'true',
-                'enable_gyro': 'true',
-                'enable_accel': 'true',
-            }),
-            ('launch', 'unitree_lidar_ros2', 'launch.py', {}),
-            ('launch', 'nova_ops', 'dashcam.launch.py', {}),
+    "sensors": {
+        "description": "RealSense + L2 + dashcam — sensor smoke tests + data collection",
+        "preflight": False,  # sensors don't need servo bus
+        "actions": [
+            (
+                "launch",
+                "realsense2_camera",
+                "rs_launch.py",
+                {
+                    "enable_color": "true",
+                    "enable_depth": "true",
+                    "enable_gyro": "true",
+                    "enable_accel": "true",
+                },
+            ),
+            ("launch", "unitree_lidar_ros2", "launch.py", {}),
+            ("launch", "nova_ops", "dashcam.launch.py", {}),
         ],
     },
-
-    'slam': {
-        'description': 'sensors + POINT-LIO + robot_state_publisher',
-        'preflight': False,
-        'actions': [
+    "slam": {
+        "description": "sensors + POINT-LIO + robot_state_publisher",
+        "preflight": False,
+        "actions": [
             # Compose by reference: load `sensors` profile first.
-            ('include_profile', 'sensors'),
-            ('launch', 'point_lio', 'mapping_unilidar_l2.launch.py', {}),
+            ("include_profile", "sensors"),
+            ("launch", "point_lio", "mapping_unilidar_l2.launch.py", {}),
             # robot_state_publisher needs the URDF — wired up once URDF lands.
             # ('node', 'robot_state_publisher', 'robot_state_publisher',
             #  {'robot_description': '<file content of nova.urdf.xacro>'}),
         ],
     },
-
-    'walk': {
-        'description': 'Teensy bridge + gait + safety envelope + dashcam + IMU',
-        'preflight': True,
-        'actions': [
-            ('launch', 'nova_ops', 'preflight.launch.py', {}),
-            ('launch', 'nova_ops', 'dashcam.launch.py', {}),
+    "walk": {
+        "description": "Teensy bridge + gait + safety envelope + dashcam + IMU",
+        "preflight": True,
+        "actions": [
+            ("launch", "nova_ops", "preflight.launch.py", {}),
+            ("launch", "nova_ops", "dashcam.launch.py", {}),
             # §10 battery_low -> clean poweroff. Safety-critical: the ONLY
             # nova_ops node not allowed to crash silently.
-            ('node', 'nova_ops', 'battery_shutdown_node', {'_respawn': True}),
+            ("node", "nova_ops", "battery_shutdown_node", {"_respawn": True}),
+            # Teensy /heartbeat watchdog -> /system_ok (audit gap closure)
+            ("node", "nova_ops", "liveness_node", {"_respawn": True}),
+            # systemd WATCHDOG=1 feeder — hang recovery when run under
+            # deploy/nova-bringup.service (WatchdogSec=15, NotifyAccess=all);
+            # idles harmlessly outside systemd. See nova_ops/watchdog/.
+            ("node", "nova_ops", "watchdog_node", {"_respawn": True}),
             # Gait controller doesn't exist yet (Phase 2 deliverable).
             # ('node', 'nova_gait', 'gait_controller', {}),
             # Safety envelope is a library wrapped INSIDE gait_controller's
@@ -70,25 +78,23 @@ PROFILES = {
             # published by gait_controller via the wrapper.
         ],
     },
-
-    'full': {
-        'description': 'walk + slam + Nav2 + Foxglove bridge',
-        'preflight': True,
-        'actions': [
-            ('include_profile', 'walk'),
-            ('include_profile', 'slam'),
+    "full": {
+        "description": "walk + slam + Nav2 + Foxglove bridge",
+        "preflight": True,
+        "actions": [
+            ("include_profile", "walk"),
+            ("include_profile", "slam"),
             # Nav2 + Foxglove are external packages (apt-installable).
             # Stubbed; Phase 3 deliverable.
             # ('launch', 'nav2_bringup', 'navigation_launch.py', {}),
             # ('launch', 'foxglove_bridge', 'foxglove_bridge_launch.xml', {}),
         ],
     },
-
-    'vla': {
-        'description': 'full + VLA inference node (Phase 4)',
-        'preflight': True,
-        'actions': [
-            ('include_profile', 'full'),
+    "vla": {
+        "description": "full + VLA inference node (Phase 4)",
+        "preflight": True,
+        "actions": [
+            ("include_profile", "full"),
             # Phase 4. OpenVLA INT4 or NanoVLA on Jetson Orin Nano 8GB.
             # ('node', 'nova_vla', 'vla_policy', {}),
         ],
@@ -106,18 +112,17 @@ def resolve_actions(profile_name: str, _seen=None) -> list:
     if _seen is None:
         _seen = set()
     if profile_name in _seen:
-        raise ValueError(
-            f'profile cycle detected: {profile_name} already in {_seen}')
+        raise ValueError(f"profile cycle detected: {profile_name} already in {_seen}")
     if profile_name not in PROFILES:
         raise ValueError(
-            f'unknown profile {profile_name!r}; '
-            f'available: {sorted(PROFILES.keys())}')
+            f"unknown profile {profile_name!r}; available: {sorted(PROFILES.keys())}"
+        )
 
     _seen = _seen | {profile_name}
     out = []
     seen_actions = set()
-    for action in PROFILES[profile_name]['actions']:
-        if action[0] == 'include_profile':
+    for action in PROFILES[profile_name]["actions"]:
+        if action[0] == "include_profile":
             for sub_action in resolve_actions(action[1], _seen=_seen):
                 key = _action_key(sub_action)
                 if key not in seen_actions:
@@ -134,7 +139,7 @@ def resolve_actions(profile_name: str, _seen=None) -> list:
 def _action_key(action) -> tuple:
     """Hashable identity for an action — used for dedup across includes."""
     kind = action[0]
-    if kind in ('launch', 'node'):
+    if kind in ("launch", "node"):
         # (kind, package, file_or_executable) — args/params not in key
         # so two identical includes with the same args are deduped, but
         # two launches of the same file with DIFFERENT args remain

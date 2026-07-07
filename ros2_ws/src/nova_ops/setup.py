@@ -41,6 +41,8 @@ setup(
             "battery_shutdown_node = nova_ops.battery_shutdown.node:main",
             # `ros2 run nova_ops liveness_node` — Teensy /heartbeat watchdog → /system_ok (respawn in bringup)
             "liveness_node = nova_ops.liveness.node:main",
+            # `ros2 run nova_ops watchdog_node` — systemd WATCHDOG=1 feeder (hang recovery under nova-bringup.service)
+            "watchdog_node = nova_ops.watchdog.node:main",
         ],
     },
 )
