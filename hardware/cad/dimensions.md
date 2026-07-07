@@ -202,8 +202,12 @@ Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 
 | Dim | Value | Status |
 |---|---|---|
-| Body L × W × H | ~51 × 38 × 42 (est.) | ❌ MEASURE — needed for the part-5 floor plate mount |
-| Mount | 2× #10 screws (est.) | ❌ MEASURE |
+| Terminal / fuse tab width | **16.0** | ✅ CALIPER 2026-07-07 |
+| Overall height (base → stud/nut top) | **46.5** | ✅ CALIPER 2026-07-07 |
+| Base foot L × W | ❌ still MEASURE — the horizontal mounting foot footprint (drives floor_plate slots) |
+| Base mount hole Ø + position | ❌ still MEASURE — how the L-bracket foot bolts down |
+| Terminal stud Ø | ❌ still MEASURE — sizes the battery/output ring terminals (looks ~M8) |
+| Lead exit directions | ❌ still MEASURE — drives the internal harness plan (#31) |
 
 ### Mxuteuk HB2-ES544 panel-mount E-stop
 **Source:** Mxuteuk product page
