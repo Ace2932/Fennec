@@ -19,7 +19,7 @@ load analysis). Ranked within group. Status legend: **NOW** (this batch),
 |---|---|---|---|
 | 4 | Trunk shell v2 (own print, PA6-CF) | kills all drill-at-assembly (battery 6 + feet 4 holes), material unknown, bolt-on floor plate → integrated bosses. Inherits every measured number | **GATED**: first full assembly proves interfaces |
 | 5 | Mass diet + real masses | servo holding torque is the platform limit; −100 g ≈ −2.4% torque everywhere. First: weigh printed set → URDF (CAD estimates land this batch, see 13) | **GATED**: scale session after print batch |
-| 6 | Knee config: keep translated vs X-config | X = symmetric workspace, better fore-aft authority; costs IK + both ROM gate redos. Decide BEFORE gait tuning bakes in | **DECISION** |
+| 6 | Knee config: keep translated vs X-config | analysis DONE (`docs/knee-config-analysis.md`, 2026-07-06): it's a **pure software sign choice** — both pose spaces already gate-verified, no reprints, no URDF change. X wins rear crouch margin (46° vs 10°) + robot-level symmetry + dog-like stand-up; costs 24 mm wider foot-exclusion. **REC: X-CONFIG**, reversible any time | **DECISION** (data delivered, awaiting call) |
 | 7 | Shoe v2 (own TPU: 85A, sipes, flatter crown) | we own the toe interface now; crown r17→15.3 limits patch to ~8 mm | **GATED**: first-article stock-geometry print + θ pin |
 | — | Inboard-jog tibia (d 64.3→3.3) | −0.6 N·m holding per hip, biggest thermal win | **GATED**: balance controller (84 mm track) |
 
