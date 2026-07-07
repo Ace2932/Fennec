@@ -89,7 +89,13 @@ arm (#28) unblocks.
 
 ## Buildable before any hardware arrives
 
-gait_node glue · body-pose IK · crawl variant + tests · backlash-comp
-hook · trot metrics script · Raibert stepper as pure logic with tests ·
-MuJoCo scene from the URDF. The hardware-blocked items: IMU firmware
-driver, homing calibration, everything on-robot.
+Status 2026-07-06 (pre-hardware work package, nova_locomotion):
+gait_node glue ✅ (controller.py + node.py) · body-pose IK ✅
+(kinematics/body_pose.py) · crawl variant + tests ✅ (gait/crawl.py) ·
+backlash-comp hook ✅ (gait/backlash.py, table MEASURE-AT-STAGE-1) ·
+trot metrics script ✅ (tools/trot_metrics.py) · Raibert stepper as
+pure logic with tests ✅ (balance/raibert.py) · MuJoCo scene from the
+URDF ⏳ (mujoco not in .venv; next pre-hardware item). The
+hardware-blocked items: IMU firmware driver, homing calibration
+(gait_node counts_per_rad/home_offset WIRE-AT-CALIBRATION),
+everything on-robot.
