@@ -54,7 +54,7 @@ extends −X:
 | Carrier board L × W | 100.0 × 79.4 | ✅ |
 | Mount-hole pattern (rectangular) | 96.5 × 75.4, 4× M3 | ✅ |
 | SOM heatsink height above carrier (top of fan) | **34.9** | ✅ CALIPER 2026-07-07 (top of fan above the board; was ~21.5 guess — +13.4). ⚠ heatsink top = 78.2 board plane + 34.9 = **113.1**, which POKES the L2 mast plate bottom (110.4) by ~2.7 in the x34.5..40 overlap corner — CURRENT bespoke design needs the mast raised ~+5 OR the official-case pivot (see chassis README "Jetson enclosure decision") |
-| Official Jetson case (OfficialPrintProfile) | **110.5 × 95.2 × 38.5** enclosure; ports on one long face, hex vents all sides, board mounts inside on its own bosses | ✅ measured from the .3mf 2026-07-07 (candidate to replace the bespoke hooded tray) |
+| Official Jetson case (OfficialPrintProfile) | **110.3 × 93.9 × 38.2** enclosure; **PORTS on the 93.9-wide END face** (normal along the 110.3 long axis), heatsink block on the OPPOSITE end; hex vents all sides, board mounts inside on its own bosses; bottom vented (mount via 4 solid corners) | ✅ CALIPER 2026-07-07 (mesh said 110.5×95.2×38.5 — use these calipered numbers). Adopted, replaces the bespoke hood |
 | Carrier PCB thickness | 1.6 (standard) | ⚠️ REVIEW |
 | Power barrel jack | 5.5 × 2.5 mm | ✅ |
 | USB-A 3.1 ports | 4× on long edge | ✅ |
@@ -67,9 +67,9 @@ extends −X:
 
 | Dim | Value | Status |
 |---|---|---|
-| Body L × W × H | 124.0 × 26.0 × 29.0 | ✅ |
-| Mount pattern | 2× M3 tripod-style at body center (90 mm apart) | ⚠️ REVIEW — verify which mount face used (top vs bottom) |
-| Mount alt pattern | 4× M3 on rear panel corners | ⚠️ REVIEW |
+| Body L × W × H | **123.8 × 26.0 × 29.0** | ✅ CALIPER 2026-07-07 (facing forward) |
+| **Mount pattern (back face)** | **2× M3, 94.4 apart** center-to-center, on the back-face centerline (±47.2 along length, width-centered) | ✅ CALIPER 2026-07-07 — the design's guessed 4×-corner (±54) pattern is WRONG, it's these 2 |
+| ~~Mount alt pattern 4×~~ | retired — real back mount is the 2× above | ✅ |
 | IR projector center offset | 14.0 from body centerline | ⚠️ REVIEW |
 | USB 3.1 cable connector | Type-C on rear | ✅ |
 | Cable thickness with shield | ~6.0 (USB-A end) | ⚠️ REVIEW |
