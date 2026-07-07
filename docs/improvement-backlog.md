@@ -55,6 +55,14 @@ Verified NOT issues: E-stop already cuts leg/hip/L2 rails in hardware (NC
 through the three buck ENs, Jetson stays up — power-budget checklist line
 209 verifies at power-on); XT60+MRBF-30 fusing is properly sized/placed.
 
+## Architectural (2026-07-06 third pass — "is there a better design")
+
+| # | Item | Why | Status |
+|---|---|---|---|
+| 20 | **Series compliance: shoe v2 crush zone** | position servos can't do impedance; total leg compliance today ~1-2 mm TPU squish → touchdown spikes hit the gears rigidly. Engineered TPU rib voids in the shoe, ~5-8 N/mm (3-4 mm at 20 N trot, bottoms before 60 N peak), same toe_v2 interface. Gear protection + contact-signal ramp + stumble tolerance | **NEXT** after first-article stock shoe (folds into #7 shoe v2) |
+| 21 | **Servo bus schedule: 17 Hz/joint feedback is the gait ceiling** | round-robin 1 servo/tick → 17 Hz state, 40 Hz cmd; full 12-poll = only 4.4 ms wire time. Poll 3-4/tick (~70 Hz full state) + cmd to 100 Hz; try Feetech SYNC_READ (~200 Hz). Prereq for dynamic gait + current-based contact detection | **NEXT** (pure firmware, local compile) |
+| 22 | **Per-leg power domains** | leg rail = one 10 A buck vs 21 A 8-servo stall (caps+torque-cap+stall-trip bridge it, coherent but shared-fate: one buck foldback sags all 8; one harness short drops the rail). v7: 4× per-leg bucks or high-side switches + per-leg INA → fault isolation + transient headroom | **GATED**: v7 respin (with leg-INA + IMU footprint) |
+
 ## Process debt
 
 | # | Item | Why | Status |
