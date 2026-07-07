@@ -202,7 +202,7 @@ Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 
 | Dim | Value | Status |
 |---|---|---|
-| Body L × W × H | **61.6 × 20.0 × 46.5** | ✅ CALIPER 2026-07-07 (supersedes the ~51×38×42 est) — drives the part-5 floor-plate slots + trunk-interior clearance |
+| Body L × W × H | **61.6 × 20.0 × 46.5** | ✅ CALIPER 2026-07-07. **MOUNT = ASSEMBLY-TIME EXTERNAL** (2026-07-07): no clean captive spot exists — belly = leg-crouch space, rear-center = shoulder flange, trunk = mezzanine stack (all gate-verified). Bracket/zip-tie to the rear-shoulder exterior or trunk rear at assembly, near the battery-lead entry |
 | Terminal / fuse tab width | 16.0 (within the 20 width) | ✅ CALIPER 2026-07-07 |
 | Terminal STUD Ø | **7.8** (→ **M8**) | ✅ CALIPER 2026-07-07 — battery + output ring terminals = M8 lugs |
 | Terminal hole Ø | 10.1 | ✅ CALIPER 2026-07-07 — clearance/boot hole around the M8 stud |

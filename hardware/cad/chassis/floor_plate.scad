@@ -60,10 +60,11 @@ module floor_plate() {
         for (sx = STK_X, sy = [-1, 1])
             translate([sx, sy * STK_Y, 3.9 - EPS])
                 cylinder(d = 2.5, h = T + 2 * EPS);
-        // MRBF block slots (M5 clearance, ⚠ finalize at caliper)
-        for (p = MRBF) hull() for (dy = [-4, 4])
-            translate([p[0], p[1] + dy, 3.9 - EPS])
-                cylinder(d = 5.5, h = T + 2 * EPS);
+        // (MRBF/5191 slots REMOVED 2026-07-07: the calipered block is
+        //  61.6×20×46.5 — 46.5 tall — and the mezzanine stack fills the
+        //  whole plate footprint to z64. No room here. The block mounts
+        //  in the BELLY at the pack instead, per the design intent
+        //  "MRBF-30 at the pack" — see battery_pocket.scad tail mount.)
         // rear cutout over the trunk's rear floor opening
         hull() for (px = [-58, -48], py = [-22, 22])
             translate([px, py, 3.9 - EPS]) cylinder(r = 4, h = T + 2 * EPS);
