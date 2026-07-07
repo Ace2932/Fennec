@@ -213,6 +213,10 @@ def main():
     mast = trimesh.load('l2_mast.stl')
     head = trimesh.load('d456_head.stl')
     pack = make_box(-77.5, 77.5, -23, 23, -35.9, -0.9)   # 0.1 lift off tray
+    # skid rails (backlog #15): TPU strips under the tray, new lowest z
+    rails = trimesh.util.concatenate([
+        make_box(-55, 75, 9, 21, -42.2, -39.2),
+        make_box(-55, 75, -21, -9, -42.2, -39.2)])
     cam = make_box(69.7, 95.7, -62, 62, 80.5, 109.5)     # D456, periscope
 
     # ---- 1. riser <-> trunk --------------------------------------------------
@@ -311,6 +315,9 @@ def main():
                         ('pack', pack,
                          p[(np.abs(p[:, 0]) < 90) & (np.abs(p[:, 1]) < 30)
                            & (p[:, 2] > -40) & (p[:, 2] < 1)]),
+                        ('rails', rails,
+                         p[(np.abs(p[:, 0]) < 90) & (np.abs(p[:, 1]) < 30)
+                           & (p[:, 2] > -46) & (p[:, 2] < -35)]),
                         ('head', head,
                          p[(p[:, 0] > 60) & (p[:, 0] < 73)
                            & (np.abs(p[:, 1]) < 61) & (p[:, 2] > 55)

@@ -101,6 +101,16 @@ module battery_pocket() {
         // opening; groove across the bottom lets it pass under the pack
         translate([-77, -CAV_Y - WALL - EPS, CAV_Z0 - 2])
             cube([16, 2 * (CAV_Y + WALL) + 2 * EPS, 2 + EPS]);
+
+        // skid-rail key recesses (backlog #15, skid_rail.scad): 0.6 deep
+        // in the 3.2 bottom (2.6 remains — pack load spreads over the
+        // whole tray floor, bending trivial). Keys take the shear, CA/VHB
+        // takes the peel; rails sacrificial + replaceable. Rails at
+        // y +/-15, keys centered trunk x -43 / +58 (clear of the strap
+        // groove x -77..-61 and the boss columns y +/-26.5).
+        for (sy = [-1, 1], kx = [-43, 58])
+            translate([kx - 10.3, sy * 15 - 4.3, BOT_Z - EPS])
+                cube([20.6, 8.6, 0.6 + EPS]);
     }
 }
 

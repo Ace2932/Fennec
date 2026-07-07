@@ -278,16 +278,22 @@ void poll_one_servo() {
 // commands. Decimation keeps bus utilization sane and matches typical gait
 // command rate. Gated on safety_fsm.motion_enabled() — never writes while
 // E-stop or battery-low are latched.
-constexpr uint8_t CMD_BROADCAST_DECIMATE = 5;   // 200 Hz / 5 = 40 Hz
+constexpr uint8_t CMD_BROADCAST_DECIMATE = 2;   // 200 Hz / 2 = 100 Hz
+// (backlog #21 bus-schedule rework, 2026-07-06: was 5 = 40 Hz. Gait wants
+// >= 100 Hz command; the slew constant below scales with the period.)
 uint8_t cmd_decimate_count = 0;
 
-// Slew limit — max raw-units change per broadcast (= per 25 ms at 40 Hz).
-// STS3215 full travel 0..4095 = 360°. At 50 raw units / 25 ms = 4.4°/25ms
-// ≈ 176°/s, well under the servo's mechanical capability but slow enough
-// that a step-jump command (e.g. host crash → restart at a far pose) ramps
-// in instead of slamming. Tune in `NOVA_SLEW_MAX_DELTA` build flag.
+// Slew limit — max raw-units change per broadcast (= per 10 ms at 100 Hz).
+// STS3215 full travel 0..4095 = 360°. At 20 raw units / 10 ms ≈ 176°/s —
+// same RATE as the old 50/25ms, re-expressed for the 100 Hz broadcast:
+// slow enough that a step-jump command (host crash → restart at a far
+// pose) ramps in instead of slamming. Tune in `NOVA_SLEW_MAX_DELTA`.
 #ifndef NOVA_SLEW_MAX_DELTA
-#define NOVA_SLEW_MAX_DELTA 50
+#define NOVA_SLEW_MAX_DELTA 20
+#endif
+// Feedback polls per 5 ms tick (per-joint rate = 200*N/12 Hz): 3 -> 50 Hz
+#ifndef NOVA_POLLS_PER_TICK
+#define NOVA_POLLS_PER_TICK 3
 #endif
 
 // Per-joint last-commanded raw goal, used to compute the slew-limited
@@ -929,7 +935,14 @@ void loop() {
       }
     }
 
-    poll_one_servo();
+    // Feedback poll: N servos per tick (backlog #21 — was 1/tick = 17 Hz
+    // per joint, the gait/contact-detection ceiling). 3/tick at 200 Hz =
+    // 50 Hz per joint; bus cost ~3 x 370 us = 1.1 ms of the 5 ms tick,
+    // plus the 100 Hz sync-write (~0.5 ms every 2nd tick). Watch the
+    // exec-time p99 histogram after flashing; 4/tick (66 Hz) fits if
+    // needed. SYNC_READ (one frame, all 12) would reach ~200 Hz — probe
+    // whether the servos' firmware supports instruction 0x82 at bring-up.
+    for (uint8_t pk = 0; pk < NOVA_POLLS_PER_TICK; pk++) poll_one_servo();
     broadcast_servo_commands();
 
     // Telemetry sample

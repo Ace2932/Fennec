@@ -77,6 +77,12 @@ def main():
              trimesh.load('l2_mast.stl'),
              trimesh.load('d456_head.stl'),
              trimesh.load('floor_plate.stl')]
+    # TPU skid rails under the tray (backlog #15)
+    rail = trimesh.load('skid_rail.stl')
+    for sy in (1, -1):
+        r = rail.copy()
+        r.apply_transform(T([-55, sy * 15 - 6, -39.2]))
+        parts.append(r)
     sh = trimesh.load(f'{LEG}/shoulder.stl')
     pl_R = trimesh.load(f'{LEG}/shoulder_plate.stl')
     pl_L = trimesh.load(f'{LEG}/shoulder_plate_L.stl')
