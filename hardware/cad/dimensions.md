@@ -53,7 +53,8 @@ extends −X:
 |---|---|---|
 | Carrier board L × W | 100.0 × 79.4 | ✅ |
 | Mount-hole pattern (rectangular) | 96.5 × 75.4, 4× M3 | ✅ |
-| SOM heatsink height above carrier (top of fan) | ~21.5 | ⚠️ REVIEW — caliper-measure (depends on heatsink rev) |
+| SOM heatsink height above carrier (top of fan) | **34.9** | ✅ CALIPER 2026-07-07 (top of fan above the board; was ~21.5 guess — +13.4). ⚠ heatsink top = 78.2 board plane + 34.9 = **113.1**, which POKES the L2 mast plate bottom (110.4) by ~2.7 in the x34.5..40 overlap corner — CURRENT bespoke design needs the mast raised ~+5 OR the official-case pivot (see chassis README "Jetson enclosure decision") |
+| Official Jetson case (OfficialPrintProfile) | **110.5 × 95.2 × 38.5** enclosure; ports on one long face, hex vents all sides, board mounts inside on its own bosses | ✅ measured from the .3mf 2026-07-07 (candidate to replace the bespoke hooded tray) |
 | Carrier PCB thickness | 1.6 (standard) | ⚠️ REVIEW |
 | Power barrel jack | 5.5 × 2.5 mm | ✅ |
 | USB-A 3.1 ports | 4× on long edge | ✅ |
