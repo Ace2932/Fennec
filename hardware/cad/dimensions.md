@@ -53,7 +53,7 @@ extends −X:
 |---|---|---|
 | Carrier board L × W | 100.0 × 79.4 | ✅ |
 | Mount-hole pattern (rectangular) | 96.5 × 75.4, 4× M3 | ✅ |
-| SOM heatsink height above carrier (top of fan) | **34.9** | ✅ CALIPER 2026-07-07 (top of fan above the board; was ~21.5 guess — +13.4). ⚠ heatsink top = 78.2 board plane + 34.9 = **113.1**, which POKES the L2 mast plate bottom (110.4) by ~2.7 in the x34.5..40 overlap corner — CURRENT bespoke design needs the mast raised ~+5 OR the official-case pivot (see chassis README "Jetson enclosure decision") |
+| SOM heatsink height above carrier (top of fan) | **34.9** | ✅ CALIPER 2026-07-07 (top of fan above the board; was ~21.5 guess — +13.4). ⚠ heatsink top = 78.2 board plane + 34.9 = **113.1** would POKE the L2 mast plate. **RESOLVED 2026-07-07:** the bespoke tray+hood is retired; the board+heatsink now live in the official case on the deck (case row below), the L2 mast base was compacted into the front strip, and its plate lifted to z113.4. See chassis README "Jetson enclosure decision" + `chassis/place_case.py` |
 | Official Jetson case (OfficialPrintProfile) | **110.3 × 93.9 × 38.2** enclosure; **PORTS on the 93.9-wide END face** (normal along the 110.3 long axis), heatsink block on the OPPOSITE end; hex vents all sides, board mounts inside on its own bosses; bottom vented (mount via 4 solid corners) | ✅ CALIPER 2026-07-07 (mesh said 110.5×95.2×38.5 — use these calipered numbers). Adopted, replaces the bespoke hood |
 | Carrier PCB thickness | 1.6 (standard) | ⚠️ REVIEW |
 | Power barrel jack | 5.5 × 2.5 mm | ✅ |

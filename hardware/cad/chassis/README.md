@@ -30,8 +30,8 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 
 | Part | Status | Notes |
 |---|---|---|
-| `riser_bay.scad` | designed, gated | one print, 126.7 × 110 × 42.9 (z 29.0..71.9); L2 cable drop = 14×10 slot @ (53.5,0) — passes the RJ45 plug head |
-| `spacer.scad` | designed | Jetson standoff washers Ø8 × 6.3, print 8 |
+| `riser_bay.scad` | designed, gated | one print, 126.7 × 110 × 42.9 (z 29.0..71.9). **Reworked 2026-07-07 for the case pivot**: dropped the 96.5×75.4 Jetson standoff grid + all hood pads/inserts; added the COMPACT mast interface (54/59.0, ±14), the case PORT-END cable slot (x −58..−46, y ±18 = also the case bottom-vent breather), 4 cradle deck ties (47.3/−59.0, ±50.35), and relocated the SMA bulkheads to the front strip (57, ±40). L2 cable drop 14×12 @ (53.5,0) |
+| `spacer.scad` | **RETIRED** | Jetson standoff washers — unused now the board is in the official case (kept in build_all for reference) |
 | `battery_pocket.scad` | designed, gated | rear-loading belly tray, 6× M3 sandwich mount through the floor (**part-5 plate must adopt the (±40/0, ±26.5) pattern**; drill the floor at first assembly), velcro fence at the rear opening |
 | `l2_mast.scad` | designed, gated | flange→shaft→plate; **bolt L2 to the plate BEFORE mounting** (plate holes clear the shaft); flange screws driven under the L2 with a ball-end key. **Flange screws = NYLON M3×10 fuses** (backlog #2): mast pops off the deck at ~10 N·m faceplant instead of the shaft/inserts/L2 dying; L2 tethers on its own pigtail. Hand-tight only |
 | `d456_head.scad` | designed, gated (**v3 periscope**) | screw-in (user call): camera on its REAR 4×M3 corner pattern (⚠ unverified — tall slots at y ±54, CALIPER before printing) at z 80.5..109.5, above the shoulder deck extension, below the L2; **right-angle USB-C required** (BOM). v1 died on the shoulder webs, v2 under-chin died on the folded front femur (bar through the volume from hfe ~+35). **Row screws = NYLON M3×10 fuses** (backlog #2): bracket pops before the riser-wall inserts rip; camera tethers on the USB-C. Hand-tight only |
