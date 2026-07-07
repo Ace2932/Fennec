@@ -189,7 +189,7 @@ extends −X:
 
 | Dim | Value | Status |
 |---|---|---|
-| Pack L × W × H | 155.0 × 46.0 × 35.0 | ✅ Ovonic 6000mAh listing 2026-07-05 (user-confirmed); caliper-verify at pocket first-article |
+| Pack L × W × H | **155.0 × 46.8 × 35.0** | ✅ CALIPER 2026-07-07 (width +0.8 vs the 46 listing; L/H matched). battery_pocket CLR tightened 0.8→0.6/side → cavity re-cut, chassis gate re-run clean |
 | Weight | 510 g | ✅ listing (1.12 lb) |
 | Balance lead | JST-XHR-5P (4S) | ✅ listing |
 | Power lead | XT60 (Ovonic kit includes XT60 jumper + balance lead) | ✅ |

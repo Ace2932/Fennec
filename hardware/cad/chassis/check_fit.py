@@ -220,7 +220,7 @@ def main():
     # Official Jetson case AABB (calipered 110.3x93.9x38.2, port END -x, on
     # the deck). REPLACES the retired bespoke Jetson tray + heatsink box.
     case = make_box(-62.0, 48.3, -46.95, 46.95, 71.9, 110.1)
-    pack = make_box(-77.5, 77.5, -23, 23, -35.9, -0.9)   # 0.1 lift off tray
+    pack = make_box(-77.5, 77.5, -23.4, 23.4, -35.9, -0.9)  # 46.8 wide caliper
     # skid rails (backlog #15): TPU strips under the tray, new lowest z
     rails = trimesh.util.concatenate([
         make_box(-55, 75, 9, 21, -42.2, -39.2),

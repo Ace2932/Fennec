@@ -114,7 +114,7 @@ def main():
     parts += [FR, RR, FL, RL]
     parts += [box(-59.5, 52.5, -45, 45, 6.0, 64.0),    # stack on plate, ctr -3.5
               box(16, 91, -37.5, 37.5, 117.4, 182.4),  # L2 body (seat 117.4)
-              box(-77.5, 77.5, -23, 23, -35.9, -0.9),  # pack (inside pocket)
+              box(-77.5, 77.5, -23.4, 23.4, -35.9, -0.9),  # pack 46.8 caliper
               box(69.7, 95.7, -61.9, 61.9, 80.5, 109.5)]  # D456, periscope
     asm = trimesh.util.concatenate(parts)
     asm.export('chassis_assembly_preview.stl')

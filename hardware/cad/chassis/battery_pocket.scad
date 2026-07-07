@@ -35,8 +35,10 @@
 $fn = 64;
 EPS = 0.05;
 
-PACK = [155, 46, 35];
-CLR  = 0.8;                       // per side, listing dims (caliper at FA)
+PACK = [155, 46.8, 35];          // CALIPER 2026-07-07 (was 46 listing width)
+CLR  = 0.6;                       // per side (width caliper landed +0.8 → keep
+                                  // ~0.6/side; pack slides on the tray, EVA
+                                  // pad + strap preload it, backlog #29)
 CAV_X = PACK[0] / 2 + CLR;        // 78.3
 CAV_Y = PACK[1] / 2 + CLR;        // 23.8
 WALL  = 3.2;
