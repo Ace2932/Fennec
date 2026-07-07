@@ -43,6 +43,5 @@ One evening, calipers + the real parts. Every number lands in
 - [ ] Filament stock check: PA6-CF ~1.5 kg, PETG-CF ~0.6 kg, TPU ~100 g
 
 ## Possibly stale (check then close)
-- [ ] memory `project-femur-knee-fix` says "blocked on caliper gap
-      measurement" (STS3215 spacer bosses) — predates the leg_v6 rev2
-      knee; confirm superseded and close the memory item
+- [x] ~~femur-knee-fix memory~~ — confirmed leg_v5-era, superseded by
+      the leg_v6 knee_arm redesign; memory deleted 2026-07-06
