@@ -45,9 +45,11 @@
       <child  link="${leg}_upper"/>
       <origin xyz="${hip_to_upper_x} ${reflect*hip_to_upper_y} ${hip_to_upper_z}" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
-      <!-- gate ROM: away-trunk -86 .. toward-trunk +50 (sign mapping
-           ⚠ VERIFY IN SIM — see nova.urdf.xacro) -->
-      <limit lower="${-hfe_ext}" upper="${hfe_fold}"
+      <!-- gate ROM: toward-trunk +50 (both) .. away-trunk -50 FRONT / -86 REAR.
+           FRONT protraction capped -50 for the forward head (2026-07-07; sign
+           mapping ⚠ VERIFY IN SIM — see nova.urdf.xacro). -->
+      <limit lower="${-hfe_ext_front if leg[0] == 'F' else -hfe_ext}"
+             upper="${hfe_fold}"
              effort="${eff_leg}" velocity="${vel_servo}"/>
     </joint>
     <link name="${leg}_upper">

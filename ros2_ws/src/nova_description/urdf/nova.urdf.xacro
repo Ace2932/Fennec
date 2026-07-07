@@ -29,13 +29,19 @@
             +roll about the +x axis; LEFT = -roll — per-side via reflect
             in leg.macro.
        hfe: toward-trunk fold +50 sw (tibia flank grazes the riser skirt
-            from ~+55) / away-trunk -86 sw. ⚠ SIGN MAPPING gate->URDF
-            assumed +hfe = toward-trunk, same for all four legs (knees
-            translated, one convention) — VERIFY IN SIM before gait. -->
+            from ~+55), BOTH ends. Away-trunk (forward protraction) is now
+            LEG-DEPENDENT (head clearance, 2026-07-07): FRONT legs cap at
+            -50 (the forward HEAD occupies x70..100 z80..120; front legs
+            reaching -86 forward hit the D456 face / L2 crown — chassis
+            check_fit HEAD case), REAR legs keep -86. Front -50 is still a
+            strong stride (gait uses -30..-50; kfe-109 chord still reaches).
+            ⚠ SIGN MAPPING gate->URDF assumed +hfe = toward-trunk, same for
+            all four legs (knees translated, one convention) — VERIFY IN SIM. -->
   <xacro:property name="haa_in"   value="0.262"/>  <!-- 15 deg inboard -->
   <xacro:property name="haa_out"  value="0.698"/>  <!-- 40 deg outboard -->
-  <xacro:property name="hfe_fold" value="0.873"/>  <!-- +50 toward trunk -->
-  <xacro:property name="hfe_ext"  value="1.501"/>  <!-- -86 away -->
+  <xacro:property name="hfe_fold" value="0.873"/>  <!-- +50 toward trunk (both) -->
+  <xacro:property name="hfe_ext"       value="1.501"/>  <!-- -86 away, REAR legs -->
+  <xacro:property name="hfe_ext_front" value="0.873"/>  <!-- -50 away, FRONT legs (head cap) -->
   <xacro:property name="kfe_range" value="1.9"/>   <!-- sweep-gate: mech stop ~118 deg (tibia flank vs fork throat); 109 sw = margin. Deep-sit = v7 offset-plane option -->
 
   <!-- ===================== link offsets (m) ===================== -->

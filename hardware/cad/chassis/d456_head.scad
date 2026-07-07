@@ -1,4 +1,12 @@
 // =============================================================================
+// *** RETIRED 2026-07-07 — SUPERSEDED BY head.scad ***
+// This periscope tilted the D456 UP behind the chassis; the trunk front cut
+// the bottom of its view (near-ground occlusion). Replaced by head.scad, which
+// puts the camera FORWARD of the chassis as a 27deg DOWN-tilted face and fuses
+// the L2 crown onto the same part. Kept for its reused knowledge (D456 rear
+// 2x M3 @94.4 centerline mount, right-angle USB-C routing, notch stem) — NOT
+// built (removed from build_all.sh) and NOT gated. See head.scad.
+// =============================================================================
 // NOVA chassis — D456 HEAD BRACKET v3: PERISCOPE (screw-in, user call)
 // =============================================================================
 // Top-level design: docs/design-outline.md. Trunk frame (+x FRONT).

@@ -82,7 +82,16 @@ def _hip_abduction(joint_id: int) -> JointLimit:
 
 
 def _thigh_flexion() -> JointLimit:
-    # -30 deg (forward) to +90 deg (rear-up). Mammalian quadruped range.
+    # -30 deg (forward) to +90 deg (rear-up). Mammalian quadruped placeholder.
+    # NOTE: the URDF is the authority (notes-qol §3) and now caps hfe
+    # ASYMMETRICALLY by leg (chassis check_fit HEAD case, 2026-07-07): FRONT
+    # legs (hfe IDs 2 = FL, 5 = FR) protract to only -50 deg because the
+    # forward integrated head (head.scad: D456 face + L2 crown, x70..100
+    # z80..120) occupies the space a -86 front reach would sweep; REAR legs
+    # (IDs 8, 11) keep -86. Fold (+) is +50 for all four. This -30..+90
+    # placeholder is already inside the -50 front cap, so it is conservative
+    # for both; replace with URDF-derived per-ID limits when the URDF loader
+    # lands (front hfe lower = -50, rear = -86).
     return JointLimit(
         lower=math.radians(-30.0),
         upper=math.radians(90.0),

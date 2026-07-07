@@ -74,8 +74,7 @@ def main():
     parts = [trimesh.load(f'{NOVA}/original_body_files/SM3_Frame_ChassisTrunk.stl'),
              trimesh.load('riser_bay.stl'),
              trimesh.load('battery_pocket.stl'),
-             trimesh.load('l2_mast.stl'),
-             trimesh.load('d456_head.stl'),
+             trimesh.load('head.stl'),        # integrated D456 face + L2 crown
              trimesh.load('floor_plate.stl'),
              trimesh.load('jetson_case_mount.stl')]
     # official Jetson case (ref mesh) at its chosen placement: bbox-centre
@@ -112,10 +111,16 @@ def main():
     FL = FR.copy(); FL.apply_transform(MY)
     RL = RR.copy(); RL.apply_transform(MY)
     parts += [FR, RR, FL, RL]
+    # D456 tilted OBB (27deg down; back-face ctr 70,0,105.5) — the head "face"
+    th = np.radians(27.0)
+    fwd = np.array([np.cos(th), 0, -np.sin(th)])
+    cam = trimesh.creation.box(
+        extents=[26.0, 123.8, 29.0],
+        transform=T(np.array([70, 0, 105.5]) + 13 * fwd) @ rot(27.0, [0, 1, 0]))
     parts += [box(-59.5, 52.5, -45, 45, 6.0, 64.0),    # stack on plate, ctr -3.5
-              box(16, 91, -37.5, 37.5, 117.4, 182.4),  # L2 body (seat 117.4)
+              box(16, 91, -37.5, 37.5, 122.0, 187.0),  # L2 body (crown seat 122)
               box(-77.5, 77.5, -23.4, 23.4, -35.9, -0.9),  # pack 46.8 caliper
-              box(69.7, 95.7, -61.9, 61.9, 80.5, 109.5)]  # D456, periscope
+              cam]                                       # D456 (down-tilted face)
     asm = trimesh.util.concatenate(parts)
     asm.export('chassis_assembly_preview.stl')
     print('chassis_assembly_preview.stl', asm.bounds.round(1).tolist())

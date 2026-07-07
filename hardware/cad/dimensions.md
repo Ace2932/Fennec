@@ -69,6 +69,7 @@ extends −X:
 |---|---|---|
 | Body L × W × H | **123.8 × 26.0 × 29.0** | ✅ CALIPER 2026-07-07 (facing forward) |
 | **Mount pattern (back face)** | **2× M3, 94.4 apart** center-to-center, on the back-face centerline (±47.2 along length, width-centered) | ✅ CALIPER 2026-07-07 — the design's guessed 4×-corner (±54) pattern is WRONG, it's these 2 |
+| **Chassis mount** | `chassis/head.scad` — camera seats on a **27° DOWN-tilted** front face (back-face ctr at trunk 70,0,105.5), forward of the chassis so near-ground is in frame (replaces the retired periscope). Right-angle USB-C (BOM) | ✅ 2026-07-07 (head_study.py: 0 leg-sweep hits at front hfe −50) |
 | ~~Mount alt pattern 4×~~ | retired — real back mount is the 2× above | ✅ |
 | IR projector center offset | 14.0 from body centerline | ⚠️ REVIEW |
 | USB 3.1 cable connector | Type-C on rear | ✅ |
@@ -86,6 +87,7 @@ extends −X:
 | Power barrel | **3.5 × 1.35 mm** | ✅ CALIPER 2026-07-07 — the OEM connector that SHIPPED with the L2 measures 3.4 OD (3.5×1.35 class); supersedes the manual's ambiguous 5.5×2.1/2.5. The purchased 3.5×1.35 bare-wire pigtail matches → wires to the 12V L2 rail. Mast bore unaffected (molded housing ~Ø8 passes; RJ45 11.7×8 is the binding constraint) |
 | Ethernet | RJ-45 (standard) | ✅ |
 | FoV | 360° × 90° | ✅ |
+| **Chassis mount** | `chassis/head.scad` CROWN — 4× M3 22.5 square, bolted from BELOW the crown plate; optical center at trunk z~154 (crown seat top 122). Replaces the retired standalone `l2_mast.scad`. 360° ring clear (nearest structure 36 mm below); rear-down cone blind only below −83° (Jetson case) | ✅ 2026-07-07 (head_study.py) |
 | Self-heat / cold-boot delay | ~30-60 s below 30 °C ambient | ✅ |
 
 ---
@@ -271,6 +273,7 @@ slice-circle bore detection (1 mm slice steps, circle fit σ<0.15 mm). Feeds
 | Hip grid: haa fore-aft × lateral spacing | **282.4 × 78.1** (half: 141.2 / 39.05) | ✅ same source; front/rear + left/right symmetric about (7.45, −14.2) |
 | Assembly cross-check of femur length | 105.9 (vs 106.9 bore-metric) | ✅ bbox-center precision ±0.7 — bore metric kept |
 | Joint ranges haa/hfe/kfe | 0.7 / 1.5 / 2.2 rad | ⚠️ REVIEW — conservative placeholders, verify vs collision in sim/first-article |
+| hfe sw ROM (chassis gate) | fold **+50°** (both) · protraction **−50° FRONT / −86° REAR** | ✅ 2026-07-07 — FRONT protraction capped −50 so the forward head (head.scad, x70..100 z80..120) clears the front-leg sweep; rear keep −86. Wired: URDF `hfe_ext_front`/`hfe_ext` + `check_fit.py` HEAD case. Gait uses −30..−50, still a strong stride |
 
 ### SM3_Foot shoe (stock TREAD CRESCENT on the toe_v2 seat)
 **Source:** mesh survey 2026-07-06 **v3** (`SM3_Foot.stl`, polar slice

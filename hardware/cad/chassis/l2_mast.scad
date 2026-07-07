@@ -1,4 +1,12 @@
 // =============================================================================
+// *** RETIRED 2026-07-07 — SUPERSEDED BY head.scad ***
+// The standalone L2 mast + the periscope d456_head are replaced by ONE
+// integrated forward HEAD (head.scad) that carries BOTH the D456 (down-tilted
+// face) and the L2 (crown on top). This file is kept for its reused knowledge
+// (cable bore 13x11, deck-flange bolt pattern, L2 4x M3 22.5 square, flange
+// flare) — NOT built (removed from build_all.sh) and NOT gated. See
+// head.scad + head_study.py + chassis/README.md.
+// =============================================================================
 // NOVA chassis — L2 LiDAR MAST (riser deck -> Unitree L2, optical ctr ~+100)
 // =============================================================================
 // Top-level design: docs/design-outline.md. Trunk frame. L2: 75 x 75 x 65,
