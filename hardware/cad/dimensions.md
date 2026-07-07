@@ -204,7 +204,8 @@ Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 |---|---|---|
 | Body L × W × H | **61.6 × 20.0 × 46.5** | ✅ CALIPER 2026-07-07 (supersedes the ~51×38×42 est) — drives the part-5 floor-plate slots + trunk-interior clearance |
 | Terminal / fuse tab width | 16.0 (within the 20 width) | ✅ CALIPER 2026-07-07 |
-| Through-hole Ø | **10.1** | ✅ CALIPER 2026-07-07 — the terminal/stud hole (→ ~M10 stud; sizes the battery + output ring terminals) |
+| Terminal STUD Ø | **7.8** (→ **M8**) | ✅ CALIPER 2026-07-07 — battery + output ring terminals = M8 lugs |
+| Terminal hole Ø | 10.1 | ✅ CALIPER 2026-07-07 — clearance/boot hole around the M8 stud |
 | Base mount hole Ø + position | ⚠ still handy — how the foot bolts to the floor plate (envelope + hole above are enough to pocket + slot it; refine at assembly) |
 
 ### Mxuteuk HB2-ES544 panel-mount E-stop

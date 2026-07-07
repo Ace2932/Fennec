@@ -223,6 +223,7 @@ a mobile robot. Audio is novelty. Kept: status display + LEDs only.
 | 18AWG silicone wire | $18 | ✅ Ordered |
 | 22AWG hookup wire | $15 | ✅ Ordered |
 | JST / Dupont connector kit | $30 | ✅ Ordered — verify crimper included |
+| **M8 ring terminals, 10 AWG (×4+)** | **$5** | 🆕 Order — 5191 fuse-block stud CALIPERED **M8** (7.8 mm), 2026-07-07. Battery-in + output-out lugs on the 10 AWG feed (battery XT60 pigtail → M8 ring → 5191 stud → MRBF-30 → M8 ring → J1). Get 10 AWG barrel, M8 hole |
 
 ---
 
