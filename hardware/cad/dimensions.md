@@ -83,7 +83,7 @@ extends −X:
 | Weight | 230 g | ✅ |
 | Bottom mount holes | **4× M3 on 22.5 mm square pattern** | ✅ (CORRECTS earlier 50 mm placeholder in patterns.md §8) |
 | Mount hole thread depth | 6.0 | ✅ |
-| Power barrel | **3.5 × 1.35 mm** (candidate) | ⚠️ per the DC pigtail Aiden bought for it (May 2026, 22AWG bare-wire → 12V L2 rail); supersedes the manual's ambiguous 5.5×2.1/2.5. **CONFIRM by test-fit into the L2 jack before wiring** — 1.35 vs 2.1 center pin is obvious by eye. Mast bore unaffected (passes the molded housing ~Ø8; RJ45 11.7×8 is the binding constraint) |
+| Power barrel | **3.5 × 1.35 mm** | ✅ CALIPER 2026-07-07 — the OEM connector that SHIPPED with the L2 measures 3.4 OD (3.5×1.35 class); supersedes the manual's ambiguous 5.5×2.1/2.5. The purchased 3.5×1.35 bare-wire pigtail matches → wires to the 12V L2 rail. Mast bore unaffected (molded housing ~Ø8 passes; RJ45 11.7×8 is the binding constraint) |
 | Ethernet | RJ-45 (standard) | ✅ |
 | FoV | 360° × 90° | ✅ |
 | Self-heat / cold-boot delay | ~30-60 s below 30 °C ambient | ✅ |
