@@ -63,6 +63,18 @@ through the three buck ENs, Jetson stays up — power-budget checklist line
 | 21 | **Servo bus schedule: 17 Hz/joint feedback is the gait ceiling** | round-robin 1 servo/tick → 17 Hz state, 40 Hz cmd; full 12-poll = only 4.4 ms wire time. Poll 3-4/tick (~70 Hz full state) + cmd to 100 Hz; try Feetech SYNC_READ (~200 Hz). Prereq for dynamic gait + current-based contact detection | **NEXT** (pure firmware, local compile) |
 | 22 | **Per-leg power domains** | leg rail = one 10 A buck vs 21 A 8-servo stall (caps+torque-cap+stall-trip bridge it, coherent but shared-fate: one buck foldback sags all 8; one harness short drops the rail). v7: 4× per-leg bucks or high-side switches + per-leg INA → fault isolation + transient headroom | **GATED**: v7 respin (with leg-INA + IMU footprint) |
 
+## Part-level (2026-07-06 fourth pass)
+
+| # | Item | Why | Status |
+|---|---|---|---|
+| 23 | **Servo SKU/voltage audit** | BOM: legs "STS3215 19kg, 6-8.4V" @7.5V; hips "STS3215 30kg" @12V — a 7.4V-rated unit can't run 12V, so hips are either the 12V SKU (→ LABEL hip vs leg servos + spares, mixing = dead servo) or ALL units are 12V-rated (→ knees at 7.5V leave **+58% torque** unused). Options: verify+label now; leg rail 7.5→8.4V (+12%, in-spec, v7/adjustable buck); 12V knees if SKU allows (+58%, rail rework + gear-wear watch via temp/load telemetry) | **NOW at hardware session**: read the labels |
+| 24 | **Material allocation: PETG-CF for flat chassis parts** | PA6-CF moisture swell (0.3-0.5%) + warp on big flats — riser is a 127mm lid whose only structural job is the tension tie. Riser, floor plate, battery pocket, l2_mast, d456 bracket → PETG-CF; legs/shoulders stay PA6-CF (impact+fatigue) | **NEXT**: decide before chassis print batch |
+| 25 | **Servo bus connector retention** | 5264 inline plugs walking out under vibration = the classic bus-servo quadruped failure (limp one leg at a time). Zip anchors handle tension, not walk-out. Glue dab / printed clips + "tug-test all 24 ends" checklist line | **NEXT**: assembly checklist + tiny clip print |
+
+Verified fine this pass: pocket vents (coax/femur/tibia all vented), joint
+idler sides ride the Feetech wheel bearing, standoffs, bulk-cap placement.
+Still open from leg_v6 doctrine: 25T horn-disc kit variant (blocker-grade).
+
 ## Process debt
 
 | # | Item | Why | Status |
