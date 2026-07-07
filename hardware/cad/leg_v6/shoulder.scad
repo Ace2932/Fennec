@@ -140,10 +140,18 @@ module shoulder_v6() {
                 cylinder(d = 5.2, h = 1.8);
         }
 
-        // plate heat-set bores, down into the deck (4 per side)
-        for (sx = [-1, 1], bx = PLATE_BX, by = PLATE_BY)
+        // plate heat-set bores, down into the deck (4 per side), plus a
+        // Ø3 VENT through the remaining floor (insert-audit 2026-07-06:
+        // 6.2 bore in the 6.5 deck left a 0.25 floor — guaranteed
+        // melt-through mess when setting. The vent lets melt + air
+        // escape into the open box below and backs the iron cleanly;
+        // same pattern as the riser's through-vented deck bosses.)
+        for (sx = [-1, 1], bx = PLATE_BX, by = PLATE_BY) {
             translate([sx*bx, by, DECK_Z1 - HEATSET_L])
                 cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
+            translate([sx*bx, by, DECK_Z0 - EPS])
+                cylinder(d = 3.0, h = DECK_Z1 - DECK_Z0 + 2*EPS);
+        }
 
         // trunk-flange heat-sets (screws from inside the trunk, rearward face)
         for (sx = [-1, 1], hz = TRUNK_HOLE_Z)

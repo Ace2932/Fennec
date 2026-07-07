@@ -99,13 +99,17 @@ module coax_v6() {
             // lands on x = 16.6, screws run 16.6 -> 12.6
             horn_couple_neg();
             // screw-head counterbores into the pocket wall's inner face
-            // (heads must not intrude into the haa servo space)
+            // (heads must not intrude into the haa servo space). Depth 4
+            // (was 3): the 3-deep bores ended COINCIDENT with the pocket
+            // void surface and the L-mirror's CSG re-run left a -7.8 mm3
+            // inverted shell there (mesh-audit find 2026-07-06) — punch
+            // decisively through so the cuts merge.
             for (a = [45 : 90 : 315])
                 rotate([0, 0, a]) translate([HORN_BCD/2, 0, 0])
                     translate([0, 0, YOKE_TOP_IN + ARM_THK - EPS])
-                        cylinder(d = 5.4, h = 3);
+                        cylinder(d = 5.4, h = 4);
             translate([0, 0, YOKE_TOP_IN + ARM_THK - EPS])
-                cylinder(d = 5.6, h = 3);
+                cylinder(d = 5.6, h = 4);
         }
         translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0]) {
             // outboard arm + boss = "bottom arm" (+z -> -x inboard)

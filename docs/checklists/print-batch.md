@@ -43,6 +43,18 @@ dimensional-shift + warp risk entirely). **DRYING is non-negotiable**:
 later (hip-thermal #17 or a break), then: anneal FIRST, fit-check
 SECOND — anneal moves dims and every fit gate assumed as-modeled.
 
+## 3b. Heat-set insert notes (audit 2026-07-06)
+
+Every insert site depth-probed in the built STLs:
+- shoulder deck plate bores: now Ø3 VENTED through (0.25 floor was
+  melt-through) — set with a backing finger below, melt exits the vent
+- shoulder D456 pads + lower flange bosses: 0.75 floor — press to flush,
+  STOP (slight bulge on the inner face is cosmetic-only if you push)
+- femur shelf / flange uppers: 13+ deep, no care needed
+- riser: all sites through-vented by design
+- iron + M3 tip, inserts from the DOCUMENTED face (several press from
+  inner faces — a bench press can't reach; see part headers)
+
 ## 4. Wave 1 — first article (~450 g, doctrine: before batching)
 
 - [ ] 1× RIGHT leg set (coax_R, femur_R, tibia_R, knee_arm), 1× shoulder,
