@@ -120,9 +120,13 @@ LEGS = {
     "FL": {"base": mat_list(MY @ W_FR), "side": "L"},
     "RL": {"base": mat_list(MY @ Trear @ W_FR), "side": "L"},
 }
-# hip axis point in world for the HAA roll (x-axis through the hip):
-HIP_PT = {"FR": [HIP_FA, -HIP_LAT, HIP_Z], "RR": [-HIP_FA, -HIP_LAT, HIP_Z],
-          "FL": [HIP_FA, HIP_LAT, HIP_Z], "RL": [-HIP_FA, HIP_LAT, HIP_Z]}
+# hip axis point in world for the HAA roll (x-axis through the hip).
+# MUST equal where each leg's base maps the coax spline (coax-frame origin)
+# — else HAA rotates about an axis offset from the hip and the coax ORBITS
+# (lifts + swings) instead of spinning in place. FR base -> (+FA,+LAT,Z);
+# MY mirror flips y for the left legs; Trear flips x for the rear.
+HIP_PT = {"FR": [HIP_FA, HIP_LAT, HIP_Z], "RR": [-HIP_FA, HIP_LAT, HIP_Z],
+          "FL": [HIP_FA, -HIP_LAT, HIP_Z], "RL": [-HIP_FA, -HIP_LAT, HIP_Z]}
 # haa roll sign so +slider = outboard for every leg (right y<0 -> +roll
 # outboard needs -; left +). We expose signed range per side in JS.
 HAA_SIGN = {"FR": -1, "RR": -1, "FL": 1, "RL": 1}
