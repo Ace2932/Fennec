@@ -31,12 +31,17 @@ first** (Jetson heatsink, D456 rear pattern, 5191 block, real pack dims)
 | chassis PETG-CF | 3 | 0.25 | 20% | riser deck-face-down (zero supports), mast flange-down + trees |
 | TPU | 2 | 0.2 | 100% | clips/rails flat; shoe per stock orientation |
 
-## 3. ANNEAL POLICY (the gotcha)
+## 3. DRY yes, ANNEAL no (corrected 2026-07-06 — user catch)
 
-PA6-CF: dry, print, **anneal 80–130 °C 6–12 h, THEN fit-check** —
-annealing moves dims 0.5–1% and every fit gate assumed as-modeled dims.
-If post-anneal fits fail, measure the shrink factor once and bake it
-into the scad clearances before wave 2.
+Bambu PA6-CF: annealing is **OPTIONAL** (Bambu guidance) — but the TDS
+151 MPa flexural was measured on specimens annealed+dried 80 °C/12 h,
+so unannealed parts run ~15–25% below published. Margins re-checked
+unannealed: tightest = femur slab SF ~3.4, yoke root SF ~5.5, all else
+≥ 12 → **SKIP annealing for this batch** (also removes the 0.5–1%
+dimensional-shift + warp risk entirely). **DRYING is non-negotiable**:
+80 °C 10 h+ before printing, drybox during. If annealing is ever added
+later (hip-thermal #17 or a break), then: anneal FIRST, fit-check
+SECOND — anneal moves dims and every fit gate assumed as-modeled.
 
 ## 4. Wave 1 — first article (~450 g, doctrine: before batching)
 
