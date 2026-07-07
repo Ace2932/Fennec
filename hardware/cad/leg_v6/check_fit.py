@@ -81,7 +81,12 @@ def sweep_checks(servo, pts0):
     arm = trimesh.load('knee_arm.stl')
     arm.apply_transform(trimesh.transformations.translation_matrix([59, 0, 17.2]))
     tibia = trimesh.load('tibia_R.stl')
+    # tibia_pad rides the blade underside (TPU, backlog #15 ext) — it adds
+    # 3 toward the fork throat, i.e. straight at the kfe mech stop: sweep
+    # it with the tibia.
+    pad = trimesh.load('tibia_pad.stl')
     tib_pts = np.vstack([trimesh.sample.sample_surface(tibia, 6000, seed=0)[0],
+                         trimesh.sample.sample_surface(pad, 1500, seed=0)[0],
                          trimesh.transform_points(pts0, rot_z180())])
     T_knee = trimesh.transformations.translation_matrix([106.9, 0, 0])
     print('-- knee fold sweep (tibia+servo vs femur+knee_arm)')

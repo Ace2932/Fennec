@@ -173,6 +173,9 @@ def load_leg_parts():
             trimesh.load(f'{LEG}/femur_R.stl'), 4000, seed=0)[0], femur_extra]),
         arm=trimesh.sample.sample_surface(arm, 1000, seed=0)[0],
         tibia=np.vstack([trimesh.sample.sample_surface(tib, 4000, seed=0)[0],
+                         trimesh.sample.sample_surface(
+                             trimesh.load(f'{LEG}/tibia_pad.stl'),
+                             1000, seed=0)[0],   # TPU blade pad (backlog #15)
                          tibia_extra]),
     )
 

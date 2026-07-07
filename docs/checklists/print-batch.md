@@ -21,7 +21,7 @@ first** (Jetson heatsink, D456 rear pattern, 5191 block, real pack dims)
 |---|---|
 | PA6-CF (dry + anneal) | coax, femur, tibia, knee_arm, shoulder, shoulder_plate (+L variants) |
 | PETG-CF | riser_bay, floor_plate, battery_pocket, spacer ×8, l2_mast, d456_head, hood (post-caliper) |
-| TPU 95A | SM3_Foot shoe ×4+1 (STOCK geometry — crush-zone v2 waits for first-article, #20), skid_rail ×2, cable_clip ×20 |
+| TPU 95A | SM3_Foot shoe ×4+1 (STOCK geometry — crush-zone v2 waits for first-article, #20), skid_rail ×2, cable_clip ×20, **tibia_pad ×5** |
 
 ## 2. Slicer spec
 

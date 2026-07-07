@@ -37,7 +37,7 @@ Notes on the two negative rows:
 - The +50 fold cap is the riser-skirt graze, applied leg-local to all
   legs. In X the rear pair simply never visits that side of its range.
 
-## Recommendation: **X-CONFIG**
+## DECIDED 2026-07-06: **X-CONFIG** (user call, same day)
 
 Rear crouch margin (46° vs 10°) + robot-level symmetry + natural
 stand-up mechanics outweigh the modestly wider foot-exclusion zone. And
