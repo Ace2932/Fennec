@@ -252,6 +252,20 @@ def main():
         near = p[(np.abs(p[:, 0]) < 72) & (p[:, 2] > 25)]
         hits = near[riser.contains(near)] if len(near) else near
         bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs riser', hits)
+        # 3b. shoulder vs TRUNK: everything reaching inside the end face
+        # (|x| < 63.4) must be the flange floor FEET on their designed
+        # seats — trunk (|x| 54..63.5, |y| 37.5..46.5, floor band) — or the
+        # D456 insert pads / battery-lead notch fillers in the end
+        # aperture (open space, contains() never true there anyway).
+        inside = p[np.abs(p[:, 0]) < 63.4]
+        hits = inside[trunk.contains(inside)] if len(inside) else inside
+        if len(hits):
+            seat = ((np.abs(hits[:, 0]) > 53.9) & (np.abs(hits[:, 0]) < 63.5)
+                    & (np.abs(hits[:, 1]) > 37.4) & (np.abs(hits[:, 1]) < 46.6)
+                    & (hits[:, 2] > -0.1) & (hits[:, 2] < 8.2))
+            hits = hits[~seat]
+        bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs trunk '
+                      f'(feet seats excluded)', hits)
 
     # ---- 4. CROUCH-pose leg sweep vs riser + battery ------------------------------
     # CHASSIS-SAFE ROM (this gate is the authority, like the leg_v6 sweep

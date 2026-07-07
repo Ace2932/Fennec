@@ -78,12 +78,15 @@ def main():
              trimesh.load('d456_head.stl'),
              trimesh.load('floor_plate.stl')]
     sh = trimesh.load(f'{LEG}/shoulder.stl')
+    pl_R = trimesh.load(f'{LEG}/shoulder_plate.stl')
+    pl_L = trimesh.load(f'{LEG}/shoulder_plate_L.stl')
     for end in (1, -1):
         S2T = np.array([[0, end, 0, end * HIP_FA],
                         [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
-        s = sh.copy()
-        s.apply_transform(S2T)
-        parts.append(s)
+        for m in (sh, pl_R, pl_L):    # horn plates: the leg<->shoulder bridge
+            s = m.copy()
+            s.apply_transform(S2T)
+            parts.append(s)
     leg = leg_mesh()
     MIR = np.eye(4); MIR[1, 1] = -1
     S2T_f = np.array([[0, 1, 0, HIP_FA],

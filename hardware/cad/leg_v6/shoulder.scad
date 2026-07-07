@@ -43,6 +43,26 @@ WALL_Z0   = -25;
 PLATE_BX  = [27, 51];
 PLATE_BY  = [6.2, 15.2];
 
+// ---- flange floor FEET + deck gussets (2026-07-06, joint-stiffening) --------
+// The C-box hangs 77.7 fore of the trunk end on a 4-bolt flange whose
+// bolt couple is only 19 tall and sits LOW (user catch: "barely
+// connected"). Feet bolt the flange bottom down to the trunk floor's
+// solid corner bands (mesh-mapped: bolts at trunk (|x| 59.5, y +/-42)
+// land solid on ALL four corners; the rear -y pad tip overhangs the
+// rear floor opening by ~2 — 85% bearing, fine). M3x14 CSK from BELOW
+// the floor (drill O3.2 + csk at first assembly — same accepted
+// practice as the battery-sandwich holes; head flush, belly pack
+// clears), nyloc + washer on top of the pad, reached through the open
+// end aperture BEFORE the riser goes on. Gussets triangulate the
+// flange to the deck-extension underside at x +/-40 (clear of the
+// O12 grommets, which end at x 38).
+FOOT_X0   = 38;    FOOT_X1 = 46;   // wall inner face 48.93 -> 2.9 gap
+FOOT_Y1   = -86.7;                 // 9.0 onto the floor (trunk x 54.5)
+FOOT_Z0   = -34.05;                // floor top z 3.9 + 0.1 drop-in gap
+FOOT_THK  = 4;
+FOOT_BOLT_X = 42;  FOOT_BOLT_Y = -81.7;   // -> trunk (59.5, +/-42)
+GUSSET_X  = 40;                    // pair, 4 thick, centered +/-40
+
 module shoulder_v6() {
     difference() {
         union() {
@@ -73,6 +93,17 @@ module shoulder_v6() {
             for (sx = [-1, 1])
                 translate([min(sx*51, sx*55), FLANGE_Y0, WALL_Z0])
                     cube([4, REAR_W0 - FLANGE_Y0 + EPS, DECK_Z1 - WALL_Z0]);
+            // flange floor feet (see header block)
+            for (sx = [-1, 1])
+                translate([min(sx*FOOT_X0, sx*FOOT_X1), FOOT_Y1, FOOT_Z0])
+                    cube([FOOT_X1 - FOOT_X0,
+                          FLANGE_Y0 - FOOT_Y1 + 0.5, FOOT_THK]);
+            // deck gussets: flange fore face -> deck-extension underside
+            for (sx = [-1, 1])
+                translate([sx*GUSSET_X - 2, 0, 0]) rotate([90, 0, 90])
+                    linear_extrude(4) polygon([
+                        [FLANGE_Y1 - 0.5, 6], [FLANGE_Y1 - 0.5, DECK_Z0 + 0.5],
+                        [FLANGE_Y1 + 29, DECK_Z0 + 0.5]]);
             // D456 head-bracket insert pads: thicken the flange to 7 on
             // its inner face around the 4 bores (bracket = chassis lane;
             // hangs in the open trunk-end aperture, riser end wall is at
@@ -109,6 +140,11 @@ module shoulder_v6() {
         for (sx = [-1, 1], hz = TRUNK_HOLE_Z)
             translate([sx*TRUNK_HOLE_X, FLANGE_Y0 - EPS, hz])
                 rotate([-90, 0, 0]) cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
+
+        // foot bolt clearance: M3 up from below the floor, nyloc on top
+        for (sx = [-1, 1])
+            translate([sx*FOOT_BOLT_X, FOOT_BOLT_Y, FOOT_Z0 - 1])
+                cylinder(d = 3.4, h = FOOT_THK + 2);
 
         // cable grommets
         for (sx = [-1, 1])
