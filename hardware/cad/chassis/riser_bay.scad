@@ -23,25 +23,35 @@
 //
 // Deck top z 71.9 = trunk top + 25 (outline-locked silhouette). Deck top is
 // FLAT — every fixture is an UNDERSLUNG boss so the part prints deck-face
-// on the bed with zero supports. Jetson standoffs = 4 separate spacer
-// washers (spacer.scad).
+// on the bed with zero supports.
 //
-// Deck fixtures (trunk x,y):
-//   Jetson Orin Nano devkit, ports facing +y (side), plugs drop through the
-//     deck slot — rear fin + mast stay clear:
-//     mount grid 96.5 x 75.4 -> bores at (-58.25/+38.25, -47.4/+28.0)
-//   L2 mast base: 4x M3 rect 16 x 28 at (44/60, +/-14) — clear of the
-//     Jetson footprint so the mast unbolts WITHOUT pulling the Jetson
-//   L2 cable drop O11 at (52, 0) (ethernet + power down the mast column)
-//   cable slot 9 x 20 at x -53..-44, y +26..+46 (RJ45/USB3/barrel rise here)
-//   SMA bulkheads 2x O6.5 at (-15,+44) and (+25,+44) (40 apart, MIMO)
-// Wall fixtures: D456 head bore row (front, y -21/-7/+7/+21 @ z 67.4 on a
-//   strip pad; shell also bears on the wall face) + USB3 grommet O9 (front,
-//   y 0 z 65) — all inside the shoulder-flange center notch (y +/-26 above
-//   z 57.55, shoulder.scad rev 2026-07-06); hood pads (sides, x -50/+35,
-//   z 67); riser<->flange pads (both ends, y +/-40, bores z 67.4). All
-//   end-wall pads live in z 64.4..70.4 — above the stack envelope, fused
-//   to the deck. Vent slots both sides, z 52..66.
+// JETSON: the bespoke tray+hood is RETIRED (heatsink calipered 34.9, not
+// 21.5 -> collides the L2 plate). The OFFICIAL CASE (110.3 x 93.9 x 38.2)
+// now sits on the deck, held by jetson_case_mount.scad (deck cradle). The
+// old 96.5 x 75.4 Jetson standoff grid + hood pads are GONE. See README
+// "Jetson enclosure decision" + place_case.py (the placement study).
+//   case world AABB x -62.0..48.3, y +-46.95, z 71.9..110.1; PORT END -x
+//   (rear), heatsink end +x. Cables exit the -x port end into the shoulder
+//   center notch (y+-26) + the deck CASE_SLOT below it.
+//
+// Deck fixtures (trunk x,y) after the case pivot:
+//   COMPACT L2 mast base: 4x M3 at (54/59.0, +/-14) in the FRONT STRIP
+//     (x51.3..63, the deck the rearward-shifted case leaves free), 3.0 clear
+//     of the case front (48.3). The L2 optical position is UNCHANGED (mast
+//     plate CTR 53.5, lifted to cantilever over the case top) — only the
+//     base shrank. Mast unbolts without disturbing the case.
+//   L2 cable drop at (53.5, 0) (down the mast column) — forward of the case.
+//   CASE_SLOT x -58..-46, y +-18: the case PORT-END cable exit (into the
+//     shoulder notch) AND the case bottom-vent breather.
+//   SMA bulkheads 2x O6.5 at (57, +/-40) — RELOCATED to the front strip
+//     (the case covers the old +y deck spots); 80 apart (MIMO). !! pigtail
+//     reach from the rear-facing ports is UNVERIFIED (flagged for review).
+//   Cradle deck ties 4x O3.4 at (47.3/-59.0, +/-50.35): M3 up from below
+//     into the cradle post-base heat-sets.
+// Wall fixtures (UNCHANGED): D456 head bore row (front, y -21/-7/+7/+21 @
+//   z 67.4) + USB3 grommet (front, y 14 z 61.5), inside the shoulder-flange
+//   center notch; riser<->flange pads (both ends, y +/-40, bores z 67.4).
+//   Vent slots both sides, z 52..66.
 //
 // Constraint carried into the head-shell part: D456 shell top <= trunk z
 // 72.8 — the shoulder DECK EXTENSION plate spans trunk z 73.05..79.55 over
@@ -76,12 +86,19 @@ HEATSET_L  = 6.2;
 M3_CLEAR   = 3.4;
 
 // ---- fixture positions ---------------------------------------------------------
-JET_BX = [-58.25, 38.25];  JET_BY = [-47.4, 28.0];   // 96.5 x 75.4 grid
-MAST_BX = [44, 60];        MAST_BY = [-14, 14];      // riser<->mast (our choice)
-L2_DROP = [53.5, 0];   // 14 x 12 slot — the L2 pigtail's RJ45 plug head
-                       // (11.7 x 8) AND ~O10 DC plug pass deck + shaft
-SLOT = [-53, -44, 26, 46];                           // x0 x1 y0 y1
-SMA  = [[-15, 44], [25, 44]];                        // O6.5
+// Jetson devkit standoff grid RETIRED — the official case sits on the deck
+// (jetson_case_mount.scad cradle) instead of a bare board on spacers.
+MAST_BX = [54, 59.0];      MAST_BY = [-14, 14];      // COMPACT mast base
+                                                     // (front strip x51.3..63,
+                                                     //  case shifted rearward)
+L2_DROP = [53.5, 0];   // mast cable-bore drop (CTR 53.5); RJ45 + DC plug pass
+CASE_SLOT = [-58, -46, -18, 18];  // case PORT-END cable exit (into the
+                                  // shoulder notch) + case bottom-vent breather
+SMA  = [[57, 40], [57, -40]];     // O6.5, RELOCATED to the front strip (case
+                                  // covers the old +y spots); 80 apart (MIMO)
+CRADLE_TIE = [[47.3, 50.35], [47.3, -50.35],         // case-cradle deck ties
+              [-59.0, 50.35], [-59.0, -50.35]];      // M3 up from below into
+                                                     // the cradle post bases
 // End-wall pads live in the z 64.4..70.4 band: above the stack envelope
 // (63.9 = 58 + 2.0 floor bosses), fused into the deck underside (67.9),
 // horizontal bores at z 67.4 (1.0 pad wall below, 2.5 deck-top web above).
@@ -99,7 +116,6 @@ USB_GROMMET = [14, 61.5];  // 10 x 6 slot, front wall — the D456 USB-C
                            // y 14 to line up with the head-bracket stem
                            // CHANNEL (a y-0 grommet was unreachable — the
                            // stem blocked the cable path; review catch)
-HOOD_X = [-50, 35]; HOOD_Z = 67;                     // side-wall hood pads
 VENT_X0 = -28; VENT_N = 6; VENT_PITCH = 8;           // 3 wide; TWO rows:
 VENT_Z = [[52, 14], [33, 12]];  // [z0, height] — upper row at logic level,
                                 // LOW row at the under-board buck pocket
@@ -145,8 +161,7 @@ module riser_bay() {
                            min(sy * (WALL_IN - CLR_TAB), sy * (WALL_IN - CLR_TAB - 2.4)),
                            26])
                     cube([16, 2.4, DECK_BOT - 26 + EPS]);
-            // underslung deck bosses
-            for (bx = JET_BX, by = JET_BY) deck_boss(bx, by);
+            // underslung deck bosses (compact mast base only — Jetson grid gone)
             for (bx = MAST_BX, by = MAST_BY) deck_boss(bx, by);
             // riser<->flange heat-set pads (both end walls, inward)
             for (sx = [-1, 1], fy = FLG_Y)
@@ -156,18 +171,17 @@ module riser_bay() {
             // D456 head interface strip (front wall, inside the flange notch)
             translate([OUT_X - WALL - 5, -26, PAD_Z0])
                 cube([5, 52, PAD_Z1 - PAD_Z0]);
-            // hood pads (side walls, inward)
-            for (sy = [-1, 1], hx = HOOD_X)
-                translate([hx - 6, min(sy * (OUT_Y - WALL), sy * (OUT_Y - WALL - 5)),
-                           HOOD_Z - 6])
-                    cube([12, 5, 12]);
         }
         // deck through-features
-        for (bx = JET_BX, by = JET_BY) deck_bore(bx, by);
         for (bx = MAST_BX, by = MAST_BY) deck_bore(bx, by);
         rounded_slot(L2_DROP[0] - 7, L2_DROP[0] + 7,
                      L2_DROP[1] - 6, L2_DROP[1] + 6, 3);
-        rounded_slot(SLOT[0], SLOT[1], SLOT[2], SLOT[3], 4);
+        rounded_slot(CASE_SLOT[0], CASE_SLOT[1], CASE_SLOT[2], CASE_SLOT[3], 4);
+        // case-cradle deck ties (M3 clearance, up from below into the cradle
+        // post-base heat-sets — the head hangs below the deck in open space)
+        for (t = CRADLE_TIE)
+            translate([t[0], t[1], DECK_BOT - EPS])
+                cylinder(d = M3_CLEAR, h = DECK_T + 2 * EPS);
         for (p = SMA)
             translate([p[0], p[1], DECK_BOT - EPS])
                 cylinder(d = 6.5, h = DECK_T + 2 * EPS);
@@ -191,11 +205,6 @@ module riser_bay() {
         hull() for (dy = [-2, 2])
             translate([OUT_X + EPS, USB_GROMMET[0] + dy, USB_GROMMET[1]])
                 rotate([0, -90, 0]) cylinder(d = 6, h = WALL + 5 + 2 * EPS);
-        // hood heat-set bores (axis y, from the side faces)
-        for (sy = [-1, 1], hx = HOOD_X)
-            translate([hx, sy * (OUT_Y + EPS), HOOD_Z])
-                rotate([sy * 90, 0, 0])
-                    cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
         // vent slots (both side skirts, two rows)
         for (sy = [-1, 1], i = [0 : VENT_N - 1], v = VENT_Z)
             translate([VENT_X0 + i * VENT_PITCH - 1.5,

@@ -2,10 +2,11 @@
 // NOVA chassis — D456 HEAD BRACKET v3: PERISCOPE (screw-in, user call)
 // =============================================================================
 // Top-level design: docs/design-outline.md. Trunk frame (+x FRONT).
-// D456 124 x 26 x 29. Mount = the REAR-PANEL 4x M3 corner pattern —
-// ⚠ REVIEW (position unverified): the plate carries four 7-long VERTICAL
-// SLOTS at y +/-54; CALIPER the real camera before printing, expect to
-// touch these numbers.
+// D456 123.8 x 26 x 29. Mount = the REAR-FACE 2x M3 CENTERLINE pattern
+// (CALIPER 2026-07-07): two holes 94.4 apart on the back-face centerline
+// (y +/-47.2, centered on the 26 width -> plate z-center 95). This SUPERSEDES
+// the old (wrong) 4x corner +-54 slot pattern. A +-3 vertical slot absorbs
+// residual z tolerance; still CALIPER-verify on the real camera before print.
 //
 // Gate history (why the camera lives up here):
 //   v1 riser-wall z 34..63  -> shoulder shear webs own y +/-51..55 there.
@@ -42,8 +43,10 @@ ROW_Y = [-21, -7, 7, 21];  ROW_Z = 67.4;
 PLT_X0 = 65.5;  PLT_X1 = 69.5;
 PLT_Z0 = 80;  PLT_Z1 = 101;
 HALF_W = 58;
-SLOT_Y = 54;                          // rear-corner pattern (⚠ caliper)
-SLOT_ROWS = [[84, 91], [94, 101 - 2]]; // vertical slot spans (⚠ caliper)
+MOUNT_Y = 47.2;                       // 2 centerline holes, 94.4 apart (CALIPER
+                                      // 2026-07-07; was 4x corner +-54)
+MOUNT_Z = 95;                         // camera vertical ctr (env 80.5..109.5)
+MOUNT_SLOT = 3;                       // +-3 vertical tolerance (z unverified)
 M3_CLEAR = 3.4;
 
 module d456_head() {
@@ -60,9 +63,9 @@ module d456_head() {
         for (ry = ROW_Y)
             translate([STEM_X0 - EPS, ry, ROW_Z]) rotate([0, 90, 0])
                 cylinder(d = M3_CLEAR, h = STEM_X1 - STEM_X0 + 2 * EPS);
-        // camera rear-pattern slots (vertical, absorb the ⚠ unknowns)
-        for (sy = [-1, 1], row = SLOT_ROWS) hull() for (rz = row)
-            translate([PLT_X0 - EPS, sy * SLOT_Y, rz]) rotate([0, 90, 0])
+        // camera 2x CENTERLINE M3 (vertical slot absorbs the z tolerance)
+        for (sy = [-1, 1]) hull() for (dz = [-MOUNT_SLOT, MOUNT_SLOT])
+            translate([PLT_X0 - EPS, sy * MOUNT_Y, MOUNT_Z + dz]) rotate([0, 90, 0])
                 cylinder(d = M3_CLEAR, h = PLT_X1 - PLT_X0 + 2 * EPS);
         // cable window (aligned over the stem channel)
         translate([PLT_X0 - EPS, 2, 86])

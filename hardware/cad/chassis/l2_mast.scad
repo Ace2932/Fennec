@@ -4,12 +4,22 @@
 // Top-level design: docs/design-outline.md. Trunk frame. L2: 75 x 75 x 65,
 // 230g, bottom mount 4x M3 on 22.5 square, thread depth 6 (dimensions.md).
 //
-// Stack: base flange on the riser deck (bolts the underslung deck inserts
-// at (44/60, +/-14), **M3x10** from ABOVE, counterbored — LONGER SCREWS
-// PUNCTURE THE STACK ENVELOPE: an M3x16 tip lands at z 59.9, 4mm into the
-// mezzanine's headroom; M3x10 tip = 65.9 with 5.1 of insert engagement)
-// -> hollow shaft -> top plate at z 110.4..114.4. L2 bottom seats at
-// 114.4 -> optical center ~146.9 = trunk top + 100.
+// JETSON-CASE PIVOT (2026-07-07): the official Jetson case (110.3 x 93.9 x
+// 38.2) now owns the deck (x -62..48.3). The old center-front mast base
+// (flange x38 / shaft x44) cannot coexist with it. RESOLUTION (place_case.py):
+// the L2 OPTICAL POSITION is UNCHANGED (plate CTR 53.5) but the mast BASE is
+// COMPACTED into the FRONT STRIP the rearward-shifted case leaves free
+// (flange/shaft x51.3..63.0, 3.0 clear of the case front), and the plate is
+// LIFTED 3mm (z110.4->113.4) so it cantilevers OVER the case top (110.1)
+// with 3.3 clearance. The L2 CoM sits ~over the base (CTR 53.5 vs base ctr
+// ~57) so the static cantilever moment is tiny; dynamic loads on the 4x M3
+// are far inside proof load (the nylon fuses are still the intended stop).
+//
+// Stack: compact base flange on the riser deck (bolts the underslung deck
+// inserts at (54/59.0, +/-14), **M3x10** from ABOVE, counterbored — longer
+// screws puncture the stack envelope) -> hollow shaft -> top plate at
+// z 113.4..117.4. L2 bottom seats at 117.4 -> optical center ~150 = trunk
+// top + 103.
 //
 // Cable: the L2 pigtail (RJ45 + power barrel) feeds DOWN through the plate
 // slot (15 x 12) -> shaft bore (13 x 11 — passes the 11.7 x 8 RJ45 plug
@@ -23,11 +33,10 @@
 // (ball-end L-key, M3x8 up into the L2 base threads). L2 off = those same
 // 4 plate screws — mast and Jetson stay untouched.
 //
-// Clearances (gate-enforced): shaft front wall x 44 vs Jetson carrier edge
-// x 41.7 (2.3); flange+shaft rear edge x 63.0 vs the shoulder deck-extension
-// fin at x 63.5 (0.5 — was 0.2, inside print tol; backlog #16 fix); L2 rear
-// overhang vs Jetson heatsink top 101.3 (13.1 — heatsink height is ⚠ REVIEW,
-// re-gate after caliper).
+// Clearances (gate-enforced): flange/shaft front wall x 51.3 vs case front
+// x 48.3 (3.0); rear edge x 63.0 vs the shoulder deck-ext fin at x 63.5
+// (0.5) and the D456 stem at x 63.45 (0.45); plate bottom z 113.4 vs case
+// top z 110.1 (3.3) and vs D456 periscope top z 109.5 (3.9).
 //
 // Print: flange-down, tree supports under the four plate corners; 45°
 // flares tie shaft->flange and shaft->plate (stiffness + fewer supports).
@@ -35,18 +44,23 @@
 $fn = 64;
 EPS = 0.05;
 
-CTR = 53.5;                        // shaft/L2 center (x), y 0
+CTR = 53.5;                        // shaft/L2 center (x), y 0 — UNCHANGED
 FLG_Z0 = 71.9; FLG_T = 4;          // flange on the deck
-FLG = [38, 63.0, -20, 20];         // x0 x1 y0 y1 — rear edge PULLED IN
-                                   // 63.3->63.0 (backlog #16): 0.2 to the
-                                   // shoulder deck-ext fin (63.5) was
-                                   // inside print tolerance; now 0.5
-MAST_BX = [44, 60]; MAST_BY = 14;  // riser deck insert positions
-SHAFT = [44, 63.0, -9, 9];         // outer x0 x1 y0 y1 — rear wall follows
-                                   // the flange trim (3.0 wall vs bore, ok)
+FLG = [51.3, 63.0, -20, 20];       // COMPACT front-strip base (case pivot):
+                                   // front 51.3 = 3.0 clear of the case
+                                   // (front 48.3); rear 63.0 = 0.5 to the
+                                   // deck-ext fin / 0.45 to the D456 stem
+MAST_BX = [54, 59.0]; MAST_BY = 14; // riser deck insert positions (front-strip
+                                    // couple 5.5; L2 CoM ~over base, moment
+                                    // tiny — see header)
+SHAFT = [51.6, 63.0, -9, 9];       // outer x0 x1 y0 y1 — front 0.3 BEHIND the
+                                   // flange front (51.3) so the flange front
+                                   // face isn't coplanar with the flare front
+                                   // (coplanarity -> non-manifold union)
 BORE  = [13, 11];                  // cable bore: RJ45 head 11.7x8 flat +
                                    // ~O10 DC plug (review fix; ⚠ caliper)
-PLATE_Z0 = 110.4; PLATE_T = 4;     // L2 seat plane = 114.4
+PLATE_Z0 = 113.4; PLATE_T = 4;     // LIFTED +3 (case pivot): L2 seat = 117.4,
+                                   // 3.3 over the case top (110.1)
 PLATE_HALF = 19;
 PLATE_X1 = 69.1;   // rear edge pulled in: the flare's top corner grazed
                    // the periscope camera envelope (rear face 69.7);
@@ -79,10 +93,15 @@ module l2_mast() {
             translate([SHAFT[0], SHAFT[2], FLG_Z0])
                 cube([SHAFT[1] - SHAFT[0], SHAFT[3] - SHAFT[2],
                       PLATE_Z0 - FLG_Z0 + EPS]);
-            // shaft -> plate flare
+            // shaft -> plate flare. RAISED to z110.6 (case pivot): below the
+            // case top (110.1) only the shaft (x51.6..63) exists — clear of
+            // the case (front 48.3) by 3.3. The rearward-widening gusset lives
+            // entirely ABOVE the case top so it never enters the case volume.
+            // (A 100.5-start flare dipped to x~44 at z104-108, INSIDE the
+            // case — gate catch 2026-07-07.) Short steep gusset -> support it.
             flare(SHAFT[0], SHAFT[1], SHAFT[2], SHAFT[3],
                   CTR - PLATE_HALF, PLATE_X1, -PLATE_HALF, PLATE_HALF,
-                  100.5, PLATE_Z0 + EPS);
+                  110.6, PLATE_Z0 + EPS);
             // top plate (L2 seat)
             translate([CTR - PLATE_HALF, -PLATE_HALF, PLATE_Z0])
                 cube([PLATE_X1 - (CTR - PLATE_HALF), 2 * PLATE_HALF, PLATE_T]);

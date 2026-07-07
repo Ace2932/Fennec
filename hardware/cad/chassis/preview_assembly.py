@@ -76,7 +76,14 @@ def main():
              trimesh.load('battery_pocket.stl'),
              trimesh.load('l2_mast.stl'),
              trimesh.load('d456_head.stl'),
-             trimesh.load('floor_plate.stl')]
+             trimesh.load('floor_plate.stl'),
+             trimesh.load('jetson_case_mount.stl')]
+    # official Jetson case (ref mesh) at its chosen placement: bbox-centre
+    # (x-6.85, y0), bottom on the deck (z71.9). Port END faces -x (rear).
+    caseref = trimesh.load('jetson_case_ref.stl')
+    bc = (caseref.bounds[0] + caseref.bounds[1]) / 2
+    caseref.apply_translation([-6.85 - bc[0], -bc[1], 71.9 - caseref.bounds[0][2]])
+    parts.append(caseref)
     # TPU skid rails under the tray (backlog #15)
     rail = trimesh.load('skid_rail.stl')
     for sy in (1, -1):
@@ -106,10 +113,9 @@ def main():
     RL = RR.copy(); RL.apply_transform(MY)
     parts += [FR, RR, FL, RL]
     parts += [box(-59.5, 52.5, -45, 45, 6.0, 64.0),    # stack on plate, ctr -3.5
-              box(-60, 40, -49.4, 30, 78.2, 101.3),    # Jetson + heatsink
-              box(16, 91, -37.5, 37.5, 114.4, 179.4),  # L2 body
+              box(16, 91, -37.5, 37.5, 117.4, 182.4),  # L2 body (seat 117.4)
               box(-77.5, 77.5, -23, 23, -35.9, -0.9),  # pack (inside pocket)
-              box(69.7, 95.7, -62, 62, 80.5, 109.5)]   # D456, periscope
+              box(69.7, 95.7, -61.9, 61.9, 80.5, 109.5)]  # D456, periscope
     asm = trimesh.util.concatenate(parts)
     asm.export('chassis_assembly_preview.stl')
     print('chassis_assembly_preview.stl', asm.bounds.round(1).tolist())

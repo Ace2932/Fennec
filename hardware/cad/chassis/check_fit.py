@@ -16,11 +16,12 @@ point inside the designed part = the part cuts its counterpart. Cases:
      for a swept-envelope check against the y-symmetric riser solid)
   5. static fixture asserts (service access, stack headroom, L2/Jetson gaps)
   6. belly battery pocket + pack envelope vs trunk / shoulders / crouch legs
-  7. L2 mast vs riser (designed flange seat excluded), Jetson + plug
-     envelopes, the shoulder deck-extension fin, and the seated L2 body
-  8. D456 head bracket + camera envelope (UNDER-CHIN, z -16.5..12.5 —
-     the v1 riser-wall position died on the shoulder shear webs) vs
-     trunk/riser/pocket/pack/shoulders + the crouch sweep
+  7. L2 mast (compact front-strip base) vs riser (flange seat excluded),
+     the OFFICIAL JETSON CASE envelope, the shoulder deck-ext fin, seated L2
+  8. D456 head bracket + camera envelope (PERISCOPE, z 80.5..109.5) vs
+     trunk/riser/mast/case/shoulders + the crouch sweep
+ 10. Official Jetson case AABB + jetson_case_mount cradle vs trunk / riser
+     (deck seat excluded) / mast / D456 / shoulders / L2 / each other
 
 Exit 0 = clean, 1 = interference. Run via build_all.sh after every change.
 """
@@ -215,12 +216,16 @@ def main():
     pocket = trimesh.load('battery_pocket.stl')
     mast = trimesh.load('l2_mast.stl')
     head = trimesh.load('d456_head.stl')
+    cradle = trimesh.load('jetson_case_mount.stl')
+    # Official Jetson case AABB (calipered 110.3x93.9x38.2, port END -x, on
+    # the deck). REPLACES the retired bespoke Jetson tray + heatsink box.
+    case = make_box(-62.0, 48.3, -46.95, 46.95, 71.9, 110.1)
     pack = make_box(-77.5, 77.5, -23, 23, -35.9, -0.9)   # 0.1 lift off tray
     # skid rails (backlog #15): TPU strips under the tray, new lowest z
     rails = trimesh.util.concatenate([
         make_box(-55, 75, 9, 21, -42.2, -39.2),
         make_box(-55, 75, -21, -9, -42.2, -39.2)])
-    cam = make_box(69.7, 95.7, -62, 62, 80.5, 109.5)     # D456, periscope
+    cam = make_box(69.7, 95.7, -61.9, 61.9, 80.5, 109.5)  # D456 123.8 wide
 
     # ---- 1. riser <-> trunk --------------------------------------------------
     rp = sample(riser)
@@ -370,13 +375,13 @@ def main():
     mp_f = mp[~seat]
     hits = mp_f[riser.contains(mp_f)]
     bad |= report('mast vs riser (seat excluded)', hits)
-    jet = make_box(-60, 40, -49.4, 30, 78.2, 101.3)
-    plugs = make_box(-55, 35, 30, 48, 78.2, 92)
     # deck-extension fin, MINUS the flange center notch strip (y +/-26)
     fin_l = make_box(63.5, 109, 26, 59.4, 73.05, 79.55)
     fin_r = make_box(63.5, 109, -59.4, -26, 73.05, 79.55)
-    l2 = make_box(53.5 - 37.5, 53.5 + 37.5, -37.5, 37.5, 114.5, 179.4)
-    for label, env in (('Jetson envelope', jet), ('Jetson plug zone', plugs),
+    # L2 body: seat lifted to 117.4 (case pivot, plate z113.4 + 4); box floor
+    # 0.1 above the seat plane so the designed L2<->plate contact isn't a hit
+    l2 = make_box(53.5 - 37.5, 53.5 + 37.5, -37.5, 37.5, 117.5, 182.5)
+    for label, env in (('case envelope', case),
                        ('deck-ext fin (left)', fin_l),
                        ('deck-ext fin (right)', fin_r)):
         hits = mp[env.contains(mp)]
@@ -384,15 +389,15 @@ def main():
     lp = sample(l2, 5000, 1000)
     hits = lp[mast.contains(lp)]
     bad |= report('seated L2 body vs mast', hits)
-    hits = lp[jet.contains(lp)]
-    bad |= report('seated L2 body vs Jetson envelope', hits)
+    hits = lp[case.contains(lp)]
+    bad |= report('seated L2 body vs case envelope', hits)
 
     # ---- 8. D456 head bracket + camera (periscope) --------------------------------
     hp = sample(head, 8000, 2000)
     for label, target in (('trunk', trunk), ('riser', riser),
                           ('mast', mast), ('deck-ext fin (left)', fin_l),
                           ('deck-ext fin (right)', fin_r),
-                          ('Jetson envelope', jet)):
+                          ('case envelope', case)):
         hits = hp[target.contains(hp)]
         bad |= report(f'head bracket vs {label}', hits)
     for end in (1, -1):
@@ -429,23 +434,54 @@ def main():
     hits = fp[pack.contains(fp)]
     bad |= report('floor plate vs battery pack', hits)
 
+    # ---- 10. Jetson official case + cradle --------------------------------------
+    # case is an AABB envelope (calipered, port end -x, sits on the deck). The
+    # cradle (jetson_case_mount.stl) locates + retains it. Designed contacts:
+    # cradle bottom on the deck top (z71.9) and the cradle lip/tabs on the case.
+    for label, target in (('trunk', trunk), ('mast', mast), ('L2 body', l2),
+                          ('D456 head', head)):
+        cs = sample(case, 6000, 1500)
+        hits = cs[target.contains(cs)]
+        bad |= report(f'case envelope vs {label}', hits)
+    crp = sample(cradle, 7000, 2000)
+    seatc = np.abs(crp[:, 2] - DECK_TOP) < 0.5           # designed deck seat
+    crp_f = crp[~seatc]
+    hits = crp_f[trunk.contains(crp_f)]
+    bad |= report('cradle vs trunk', hits)
+    hits = crp_f[riser.contains(crp_f)]
+    bad |= report('cradle vs riser (deck seat excluded)', hits)
+    for label, target in (('mast', mast), ('D456 head', head)):
+        hits = crp[target.contains(crp)]
+        bad |= report(f'cradle vs {label}', hits)
+    for end in (1, -1):
+        S2T = np.array([[0, end, 0, end * HIP_FA],
+                        [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
+        p = tf(sh_pts, S2T)
+        near = p[np.abs(p[:, 0]) < 66]
+        hits = near[cradle.contains(near)] if len(near) else near
+        bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs cradle', hits)
+
     # ---- 5. static fixture asserts ----------------------------------------------
-    jet_top = DECK_TOP + 6.3 + 1.6 + 21.5     # spacer + pcb + heatsink (REVIEW)
+    case_top = 110.1     # official case top (deck 71.9 + 38.2 calipered)
     checks = [
         ('stack + plate headroom vs deck underside',
          STACK_BOX[5] <= DECK_BOT - 2.0),
-        ('mast bores clear of the Jetson footprint (driver access)',
-         44 - 40.0 >= 3.0),
-        ('L2 body bottom clears Jetson top + hood',
-         146.9 - 65 / 2 >= jet_top + 4 + 2),
-        ('deck slot under the Jetson plug row', 46 - 30 >= 12),
+        ('mast flange front (51.3) clears the case front (48.3)',
+         51.3 - 48.3 >= 3.0),
+        ('case rear (-62) clears the rear shoulder wall (-63.5)',
+         -62.0 - (-63.5) >= 1.0),
+        ('L2 plate bottom (113.4) clears the case top',
+         113.4 - case_top >= 3.0),
+        ('L2 body bottom (117.4) clears the case top',
+         117.4 - case_top >= 4.0),
     ]
     for label, ok in checks:
         print(('OK    ' if ok else 'FAIL  ') + label)
         bad |= not ok
-    print('NOTE  Jetson heatsink 21.5 is dimensions.md REVIEW — caliper '
-          'before the hood part; D456 head shell top <= trunk z 72.8 '
-          '(shoulder deck extension above).')
+    print('NOTE  Case dims 110.3x93.9x38.2 CALIPERED (dimensions.md); the ref '
+          'mesh is ~1.2 oversize. Rear-port cables need RIGHT-ANGLE plugs '
+          '(1.5 to the shoulder wall + the y+-26 notch). SMA pigtail reach '
+          'to the front-strip bulkheads is UNVERIFIED.')
 
     sys.exit(1 if bad else 0)
 
