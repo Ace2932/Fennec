@@ -209,10 +209,15 @@ class SafeJointCommandPublisher:
             # motion incl. the back-off, which could pin a joint into a stop
             # (the firmware stall-guard would then have to limp the fleet).
             # Fixed 2026-06-27.
+            # Per-joint threshold = the JointLimit's effort field (URDF
+            # <limit effort>, % of stall); module default is the fallback.
+            # This wires the previously-dead `effort` config so hips/legs
+            # can be tuned independently (firmware-limits lane 2026-07-06).
+            refuse_at = lim.effort if lim.effort else _LOAD_REFUSE_THRESHOLD
             mean_abs, load_sign = self._load_window(joint_id, now_ns)
             if (
                 mean_abs is not None
-                and mean_abs > _LOAD_REFUSE_THRESHOLD
+                and mean_abs > refuse_at
                 and last is not None
                 and load_sign != 0.0
                 and (goal - last) * load_sign > 0.0

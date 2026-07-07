@@ -16,12 +16,18 @@ Method (per joint):
   4. Record stop position, then back off BACKOFF_RAW the other way.
   5. home_raw = stop_pos - search_dir * stop_to_home_raw  (clamped 0..4095).
 
-SAFETY: there is currently no torque-limit passthrough to the servo (firmware
-is raw bus driver only), so the *only* gear protection is a low LOAD_THRESHOLD
-plus an immediate stop plus the slow step rate. Keep LOAD_THRESHOLD
-conservative. A per-joint TIMEOUT_TICKS guard aborts if no stop is found
-(e.g. wrong search_dir, joint free-spinning) before the servo cooks itself.
+SAFETY: the firmware caps every servo's torque-limit register at 600
+permille on arm (main.cpp NOVA_TORQUE_LIMIT_RAW — this note previously
+said "no passthrough"; stale as of 2026-07-06), so a missed stop
+saturates at 60% of stall. Still keep LOAD_THRESHOLD conservative: 60%
+through the gears is plenty to chew a stripped horn. A per-joint
+TIMEOUT_TICKS guard aborts if no stop is found (e.g. wrong search_dir,
+joint free-spinning) before the servo cooks itself. NOTE: the firmware
+per-joint position-limit table (`joint_limits` topic) must stay WIDE
+OPEN during homing — the stops live outside walk ROM by design; publish
+the table AFTER homing (nova_ops safety_envelope/firmware_limits.py).
 """
+
 from dataclasses import dataclass
 from enum import Enum
 
@@ -29,27 +35,27 @@ RAW_FULL_SCALE = 4095
 
 
 class Outcome(str, Enum):
-    OK = 'ok'
-    TIMEOUT = 'timeout'          # never hit a stop — check search_dir / mechanics
-    ABORTED = 'aborted'          # external abort (safety tripped, e-stop)
-    OVERLOAD = 'overload'        # load blew past the hard ceiling immediately
-    SKIPPED = 'skipped'          # placeholder config — not calibrated
+    OK = "ok"
+    TIMEOUT = "timeout"  # never hit a stop — check search_dir / mechanics
+    ABORTED = "aborted"  # external abort (safety tripped, e-stop)
+    OVERLOAD = "overload"  # load blew past the hard ceiling immediately
+    SKIPPED = "skipped"  # placeholder config — not calibrated
 
 
 @dataclass
 class HardStopParams:
-    step_raw: int = 4            # goal advance per tick (~4 raw = 0.35 deg)
-    tick_hz: float = 20.0        # control-loop rate; 4 raw @ 20 Hz = ~7 deg/s
-    load_threshold: int = 200    # |effort| (of 1000) that counts as "pushing"
-    load_ceiling: int = 600      # abort immediately if exceeded (gear safety)
-    stall_ticks: int = 4         # consecutive over-threshold ticks => stopped
-    pos_epsilon: int = 2         # raw counts; below this = "not moving"
-    backoff_raw: int = 60        # retreat from the stop after detection (~5 deg)
-    leash_raw: int = 24          # max goal lead over last measured position —
-                                 # bounds position error (∝ torque) when the
-                                 # stop is compliant (printed PA6 flexes) or
-                                 # /joint_states is stale (16.7 Hz per joint)
-    timeout_s: float = 12.0      # per-joint abort if no stop found
+    step_raw: int = 4  # goal advance per tick (~4 raw = 0.35 deg)
+    tick_hz: float = 20.0  # control-loop rate; 4 raw @ 20 Hz = ~7 deg/s
+    load_threshold: int = 200  # |effort| (of 1000) that counts as "pushing"
+    load_ceiling: int = 600  # abort immediately if exceeded (gear safety)
+    stall_ticks: int = 4  # consecutive over-threshold ticks => stopped
+    pos_epsilon: int = 2  # raw counts; below this = "not moving"
+    backoff_raw: int = 60  # retreat from the stop after detection (~5 deg)
+    leash_raw: int = 24  # max goal lead over last measured position —
+    # bounds position error (∝ torque) when the
+    # stop is compliant (printed PA6 flexes) or
+    # /joint_states is stale (16.7 Hz per joint)
+    timeout_s: float = 12.0  # per-joint abort if no stop found
 
     @property
     def timeout_ticks(self) -> int:
@@ -64,7 +70,7 @@ class HardStopResult:
     home_raw: int = 0
     peak_load: int = 0
     ticks: int = 0
-    detail: str = ''
+    detail: str = ""
 
 
 def _clamp_raw(v: int) -> int:
@@ -82,8 +88,15 @@ class HardStopCalibrator:
         sleep_tick()                            block one control period
     """
 
-    def __init__(self, read_position, read_load, send_goal,
-                 is_aborted, sleep_tick, params: HardStopParams = None):
+    def __init__(
+        self,
+        read_position,
+        read_load,
+        send_goal,
+        is_aborted,
+        sleep_tick,
+        params: HardStopParams = None,
+    ):
         self._read_position = read_position
         self._read_load = read_load
         self._send_goal = send_goal
@@ -94,13 +107,17 @@ class HardStopCalibrator:
     def run_joint(self, cfg) -> HardStopResult:
         """cfg is a config.JointHomeConfig."""
         jid = cfg.joint_id
-        if getattr(cfg, 'placeholder', False):
-            return HardStopResult(jid, Outcome.SKIPPED,
-                                  detail='placeholder config (fill search_dir / '
-                                         'stop_to_home_raw from CAD)')
+        if getattr(cfg, "placeholder", False):
+            return HardStopResult(
+                jid,
+                Outcome.SKIPPED,
+                detail="placeholder config (fill search_dir / "
+                "stop_to_home_raw from CAD)",
+            )
         if cfg.search_dir not in (+1, -1):
-            return HardStopResult(jid, Outcome.SKIPPED,
-                                  detail=f'bad search_dir {cfg.search_dir}')
+            return HardStopResult(
+                jid, Outcome.SKIPPED, detail=f"bad search_dir {cfg.search_dir}"
+            )
 
         p = self.p
         goal = self._read_position(jid)
@@ -110,9 +127,13 @@ class HardStopCalibrator:
 
         for tick in range(p.timeout_ticks):
             if self._is_aborted():
-                return HardStopResult(jid, Outcome.ABORTED, ticks=tick,
-                                      peak_load=peak_load,
-                                      detail='aborted mid-run')
+                return HardStopResult(
+                    jid,
+                    Outcome.ABORTED,
+                    ticks=tick,
+                    peak_load=peak_load,
+                    detail="aborted mid-run",
+                )
 
             goal = _clamp_raw(goal + cfg.search_dir * p.step_raw)
             # Leash the goal to the last measured position. Without this the
@@ -136,9 +157,14 @@ class HardStopCalibrator:
             if load >= p.load_ceiling:
                 # Blew past the safe ceiling in one step — bail before damage.
                 self._back_off(jid, pos, cfg.search_dir)
-                return HardStopResult(jid, Outcome.OVERLOAD, stop_pos_raw=pos,
-                                      peak_load=peak_load, ticks=tick,
-                                      detail=f'load {load} >= ceiling {p.load_ceiling}')
+                return HardStopResult(
+                    jid,
+                    Outcome.OVERLOAD,
+                    stop_pos_raw=pos,
+                    peak_load=peak_load,
+                    ticks=tick,
+                    detail=f"load {load} >= ceiling {p.load_ceiling}",
+                )
 
             moving = abs(pos - prev_pos) > p.pos_epsilon
             prev_pos = pos
@@ -152,14 +178,24 @@ class HardStopCalibrator:
                 stop_pos = pos
                 home = _clamp_raw(stop_pos - cfg.search_dir * cfg.stop_to_home_raw)
                 self._back_off(jid, stop_pos, cfg.search_dir)
-                return HardStopResult(jid, Outcome.OK, stop_pos_raw=stop_pos,
-                                      home_raw=home, peak_load=peak_load,
-                                      ticks=tick, detail='stop detected')
+                return HardStopResult(
+                    jid,
+                    Outcome.OK,
+                    stop_pos_raw=stop_pos,
+                    home_raw=home,
+                    peak_load=peak_load,
+                    ticks=tick,
+                    detail="stop detected",
+                )
 
-        return HardStopResult(jid, Outcome.TIMEOUT, peak_load=peak_load,
-                              ticks=p.timeout_ticks,
-                              detail='no stop within timeout — check search_dir / '
-                                     'mechanics / load_threshold')
+        return HardStopResult(
+            jid,
+            Outcome.TIMEOUT,
+            peak_load=peak_load,
+            ticks=p.timeout_ticks,
+            detail="no stop within timeout — check search_dir / "
+            "mechanics / load_threshold",
+        )
 
     def _back_off(self, jid, from_pos, search_dir):
         target = _clamp_raw(from_pos - search_dir * self.p.backoff_raw)

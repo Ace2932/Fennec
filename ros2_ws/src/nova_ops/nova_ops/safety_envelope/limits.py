@@ -47,18 +47,35 @@ class JointLimit:
 # Angles in radians. STS3215 supports ±180° physically but the leg
 # kinematics constrain a much smaller range; pick ranges that won't
 # crash linkages at first walk.
-def _hip_abduction() -> JointLimit:
-    # ±45 deg lateral splay around neutral
-    # ⚠ LOOSER THAN THE CAD GATE (2026-07-06): the chassis fit gate caps
-    # INBOARD roll at 15 deg sw (belly-pack contact from ~18 deg at any
-    # hfe fold >= 30); outboard 40 is fine. URDF now carries the
-    # asymmetric range per side (nova_description). Tightening THIS
-    # table needs the per-ID homing direction map (which servo sign is
-    # inboard, servo_homing/config.py) — do it in the firmware-limits
-    # lane (improvement-backlog #9) before any crouch+roll choreography.
+# Per-haa-ID INBOARD sign in the *servo command frame* (the frame
+# /joint_commands positions are expressed in): +1 = increasing command
+# swings that leg toward the belly, -1 = decreasing does. UNKNOWN until
+# homing calibration observes real motion — the config.py search_dirs
+# are placeholders and encode "safe stop direction", NOT inboard.
+# While a sign is None its haa gets the CONSERVATIVE SYMMETRIC ±15 deg
+# (the chassis gate's inboard cap: belly-pack contact from ~18 deg at
+# any hfe fold >= 30). Filling the sign unlocks the asymmetric
+# 15-inboard / 40-outboard gate ROM. Splay choreography needs >15
+# outboard, so fill these AT homing calibration (firmware-limits lane,
+# closed 2026-07-06; signs pending hardware).
+HAA_INBOARD_SIGN: Dict[int, Optional[int]] = {1: None, 4: None, 7: None, 10: None}
+
+_HAA_INBOARD_CAP = math.radians(15.0)  # chassis-gate inboard cap
+_HAA_OUTBOARD_CAP = math.radians(40.0)  # chassis-gate outboard cap
+
+
+def _hip_abduction(joint_id: int) -> JointLimit:
+    sign = HAA_INBOARD_SIGN.get(joint_id)
+    if sign is None:
+        # unknown direction -> both ways get the inboard cap
+        lower, upper = -_HAA_INBOARD_CAP, _HAA_INBOARD_CAP
+    elif sign > 0:
+        lower, upper = -_HAA_OUTBOARD_CAP, _HAA_INBOARD_CAP
+    else:
+        lower, upper = -_HAA_INBOARD_CAP, _HAA_OUTBOARD_CAP
     return JointLimit(
-        lower=math.radians(-45.0),
-        upper=math.radians(45.0),
+        lower=lower,
+        upper=upper,
         velocity=math.radians(180.0),
         effort=0.70,
     )
@@ -117,7 +134,7 @@ def load_default_limits(include_arm: bool = False) -> JointLimits:
     # PER-LEG-SEQUENTIAL: each leg = (haa, hfe, kfe) in ID order (FL,FR,RL,RR).
     for leg in range(4):
         base = 1 + leg * 3
-        table[base] = _hip_abduction()  # haa  (IDs 1,4,7,10)
+        table[base] = _hip_abduction(base)  # haa  (IDs 1,4,7,10)
         table[base + 1] = _thigh_flexion()  # hfe  (IDs 2,5,8,11)
         table[base + 2] = _knee()  # kfe  (IDs 3,6,9,12)
     if include_arm:

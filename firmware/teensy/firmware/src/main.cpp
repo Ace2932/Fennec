@@ -296,6 +296,28 @@ uint8_t cmd_decimate_count = 0;
 constexpr uint16_t SLEW_UNINIT = 0xFFFF;
 uint16_t last_cmd_goal[NOVA_JOINT_COUNT];
 
+// ---------------- Per-joint position limit table ----------------
+// Defense-in-depth (firmware-limits lane 2026-07-06): the Jetson-side
+// safety envelope (nova_ops wrapper.py) clamps to the URDF/gate ROM, but
+// it is a single point of failure — a bypassed wrapper or rogue publisher
+// could command any raw 0..4095. The host publishes per-joint raw limits
+// on `joint_limits` (Float32MultiArray, 24 floats = min,max per joint in
+// bus-ID order) after homing calibration maps URDF radians -> raw counts
+// (nova_ops safety_envelope/firmware_limits.py). Until that message
+// arrives the table is wide open (0..4095) — homing itself must move
+// joints outside walk ROM. RAM-only: host re-publishes on reconnect
+// (agent re-subscribe implies a fresh session).
+uint16_t joint_limit_min[NOVA_JOINT_COUNT];
+uint16_t joint_limit_max[NOVA_JOINT_COUNT];
+volatile uint32_t joint_limits_rx_count = 0;
+
+inline void joint_limits_init_all() {
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    joint_limit_min[i] = 0;
+    joint_limit_max[i] = 4095;
+  }
+}
+
 inline void slew_init_all() {
   for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) last_cmd_goal[i] = SLEW_UNINIT;
 }
@@ -321,6 +343,9 @@ void broadcast_servo_commands() {
     if (isnan(v) || v < 0.0) v = 0.0;
     else if (v > 4095.0)     v = 4095.0;
     uint16_t target = (uint16_t)v;
+    // per-joint ROM clamp (host-published table; wide open until then)
+    if (target < joint_limit_min[i]) target = joint_limit_min[i];
+    if (target > joint_limit_max[i]) target = joint_limit_max[i];
 
     uint16_t out;
     if (last_cmd_goal[i] == SLEW_UNINIT) {
@@ -432,6 +457,7 @@ rcl_publisher_t servo_voltage_pub;
 rcl_publisher_t servo_temperature_pub;
 rcl_subscription_t joint_cmd_sub;
 rcl_subscription_t safety_clear_sub;
+rcl_subscription_t joint_limits_sub;
 
 std_msgs__msg__Int32 heartbeat_msg;
 std_msgs__msg__Int32 loop_max_msg;
@@ -463,6 +489,9 @@ std_msgs__msg__Bool  battery_low_msg;
 std_msgs__msg__Bool  command_stale_msg;
 sensor_msgs__msg__JointState joint_states_msg;
 sensor_msgs__msg__JointState joint_cmd_msg;
+// joint_limits sub: 24 floats = (min,max) raw per joint, bus-ID order
+std_msgs__msg__Float32MultiArray joint_limits_msg;
+float joint_limits_rx_buf[2 * NOVA_JOINT_COUNT];
 
 // Backing storage for JointState arrays (pub + sub). Names + frame_id stay
 // empty for now — see header note.
@@ -487,6 +516,27 @@ void joint_cmd_callback(const void* msgin) {
   for (size_t i = 0; i < n; i++) latched_cmd_position[i] = m->position.data[i];
   joint_cmd_rx_count++;
   last_joint_cmd_us = micros();   // staleness-failsafe freshness stamp
+}
+
+// `joint_limits` callback — per-joint raw ROM table from the host (see the
+// table block above broadcast_servo_commands). Whole-message validation:
+// exactly 2*N floats, every pair sane (0 <= min < max <= 4095) — else the
+// entire update is REJECTED (no partial tables: a half-applied table could
+// pin one leg's joints while its neighbors run the old ROM).
+void joint_limits_callback(const void* msgin) {
+  const std_msgs__msg__Float32MultiArray* m =
+      (const std_msgs__msg__Float32MultiArray*)msgin;
+  if (m->data.size != 2 * NOVA_JOINT_COUNT) return;
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    float lo = m->data.data[2 * i], hi = m->data.data[2 * i + 1];
+    if (isnan(lo) || isnan(hi) || lo < 0.0f || hi > 4095.0f || lo >= hi)
+      return;
+  }
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    joint_limit_min[i] = (uint16_t)m->data.data[2 * i];
+    joint_limit_max[i] = (uint16_t)m->data.data[2 * i + 1];
+  }
+  joint_limits_rx_count++;
 }
 
 // /safety_clear sub callback — Bool; data=true requests a latch clear.
@@ -566,6 +616,8 @@ void setup() {
   // broadcast after boot accepts the latched goal verbatim (no false ramp
   // from a previous boot's residual value).
   slew_init_all();
+  // Position-limit table boots wide open; the host narrows it after homing.
+  joint_limits_init_all();
 
   // Boot servo ping sweep — one-shot inventory of the bus. Populates
   // servo_present_mask before the tick loop starts so the first
@@ -770,6 +822,18 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState),
       "joint_commands"));
+  RCCHECK(rclc_subscription_init_default(
+      &joint_limits_sub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+      "joint_limits"));
+  joint_limits_msg.data.data     = joint_limits_rx_buf;
+  joint_limits_msg.data.size     = 0;
+  joint_limits_msg.data.capacity = 2 * NOVA_JOINT_COUNT;
+  joint_limits_msg.layout.dim.data     = NULL;
+  joint_limits_msg.layout.dim.size     = 0;
+  joint_limits_msg.layout.dim.capacity = 0;
+  joint_limits_msg.layout.data_offset  = 0;
 
   joint_state_bind(&joint_states_msg, js_position, js_velocity, js_effort);
   joint_state_bind(&joint_cmd_msg,    cmd_position, cmd_velocity, cmd_effort);
@@ -778,14 +842,17 @@ void setup() {
     latched_cmd_position[i] = 0.0;
   }
 
-  // Executor sized for 2 subs: joint_commands + safety_clear.
-  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
+  // Executor sized for 3 subs: joint_commands + safety_clear + joint_limits.
+  RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
   RCCHECK(rclc_executor_add_subscription(
       &executor, &joint_cmd_sub, &joint_cmd_msg,
       &joint_cmd_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(
       &executor, &safety_clear_sub, &safety_clear_msg,
       &safety_clear_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(
+      &executor, &joint_limits_sub, &joint_limits_msg,
+      &joint_limits_callback, ON_NEW_DATA));
 
   heartbeat_msg.data = 0;
   estop_msg.data = false;
@@ -878,6 +945,14 @@ void loop() {
       safety_clear_request = false;
     }
     nova::SafetyState curr_safety = safety_fsm.state();
+    // LIMP on any latch (E-stop / battery-low; the stall path already cut
+    // torque itself before tripping): holding the last pose with torque
+    // enabled fights the operator and cooks servos against whatever caused
+    // the stop. The robot is EXPECTED to collapse on E-stop — catch it or
+    // let it sit down. (system-audit item "E-stop limp", closed 2026-07-06)
+    if (curr_safety != nova::SAFETY_NORMAL && prev_safety == nova::SAFETY_NORMAL) {
+      set_fleet_torque(false);
+    }
     // On any transition back to NORMAL (clear succeeded), reset the slew
     // history so the next broadcast accepts the current target verbatim
     // rather than ramping from the stale pre-fault goal.
