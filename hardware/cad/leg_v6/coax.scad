@@ -58,6 +58,21 @@ module coax_v6() {
             arm_plate(ARM_OUT_X0, ARM_OUT_X1);
             translate([BLK_X - 2, HFE_Y - ARM_HALF_YZ, BRIDGE_Z0])
                 cube([ARM_OUT_X1 - BLK_X + 2, 2*ARM_HALF_YZ, 13.4 - BRIDGE_Z0]);
+            // outboard-arm ROOT DOUBLER (backlog #26, stress audit
+            // 2026-07-06): the arm-to-bridge junction was the only member
+            // on the robot under SF 15 — ~14 MPa at the 4-thick root under
+            // a 20 N lateral/turning foot load = fatigue SF ~1.9 per
+            // stride. 2-thick outboard gusset over the junction (z 0..13.4,
+            // tapering out by z -1.5) doubles the root modulus -> ~6 MPa.
+            // Taper stops ABOVE the wheel-screw head zone (top BCD heads
+            // reach z -1.95; ARM_THK itself is shared by every couple cut
+            // and cannot change). L mirror: symmetric in y, mirrors clean.
+            hull() {
+                translate([ARM_OUT_X1 - EPS, HFE_Y - ARM_HALF_YZ, 0])
+                    cube([2, 2*ARM_HALF_YZ, 13.4]);
+                translate([ARM_OUT_X1 - EPS, HFE_Y - ARM_HALF_YZ, -1.5])
+                    cube([0.5, 2*ARM_HALF_YZ, 14.9]);
+            }
             // outboard-arm boss reaching the femur wheel (56.2 -> 51.5)
             translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0])
                 wheel_boss_pos();

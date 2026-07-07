@@ -24,9 +24,10 @@
 // 4 plate screws — mast and Jetson stay untouched.
 //
 // Clearances (gate-enforced): shaft front wall x 44 vs Jetson carrier edge
-// x 41.7 (2.3); flange rear edge x 63.3 vs the shoulder deck-extension fin
-// at x 63.5 (0.2); L2 rear overhang vs Jetson heatsink top 101.3 (13.1 —
-// heatsink height is ⚠ REVIEW, re-gate after caliper).
+// x 41.7 (2.3); flange+shaft rear edge x 63.0 vs the shoulder deck-extension
+// fin at x 63.5 (0.5 — was 0.2, inside print tol; backlog #16 fix); L2 rear
+// overhang vs Jetson heatsink top 101.3 (13.1 — heatsink height is ⚠ REVIEW,
+// re-gate after caliper).
 //
 // Print: flange-down, tree supports under the four plate corners; 45°
 // flares tie shaft->flange and shaft->plate (stiffness + fewer supports).
@@ -36,9 +37,13 @@ EPS = 0.05;
 
 CTR = 53.5;                        // shaft/L2 center (x), y 0
 FLG_Z0 = 71.9; FLG_T = 4;          // flange on the deck
-FLG = [38, 63.3, -20, 20];         // x0 x1 y0 y1
+FLG = [38, 63.0, -20, 20];         // x0 x1 y0 y1 — rear edge PULLED IN
+                                   // 63.3->63.0 (backlog #16): 0.2 to the
+                                   // shoulder deck-ext fin (63.5) was
+                                   // inside print tolerance; now 0.5
 MAST_BX = [44, 60]; MAST_BY = 14;  // riser deck insert positions
-SHAFT = [44, 63.3, -9, 9];         // outer x0 x1 y0 y1
+SHAFT = [44, 63.0, -9, 9];         // outer x0 x1 y0 y1 — rear wall follows
+                                   // the flange trim (3.0 wall vs bore, ok)
 BORE  = [13, 11];                  // cable bore: RJ45 head 11.7x8 flat +
                                    // ~O10 DC plug (review fix; ⚠ caliper)
 PLATE_Z0 = 110.4; PLATE_T = 4;     // L2 seat plane = 114.4
