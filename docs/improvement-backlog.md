@@ -37,6 +37,24 @@ load analysis). Ranked within group. Status legend: **NOW** (this batch),
 | 10 | Contact detection from servo current | no foot sensors needed; pairs with per-leg INA (v7) | **GATED**: v7 boards (current-only version possible from servo telemetry sooner) |
 | 11 | Jetson watchdog + joint-ID map | audit opens | **DONE 2026-07-06**: 3-layer watchdog (Restart=on-failure / WatchdogSec+`watchdog_node` sd_notify feeder / Tegra RuntimeWatchdogSec) — `deploy/nova-bringup.service` + setup-jetson §16; liveness+watchdog nodes added to the walk profile. Joint-ID map: `nova_ops/joint_map.py` loader + consistency tests locking yaml ↔ homing config ↔ limits grouping ↔ URDF. **At Jetson**: install the unit + RuntimeWatchdogSec, bench-verify the SIGSTOP restart |
 
+## Hardware review, second pass (2026-07-06)
+
+PCBs already ordered (JLCPCB 2026-07-01) — **none of these need a respin**;
+item 14 is the only electrical one and it rides the existing I²C bus.
+
+| # | Item | Why | Status |
+|---|---|---|---|
+| 14 | **Dedicated IMU near CoM** (ICM-42688-P breakout, ~$12) | MPU-6050 cut (2026-05-24) assumed D456/L2 IMUs suffice — that predates gait planning AND the breakaway masts: those IMUs are high, vibration-rich, USB/Ethernet latency, and mounted on parts designed to pop off in a fall. Balance loop needs rigid CoM-mounted attitude at 1 kHz on the Teensy. **Wiring: shares the INA226 I²C bus** (addr 0x68 clear of 0x40/41/44/45; 140 kbps of 400 kHz), 4 wires to interboard I²C or Teensy through-hole pins; mounts on the mezzanine (stack ctr x −3.5 ≈ CoM). Verify socket/pin access when boards arrive. Permanent footprint → v7 respin list | **NEXT**: BOM add + bench-wire at board bring-up |
+| 15 | **Belly skid rails + collapse-pose check** | E-stop limp = collapse by design; pack bottom (z −35.9) is the lowest point on the robot — puncture = fire. TPU strips on the battery-tray bottom + TPU bumpers at knee outer faces; one-time CAD check of the limp resting pose (what touches first) | **NEXT** (CAD, cheap) |
+| 16 | **Trim l2_mast flange rear edge 63.3 → 63.0** | 0.2 gap to the shoulder deck-extension fin (63.5) is inside ±0.15 print tolerance — coin-flip interference at assembly. Other tight gaps checked: D456 stem 0.1 = designed register, riser 0.1-over-plateau = datum, shoe gaps = TPU. This is the only bad one | **NEXT** (5-min CAD + regate) |
+| 17 | **Hip servo heat path** | HAA/HFE hold ~22% torque continuously in PA6-CF thermal blankets. Per-servo temp telemetry already streams at 5 Hz → MEASURE at first stand; if hips >55 °C sustained, thermal pad + alu spreader through the existing vent windows (zero reprint). Real fix long-term = inboard-jog tibia (see gated items) | **GATED**: first-stand thermal data |
+| 18 | **Cable service loops at joints** | haa ±40° / kfe ±109° at trot ≈ 10⁵ flex cycles/hr — quadruped cables classically die at the hip. Printed clips defining ≥8× cable-Ø bend radius at each joint crossing + spiral wrap in flex zones; spec in the assembly checklist | **NEXT** (spec + small clips w/ leg print batch) |
+| 19 | **Battery precharge** | XT60→MRBF→switch: hot-plug arcing lands on the switch contacts (bulk caps + 12 servos downstream) — pits over time. 100 Ω/5 W precharge resistor bridging the switch, or XT90-S swap | **LOW** (BOM line, bench QoL) |
+
+Verified NOT issues: E-stop already cuts leg/hip/L2 rails in hardware (NC
+through the three buck ENs, Jetson stays up — power-budget checklist line
+209 verifies at power-on); XT60+MRBF-30 fusing is properly sized/placed.
+
 ## Process debt
 
 | # | Item | Why | Status |
