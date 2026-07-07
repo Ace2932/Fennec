@@ -87,6 +87,12 @@ notes; only two actionable findings:
 | 26 | **Coax yoke arm root +50% section** | ONLY plastic member below SF 15: 14 MPa at the 4 mm root (20 N lateral/turning), SF ~3 wet and **~1.9 against PA6 fatigue** on a per-stride cyclic load. Root 4→6 + fillet → ~6 MPa | **DONE 2026-07-06**: tapered outboard doubler at the arm-bridge junction (taper clears the wheel-screw heads; shared ARM_THK untouched); mesh-verified 6.0 root, all gates green |
 | 27 | **Mass diet targets + first-article static test** | LESS is safe in: tibia infill 40→25% (SF 35; ~8-10 g/leg), shoulder flange mid-panel windows (SF>150; ~15 g ×2), riser thin walls at PETG reprint (~25 g). NEVER: leg walls, femur (10 MPa, 2nd-tightest), coax, toe pocket ring. And calcs can't see a bad print: **first-article static test — 12 kg (3× robot) hung off one tibia toe + 5 N·m on a shoulder joint** before first walk | **GATED**: print batch / first article |
 
+## Phase-4 arm (assessed 2026-07-06)
+
+| # | Item | Why | Status |
+|---|---|---|---|
+| 28 | Arm go/no-go + prep flags | POSSIBLE (boards carry J14 + arm buck footprint + U12 INA + EN regate; IDs 13-18 + limits placeholders exist). Physics: +650 g (+15%), hips 22→~26% continuous (thermal), ~250 g payload @300 mm on the 7.5 V rail, extended-arm CoM shift ~45 mm. **GOOD IDEA ONLY behind two gates: stable trot, then balance controller** (which also unlocks inboard-jog = buys back the thermal cost). Design rules when it lands: mount over CoM, hard STOW pose enforced for all locomotion, consider lighter distal servos. Firmware: arrays 12→18 + joint_limits 36 floats (build flag). **⚠ CHECK at board bring-up: arm INA U12 address (memory says 0x45 = collides with the optional L2 INA)** | **GATED**: trot + balance controller |
+
 ## Process debt
 
 | # | Item | Why | Status |
