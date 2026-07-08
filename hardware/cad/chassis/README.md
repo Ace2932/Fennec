@@ -30,7 +30,7 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 
 | Part | Status | Notes |
 |---|---|---|
-| `riser_bay.scad` | designed, gated | one print, 126.7 × 110 × 42.9 (z 29.0..71.9). **Reworked 2026-07-07 for the case pivot**: dropped the 96.5×75.4 Jetson standoff grid + all hood pads/inserts; added the case PORT-END cable slot (x −58..−46, y ±18 = also the case bottom-vent breather), 4 cradle deck ties (47.3/−59.0, ±50.35), and SMA bulkheads on the front strip (57, ±40). **Head interface RETIRED 2026-07-07** — the L2-column deck base, L2 cable drop, front-wall camera register + USB grommet are removed (head moved fwd onto `neck_bracket.scad`); SMA kept |
+| `riser_bay.scad` | designed, gated | one print, 126.7 × 110 × 42.9 (z 29.0..71.9). **Reworked 2026-07-07 for the case pivot**: dropped the 96.5×75.4 Jetson standoff grid + all hood pads/inserts; added the case PORT-END cable slot (x −58..−46, y ±18 = also the case bottom-vent breather), 4 cradle deck ties (47.3/−59.0, ±50.35). **Head interface RETIRED 2026-07-07** — the L2-column deck base, L2 cable drop, front-wall camera register + USB grommet removed (head moved fwd onto `neck_bracket.scad`); **SMA bulkheads also removed** — WiFi MIMO antennas consolidated to the head ears (higher, clear of the CF chassis) |
 | `spacer.scad` | **RETIRED** | Jetson standoff washers — unused now the board is in the official case (kept in build_all for reference) |
 | `battery_pocket.scad` | designed, gated | rear-loading belly tray, 6× M3 sandwich mount through the floor (**part-5 plate must adopt the (±40/0, ±26.5) pattern**; drill the floor at first assembly), velcro fence at the rear opening |
 | `head.scad` | **RE-ARCHITECTED + gated (2026-07-07)** | **forward HEAD on the front-shoulder "neck"** — moved OFF the riser front and FORWARD onto the front-shoulder top so it projects ahead like a fox (not a turret). Bolts to `neck_bracket.scad`, NOT the riser. Sensors shifted **DX+73 DZ+6** vs the old riser head (`forward_head_study.py` = the proof): D456 27° down-tilted face, back-face ctr **(143,0,111.5)**, body x136.4..172.7 z86.8..124.4 y±61.9; L2 crown center **x126.5**, optical z~160, seat 128. Camera bottom clears the front horn-plate top (+2.0) + the bracket base (+3.25); camera top +3.6 under the L2. **0 front-leg hits** across the full ROM. Mounts via a rear boss → 4× M3 into the bracket wall (tall couple). L2 = 4 crown screws from below; camera bolts on the bench. **Right-angle USB-C** (BOM). Print BOSS-DOWN. STYLE (fennec ears/skull) = WIP, default off |
@@ -81,8 +81,11 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
   Head removal = the 4 boss→bracket bolts → lifts off with the L2 + camera. The
   bracket stays bolted to the deck (drilled once), so the head is a modular
   removable unit for fennec-styling iteration.
-- **SMA bulkheads**: 2× Ø6.5 at (57, ±40) — 80 apart (MIMO), front strip.
-  ⚠ verify the U.FL pigtail reach on the real board.
+- **SMA bulkheads**: REMOVED 2026-07-07 → the 2× WiFi MIMO antennas now live
+  in the **head ears** (Ø6.5 SMA bores, higher + clear of the CF chassis). ⚠
+  antennas are a PROVISION only — onboard Jetson WiFi works; test bench range
+  first, then order (2× SMA bulkhead + 2× U.FL→SMA pigtail + 2× whip, ~$25) and
+  verify the WiFi card exposes U.FL.
 - **Hood interface**: 4× M3 horizontal heat-sets in the side walls at
   (x −50/+35, z 67) — hood straddles the deck, screws from free air.
 - **Vents**: 6× 3 mm slots per side, z 52..66.

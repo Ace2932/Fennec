@@ -40,16 +40,13 @@
 // the front-shoulder top (the "neck") via the separate neck_bracket.scad, so it
 // no longer bolts to the riser at all. The old riser head anchors (L2-column
 // deck base 54/59,±14; L2 cable drop; front-wall camera register z67.4; USB-C
-// grommet 14,61.5) are REMOVED. SMA bulkheads KEPT (still MIMO candidate; may
-// yet relocate to the head ears once the fennec styling lands). See head.scad +
-// neck_bracket.scad + README "head interface".
+// grommet 14,61.5) are REMOVED. SMA bulkheads ALSO REMOVED 2026-07-07 — the
+// WiFi MIMO antennas consolidated to the HEAD EARS (higher + clear of the CF
+// chassis = better range). See head.scad STYLE SMA bores + README.
 //
 // Deck fixtures (trunk x,y) after the case pivot:
 //   CASE_SLOT x -58..-46, y +-18: the case PORT-END cable exit (into the
 //     shoulder notch) AND the case bottom-vent breather.
-//   SMA bulkheads 2x O6.5 at (57, +/-40) — RELOCATED to the front strip
-//     (the case covers the old +y deck spots); 80 apart (MIMO). !! pigtail
-//     reach from the rear-facing ports is UNVERIFIED (flagged for review).
 //   Cradle deck ties 4x O3.4 at (47.3/-59.0, +/-50.35): M3 up from below
 //     into the cradle post-base heat-sets.
 // Wall fixtures: riser<->flange pads (both ends, y +/-40, bores z 67.4). Vent
@@ -98,8 +95,9 @@ M3_CLEAR   = 3.4;
 // L2_DROP = [53.5, 0];                          // head cable-bore drop
 CASE_SLOT = [-58, -46, -18, 18];  // case PORT-END cable exit (into the
                                   // shoulder notch) + case bottom-vent breather
-SMA  = [[57, 40], [57, -40]];     // O6.5, RELOCATED to the front strip (case
-                                  // covers the old +y spots); 80 apart (MIMO)
+// SMA bulkheads RETIRED 2026-07-07 — WiFi MIMO antennas consolidated to the
+// head ears (higher, clear of the CF chassis). Kept commented for reference.
+// SMA  = [[57, 40], [57, -40]];  // O6.5, front strip, 80 apart (MIMO)
 CRADLE_TIE = [[47.3, 50.35], [47.3, -50.35],         // case-cradle deck ties
               [-59.0, 50.35], [-59.0, -50.35]];      // M3 up from below into
                                                      // the cradle post bases
@@ -178,9 +176,9 @@ module riser_bay() {
         for (t = CRADLE_TIE)
             translate([t[0], t[1], DECK_BOT - EPS])
                 cylinder(d = M3_CLEAR, h = DECK_T + 2 * EPS);
-        for (p = SMA)
-            translate([p[0], p[1], DECK_BOT - EPS])
-                cylinder(d = 6.5, h = DECK_T + 2 * EPS);
+        // (SMA bulkheads RETIRED 2026-07-07 — WiFi antennas consolidated to
+        //  the HEAD EARS: higher/clearer of the CF chassis = better range, one
+        //  home instead of two. See head.scad STYLE SMA bores.)
         // riser<->flange heat-set bores (axis x). Pressed from the PAD's
         // INNER face (reachable from below, pre-mount) so screw tension
         // seats the insert DEEPER — outer-face press was extraction-loaded

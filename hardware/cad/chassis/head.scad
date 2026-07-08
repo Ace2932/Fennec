@@ -180,7 +180,11 @@ module head() {
         // channel down the column front (x behind the plate) to the boss bottom
         translate([COL_X1 - 11, 6, MB_Z0 - EPS])
             cube([11, 9, PILLAR_Z1 - MB_Z0]);
-        // --- FENNEC: SMA antenna bore up each ear root (O6.5, U.FL->SMA) ---
+        // --- FENNEC: SMA antenna bore up each ear root (O6.5) — the SOLE home
+        //     for the Jetson WiFi 2x2 MIMO antennas (riser bulkheads retired):
+        //     U.FL->SMA pigtail up the neck -> bulkhead here -> whip. Highest,
+        //     clearest-of-CF spot. PROVISION — onboard WiFi works; order only
+        //     if bench range needs it (verify the card exposes U.FL). ---
         if (STYLE)
             for (sy = [-1, 1])
                 translate([80, sy * 14, CROWN_Z0 - EPS])
