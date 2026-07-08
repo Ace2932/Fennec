@@ -526,9 +526,10 @@ def main():
         print(('OK    ' if ok else 'FAIL  ') + label)
         bad |= not ok
     print('NOTE  Case dims 110.3x93.9x38.2 CALIPERED (dimensions.md); the ref '
-          'mesh is ~1.2 oversize. Ports on the -Y flank -> STRAIGHT plugs are '
-          'shielded by jetson_cowl + drop the -Y CASE_SLOT to the bay (#38); '
-          'verify the bundle fit + drop-to-boards at wiring.')
+          'mesh is now SCALED to those dims (was ~1.3 oversize -> grazed the '
+          'cradle lips 0.25 in the viewer). Ports on the -Y flank -> STRAIGHT '
+          'plugs are shielded by jetson_cowl + drop the -Y CASE_SLOT to the bay '
+          '(#38); verify the bundle fit + drop-to-boards at wiring.')
 
     sys.exit(1 if bad else 0)
 
