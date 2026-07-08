@@ -182,9 +182,12 @@ def main():
         print(f'    D456 (110g): ctr x{old_cam_ctr:.0f}->{cam_ctr_x:.0f}  '
               f'{d_d456:+.0f} g.mm')
         print(f'    structure (~120g): {d_struct:+.0f} g.mm')
+        PACK_G = 510.0   # 4S 6000mAh 120C Ovonic, CALIPERED (BOM "510 g rattle")
         print(f'    net +{net:.1f} mm forward (of the 4.2 kg robot) -> nudge '
-              f'the belly battery ~{net*M_ROBOT/300:.0f} mm rearward to null '
-              f'(300 g pack), or accept front-load.')
+              f'the belly battery ~{net*M_ROBOT/PACK_G:.0f} mm rearward to null '
+              f'THIS DELTA ({PACK_G:.0f} g pack), or accept front-load. NB this '
+              f'nulls only the head-move delta, NOT the absolute CoM (~+12 mm '
+              f'fwd; run a full mass model to confirm).')
     else:
         print('  NO clean shift in the tested range -- widen/retune.')
 

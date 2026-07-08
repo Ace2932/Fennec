@@ -12,6 +12,6 @@ for p in femur tibia coax; do
   $OS -o ${p}_L.stl ${p}_L.scad
 done
 ls -la *_R.stl *_L.stl
-../../../.venv/bin/python ../mesh_health.py *_R.stl *_L.stl knee_arm.stl shoulder.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl tibia_pad.stl
+../../../.venv/bin/python ../mesh_health.py *_R.stl *_L.stl knee_arm.stl shoulder.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl
 ../../../.venv/bin/python check_fit.py --sweep
 ../../../.venv/bin/python check_shoe.py

@@ -118,8 +118,10 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 > See `forward_head_study.py` + the `neck_bracket.scad` table row above. The
 > "REAR LOBE reuses the mast / riser" wording below is HISTORICAL — the mount
 > is now the rear boss → bracket wall, but the crown/column geometry carried
-> over. CoM moved **+6.5 mm forward** → nudge the belly battery
-> ~91 mm rearward, or accept front-load.
+> over. CoM moved **+6.5 mm forward** → ~54 mm rearward on the belly battery
+> (510 g pack) nulls that delta. Absolute CoM ~+12 mm fwd — see the plan's
+> battery note; defer the pack move to a full mass model + the balance-
+> controller CoM target.
 
 - **ONE part carries BOTH front sensors.** REAR LOBE = the L2 tower (reuses the
   mast: deck flange bolts (54/59.0, ±14) M3×10 from above; column x51.6..64

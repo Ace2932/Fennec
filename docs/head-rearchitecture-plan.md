@@ -56,8 +56,10 @@ So the anatomically-right forward position is available.
       head/bracket/camera across the full ROM sweep. The front-hfe −50 cap
       still holds (now conservative — could relax; deferred to the leg-ROM lane).
 - [x] CoM delta → **+6.5 mm forward** (L2 230 g x53.5→126.5 dominates; head
-      struct MEASURED ~35 g) → nudge belly battery ~91 mm rearward (300 g pack)
-      to null, or accept front-load.
+      struct MEASURED ~35 g) → ~54 mm rearward on the belly battery nulls THIS
+      DELTA (pack = 510 g CALIPERED, BOM "510 g rattle"; the study's old 300 g
+      was wrong). NB the ABSOLUTE CoM is ~+12 mm fwd — see the battery note
+      below; a full mass model is the right tool.
 - [x] Retire the riser front head interface (user: RETIRE NOW, keep SMA) —
       removed the L2-column deck base + bores + L2 cable drop + front-wall
       camera register + USB-C grommet from `riser_bay.scad`; SMA kept. Riser

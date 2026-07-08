@@ -1,4 +1,18 @@
 // =============================================================================
+// V6 TIBIA BLADE PAD  ⚠⚠ RETIRED 2026-07-07 — MISPLACED, DO NOT PRINT ⚠⚠
+// =============================================================================
+// The pad sits on the tibia's -Z LOCAL face, but that face maps to WORLD +Y
+// (LATERAL) once the blade is mounted — the tibia is a blade that swings in the
+// fore-aft plane, so its flat faces point SIDEWAYS, not down. collapse_study.py
+// (../leg_v6/collapse_study.py) proves it never leads into the ground: across
+// the whole fold ROM (haa 0/25/40, hfe/kfe) the pad sits +22..69 mm ABOVE the
+// real ground contact (the foot, or the tibia LEADING EDGE / knee on a fold).
+// The belly rails (z-42.2) don't catch first either — a limp-folded leg hangs
+// to z-56..-94, below them. Real fix (backlog #15, reopened): a KNEE-OUTER-FACE
+// bumper + a CONTROLLED-LIMP sit pose (splay+fold so the legs clear the rails).
+// File kept for the press-plug + TPU-print knowledge only. NOT built, NOT gated.
+// -----------------------------------------------------------------------------
+// (original header below)
 // V6 TIBIA BLADE PAD (TPU 95A — print 5: 4 legs + spare)
 // =============================================================================
 // Backlog #15 extension (user call 2026-07-06): E-stop limp = collapse by
