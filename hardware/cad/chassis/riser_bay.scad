@@ -1,6 +1,8 @@
 // =============================================================================
 // NOVA chassis — trunk RISER BAY (+25mm rim, replaces the stock lid)
 // =============================================================================
+// PRINT: PETG-CF, DECK-FACE-DOWN (the flat top deck on the bed) — zero supports.
+//   3 walls / 0.25 layer / 20% infill (print-batch §2).
 // Top-level design: docs/design-outline.md (chassis lane).
 // Frame = TRUNK frame: z0 = trunk floor bottom, x fore-aft (+x FRONT, the
 // stock "F" arrow), y lateral, trunk outer 127 x 110 x 46.91.

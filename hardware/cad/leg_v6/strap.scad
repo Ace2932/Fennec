@@ -3,7 +3,11 @@
 // =============================================================================
 // plate, 2x Ø2.9 (M2.5 self-tap clearance) holes at ±14.25,
 // matching strap_pilot_neg() in leg_v6_common.scad. Sits on the pocket rims
-// (rim top = servo body top): clamps the body down into the pocket.
+// (rim top = servo body top): clamps the body down into the pocket. (Backup-
+// only now the anti-rotation ribs take the torque — coax + tibia use it,
+// femur has none.)
+// PRINT: PA6-CF (in the leg batch) or PETG-CF, FLAT (2.5 plate on the bed),
+//   ~100% infill, zero supports, ~1 g. Thin — go PETG-CF if the M2.5 holes crack.
 $fn = 48;
 difference() {
     hull() for (sy = [-1, 1])

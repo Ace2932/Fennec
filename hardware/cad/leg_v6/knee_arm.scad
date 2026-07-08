@@ -6,6 +6,8 @@
 // the femur fork shelf with 4x M3 into heat-sets; the screws register it.
 // FEMUR-frame: plate spans z 17.2..21.2, shelf zone x 59..80, horn at 106.9.
 // Part-local: underside = z0 (PRINT THIS FACE DOWN), knee axis at x = KNEE_X.
+// PRINT: PA6-CF, UNDERSIDE (horn-seat face, z0) DOWN — zero/minimal supports,
+//   4 walls / 0.2 / 40% (print-batch §2). print 4 (no mirror).
 include <leg_v6_common.scad>
 
 X0 = 59;                 // femur-frame plate start

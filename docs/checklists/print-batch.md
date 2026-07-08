@@ -1,8 +1,26 @@
 # Print Batch Checklist (v6 full set)
 
-From the 2026-07-06 batch-questions review. Prereq: **caliper session
-first** (Jetson heatsink, D456 rear pattern, 5191 block, real pack dims)
-— else hood / d456_head / floor_plate / battery_pocket print twice.
+From the 2026-07-06 batch-questions review. The caliper prereqs are now
+CLEARED (Jetson heatsink 34.9, D456 rear pattern confirmed, pack 510 g, 5191
+= external mount) — so floor_plate / battery_pocket no longer risk a re-print.
+
+## Δ since 2026-07-06 (head re-arch + fit/structure session, 2026-07-07)
+
+**RETIRED — do NOT print:** `l2_mast`, `d456_head` (→ folded into `head`),
+`hood` (→ official Jetson case), `tibia_pad` (misplaced → `knee_bumper`),
+`spacer` (board in the case).
+
+**NEW parts:** `head.scad` (fwd integrated head, PA6-CF), `neck_bracket.scad`
+(front-shoulder-deck adapter, PA6-CF), `knee_bumper.scad` (TPU collapse guard).
+
+**CHANGED → re-print (old copies are stale):** all 6 legs (coax/femur/tibia
++ mirrors — new anti-rotation ribs in the servo pocket), `riser_bay` (head
+interface removed).
+
+**⚠ NOT print-final:** `head` — functional + gate-clean, but the FENNEC styling
+(STYLE=true ears) is a FIRST PASS (L2 skull shroud / eye accent / snout still
+TODO) and its L2 (Ø51) + D456 mounts are gate-clean but BENCH-UNVERIFIED vs the
+real parts. Print it in Wave 1 as a fit-check article, not the final head.
 
 ## 0. Open before starting (user)
 
@@ -19,17 +37,18 @@ first** (Jetson heatsink, D456 rear pattern, 5191 block, real pack dims)
 
 | Material | Parts |
 |---|---|
-| PA6-CF (DRY 80 °C/10 h; no anneal — §3) | coax, femur, tibia, knee_arm, shoulder, shoulder_plate (+L variants) |
-| PETG-CF | riser_bay, floor_plate, battery_pocket, spacer ×8, l2_mast, d456_head, hood (post-caliper) |
+| PA6-CF (DRY 80 °C/10 h; no anneal — §3) | coax, femur, tibia, knee_arm, shoulder, shoulder_plate (+L variants), strap ×4, **`head`**, **`neck_bracket`** (both structural cantilevers — stiffness/vibration; ⚠ NOT yet stress-audited for infill like the legs — default 4–5 walls / 40–60 %) |
+| PETG-CF | riser_bay, floor_plate, battery_pocket |
 | TPU 95A | SM3_Foot shoe ×4+1 (STOCK geometry — crush-zone v2 waits for first-article, #20), skid_rail ×2, cable_clip ×20, ~~tibia_pad~~ → **knee_bumper ×4+1** (backlog #15 B, replaces the retired tibia_pad — wraps the tibia knee-block, ~8 g TPU, U opening up), **grommet_insert ×6** |
 
 ## 2. Slicer spec
 
 | Class | Walls | Layer | Infill | Notes |
 |---|---|---|---|---|
-| legs PA6-CF | 4 | 0.2 | 40% (**tibia 25%** — stress audit SF 35) | orientations per part headers: femur/tibia flat −Z, coax rear, shoulder rear-face-down + tree supports, tibia tab-down + pillars |
-| chassis PETG-CF | 3 | 0.25 | 20% | riser deck-face-down (zero supports), mast flange-down + trees |
-| TPU | 2 | 0.2 | 100% | clips/rails flat; shoe per stock orientation |
+| legs PA6-CF | 4 | 0.2 | 40% (**tibia 25%** — stress audit SF 35) | orientations per part headers: femur/tibia flat −Z, coax rear-face-down + supports under the yoke bridge, shoulder rear-face-down + tree supports, tibia tab-down + pillars, shoulder_plate horn-seat-down, knee_arm underside-down, strap flat |
+| head/bracket PA6-CF | 4–5 | 0.2 | 40–60% | `head` BOSS-DOWN (rear boss on the bed; column+crown+face rise, tree supports under the tilted face-plate overhang); `neck_bracket` BASE-DOWN (deck face on the bed, wall+gussets rise) |
+| chassis PETG-CF | 3 | 0.25 | 20% | riser DECK-FACE-DOWN (zero supports); floor_plate flat (zero supports); battery_pocket FLOOR-DOWN (opening up, zero supports); jetson_case_mount base-down |
+| TPU | 2 | 0.2 | 100% | clips/rails/grommet flat; **knee_bumper U-opening-UP**; shoe per stock orientation |
 
 ## 3. DRY yes, ANNEAL no (corrected 2026-07-06 — user catch)
 
@@ -58,10 +77,18 @@ Every insert site depth-probed in the built STLs:
 ## 4. Wave 1 — first article (~450 g, doctrine: before batching)
 
 - [ ] 1× RIGHT leg set (coax_R, femur_R, tibia_R, knee_arm), 1× shoulder,
-      1× shoulder_plate pair, 1× shoe, 1× skid_rail, 2× cable_clip
-- [ ] Fit checks (leg_v6 README "Verify"): pocket drop-in (0.25/side),
-      M3 through the Ø3.1 dowel pair, M2 through columns, insert purchase
-      at Ø4.0, countersink flush, fork-arm seat flatness
+      1× shoulder_plate pair, 1× shoe, 1× skid_rail, 2× cable_clip,
+      1× knee_bumper, 1× strap
+- [ ] 1× head + 1× neck_bracket (FIT-CHECK articles — new mounts + fennec
+      styling not final; prove the L2 Ø51 + D456 patterns vs the real parts)
+- [ ] Fit checks (leg_v6 README "Verify"): **servo drop-in — the pocket is
+      0.45 slip + NEW 0.1 anti-rotation ribs (±Y case flats): the servo should
+      drop FREE, then not rotate; if a tight print binds, file the rib tips (a
+      few seconds) — they're crush ribs**; M3 through the Ø3.1 dowel pair, M2
+      through columns, insert purchase at Ø4.0, countersink flush, fork-arm
+      seat flatness
+- [ ] knee_bumper: clips over the tibia knee-block, wraps the bottom, stays put
+- [ ] head→bracket: 4× M3 boss bolts land; bracket base bolts drill the deck
 - [ ] Shoe: snap onto the toe_v2 seat (tabs into pockets, lips over the
       disc), pin θ if slop, photo for dimensions.md
 - [ ] **Static test A — tibia**: scrap block clamped in the KFE pocket,
@@ -74,9 +101,11 @@ Every insert site depth-probed in the built STLs:
 
 ## 5. Wave 2 — batch (after wave 1 passes)
 
-- [ ] Left mirrors + 3 more leg sets + 2nd shoulder + plates
-- [ ] Chassis set (incl. hood + d456_head if calipers done)
-- [ ] TPU: remaining 3+1 shoes, 2nd rail, 18 clips
+- [ ] Left mirrors + 3 more leg sets + 2nd shoulder + plates + 3 more straps
+- [ ] Chassis set: riser_bay, floor_plate, battery_pocket, jetson_case_mount,
+      neck_bracket (final), head (final — AFTER the fennec styling pass +
+      bench-verified mounts, else it re-prints)
+- [ ] TPU: remaining 3+1 shoes, 2nd rail, 18 clips, 3+1 knee_bumper
 - [ ] Spares: **2–3 horn discs**, 1 shoe, 4 clips
 - [ ] Weigh the full set → final URDF masses; update
       `docs/improvement-backlog.md` #5
@@ -88,11 +117,17 @@ Every insert site depth-probed in the built STLs:
 - [ ] Cable dressing per leg_v6 README (clips at both loop ends, ≥40 mm
       loops, spiral wrap, tug-test all anchors + 24 connector ends)
 - [ ] Skid rails: key + CA/VHB under the tray
-- [ ] Nylon M3×10 at both mast mounts (hand-tight — fuses, #2)
+- [ ] Breakaway fuses (#2): the masts are RETIRED → re-map the nylon-M3
+      breakaway concept to the HEAD mount (4× M3 boss→bracket) so the head
+      pops off in a fall instead of snapping the neck. ⚠ DECISION open —
+      the bracket→deck bolts should stay metal (structural); only the
+      head→bracket joint is the breakaway candidate
 - [ ] Washers under every stock-shell-side head (#3)
 - [ ] EVA foam pad on the battery tray floor + felt/kapton on the
       shoulder-flange bottom edges over the pack (#29)
 - [ ] TPU grommet inserts into the 4 flange grommets before cable pull (#30)
 - [ ] Riser shake test (0.45 lateral tab slack) after hold-down screws
-- [ ] **E-stop pod mounted + wired BEFORE first bus power** (pod design
-      rides with the hood — sequence calipers accordingly)
+- [ ] **E-stop pod mounted + wired BEFORE first bus power** — ⚠ the hood is
+      RETIRED (official Jetson case adopted), so the pod + OLED lost their
+      home. New mount TBD (case top / riser deck / neck bracket) — resolve
+      before this step
