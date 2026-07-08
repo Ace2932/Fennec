@@ -142,15 +142,15 @@ module head() {
                 // (x89..112) doesn't lift into the seated L2.
                 translate([74, -CROWN_HALF_Y, CROWN_Z0])
                     cube([38, 2 * CROWN_HALF_Y, 3.5]);
-                // EARS: big splayed triangular blades, base BEHIND the L2
-                // (x72..88, 1mm off the L2 rear face x89), leaning rearward +
-                // outward + up to tall fennec tips. Each houses an SMA antenna.
+                // EARS: BIG BROAD fennec triangles (not thin blades). Flat
+                // ~5mm panels, broad face pointing FORWARD (so you read the ear
+                // from the front), wide base (~32) tapering to a tall apex that
+                // leans out + back. Behind the L2 (x<89) -> rear sector only.
                 for (sy = [-1, 1])
                     hull() {
-                        translate([72, sy * 14 - EAR_T / 2, CROWN_Z0 + 1])
-                            cube([16, EAR_T, 4]);            // broad base on shelf
-                        translate([64, sy * 44 - EAR_T / 2, 200])
-                            cube([12, EAR_T, 4]);            // tall splayed tip
+                        translate([79, sy * 6,  CROWN_Z0 + 2]) cube([6, 5, 4]);  // base inner
+                        translate([79, sy * 38, CROWN_Z0 + 2]) cube([6, 5, 4]);  // base outer (broad)
+                        translate([68, sy * 48, 198]) cube([6, 5, 4]);           // tall apex, out+back
                     }
                 // FACETED CHEEKS: flare the narrow crown (y±21, under the L2)
                 // out to the wide D456 eye-band -> the fox FACE. Kept BEHIND the
@@ -202,9 +202,9 @@ module head() {
         //     clearest-of-CF spot. PROVISION — onboard WiFi works; order only
         //     if bench range needs it (verify the card exposes U.FL). ---
         if (STYLE)
-            for (sy = [-1, 1])
-                translate([80, sy * 14, CROWN_Z0 - EPS])
-                    cylinder(d = 6.5, h = 50);
+            for (sy = [-1, 1])                       // SMA bulkhead THROUGH the
+                translate([72, sy * 22, 155]) rotate([0, 90, 0])   // flat ear panel
+                    cylinder(d = 6.5, h = 18);
     }
 }
 
