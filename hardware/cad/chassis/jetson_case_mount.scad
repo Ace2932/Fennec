@@ -10,11 +10,15 @@
 //
 // CASE ORIENTATION (user-confirmed 2026-07-08):
 //   * long axis || X (~110), fan/vent lid UP;
-//   * the removable part is a slide-on END BEZEL (one short end);
+//   * the removable SLIDE-ON BEZEL is the +Y face = robot's LEFT flank (the
+//     board-access panel; measured FLUSH at y46.95 -> the +Y locating lip
+//     clears it, no change needed);
 //   * PORTS / I-O are on the -Y face = robot's RIGHT flank -> cables exit -Y
 //     (sideways), NOT the rear end (see #38 / cable routing);
 //   * the case is ASSEMBLED OFF-ROBOT (bezel on) then DROPPED into the cradle
-//     -> the cradle only has to CLEAR + RETAIN a finished closed box.
+//     -> the cradle only has to CLEAR + RETAIN a finished closed box. (The bezel
+//     can't come off in place anyway: the front lip + rear shoulder wall block
+//     any fore-aft slide -> service = pull the case, off the 4 clamps.)
 //   * case world AABB x -62.0..48.3, y +-46.95, z 71.9..110.1 (peak). The top
 //     is FACETED: the SOLID CORNER COLUMNS top out at z ~102.8 (MEASURED), the
 //     central fan/vent peak at ~110.1. Retention grabs the corners (102.8).
