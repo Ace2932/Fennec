@@ -132,12 +132,14 @@ Every insert site depth-probed in the built STLs:
       head (final — AFTER the fennec styling pass + bench-verified mounts, else
       it re-prints), control_pod (rear-top E-stop + OLED) + its 4 riser heat-sets
       (pressed from the pad pocket face)
-- [ ] **Jetson case → cradle assembly** (reworked #33/#34): press the 4 upright
+- [ ] **Jetson case → cradle assembly** (reworked #33/#34/#38): press the 4 upright
       TOP heat-sets (from above) + BASE heat-sets (from below) → bolt the cradle
-      to the deck → assemble the case fully (bezel on) OFF-robot → DROP it in
-      (ports face −y/right) → set the 4 `jetson_clamp`s on the upright tops, M3×8
-      down, capping the case corner columns. Add a TPU/EVA shim on each clamp pad
-      for preload. Cables exit −y → the riser −Y `CASE_SLOT` (x−25..25, y−53..−47)
+      to the deck → assemble the case fully (bezel on the +y face) OFF-robot →
+      DROP it in (ports face −y/right) → plug the −y cables (STRAIGHT plugs sit in
+      the −Y CABLE COWL; route them down the cowl floor → riser −Y `CASE_SLOT`
+      x−30..30/y−51.5..−47 → bay to the boards) → set the 4 `jetson_clamp`s on the
+      upright tops, M3×8 down, capping the case corner columns (TPU/EVA shim each
+      for preload). The cowl shields the straight plugs in a side-fall.
 - [ ] TPU: remaining 3+1 shoes, 2nd rail, 18 clips, 3+1 knee_bumper
 - [ ] Spares: **2–3 horn discs**, 1 shoe, 4 clips
 - [ ] Weigh the full set → final URDF masses; update

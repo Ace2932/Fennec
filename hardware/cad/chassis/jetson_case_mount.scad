@@ -109,11 +109,27 @@ module jetson_case_mount() {
     lip_wall(IN_X1, IN_X1 + FRONT_WALL, -IN_Y - WALL, IN_Y + WALL);
     // +Y locating lip (full length)
     lip_wall(CX0, IN_X1 + FRONT_WALL, IN_Y, IN_Y + WALL);
-    // -Y side: a LOW rail (h1.5) only — locates the case's -y bottom edge + ties
-    // the two -y uprights into one body. Kept to 1.5 so the -y port cables drape
-    // straight over it + drop through the riser CASE_SLOT into the bay (#38).
-    translate([CX0, -IN_Y - WALL, DECK])
-        cube([IN_X1 + FRONT_WALL - CX0, WALL, 1.5]);
+    // -Y CABLE COWL (#38, straight plugs — no right-angle plugs). The -Y ports
+    // take STRAIGHT plugs that stick out ~12-16 (USB-C/USB-A/barrel); the 4.8
+    // channel to the skirt won't hide them, so they'd protrude the right flank +
+    // get CRUSHED in a side-fall. This 3-sided cowl (outer IMPACT WALL + 2 end
+    // walls tying to the -y uprights) SHIELDS them: on a -y fall the ground hits
+    // the y-67 wall, not the plugs. Open TOP (plug cables in) + open +Y (toward
+    // the case) + a low FLOOR shelf that catches the cables + guides them inboard
+    // to the deck -> the riser CASE_SLOT -> bay. Cantilevers ~12 past the riser
+    // -y edge (y-55) — mid-body, verified clear of the legs. (Dev ethernet RJ45
+    // ~21 pokes above the open top — fine, it's not an operational cable.)
+    COWL_YO = -67; COWL_YI = -65; COWL_Z1 = 103;   // outer wall y-67..-65, to z103
+    // outer impact wall (spans between the -y uprights)
+    translate([REAR_PXC, COWL_YO, DECK])
+        cube([FRONT_PXC - REAR_PXC, COWL_YI - COWL_YO, COWL_Z1 - DECK]);
+    // 2 end walls: outer wall -> the -y uprights (close the ends + carry the load)
+    for (px = [REAR_PXC, FRONT_PXC])
+        translate([px - POST_W/2, COWL_YO, DECK])
+            cube([POST_W, -POST_YC - COWL_YO, COWL_Z1 - DECK]);
+    // floor shelf: catches cables, bridges the cowl to the deck edge (y-55)
+    translate([REAR_PXC, COWL_YI, DECK])
+        cube([FRONT_PXC - REAR_PXC, -55 - COWL_YI, 2]);
     // 4 corner uprights (locate + retain via the removable clamps + tie to deck)
     upright(true, 1);  upright(true, -1);
     upright(false, 1); upright(false, -1);
