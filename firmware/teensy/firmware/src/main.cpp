@@ -509,8 +509,25 @@ void setup() {
   // already pressed, or battery-low comparator already asserted, pre-seed
   // the safety FSM into the matching latched state — the operator must
   // resolve and clear before any servo writes can fire.
-  bool estop_boot   = (digitalRead(ESTOP_PIN) == HIGH);   // HIGH = pressed/open (NC fail-safe)
-  bool batt_low_boot = (digitalRead(BATTERY_LOW_PIN) == HIGH);
+  //
+  // E-stop is a mechanical NC switch (deterministic) — read directly.
+  bool estop_boot = (digitalRead(ESTOP_PIN) == HIGH);   // HIGH = pressed/open (NC fail-safe)
+
+  // Battery-low at boot must be SETTLE-CONFIRMED, not sampled instantaneously:
+  // the LVC comparator's reference is the V5_AUX (UBEC) rail, which ramps at
+  // cold boot. While the LM393 powers through its V+ threshold its output can
+  // glitch, so a single early read could falsely latch BATTERY_LOW — and
+  // whether it did would vary run-to-run (nondeterministic). Wait for the rail
+  // to settle, then require BATTERY_LOW to read HIGH on EVERY sample of a short
+  // confirm window: a genuinely-low pack stays HIGH (latches, correct); a
+  // power-on glitch clears by then (does not latch). 2026-06-17 review.
+  constexpr uint32_t RAIL_SETTLE_MS = 250;
+  delay(RAIL_SETTLE_MS);
+  bool batt_low_boot = true;                 // assume low, then try to disprove
+  for (uint8_t i = 0; i < 8; i++) {          // ~16 ms confirm window
+    if (digitalRead(BATTERY_LOW_PIN) == LOW) { batt_low_boot = false; break; }
+    delay(2);
+  }
   if (estop_boot)   boot_self_test_flags |= 0x01;
   if (batt_low_boot) boot_self_test_flags |= 0x02;
   if (boot_self_test_flags) {
