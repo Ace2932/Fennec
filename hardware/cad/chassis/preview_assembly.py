@@ -96,6 +96,14 @@ def main():
     dome = trimesh.creation.icosphere(radius=20); dome.apply_scale([1, 1, 0.42])
     dome.apply_translation([ex, 0, dz+24])
     parts.append(dome)                                              # domed top
+    # 4 removable Jetson case clamps (jetson_clamp.stl) — bolt to the upright
+    # tops, cap the case corner columns (z102.8). Local: bolt@origin, pad@+x.
+    clamp = trimesh.load('jetson_clamp.stl')
+    for (px, py, ang) in [(47.3, 50.35, -116.8), (47.3, -50.35, 116.8),
+                          (-59.0, 50.35, -74.3), (-59.0, -50.35, 74.3)]:
+        cl = clamp.copy()
+        cl.apply_transform(T([px, py, 102.8]) @ rot(ang, [0, 0, 1]))
+        parts.append(cl)
     # official Jetson case (ref mesh) at its chosen placement: bbox-centre
     # (x-6.85, y0), bottom on the deck (z71.9). Port END faces -x (rear).
     caseref = trimesh.load('jetson_case_ref.stl')

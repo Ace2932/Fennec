@@ -45,8 +45,11 @@
 // chassis = better range). See head.scad STYLE SMA bores + README.
 //
 // Deck fixtures (trunk x,y) after the case pivot:
-//   CASE_SLOT x -58..-46, y +-18: the case PORT-END cable exit (into the
-//     shoulder notch) AND the case bottom-vent breather.
+//   CASE_SLOT x -25..25, y -53..-47: the case -Y-FLANK cable drop (2026-07-08,
+//     #38 — the Jetson ports face -Y/robot-right, so cables exit the -Y side +
+//     drop here into the bay; was rear-centre x-58..-46 when the port end was
+//     assumed rearward). Outboard of the case footprint (y-47), clear of the
+//     -y register tab (x-48..-32) + the cradle -y deck ties (x47.3/-59).
 //   Cradle deck ties 4x O3.4 at (47.3/-59.0, +/-50.35): M3 up from below
 //     into the cradle post-base heat-sets.
 // Wall fixtures: riser<->flange pads (both ends, y +/-40, bores z 67.4). Vent
@@ -93,8 +96,8 @@ M3_CLEAR   = 3.4;
 // Kept commented for the reused-geometry knowledge.
 // MAST_BX = [54, 59.0];  MAST_BY = [-14, 14];  // HEAD L2-column base
 // L2_DROP = [53.5, 0];                          // head cable-bore drop
-CASE_SLOT = [-58, -46, -18, 18];  // case PORT-END cable exit (into the
-                                  // shoulder notch) + case bottom-vent breather
+CASE_SLOT = [-25, 25, -53, -47];  // case -Y-FLANK cable drop (#38; was rear-ctr
+                                  // x-58..-46) -> into the bay to the boards
 // SMA bulkheads RETIRED 2026-07-07 — WiFi MIMO antennas consolidated to the
 // head ears (higher, clear of the CF chassis). Kept commented for reference.
 // SMA  = [[57, 40], [57, -40]];  // O6.5, front strip, 80 apart (MIMO)
@@ -113,7 +116,7 @@ PAD_Z0 = 64.4; PAD_Z1 = 70.4;
 // boss fits; instead a central pad on the rear wall protrudes OUTWARD into the
 // (clear, between-shoulder) central pocket to x-66.5, and the pod bolts to it.
 // The end-plane guard is excepted for the central y±14 channel (below). Bolts:
-POD_MOUNT = [[-10, 60], [10, 60], [-10, 66], [10, 66]];   // (y,z) — matches pod
+POD_MOUNT = [[-10, 61], [10, 61], [-10, 66], [10, 66]];   // (y,z) — matches pod
 POD_BOSS_X = -66.5;                                  // pad rear face (pocket side)
 POD_CH = 14;                                         // central channel half-width
 // D456_Y/D456_Z/USB_GROMMET RETIRED 2026-07-07 — head moved fwd onto the neck
@@ -178,8 +181,9 @@ module riser_bay() {
             // OUTWARD into the clear central pocket (to POD_BOSS_X). Holds the 4
             // pod heat-sets. y±13 (clears the rear shoulders at y15); z57..69
             // (above the trunk lip z58, spans both bolt rows).
-            translate([POD_BOSS_X, -13, 57])
-                cube([6.0, 26, 12]);   // x-66.5..-60.5 (front face embedded in the wall)
+            translate([POD_BOSS_X, -13, 58])
+                cube([6.0, 26, 11]);   // x-66.5..-60.5, z58..69 (z58 clears the rear
+                                       // shoulder top z57.5 at the centre — gate catch)
         }
         // deck through-features
         // (head L2-column deck bores + the L2 cable drop RETIRED 2026-07-07 —
@@ -215,9 +219,9 @@ module riser_bay() {
         for (b = POD_MOUNT)
             translate([POD_BOSS_X - EPS, b[0], b[1]]) rotate([0, 90, 0])
                 cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
-        translate([POD_BOSS_X - EPS, 0, 63]) rotate([0, 90, 0])
-            cylinder(d = 10, h = (-OUT_X + WALL) - POD_BOSS_X + 5);   // Ø10 (1mm off the
-                                                 // pad z57/69 edges — no tangent), to the bay
+        translate([POD_BOSS_X - EPS, 0, 63.5]) rotate([0, 90, 0])
+            cylinder(d = 10, h = (-OUT_X + WALL) - POD_BOSS_X + 5);   // Ø10 at z63.5
+                                                 // (0.5 off the pad z58/69 edges — no tangent)
         // vent slots (both side skirts, two rows)
         for (sy = [-1, 1], i = [0 : VENT_N - 1], v = VENT_Z)
             translate([VENT_X0 + i * VENT_PITCH - 1.5,

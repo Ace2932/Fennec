@@ -14,7 +14,7 @@
 //     faces (x-66.5). riser_bay POD_MOUNT + the guard exception cover this;
 //   * the stock TRUNK rear lip fills the low centre (x≈-67, y±5, z40..58);
 //   * the rear SHOULDER tops end at z≈80 -> above that the rear is OPEN.
-// So: a CENTRAL COLUMN bolts to the riser pocket-bosses (y±10, z60/66); the deck
+// So: a CENTRAL COLUMN bolts to the riser pocket-bosses (y±10, z61/66); the deck
 // cantilevers back over the pocket; the E-stop block hangs at x-87 (front x-71
 // clears the boss/trunk lip, rear x-103 clears the shoulder at x-104); the OLED
 // rises above the shoulder line (z>80) where it's clear.
@@ -40,7 +40,7 @@ M3_CLEAR = 3.4; M2_CLEAR = 2.3;
 BOSS_X   = -66.5;                  // riser pocket-boss REAR face (pod bolts here)
 COL_X0   = -70.0;                  // column rear face (behind the boss)
 COL_HY   = 14;                     // column half-width (clears shoulders at y15)
-MOUNT    = [[-10, 60], [10, 60], [-10, 66], [10, 66]];   // (y,z) — matches riser
+MOUNT    = [[-10, 61], [10, 61], [-10, 66], [10, 66]];   // (y,z) — matches riser
 
 ES       = [-87, 0];               // E-stop panel-hole center (x,y)
 ES_HOLE  = 22.6;                   // Ø22 thread + clearance
