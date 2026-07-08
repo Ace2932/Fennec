@@ -142,16 +142,20 @@ module head() {
                 // (x89..112) doesn't lift into the seated L2.
                 translate([74, -CROWN_HALF_Y, CROWN_Z0])
                     cube([38, 2 * CROWN_HALF_Y, 3.5]);
-                // EARS: BIG BROAD fennec triangles (not thin blades). Flat
-                // ~5mm panels, broad face pointing FORWARD (so you read the ear
-                // from the front), wide base (~32) tapering to a tall apex that
-                // leans out + back. Behind the L2 (x<89) -> rear sector only.
-                for (sy = [-1, 1])
+                // EARS: BIG BROAD fennec triangles = the ANTENNA MASTS. Flat
+                // ~5mm panels, broad face fwd, wide base tapering to a tall apex
+                // that leans out+back. Behind the L2 (x<89) -> rear sector only.
+                // cube center=true -> the two ears are TRUE MIRRORS (the old
+                // +y-extending cubes were asymmetric). Each carries an antenna
+                // BOSS at the tip so the SMA whip points UP (vertical = omni RF).
+                for (sy = [-1, 1]) {
                     hull() {
-                        translate([79, sy * 6,  CROWN_Z0 + 2]) cube([6, 5, 4]);  // base inner
-                        translate([79, sy * 38, CROWN_Z0 + 2]) cube([6, 5, 4]);  // base outer (broad)
-                        translate([68, sy * 48, 198]) cube([6, 5, 4]);           // tall apex, out+back
+                        translate([82, sy * 10, CROWN_Z0 + 3]) cube([6, 5, 4], center = true);
+                        translate([82, sy * 36, CROWN_Z0 + 3]) cube([6, 5, 4], center = true);
+                        translate([71, sy * 50, 196])          cube([6, 5, 4], center = true);
                     }
+                    translate([71, sy * 50, 189]) cylinder(d = 10, h = 15);  // antenna boss
+                }
                 // FACETED CHEEKS: flare the narrow crown (y±21, under the L2)
                 // out to the wide D456 eye-band -> the fox FACE. Kept BEHIND the
                 // camera back-corner (x<136 -> never in the 87x58 view) and
@@ -202,9 +206,9 @@ module head() {
         //     clearest-of-CF spot. PROVISION — onboard WiFi works; order only
         //     if bench range needs it (verify the card exposes U.FL). ---
         if (STYLE)
-            for (sy = [-1, 1])                       // SMA bulkhead THROUGH the
-                translate([72, sy * 22, 155]) rotate([0, 90, 0])   // flat ear panel
-                    cylinder(d = 6.5, h = 18);
+            for (sy = [-1, 1])                       // SMA bulkhead up the tip
+                translate([71, sy * 50, 182])        // boss -> whip points UP
+                    cylinder(d = 6.5, h = 30);
     }
 }
 
