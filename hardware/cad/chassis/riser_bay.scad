@@ -108,6 +108,14 @@ CRADLE_TIE = [[47.3, 50.35], [47.3, -50.35],         // case-cradle deck ties
 // gate catch 2026-07-06.
 FLG_Y = [-40, 40];  FLG_Z = 67.4;                    // riser<->flange heat-sets
 PAD_Z0 = 64.4; PAD_Z1 = 70.4;
+// CONTROL POD mount (control_pod.scad — E-stop + OLED in the rear pocket, hood
+// retired). The mezzanine stack sits 0.65 behind the 3.2 rear wall, so no INNER
+// boss fits; instead a central pad on the rear wall protrudes OUTWARD into the
+// (clear, between-shoulder) central pocket to x-66.5, and the pod bolts to it.
+// The end-plane guard is excepted for the central y±14 channel (below). Bolts:
+POD_MOUNT = [[-10, 60], [10, 60], [-10, 66], [10, 66]];   // (y,z) — matches pod
+POD_BOSS_X = -66.5;                                  // pad rear face (pocket side)
+POD_CH = 14;                                         // central channel half-width
 // D456_Y/D456_Z/USB_GROMMET RETIRED 2026-07-07 — head moved fwd onto the neck
 // bracket; the camera register + USB-C grommet on this front wall are orphaned
 // (USB-C now routes down the neck -> shoulder C-box). Kept commented.
@@ -166,6 +174,12 @@ module riser_bay() {
                            fy - 6, PAD_Z0])
                     cube([5, 12, PAD_Z1 - PAD_Z0]);
             // (HEAD camera-register strip RETIRED 2026-07-07 — see above.)
+            // CONTROL-POD mount pad: central block on the REAR wall protruding
+            // OUTWARD into the clear central pocket (to POD_BOSS_X). Holds the 4
+            // pod heat-sets. y±13 (clears the rear shoulders at y15); z57..69
+            // (above the trunk lip z58, spans both bolt rows).
+            translate([POD_BOSS_X, -13, 57])
+                cube([6.0, 26, 12]);   // x-66.5..-60.5 (front face embedded in the wall)
         }
         // deck through-features
         // (head L2-column deck bores + the L2 cable drop RETIRED 2026-07-07 —
@@ -194,6 +208,16 @@ module riser_bay() {
         // (HEAD D456 camera-register bore row + USB-C grommet RETIRED
         //  2026-07-07 — the head moved fwd onto the neck bracket; the USB-C now
         //  routes down the neck -> shoulder C-box, not through this front wall.)
+        // CONTROL-POD heat-sets: 4x M3 bored from the pad's POCKET face (x-66.5)
+        // going +x into the pad -> the pod bolts REARWARD into them. Insert
+        // pressed from the pocket end (reachable). + a Ø12 cable grommet at
+        // (y0, z63) through the pad into the bay (E-stop NC + OLED SPI drop).
+        for (b = POD_MOUNT)
+            translate([POD_BOSS_X - EPS, b[0], b[1]]) rotate([0, 90, 0])
+                cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
+        translate([POD_BOSS_X - EPS, 0, 63]) rotate([0, 90, 0])
+            cylinder(d = 10, h = (-OUT_X + WALL) - POD_BOSS_X + 5);   // Ø10 (1mm off the
+                                                 // pad z57/69 edges — no tangent), to the bay
         // vent slots (both side skirts, two rows)
         for (sy = [-1, 1], i = [0 : VENT_N - 1], v = VENT_Z)
             translate([VENT_X0 + i * VENT_PITCH - 1.5,
@@ -201,10 +225,13 @@ module riser_bay() {
                 cube([3, WALL + 2 * EPS, v[1]]);
         // end-plane guard: nothing may protrude past x +/-63.35 — the
         // Ø9 head L2-column bosses at (60, +/-14) poked 1.15 through the
-        // flange notch into the head stem lane (gate catch 2026-07-06)
-        for (sx = [-1, 1])
-            translate([sx > 0 ? OUT_X : -OUT_X - 10, -OUT_Y - 5, 20])
-                cube([10, 2 * (OUT_Y + 5), 60]);
+        // flange notch into the head stem lane (gate catch 2026-07-06).
+        // FRONT: full. REAR: split around the central y±POD_CH channel, which is
+        // clear (between the rear shoulders) and holds the control-pod mount pad.
+        translate([OUT_X, -OUT_Y - 5, 20]) cube([10, 2 * (OUT_Y + 5), 60]);
+        for (sy = [-1, 1])
+            translate([-OUT_X - 10, sy > 0 ? POD_CH : -OUT_Y - 5, 20])
+                cube([10, OUT_Y + 5 - POD_CH, 60]);
     }
 }
 

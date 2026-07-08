@@ -12,11 +12,12 @@ $OS -o head.stl head.scad          # fwd head (D456 face + L2 crown)
 $OS -o head_ear.stl head_ear.scad          # fennec ear / antenna mast (R)
 $OS -o head_ear_L.stl head_ear_L.scad      # ear (L mirror)
 $OS -o l2_adapter.stl l2_adapter.scad      # L2 accessible-mount plate
+$OS -o control_pod.stl control_pod.scad    # rear-top E-stop + OLED pod
 $OS -o neck_bracket.stl neck_bracket.scad   # front-shoulder-deck adapter
 $OS -o floor_plate.stl floor_plate.scad
 $OS -o jetson_case_mount.stl jetson_case_mount.scad
 $OS -o ../leg_v6/shoulder.stl ../leg_v6/shoulder.scad
-../../../.venv/bin/python ../mesh_health.py head.stl head_ear.stl head_ear_L.stl l2_adapter.stl neck_bracket.stl
+../../../.venv/bin/python ../mesh_health.py head.stl head_ear.stl head_ear_L.stl l2_adapter.stl control_pod.stl neck_bracket.stl
 ls -la riser_bay.stl spacer.stl battery_pocket.stl head.stl neck_bracket.stl floor_plate.stl jetson_case_mount.stl
 ../../../.venv/bin/python check_fit.py
 echo "chassis gate clean — now re-gate leg_v6 (shoulder rev):"
