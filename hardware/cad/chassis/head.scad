@@ -75,9 +75,13 @@ COL_X0 = 121; COL_X1 = 138;       // rear FLUSH with the boss/bracket-wall face
 COL_Y  = 15;
 COL_Z0 = 106;                      // = boss top
 CROWN_Z0 = 124; CROWN_T = 4;       // seat top 128 = L2 body bottom
-CROWN_X0 = 108; CROWN_X1 = 145;    // holds the L2 22.5 square (x115.25/137.75)
-CROWN_HALF_Y = 19;
-L2_BCD = 22.5 / 2;                 // 11.25
+CROWN_X0 = 105; CROWN_X1 = 148;    // grown to hold the REAL L2 pattern (±18)
+CROWN_HALF_Y = 21;
+// L2 mount = the REAL Unitree L2 base pattern (MEASURED from the STEP 2026-07-07:
+// 4 holes on a Ø51 bolt circle, R25.5, 90° apart). Placed at 45° -> a 36 mm
+// square: holes at CTR±18, ±18 (R25.5). REPLACES the wrong 22.5 square (±11.25)
+// the mast/head had assumed. M3 clearance up from below into the L2 base threads.
+L2_BCD = 18.0;                     // = 25.5·cos45 (Ø51 BCD at 45°)
 
 // ---- front lobe : D456 face -------------------------------------------------
 PILLAR = [128, 138, -16, 16];     // backs the plate, behind the cam back-corner

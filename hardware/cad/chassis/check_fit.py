@@ -235,7 +235,7 @@ def l2_box():
     """Seated L2 body (75x75x65). Floor 0.1 above the crown seat plane so the
     designed L2<->crown contact isn't scored a hit."""
     return make_box(L2_CTR_X - 37.5, L2_CTR_X + 37.5, -37.5, 37.5,
-                    L2_SEAT_TOP + 0.1, L2_SEAT_TOP + 65)
+                    L2_SEAT_TOP + 0.1, L2_SEAT_TOP + 63.5)
 
 
 def main():

@@ -130,6 +130,14 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 > REAR face (user-confirmed), so the rear-plate mount is correct, lens forward-
 > down free. The real mesh is in `preview_assembly` (the "eyes"); check_fit
 > keeps the OBB as the conservative envelope.
+>
+> **REAL Unitree L2 mesh (`l2_ref.stl`, from the STEP, 2026-07-07):** 74.9×75.0
+> ×63.5, round Ø75 base. **Caught a mount error** — the real base pattern is
+> **4 holes on a Ø51 BCD (R25.5), 90° apart** (M3), NOT the 22.5 mm square the
+> mast/head had assumed. Crown re-cut to the real pattern (holes at CTR±18,±18
+> = R25.5 at 45°; crown grown to x105..148, y±21). Optical center ~27 mm above
+> the base (was 32.5 — minor). Real L2 in the preview (the "crown"); check_fit
+> keeps the 75×75 box (conservative). ⚠ cable connector on one side (−X).
 
 - **ONE part carries BOTH front sensors.** REAR LOBE = the L2 tower (reuses the
   mast: deck flange bolts (54/59.0, ±14) M3×10 from above; column x51.6..64
