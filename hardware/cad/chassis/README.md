@@ -122,6 +122,14 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 > (510 g pack) nulls that delta. Absolute CoM ~+12 mm fwd — see the plan's
 > battery note; defer the pack move to a full mass model + the balance-
 > controller CoM target.
+>
+> **REAL D456 mesh (`d456_ref.stl`, from the RealSense SLDPRT, 2026-07-07):**
+> confirms the OBB gate envelope is CONSERVATIVE (real = 124×29×26, slightly
+> smaller than the 26×123.8×29 box — rounded corners/recessed lens → all head
+> clearances hold with margin). Mount VALIDATED: the 2× M3 (±47.2) are on the
+> REAR face (user-confirmed), so the rear-plate mount is correct, lens forward-
+> down free. The real mesh is in `preview_assembly` (the "eyes"); check_fit
+> keeps the OBB as the conservative envelope.
 
 - **ONE part carries BOTH front sensors.** REAR LOBE = the L2 tower (reuses the
   mast: deck flange bolts (54/59.0, ±14) M3×10 from above; column x51.6..64

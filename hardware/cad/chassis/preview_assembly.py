@@ -113,16 +113,18 @@ def main():
     FL = FR.copy(); FL.apply_transform(MY)
     RL = RR.copy(); RL.apply_transform(MY)
     parts += [FR, RR, FL, RL]
-    # D456 tilted OBB (27deg down; back-face ctr 143,0,111.5) — fwd head "face"
-    th = np.radians(27.0)
-    fwd = np.array([np.cos(th), 0, -np.sin(th)])
-    cam = trimesh.creation.box(
-        extents=[26.0, 123.8, 29.0],
-        transform=T(np.array([143, 0, 111.5]) + 13 * fwd) @ rot(27.0, [0, 1, 0]))
+    # REAL D456 (d456_ref.stl, mm, from the RealSense SLDPRT via STL). Mounts
+    # rear->plate (the 2x M3 @ ±47.2 are on the REAR face = STL z-26), lens
+    # (STL z0) projecting forward-down at 27deg. STL axes: X=length->head Y,
+    # Y=height->up, Z=depth (z-26 rear -> at CAM_M, z0 lens -> +x' fwd).
+    M2 = np.array([[0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1.0]])
+    cam = trimesh.load('d456_ref.stl')
+    cam.apply_transform(T([143, 0, 111.5]) @ rot(27.0, [0, 1, 0]) @ M2
+                        @ T([0, 0, 26]))
     parts += [box(-59.5, 52.5, -45, 45, 6.0, 64.0),    # stack on plate, ctr -3.5
               box(89, 164, -37.5, 37.5, 128.0, 193.0),  # L2 body (crown seat 128)
               box(-77.5, 77.5, -23.4, 23.4, -35.9, -0.9),  # pack 46.8 caliper
-              cam]                                       # D456 (down-tilted face)
+              cam]                                       # real D456 (down-tilted)
     asm = trimesh.util.concatenate(parts)
     asm.export('chassis_assembly_preview.stl')
     print('chassis_assembly_preview.stl', asm.bounds.round(1).tolist())
