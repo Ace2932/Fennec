@@ -53,7 +53,7 @@ real parts. Print it in Wave 1 as a fit-check article, not the final head.
 |---|---|---|---|---|
 | legs PA6-CF | 4 | 0.2 | 40% (**tibia 25%** — stress audit SF 35) | orientations per part headers: femur/tibia flat −Z, coax rear-face-down + supports under the yoke bridge, shoulder rear-face-down + tree supports, tibia tab-down + pillars, shoulder_plate horn-seat-down, knee_arm underside-down, strap flat |
 | head/bracket PA6-CF | 4–5 | 0.2 | 40–60% | `head` CROWN/PAD-DOWN (the flat crown top on the bed = best L2-seat + ear-pad surface; the boss + tilted face + cheeks rise → tree supports under the tilted-face + cheek overhangs); `neck_bracket` BASE-DOWN (deck face on the bed, wall+gussets rise); `l2_adapter` FLAT bottom-down (zero supports) |
-| chassis PETG-CF | 3 | 0.25 | 20% | riser DECK-FACE-DOWN (zero supports); floor_plate flat (zero supports); battery_pocket FLOOR-DOWN (opening up, zero supports); jetson_case_mount base-down (uprights rise, no overhangs after the #34 rework); `jetson_clamp` ×4 flat (PA6-CF; the removable case hold-downs); `control_pod` COLUMN-FACE-DOWN (riser-facing face on the bed; light supports under the deck + OLED-panel overhangs) |
+| chassis PETG-CF | 3 | 0.25 | 20% | riser DECK-FACE-DOWN (zero supports); floor_plate flat (zero supports); battery_pocket FLOOR-DOWN (opening up, zero supports); jetson_case_mount base-down (uprights rise, no overhangs after the #34 rework); `jetson_clamp` ×4 flat (PA6-CF; the removable case hold-downs); `jetson_cowl` ×1 (PA6-CF impact part, outer-wall/end-down, ~8 g; the −y straight-plug shield); `control_pod` COLUMN-FACE-DOWN (riser-facing face on the bed; light supports under the deck + OLED-panel overhangs) |
 | TPU | 2 | 0.2 | 100% | clips/rails/grommet flat; **knee_bumper U-opening-UP**; shoe per stock orientation |
 
 ## 3. DRY yes, ANNEAL no (corrected 2026-07-06 — user catch)
@@ -135,11 +135,12 @@ Every insert site depth-probed in the built STLs:
 - [ ] **Jetson case → cradle assembly** (reworked #33/#34/#38): press the 4 upright
       TOP heat-sets (from above) + BASE heat-sets (from below) → bolt the cradle
       to the deck → assemble the case fully (bezel on the +y face) OFF-robot →
-      DROP it in (ports face −y/right) → plug the −y cables (STRAIGHT plugs sit in
-      the −Y CABLE COWL; route them down the cowl floor → riser −Y `CASE_SLOT`
-      x−30..30/y−51.5..−47 → bay to the boards) → set the 4 `jetson_clamp`s on the
-      upright tops, M3×8 down, capping the case corner columns (TPU/EVA shim each
-      for preload). The cowl shields the straight plugs in a side-fall.
+      DROP it in (ports face −y/right) → **plug the −y STRAIGHT cables now (full
+      access)** → **bolt on `jetson_cowl` ×1** (2× M3 from the −y side into the
+      −y upright heat-sets — shields the plugs from a right-side-fall crush; route
+      cables down the cowl floor → riser −Y `CASE_SLOT` x−30..30/y−51.5..−47 → bay)
+      → set the 4 `jetson_clamp`s on the upright tops, M3×8 down, capping the case
+      corner columns (TPU/EVA shim each for preload).
 - [ ] TPU: remaining 3+1 shoes, 2nd rail, 18 clips, 3+1 knee_bumper
 - [ ] Spares: **2–3 horn discs**, 1 shoe, 4 clips
 - [ ] Weigh the full set → final URDF masses; update

@@ -87,8 +87,11 @@ module lip_wall(x0, x1, y0, y1) {
     translate([x0, y0, DECK]) cube([x1 - x0, y1 - y0, WALL_H]);
 }
 
+COWL_BOLT_Z = 85;   // -y cowl bolts into the -y uprights at this z
+
 // one corner UPRIGHT: post (deck -> corner height) + top heat-set (clamp bolt)
 // + base heat-set (deck tie). NO fixed tab — the removable clamp caps the case.
+// The two -Y uprights also get a -y-face heat-set for the bolt-on cable cowl.
 module upright(front, sy) {
     pxc = front ? FRONT_PXC : REAR_PXC;
     pyc = sy * POST_YC;
@@ -101,6 +104,10 @@ module upright(front, sy) {
         // deck tie heat-set — pressed from BELOW (M3 up from under the deck)
         translate([pxc, pyc, DECK - EPS])
             cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
+        // -Y cowl heat-set — pressed from the -y FACE (jetson_cowl bolts here)
+        if (sy < 0)
+            translate([pxc, pyc - POST_W / 2 - EPS, COWL_BOLT_Z]) rotate([-90, 0, 0])
+                cylinder(d = HEATSET_D, h = 4.5 + EPS);
     }
 }
 
@@ -109,27 +116,12 @@ module jetson_case_mount() {
     lip_wall(IN_X1, IN_X1 + FRONT_WALL, -IN_Y - WALL, IN_Y + WALL);
     // +Y locating lip (full length)
     lip_wall(CX0, IN_X1 + FRONT_WALL, IN_Y, IN_Y + WALL);
-    // -Y CABLE COWL (#38, straight plugs — no right-angle plugs). The -Y ports
-    // take STRAIGHT plugs that stick out ~12-16 (USB-C/USB-A/barrel); the 4.8
-    // channel to the skirt won't hide them, so they'd protrude the right flank +
-    // get CRUSHED in a side-fall. This 3-sided cowl (outer IMPACT WALL + 2 end
-    // walls tying to the -y uprights) SHIELDS them: on a -y fall the ground hits
-    // the y-67 wall, not the plugs. Open TOP (plug cables in) + open +Y (toward
-    // the case) + a low FLOOR shelf that catches the cables + guides them inboard
-    // to the deck -> the riser CASE_SLOT -> bay. Cantilevers ~12 past the riser
-    // -y edge (y-55) — mid-body, verified clear of the legs. (Dev ethernet RJ45
-    // ~21 pokes above the open top — fine, it's not an operational cable.)
-    COWL_YO = -67; COWL_YI = -65; COWL_Z1 = 103;   // outer wall y-67..-65, to z103
-    // outer impact wall (spans between the -y uprights)
-    translate([REAR_PXC, COWL_YO, DECK])
-        cube([FRONT_PXC - REAR_PXC, COWL_YI - COWL_YO, COWL_Z1 - DECK]);
-    // 2 end walls: outer wall -> the -y uprights (close the ends + carry the load)
-    for (px = [REAR_PXC, FRONT_PXC])
-        translate([px - POST_W/2, COWL_YO, DECK])
-            cube([POST_W, -POST_YC - COWL_YO, COWL_Z1 - DECK]);
-    // floor shelf: catches cables, bridges the cowl to the deck edge (y-55)
-    translate([REAR_PXC, COWL_YI, DECK])
-        cube([FRONT_PXC - REAR_PXC, -55 - COWL_YI, 2]);
+    // -Y tie-rail: ties the two -y uprights into one body, OUTBOARD of the
+    // CASE_SLOT (y-52..-55, over the skirt) so it does NOT block the cable drop.
+    // The -Y CABLE COWL is now a SEPARATE bolt-on part (jetson_cowl.scad) — so
+    // you plug the straight cables FIRST (full access), THEN bolt the cowl to the
+    // -y uprights' -y-face heat-sets (COWL_BOLT_Z). #38.
+    translate([CX0, -55, DECK]) cube([IN_X1 + FRONT_WALL - CX0, 3, 3]);   // y-55..-52
     // 4 corner uprights (locate + retain via the removable clamps + tie to deck)
     upright(true, 1);  upright(true, -1);
     upright(false, 1); upright(false, -1);

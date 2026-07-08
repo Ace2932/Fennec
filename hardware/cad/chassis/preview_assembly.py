@@ -104,6 +104,7 @@ def main():
         cl = clamp.copy()
         cl.apply_transform(T([px, py, 102.8]) @ rot(ang, [0, 0, 1]))
         parts.append(cl)
+    parts.append(trimesh.load('jetson_cowl.stl'))   # -y cable cowl (straight-plug shield)
     # official Jetson case (ref mesh) at its chosen placement: bbox-centre
     # (x-6.85, y0), bottom on the deck (z71.9). Port END faces -x (rear).
     caseref = trimesh.load('jetson_case_ref.stl')
