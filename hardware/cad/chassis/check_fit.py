@@ -218,7 +218,7 @@ HEAD_TILT = 27.0                              # D456 down-tilt about +y
 CAM_M = (143.0, 0.0, 111.5)                   # D456 back-face center on the face
 CAM_D, CAM_L, CAM_H = 26.0, 123.8, 29.0       # D456 body (dimensions.md)
 L2_CTR_X = 126.5                              # L2 optical/plate center x
-L2_SEAT_TOP = 128.0                           # L2 body bottom (crown top)
+L2_SEAT_TOP = 133.0                           # L2 body bottom (crown top)
 
 
 def cam_box():

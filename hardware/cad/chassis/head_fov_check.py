@@ -29,7 +29,7 @@ parts={'head':S(head), 'ears':np.vstack([S(earR,3000),S(earL,3000)]),
        'riser':S(box(-63.5,63.5,-55,55,29,71.9),3000)}
 
 print("== L2 360deg RING + down-cone ==  optical (126.5,0,158)")
-Lc=np.array([126.5,0,158.0]); RNEAR=300.0  # near field that would occlude
+Lc=np.array([126.5,0,163.0]); RNEAR=300.0  # near field that would occlude
 def ring(elo,ehi,label):
     az_block={}
     for nm,p in parts.items():

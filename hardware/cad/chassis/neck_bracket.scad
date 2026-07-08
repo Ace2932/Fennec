@@ -93,12 +93,22 @@ module neck_bracket() {
         for (b = BOLT_XY)
             translate([b[0], b[1], DECK_TOP - EPS])
                 cylinder(d = M3_CLEAR, h = BASE_T + 2 * EPS);
-        // ---- head-mount heat-sets, bored from the FRONT face (x121) so the
-        // iron is reached from the head side BEFORE the head goes on; the
-        // head boss bolts M3 rearward into them. 6mm bore in the 8mm wall.
-        for (z = HM_Z, sy = [-1, 1])
-            translate([WALL_X1 - HEATSET_L, sy * HM_Y, z]) rotate([0, 90, 0])
-                cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
+        // ---- head-mount: the HEAD BOSS now holds the heat-sets; the wall has
+        // clearance + a rear counterbore. The 4 M3 drive from BEHIND the wall
+        // (x<113, open above the deck) — the front approach was blocked by the
+        // head pillar at z100 (access audit 2026-07-08).
+        for (z = HM_Z, sy = [-1, 1]) {
+            translate([WALL_X0 - EPS, sy * HM_Y, z]) rotate([0, 90, 0])
+                cylinder(d = M3_CLEAR, h = WALL_X1 - WALL_X0 + 2 * EPS);  // shank
+            translate([WALL_X0 - EPS, sy * HM_Y, z]) rotate([0, 90, 0])
+                cylinder(d = 6.5, h = 3);          // rear counterbore for the head
+        }
+        // aft-gusset DRIVER NOTCH: 2 channels for the LOWER (z89) bolts — the
+        // gusset (x107..113) blocks that approach; the upper z100 is above its
+        // apex. Ø9 clears a ball-key/socket to the recessed bolt head.
+        for (sy = [-1, 1])
+            translate([103, sy * HM_Y, HM_Z[0]]) rotate([0, 90, 0])
+                cylinder(d = 9, h = 12);           // x103..115
         // ---- deck lightening-window passthrough (cable route L2->trunk) ----
         // a slot in the base plate over the window center for the L2 pigtail
         // to drop into the C-box / trunk (RJ45 + DC plug; caliper).

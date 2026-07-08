@@ -120,9 +120,18 @@ module head() {
             // --- column (boss top -> crown) ---
             translate([COL_X0, -COL_Y, COL_Z0])
                 cube([COL_X1 - COL_X0, 2 * COL_Y, CROWN_Z0 - COL_Z0 + EPS]);
-            // --- crown plate (L2 seat) ---
+            // --- crown plate (L2-adapter seat) ---
             translate([CROWN_X0, -CROWN_HALF_Y, CROWN_Z0])
                 cube([CROWN_X1 - CROWN_X0, 2 * CROWN_HALF_Y, CROWN_T]);
+            // crown FRONT LIP: captures the L2-adapter front tongue — it slides
+            // into the slot, under the z130.5 hook (no front bolt; the front
+            // was unreachable). Above the D456 (z<124), below the L2 (z<133).
+            difference() {
+                translate([146, -15, CROWN_Z0 + CROWN_T - 1])
+                    cube([14, 30, 5.5]);               // x146..160, z127..132.5 (laps crown z128)
+                translate([145, -16, CROWN_Z0 + CROWN_T - EPS])
+                    cube([13.5, 32, 2.5]);             // tongue slot z128..130.5
+            }
 
             // --- face pillar (backs the tilted plate; ties to the column) ---
             translate([PILLAR[0], PILLAR[2], PILLAR_Z0])
@@ -174,23 +183,37 @@ module head() {
             cube([BORE[0], BORE[1], CROWN_Z0 + CROWN_T - MB_Z0 + 2 * EPS]);
         translate([CTR - 7.5, -6, CROWN_Z0 - 6])
             cube([15, 12, CROWN_T + 6 + EPS]);
-        // --- boss -> bracket bolts: 4x M3x16 rearward into the wall heat-sets,
-        //     counterbored on the boss front (x133) for the head + ball-key ---
-        for (z = HM_Z, sy = [-1, 1]) {
+        // --- boss -> bracket bolts: driven from the OPEN REAR (behind the
+        //     bracket wall, x<113 = open above the deck). HEAT-SETS in the boss
+        //     (from its rear face x121, +x); the wall has clearance; M3 from
+        //     behind. (The old front-drive was BLOCKED by the pillar/face-plate
+        //     at z100 — access audit 2026-07-08.) ---
+        for (z = HM_Z, sy = [-1, 1])
             translate([MB_X0 - EPS, sy * HM_Y, z]) rotate([0, 90, 0])
-                cylinder(d = M3_CLEAR, h = MB_X1 - MB_X0 + 2 * EPS);
-            translate([MB_X1 - 5, sy * HM_Y, z]) rotate([0, 90, 0])
-                cylinder(d = 6.5, h = 6);          // head counterbore + ball-key
-        }
-        // --- L2 bolts: 4x M3x8 from BELOW the crown into the L2 base ---
-        for (sx = [-1, 1], sy = [-1, 1])
-            translate([CTR + sx * L2_BCD, sy * L2_BCD, CROWN_Z0 - EPS])
+                cylinder(d = 4.0, h = 6.2 + EPS);   // heat-set x121..127 from rear
+        // --- L2 ADAPTER mount (l2_adapter.scad — the L2 bolts to the adapter
+        //     on the bench, not direct; 2 of its 4 bolts are unreachable on the
+        //     assembled head, access audit 2026-07-08). 2x M3 from BELOW the
+        //     crown rear lip up into the adapter heat-sets; the adapter's front
+        //     tongue slides under the crown front lip (added in the union). ---
+        for (sy = [-1, 1])
+            translate([110, sy * 14, CROWN_Z0 - EPS])
                 cylinder(d = M3_CLEAR, h = CROWN_T + 2 * EPS);
         // --- D456 2x centerline M3 (+-3 z-slot), through the tilted plate ---
         translate(CAM_M) rotate([0, TILT, 0])
             for (sy = [-1, 1]) hull() for (dz = [-MOUNT_SLOT, MOUNT_SLOT])
                 translate([-FACE_T - EPS, sy * MOUNT_Y, dz]) rotate([0, 90, 0])
                     cylinder(d = M3_CLEAR, h = FACE_T + 3);
+        // --- D456 driver-access pockets: the 2 rear plate screws are driven on
+        //     the bench along -x' (backward-up); the fennec CHEEKS sat ~3mm
+        //     behind them -> cramped. Pocket the cheek behind each bolt (Ø11,
+        //     at y±47.2 = outboard of the pillar/column, styling-only material).
+        //     access audit 2026-07-08. ---
+        if (STYLE)
+            translate(CAM_M) rotate([0, TILT, 0])
+                for (sy = [-1, 1])
+                    translate([-FACE_T - 1, sy * MOUNT_Y, 0]) rotate([0, -90, 0])
+                        cylinder(d = 11, h = 22);
         // --- USB-C path: face-plate window -> pillar/column front -> boss ---
         translate(CAM_M) rotate([0, TILT, 0])
             translate([-FACE_T - EPS, 3, -13]) cube([FACE_T + 2 * EPS, 16, 13]);
@@ -207,7 +230,7 @@ module head() {
         // antenna bore now lives in head_ear.scad, not here.)
         if (STYLE)
             for (sy = [-1, 1], ex = [77, 83])
-                translate([ex, sy * 14, CROWN_Z0 + 7 - 6.2])
+                translate([ex, sy * 10, CROWN_Z0 + 7 - 6.2])
                     cylinder(d = 4.0, h = 6.2 + EPS);
     }
 }

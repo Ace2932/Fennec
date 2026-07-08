@@ -127,11 +127,12 @@ def main():
     # 7.7,14.66,-6.7) -> seat (126.5,0,128); Rz-22 lands the Ø51/90° base holes
     # on the crown's 45° (±18) pattern; body rises to z191.5. (check_fit keeps
     # the 75x75 box as the conservative envelope.)
+    # L2 now on the L2 ADAPTER (l2_adapter.scad) -> base at z133 (was 128).
     l2 = trimesh.load('l2_ref.stl')
-    l2.apply_transform(T([126.5, 0, 128]) @ rot(-22, [0, 0, 1])
+    l2.apply_transform(T([126.5, 0, 133]) @ rot(-22, [0, 0, 1])
                        @ T([-7.7, -14.66, 6.7]))
     parts += [box(-59.5, 52.5, -45, 45, 6.0, 64.0),    # stack on plate, ctr -3.5
-              l2,                                        # real L2 crown
+              l2, trimesh.load('l2_adapter.stl'),        # real L2 + its adapter
               box(-77.5, 77.5, -23.4, 23.4, -35.9, -0.9),  # pack 46.8 caliper
               cam]                                       # real D456 (down-tilted)
     asm = trimesh.util.concatenate(parts)
