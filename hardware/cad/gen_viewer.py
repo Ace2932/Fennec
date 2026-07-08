@@ -60,6 +60,7 @@ MESHES = {
     "femur_R": f"{CAD}/leg_v6/femur_R.stl",
     "tibia_R": f"{CAD}/leg_v6/tibia_R.stl",
     "knee_arm": f"{CAD}/leg_v6/knee_arm.stl",
+    "knee_bump": f"{CAD}/leg_v6/knee_bumper.stl",   # TPU collapse guard (rides tibia)
     "shoulder": f"{CAD}/leg_v6/shoulder.stl",
     "splate_R": f"{CAD}/leg_v6/shoulder_plate.stl",
     "splate_L": f"{CAD}/leg_v6/shoulder_plate_L.stl",
@@ -114,6 +115,7 @@ PART_CHAIN = {
     "femur": ["hfe", "mf"],
     "knee":  ["hfe", "mf", "arm"],
     "tibia": ["hfe", "mf", "knee", "kfe"],
+    "kneebump": ["hfe", "mf", "knee", "kfe"],   # TPU bumper: same frame as tibia
     "shoe":  ["hfe", "mf", "knee", "kfe", "shoe"],
 }
 
@@ -196,7 +198,8 @@ DATA = {
     "static": STATIC, "chain": PART_CHAIN,
     "Mf": Mf, "hfePt": HFE_PT, "knee": KNEE, "arm": ARM_OFF, "shoe": SHOE_OFF,
     # leg part -> mesh key uses side; explode factors (proximal->distal)
-    "legParts": {"coax": 0.0, "femur": 45, "knee": 45, "tibia": 95, "shoe": 140},
+    "legParts": {"coax": 0.0, "femur": 45, "knee": 45, "tibia": 95,
+                 "kneebump": 95, "shoe": 140},
     "rom": {"haaIn": 15, "haaOut": 40, "hfeMin": -86, "hfeMax": 50,
             "kfe": 109},
 }
@@ -334,6 +337,7 @@ function legPartMesh(part,side){
   if(part==='femur')return 'femur_R';
   if(part==='tibia')return 'tibia_R';
   if(part==='knee')return 'knee_arm';
+  if(part==='kneebump')return 'knee_bump';
   if(part==='shoe')return 'shoe';}
 function coaxFrame(part,hfe,kfe){
   let m=M4.id();const ops=D.chain[part];
@@ -349,7 +353,7 @@ for(const L in D.legs){const lg=D.legs[L];
  for(const part in D.legParts){
   const mk=legPartMesh(part,lg.side);
   P.push({leg:L,part:part,mesh:mk,grp:'legs',
-   color: part==='knee'?COL.knee_arm: part==='shoe'?COL.shoe: COL[lg.side]});
+   color: part==='knee'?COL.knee_arm: (part==='shoe'||part==='kneebump')?COL.shoe: COL[lg.side]});
  }}
 for(const s of D.static)P.push({mesh:s.mesh,grp:s.grp,exS:s.expl,
   color:COL[s.mesh]||COL[s.grp]||COL.chassis, staticM:s.M});
