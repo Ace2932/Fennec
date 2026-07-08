@@ -209,12 +209,14 @@ def make_box(x0, x1, y0, y1, z0, z1):
             [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2]))
 
 
-# ---- HEAD geometry (must track head.scad / head_study.py) --------------------
+# ---- HEAD geometry (must track head.scad / forward_head_study.py) ------------
+# 2026-07-07 re-architecture: head moved FWD onto the front-shoulder top (the
+# "neck") via neck_bracket.scad. Sensors shifted DX+73 DZ+6 vs the riser head.
 HEAD_TILT = 27.0                              # D456 down-tilt about +y
-CAM_M = (70.0, 0.0, 105.5)                    # D456 back-face center on the face
+CAM_M = (143.0, 0.0, 111.5)                   # D456 back-face center on the face
 CAM_D, CAM_L, CAM_H = 26.0, 123.8, 29.0       # D456 body (dimensions.md)
-L2_CTR_X = 53.5                               # L2 optical/plate center x
-L2_SEAT_TOP = 122.0                           # L2 body bottom (crown top)
+L2_CTR_X = 126.5                              # L2 optical/plate center x
+L2_SEAT_TOP = 128.0                           # L2 body bottom (crown top)
 
 
 def cam_box():
@@ -239,8 +241,9 @@ def main():
     riser = trimesh.load('riser_bay.stl')
     trunk = trimesh.load(TRUNK)
     pocket = trimesh.load('battery_pocket.stl')
-    head = trimesh.load('head.stl')     # integrated D456 face + L2 crown
-                                        # (retired: l2_mast.stl + d456_head.stl)
+    head = trimesh.load('head.stl')     # fwd head (D456 face + L2 crown), bolts
+                                        # to the neck bracket (retired: riser mount)
+    bracket = trimesh.load('neck_bracket.stl')   # front-shoulder-deck adapter
     cradle = trimesh.load('jetson_case_mount.stl')
     # Official Jetson case AABB (calipered 110.3x93.9x38.2, port END -x, on
     # the deck). REPLACES the retired bespoke Jetson tray + heatsink box.
@@ -355,14 +358,21 @@ def main():
                         ('rails', rails,
                          p[(np.abs(p[:, 0]) < 90) & (np.abs(p[:, 1]) < 30)
                            & (p[:, 2] > -46) & (p[:, 2] < -35)]),
+                        # fwd head: crown/boss/column x108..145, pillar x128..138
                         ('head', head,
-                         p[(p[:, 0] > 50) & (p[:, 0] < 78)
-                           & (np.abs(p[:, 1]) < 62) & (p[:, 2] > 55)
-                           & (p[:, 2] < 122)]),
+                         p[(p[:, 0] > 100) & (p[:, 0] < 146)
+                           & (np.abs(p[:, 1]) < 40) & (p[:, 2] > 82)
+                           & (p[:, 2] < 130)]),
+                        # neck bracket: base x107..150 y+-21, wall to z106
+                        ('bracket', bracket,
+                         p[(p[:, 0] > 100) & (p[:, 0] < 152)
+                           & (np.abs(p[:, 1]) < 24) & (p[:, 2] > 78)
+                           & (p[:, 2] < 108)]),
+                        # D456 body x136..173, z87..125, y+-62
                         ('camera', cam,
-                         p[(p[:, 0] > 62) & (p[:, 0] < 101)
-                           & (np.abs(p[:, 1]) < 63) & (p[:, 2] > 78)
-                           & (p[:, 2] < 120)]),
+                         p[(p[:, 0] > 130) & (p[:, 0] < 176)
+                           & (np.abs(p[:, 1]) < 63) & (p[:, 2] > 84)
+                           & (p[:, 2] < 126)]),
                     ):
                         if not len(near):
                             continue
@@ -398,43 +408,58 @@ def main():
             bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs '
                           f'{label}', hits)
 
-    # ---- 7+8. HEAD (D456 face + L2 crown) — fused mast + periscope cases -----------
+    # ---- 7+8. FWD HEAD + NECK BRACKET vs static env + shoulder -----------------
     # deck-extension fin, MINUS the flange center notch strip (y +/-26)
     fin_l = make_box(63.5, 109, 26, 59.4, 73.05, 79.55)
     fin_r = make_box(63.5, 109, -59.4, -26, 73.05, 79.55)
-    l2 = l2_box()                                        # seated L2, floor z121.1
+    l2 = l2_box()                                        # seated L2, floor z128.1
+    # --- head bolts to the bracket; it has NO chassis seat (all up at z>=84) ---
     hp = sample(head, 10000, 3000)
-    seat = (np.abs(hp[:, 2] - DECK_TOP) < 0.35)          # designed deck flange seat
-    hp_f = hp[~seat]
     for label, target in (('trunk', trunk), ('riser', riser),
                           ('case envelope', case),
                           ('deck-ext fin (left)', fin_l),
                           ('deck-ext fin (right)', fin_r)):
-        hits = hp_f[target.contains(hp_f)]
+        hits = hp[target.contains(hp)]
         bad |= report(f'head vs {label}', hits)
+    # --- neck bracket: base seats on the front-shoulder deck top (z79.55); the
+    #     4 corner bolts drill THROUGH the deck (designed). Exclude the base
+    #     bottom face (z<80.1) as the designed deck seat.
+    bp = sample(bracket, 9000, 2500)
+    bp_f = bp[bp[:, 2] > 80.1]
+    for label, target in (('trunk', trunk), ('riser', riser),
+                          ('case envelope', case)):
+        hits = bp_f[target.contains(bp_f)]
+        bad |= report(f'neck bracket vs {label}', hits)
+    # --- head <-> bracket bolt joint (head boss front x121 meets wall front
+    #     x121). Exclude the interface band; the rest must not interpenetrate.
+    hp_nj = hp[np.abs(hp[:, 0] - 121) >= 1.0]
+    hits = hp_nj[bracket.contains(hp_nj)]
+    bad |= report('head vs bracket (bolt-joint band excluded)', hits)
+    # --- shoulder (both ends) vs head / bracket / camera. Filter to the fwd
+    #     region ABOVE the deck seat (z>80.2) so the designed bracket-on-deck
+    #     contact isn't scored.
     for end in (1, -1):
         S2T = np.array([[0, end, 0, end * HIP_FA],
                         [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
         p = tf(sh_pts, S2T)
-        near = p[np.abs(p[:, 0]) < 112]
-        for label, target in (('head', head), ('camera', cam)):
+        near = p[(p[:, 0] > 95) & (p[:, 0] < 176) & (p[:, 2] > 80.2)]
+        for label, target in (('head', head), ('bracket', bracket),
+                              ('camera', cam)):
             hits = near[target.contains(near)] if len(near) else near
             bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs '
                           f'{label}', hits)
     # camera OBB vs static env (camera back seats on the tilted plate = designed)
     cp = sample(cam, 6000, 1500)
-    for label, target in (('riser', riser),
+    for label, target in (('riser', riser), ('neck bracket', bracket),
                           ('deck-ext fin (left)', fin_l),
                           ('deck-ext fin (right)', fin_r),
                           ('L2 body', l2)):
         hits = cp[target.contains(cp)]
         bad |= report(f'camera envelope vs {label}', hits)
-    # seated L2 body vs the head crown region + the case
+    # seated L2 body vs the head crown (designed seat excluded via l2_box floor)
     lp = sample(l2, 5000, 1000)
     hits = lp[head.contains(lp)]
     bad |= report('seated L2 body vs head', hits)
-    hits = lp[case.contains(lp)]
-    bad |= report('seated L2 body vs case envelope', hits)
 
     # ---- 9. floor plate ------------------------------------------------------------
     plate = trimesh.load('floor_plate.stl')
@@ -479,18 +504,21 @@ def main():
     checks = [
         ('stack + plate headroom vs deck underside',
          STACK_BOX[5] <= DECK_BOT - 2.0),
-        ('head flange front (51.3) clears the case front (48.3)',
-         51.3 - 48.3 >= 3.0),
         ('case rear (-62) clears the rear shoulder wall (-63.5)',
          -62.0 - (-63.5) >= 1.0),
-        ('L2 crown bottom (118) clears the case top',
-         118.0 - case_top >= 3.0),
-        ('L2 body bottom (122) clears the case top',
-         122.0 - case_top >= 4.0),
-        ('camera fwd-top corner (99.7) inside the x100 leg limit',
-         99.7 <= 100.0),
-        ('face-plate top (120.7) clears the L2 body bottom (122)',
-         122.0 - 120.7 >= 1.0),
+        # --- fwd head (forward_head_study.py DX+73 DZ+6) ---
+        ('camera bottom (86.8) clears the front horn-plate top (84.75)',
+         86.8 - 84.75 >= 1.5),
+        ('camera bottom (86.8) clears the neck-bracket base top (83.55)',
+         86.8 - 83.55 >= 2.0),
+        ('face-plate top (124.4) clears the L2 body bottom (128)',
+         128.0 - 124.4 >= 1.0),
+        ('camera fwd-most (172.7) within the studied envelope (175)',
+         172.7 <= 175.0),
+        ('L2 body bottom (128) far clears the case top (110.1)',
+         128.0 - case_top >= 4.0),
+        ('neck-bracket deck-through bolts span (36 fore-aft) >= 30',
+         148 - 110 >= 30),
     ]
     for label, ok in checks:
         print(('OK    ' if ok else 'FAIL  ') + label)

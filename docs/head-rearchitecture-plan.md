@@ -47,12 +47,25 @@ So the anatomically-right forward position is available.
   D456 lenses as eyes, add a nose/snout if the forward position allows.
 
 ## Start-here checklist next session
-- [ ] Confirm neck-bracket vs shoulder-variant (user)
-- [ ] Build the neck/head at x110..175 z82..170 on the front shoulder top
-- [ ] Move D456 + L2 onto it (keep the tilted-eye + crown mounts)
-- [ ] Re-gate (chassis check_fit: head-vs-front-leg, L2 ring, CoM); the
-      front-hfe −50 cap likely still applies — re-verify at the new x
-- [ ] CoM delta + battery-rebalance recommendation
-- [ ] Retire/rework the riser front head interface (now unused)
-- [ ] Fennec styling pass (broad ears + L2 skull + eye accent + maybe snout)
-- [ ] The current `head.scad` (riser-mounted) stays gate-clean until replaced
+- [x] Confirm neck-bracket vs shoulder-variant → **NECK BRACKET** (user, 07-07)
+- [x] Build the neck/head on the front shoulder top → `neck_bracket.scad` +
+      reworked `head.scad`; sensors shifted **DX+73 DZ+6** (`forward_head_study.py`)
+- [x] Move D456 + L2 onto it → D456 back-face (143,0,111.5) 27° down; L2 crown
+      x126.5, optical z~160. Tilted-eye + crown mounts kept.
+- [x] Re-gate → `check_fit.py` PASSES (exit 0). **0 front-leg hits** vs
+      head/bracket/camera across the full ROM sweep. The front-hfe −50 cap
+      still holds (now conservative — could relax; deferred to the leg-ROM lane).
+- [x] CoM delta → **+6.5 mm forward** (L2 230 g x53.5→126.5 dominates; head
+      struct MEASURED ~35 g) → nudge belly battery ~91 mm rearward (300 g pack)
+      to null, or accept front-load.
+- [x] Retire the riser front head interface (user: RETIRE NOW, keep SMA) —
+      removed the L2-column deck base + bores + L2 cable drop + front-wall
+      camera register + USB-C grommet from `riser_bay.scad`; SMA kept. Riser
+      re-gated (exit 0), watertight.
+- [x] Fennec styling FIRST PASS (user: REARWARD SKULL SHELF ears) — STYLE=true
+      now GATE-CLEAN: broad triangular ears root on a rear skull shelf BEHIND
+      the L2 (x<89), splay outward, house the SMA antennas; clear the seated L2
+      + 0 leg hits. **STILL TODO** (touch sensor FoV → need the L2 ring / D456
+      down-cone gate): L2 skull shroud, D456 eye-band accent, pointed snout.
+- All parts gate-clean (chassis + leg_v6 exit 0), watertight. Previews +
+  renders regenerated. `forward_head_study.py` = the placement proof.

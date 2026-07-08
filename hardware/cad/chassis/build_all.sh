@@ -8,13 +8,14 @@ OS=/opt/homebrew/bin/openscad
 $OS -o riser_bay.stl riser_bay.scad
 $OS -o spacer.stl spacer.scad
 $OS -o battery_pocket.stl battery_pocket.scad
-$OS -o head.stl head.scad          # integrated D456 face + L2 crown
-                                   # (retired: l2_mast.scad + d456_head.scad)
+$OS -o head.stl head.scad          # fwd head (D456 face + L2 crown)
+$OS -o neck_bracket.stl neck_bracket.scad   # front-shoulder-deck adapter
 $OS -o floor_plate.stl floor_plate.scad
 $OS -o jetson_case_mount.stl jetson_case_mount.scad
 $OS -o ../leg_v6/shoulder.stl ../leg_v6/shoulder.scad
 ../../../.venv/bin/python ../mesh_health.py head.stl
-ls -la riser_bay.stl spacer.stl battery_pocket.stl head.stl floor_plate.stl jetson_case_mount.stl
+../../../.venv/bin/python ../mesh_health.py neck_bracket.stl
+ls -la riser_bay.stl spacer.stl battery_pocket.stl head.stl neck_bracket.stl floor_plate.stl jetson_case_mount.stl
 ../../../.venv/bin/python check_fit.py
 echo "chassis gate clean — now re-gate leg_v6 (shoulder rev):"
 (cd ../leg_v6 && ../../../.venv/bin/python check_fit.py --sweep)

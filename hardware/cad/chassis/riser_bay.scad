@@ -34,20 +34,15 @@
 //   (rear), heatsink end +x. Cables exit the -x port end into the shoulder
 //   center notch (y+-26) + the deck CASE_SLOT below it.
 //
-// HEAD MOUNT (2026-07-07): the standalone mast + periscope are retired; ONE
-// integrated head.scad (D456 down-tilted face + L2 crown) now bolts to the
-// riser via TWO reused anchor patterns — the deck L2-column base (below) AND
-// the front-wall camera register (Wall fixtures). Geometry UNCHANGED from the
-// mast/periscope interfaces (the head just reuses both), so the riser is not
-// re-cut. See head.scad + README "head interface".
+// HEAD MOUNT — RETIRED FROM THE RISER 2026-07-07. The head moved FORWARD onto
+// the front-shoulder top (the "neck") via the separate neck_bracket.scad, so it
+// no longer bolts to the riser at all. The old riser head anchors (L2-column
+// deck base 54/59,±14; L2 cable drop; front-wall camera register z67.4; USB-C
+// grommet 14,61.5) are REMOVED. SMA bulkheads KEPT (still MIMO candidate; may
+// yet relocate to the head ears once the fennec styling lands). See head.scad +
+// neck_bracket.scad + README "head interface".
 //
 // Deck fixtures (trunk x,y) after the case pivot:
-//   HEAD L2-COLUMN base (was the compact mast base): 4x M3 at (54/59.0, +/-14)
-//     in the FRONT STRIP (x51.3..63, the deck the rearward-shifted case leaves
-//     free), 3.0 clear of the case front (48.3). L2 optical position UNCHANGED
-//     (column CTR 53.5, crown lifted to cantilever over the case top). The head
-//     unbolts (these 4 + the 4 wall-row screws) without disturbing the case.
-//   L2 cable drop at (53.5, 0) (down the head column) — forward of the case.
 //   CASE_SLOT x -58..-46, y +-18: the case PORT-END cable exit (into the
 //     shoulder notch) AND the case bottom-vent breather.
 //   SMA bulkheads 2x O6.5 at (57, +/-40) — RELOCATED to the front strip
@@ -55,12 +50,9 @@
 //     reach from the rear-facing ports is UNVERIFIED (flagged for review).
 //   Cradle deck ties 4x O3.4 at (47.3/-59.0, +/-50.35): M3 up from below
 //     into the cradle post-base heat-sets.
-// Wall fixtures (UNCHANGED): HEAD front-wall camera register (was the D456
-//   periscope bore row): front, y -21/-7/+7/+21 @ z 67.4 — the head stem drops
-//   through the shoulder center notch and bolts here (horizontal M3, driver
-//   passes UNDER the tilted camera face); + USB3 grommet (front, y 14 z 61.5)
-//   for the right-angle USB-C; riser<->flange pads (both ends, y +/-40, bores
-//   z 67.4). Vent slots both sides, z 52..66.
+// Wall fixtures: riser<->flange pads (both ends, y +/-40, bores z 67.4). Vent
+//   slots both sides, z 52..66. (The HEAD front-wall camera register + USB-C
+//   grommet that lived here are RETIRED — see HEAD MOUNT above.)
 //
 // The head's forward face + L2 crown live ABOVE the shoulder DECK EXTENSION
 // (which spans trunk z 73.05..79.55 over x 63.5..109 at both ends); the head
@@ -97,10 +89,11 @@ M3_CLEAR   = 3.4;
 // ---- fixture positions ---------------------------------------------------------
 // Jetson devkit standoff grid RETIRED — the official case sits on the deck
 // (jetson_case_mount.scad cradle) instead of a bare board on spacers.
-MAST_BX = [54, 59.0];      MAST_BY = [-14, 14];      // HEAD L2-column base
-                                                     // (front strip x51.3..63,
-                                                     //  case shifted rearward)
-L2_DROP = [53.5, 0];   // head cable-bore drop (CTR 53.5); RJ45 + DC plug pass
+// MAST_BX/MAST_BY/L2_DROP RETIRED 2026-07-07 — head moved fwd onto the neck
+// bracket (neck_bracket.scad); these riser L2-column anchors are orphaned.
+// Kept commented for the reused-geometry knowledge.
+// MAST_BX = [54, 59.0];  MAST_BY = [-14, 14];  // HEAD L2-column base
+// L2_DROP = [53.5, 0];                          // head cable-bore drop
 CASE_SLOT = [-58, -46, -18, 18];  // case PORT-END cable exit (into the
                                   // shoulder notch) + case bottom-vent breather
 SMA  = [[57, 40], [57, -40]];     // O6.5, RELOCATED to the front strip (case
@@ -115,16 +108,11 @@ CRADLE_TIE = [[47.3, 50.35], [47.3, -50.35],         // case-cradle deck ties
 // gate catch 2026-07-06.
 FLG_Y = [-40, 40];  FLG_Z = 67.4;                    // riser<->flange heat-sets
 PAD_Z0 = 64.4; PAD_Z1 = 70.4;
-D456_Y = [-21, -7, 7, 21];                           // HEAD camera register row
-D456_Z = 67.4;                                       // (head stem bears on the
-                                                     //  wall face — screws clamp)
-USB_GROMMET = [14, 61.5];  // 10 x 6 slot, front wall — the D456 USB-C
-                           // plug (overmold ~10.5 x 6) pre-feeds from the
-                           // trunk side; sits under the bore row (67.4),
-                           // above the flange notch edge (57.55), and at
-                           // y 14 to line up with the head-bracket stem
-                           // CHANNEL (a y-0 grommet was unreachable — the
-                           // stem blocked the cable path; review catch)
+// D456_Y/D456_Z/USB_GROMMET RETIRED 2026-07-07 — head moved fwd onto the neck
+// bracket; the camera register + USB-C grommet on this front wall are orphaned
+// (USB-C now routes down the neck -> shoulder C-box). Kept commented.
+// D456_Y = [-21, -7, 7, 21];  D456_Z = 67.4;   // HEAD camera register row
+// USB_GROMMET = [14, 61.5];                     // D456 USB-C front-wall slot
 VENT_X0 = -28; VENT_N = 6; VENT_PITCH = 8;           // 3 wide; TWO rows:
 VENT_Z = [[52, 14], [33, 12]];  // [z0, height] — upper row at logic level,
                                 // LOW row at the under-board buck pocket
@@ -170,21 +158,18 @@ module riser_bay() {
                            min(sy * (WALL_IN - CLR_TAB), sy * (WALL_IN - CLR_TAB - 2.4)),
                            26])
                     cube([16, 2.4, DECK_BOT - 26 + EPS]);
-            // underslung deck bosses (head L2-column base only — Jetson grid gone)
-            for (bx = MAST_BX, by = MAST_BY) deck_boss(bx, by);
+            // (head L2-column deck bosses RETIRED 2026-07-07 — the head moved
+            //  fwd onto the neck bracket; this riser interface is orphaned.)
             // riser<->flange heat-set pads (both end walls, inward)
             for (sx = [-1, 1], fy = FLG_Y)
                 translate([min(sx * (OUT_X - WALL), sx * (OUT_X - WALL - 5)),
                            fy - 6, PAD_Z0])
                     cube([5, 12, PAD_Z1 - PAD_Z0]);
-            // HEAD camera-register strip (front wall, inside the flange notch)
-            translate([OUT_X - WALL - 5, -26, PAD_Z0])
-                cube([5, 52, PAD_Z1 - PAD_Z0]);
+            // (HEAD camera-register strip RETIRED 2026-07-07 — see above.)
         }
         // deck through-features
-        for (bx = MAST_BX, by = MAST_BY) deck_bore(bx, by);
-        rounded_slot(L2_DROP[0] - 7, L2_DROP[0] + 7,
-                     L2_DROP[1] - 6, L2_DROP[1] + 6, 3);
+        // (head L2-column deck bores + the L2 cable drop RETIRED 2026-07-07 —
+        //  the L2 pigtail now drops the neck cable slot -> shoulder C-box.)
         rounded_slot(CASE_SLOT[0], CASE_SLOT[1], CASE_SLOT[2], CASE_SLOT[3], 4);
         // case-cradle deck ties (M3 clearance, up from below into the cradle
         // post-base heat-sets — the head hangs below the deck in open space)
@@ -206,14 +191,9 @@ module riser_bay() {
                 rotate([0, -sx * 90, 0])
                     cylinder(d = M3_CLEAR, h = 8.2 + 2 * EPS);
         }
-        // D456 bore row (axis x, from the front face)
-        for (dy = D456_Y)
-            translate([OUT_X + EPS, dy, D456_Z])
-                rotate([0, -90, 0]) cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
-        // USB3 grommet slot (front wall): 10 x 6 rounded
-        hull() for (dy = [-2, 2])
-            translate([OUT_X + EPS, USB_GROMMET[0] + dy, USB_GROMMET[1]])
-                rotate([0, -90, 0]) cylinder(d = 6, h = WALL + 5 + 2 * EPS);
+        // (HEAD D456 camera-register bore row + USB-C grommet RETIRED
+        //  2026-07-07 — the head moved fwd onto the neck bracket; the USB-C now
+        //  routes down the neck -> shoulder C-box, not through this front wall.)
         // vent slots (both side skirts, two rows)
         for (sy = [-1, 1], i = [0 : VENT_N - 1], v = VENT_Z)
             translate([VENT_X0 + i * VENT_PITCH - 1.5,
