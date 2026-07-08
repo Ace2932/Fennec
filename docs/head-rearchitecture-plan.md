@@ -64,10 +64,11 @@ So the anatomically-right forward position is available.
       removed the L2-column deck base + bores + L2 cable drop + front-wall
       camera register + USB-C grommet from `riser_bay.scad`; SMA kept. Riser
       re-gated (exit 0), watertight.
-- [x] Fennec styling FIRST PASS (user: REARWARD SKULL SHELF ears) — STYLE=true
-      now GATE-CLEAN: broad triangular ears root on a rear skull shelf BEHIND
-      the L2 (x<89), splay outward, house the SMA antennas; clear the seated L2
-      + 0 leg hits. **STILL TODO** (touch sensor FoV → need the L2 ring / D456
-      down-cone gate): L2 skull shroud, D456 eye-band accent, pointed snout.
+- [x] Fennec styling — DONE + FoV-clean (`head_fov_check.py`): rear-shelf ears
+      + FACETED CHEEKS (crown → wide D456 eye-band = the fox face) + a BROW
+      visor; the tilted eye-face reads as a down-muzzle. All kept behind the
+      camera (x<136) + below the L2 seat (z<128) → neither sensor FoV touched.
+      ⚠ L2 skull SHROUD + pointed SNOUT are RULED OUT (not deferred): a shroud
+      blocks the L2 360 ring/down-cone; a snout enters the D456 ground view.
 - All parts gate-clean (chassis + leg_v6 exit 0), watertight. Previews +
   renders regenerated. `forward_head_study.py` = the placement proof.
