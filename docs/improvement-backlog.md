@@ -107,6 +107,19 @@ Captivity verified: stack/Jetson/riser/shoulders/servos all bolted;
 switch (de-cased, under power board), bucks, MRBF all have designed homes.
 Fit: all gated except the 5 known caliper unknowns.
 
+## Assembly-fit issues (2026-07-08 — user CAD review of the rear-top)
+
+Found reviewing the assembled preview. Measurements verified in-model. NOT yet
+fixed — noted for a dedicated pass.
+
+| # | Item | Detail (measured) | Status |
+|---|---|---|---|
+| 33 | **Jetson cradle posts TOO HIGH — retention fails** | The real case top is FACETED: the perimeter corner shelf (where the hold-down tabs grip) is at **z≈102.8**, but the fan/vent PEAK is z110.1. `jetson_case_mount` set `CASE_TOP=110.1` (the peak) → posts rise to `POST_TOP=112.1`, tab underside z109.1 → the tabs float **≈6.3 mm ABOVE the case corners** and never touch it = ZERO hold-down. Fix: reference the corner-shelf z (~102.8, re-measure on the real STL), POST_TOP≈105.8, tab underside≈102.8. | **TODO** |
+| 34 | **Jetson can't be inserted into the cradle** | 4 corner posts + inward hold-down tabs + 3 lip walls + the rear shoulder-wall backstop fully CAGE the case. Once the tabs are lowered to actually grip (#33), you can't drop the case in vertically (tabs overhang the corners) nor slide it (boxed on all 4 sides). Today it only "fits" because the tabs are too high to block — but that's the same reason they don't hold (#33). Needs a real retention rethink: 2 fixed + 2 removable/bolt-on clamps, OR a front-removable retainer bar, OR slide-in-then-lock. | **TODO** |
+| 35 | **Jetson case model — 2nd part / orientation** | `jetson_case_ref.stl` = 2 bodies (main shell + a y±7 full-length centre body, purpose unconfirmed — internal board/heatsink or stray); ~1.2× oversize; faceted vented top. The real case is a 2-PART SLIDE assembly (shell + removable front bezel, user-shown) — the bezel isn't modeled, and which end is the port/bezel end (my design assumes PORT=REAR, -x) needs confirming. "2nd part isn't where it should be" — verify bezel placement + case orientation vs the real STL. | **TODO — needs the real case STL / user confirm** |
+| 36 | **Neck-bracket deck bolts "go nowhere"** | The 4 `BOLT_XY` deck-through bolts are drill-at-assembly M3+nyloc — there's NO matching hole modeled in the shoulder deck, so in the assembly they read as dead-end holes. They DO land on solid shoulder deck (verified all 4, z-top 79.5) so it's functionally OK, but model the mating holes / add pilot dimples so it doesn't look orphaned. | **TODO (cosmetic/clarity)** |
+| 37 | **Neck-bracket rear deck bolts break the base edge** | The centre/rear pair `(110, ±20)` sit at y20 with the base-plate edge at y21 → the Ø3.4 hole reaches y21.7, **notching the edge by 0.7 mm** (open-sided hole = weak, poor thread purchase). Front pair `(146, ±19)` are fine (0.3 mm margin). Fix: pull the rear bolts inboard to y≈17, or widen the base rear to y≈±23. | **TODO (quick fix)** |
+
 ## Process debt
 
 | # | Item | Why | Status |
