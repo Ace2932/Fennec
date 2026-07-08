@@ -29,7 +29,9 @@ DECK = 71.9; COWL_BOLT_Z = 85;        // deck top + cowl bolt z
 
 // ---- cowl geometry ----
 COWL_YI = -72; COWL_YO = -74;         // impact wall: inner y-72, outer y-74
-COWL_Z1 = 103;                        // wall top (covers the ports z72..101)
+COWL_Z1 = 102;                        // wall top (covers ports z72..101; kept
+                                      // BELOW the clamp seats z102.8 so the -y
+                                      // clamp discs don't clip the cowl top)
 UP_FACE = -POST_YC - POST_W / 2;      // -y upright -y face = -53.35 (end-wall root)
 
 module jetson_cowl() {

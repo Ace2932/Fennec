@@ -121,7 +121,10 @@ module jetson_case_mount() {
     // The -Y CABLE COWL is now a SEPARATE bolt-on part (jetson_cowl.scad) — so
     // you plug the straight cables FIRST (full access), THEN bolt the cowl to the
     // -y uprights' -y-face heat-sets (COWL_BOLT_Z). #38.
-    translate([CX0, -55, DECK]) cube([IN_X1 + FRONT_WALL - CX0, 3, 3]);   // y-55..-52
+    translate([CX0, -53.35, DECK]) cube([IN_X1 + FRONT_WALL - CX0, 1.35, 3]);  // y-53.35..-52
+                                          // (outboard edge y-53.35 = the -y upright
+                                          //  face so it doesn't poke into the bolt-on
+                                          //  cowl seat; inboard clear of the CASE_SLOT)
     // 4 corner uprights (locate + retain via the removable clamps + tie to deck)
     upright(true, 1);  upright(true, -1);
     upright(false, 1); upright(false, -1);

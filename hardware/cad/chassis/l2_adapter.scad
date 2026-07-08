@@ -22,8 +22,11 @@ CTR = 126.5; L2_BCD = 18;          // L2 Ø51 pattern at 45° -> holes at ±18
 module l2_adapter() {
     difference() {
         union() {
-            translate([104, -24, Z0]) cube([46, 48, T]);       // main plate x104..150
-            translate([150, -14, Z0]) cube([8, 28, 2]);         // front tongue x150..158, 2 thick
+            translate([104, -24, Z0]) cube([42, 48, T]);       // main plate x104..146
+            translate([146, -14, Z0]) cube([12, 28, 2]);        // front tongue x146..158, 2 thin
+                                                                // (starts at x146 = crown-lip start so the
+                                                                //  lip only ever hooks the THIN tongue, never
+                                                                //  the 5mm main plate — clash fix 2026-07-08)
         }
         // 4x L2 bolts: CSK from the BOTTOM (heads flush), M3 up into the L2 base
         for (sx = [-1, 1], sy = [-1, 1]) {

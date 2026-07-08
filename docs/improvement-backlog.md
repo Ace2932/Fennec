@@ -121,6 +121,8 @@ fixed — noted for a dedicated pass.
 | 36 | **Neck-bracket deck bolts "go nowhere"** | The 4 `BOLT_XY` deck-through bolts are drill-at-assembly M3+nyloc — there's NO matching hole modeled in the shoulder deck, so in the assembly they read as dead-end holes. They DO land on solid shoulder deck (verified all 4, z-top 79.5) so it's functionally OK, but model the mating holes / add pilot dimples so it doesn't look orphaned. | **TODO (cosmetic/clarity)** |
 | 37 | **Neck-bracket rear deck bolts break the base edge** | The centre/rear pair `(110, ±20)` sit at y20 with the base-plate edge at y21 → the Ø3.4 hole reaches y21.7, **notching the edge by 0.7 mm** (open-sided hole = weak, poor thread purchase). Front pair `(146, ±19)` are fine (0.3 mm margin). Fix: pull the rear bolts inboard to y≈17, or widen the base rear to y≈±23. | **TODO (quick fix)** |
 
+| 39 | **check_fit doesn't gate the newer parts** | `check_fit.py` explicitly loads only its known parts — the L2 ADAPTER, CONTROL POD, JETSON COWL + CLAMPS are NOT in it, so their interferences aren't gated (the 2026-07-08 all-pairs sweep caught 3 clashes it missed). Add them (or wire an all-pairs `contains` sweep into build_all) so future edits are gated automatically. | **TODO** |
+
 ## Process debt
 
 | # | Item | Why | Status |
