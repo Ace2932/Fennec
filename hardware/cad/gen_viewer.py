@@ -54,6 +54,7 @@ def mat_list(M):
 
 
 # ---- unique meshes -------------------------------------------------------
+CH = f"{CAD}/chassis"
 MESHES = {
     "coax_R": f"{CAD}/leg_v6/coax_R.stl",
     "femur_R": f"{CAD}/leg_v6/femur_R.stl",
@@ -64,12 +65,24 @@ MESHES = {
     "splate_L": f"{CAD}/leg_v6/shoulder_plate_L.stl",
     "shoe": f"{ORIG}/SM3_Foot.stl",
     "trunk": f"{ORIG}/SM3_Frame_ChassisTrunk.stl",
-    "riser": f"{CAD}/chassis/riser_bay.stl",
-    "battery": f"{CAD}/chassis/battery_pocket.stl",
-    "mast": f"{CAD}/chassis/l2_mast.stl",
-    "d456": f"{CAD}/chassis/d456_head.stl",
-    "floor": f"{CAD}/chassis/floor_plate.stl",
-    "skid": f"{CAD}/chassis/skid_rail.stl",
+    "riser": f"{CH}/riser_bay.stl",
+    "battery": f"{CH}/battery_pocket.stl",
+    "floor": f"{CH}/floor_plate.stl",
+    "skid": f"{CH}/skid_rail.stl",
+    # --- forward HEAD re-arch (2026-07) + sensors ---
+    "head": f"{CH}/head.stl",
+    "ear_R": f"{CH}/head_ear.stl",
+    "ear_L": f"{CH}/head_ear_L.stl",
+    "neck": f"{CH}/neck_bracket.stl",
+    "l2ad": f"{CH}/l2_adapter.stl",
+    "l2": f"{CH}/l2_ref.stl",
+    "d456": f"{CH}/d456_ref.stl",
+    # --- electronics: Jetson case + cradle/cowl/clamps + E-stop/OLED pod ---
+    "pod": f"{CH}/control_pod.stl",
+    "jmount": f"{CH}/jetson_case_mount.stl",
+    "jcowl": f"{CH}/jetson_cowl.stl",
+    "jcase": f"{CH}/jetson_case_ref.stl",
+    "jclamp": f"{CH}/jetson_clamp.stl",
 }
 geo = {}
 total = 0
@@ -131,39 +144,51 @@ HIP_PT = {"FR": [HIP_FA, HIP_LAT, HIP_Z], "RR": [-HIP_FA, HIP_LAT, HIP_Z],
 # outboard needs -; left +). We expose signed range per side in JS.
 HAA_SIGN = {"FR": -1, "RR": -1, "FL": 1, "RL": 1}
 
-# ---- shoulders (2) + chassis (static world transforms) ------------------
+# ---- shoulders (2) + chassis + head + electronics (static transforms) ----
 def s2t(end):
     return np.array([[0, end, 0, end * HIP_FA], [1, 0, 0, 0],
                      [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
+
+# world placements (match chassis/preview_assembly.py):
+M2 = np.array([[0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1.0]])
+L2_M = T([126.5, 0, 133]) @ R(-22, [0, 0, 1]) @ T([-7.7, -14.66, 6.7])
+D456_M = T([143, 0, 111.5]) @ R(27, [0, 1, 0]) @ M2 @ T([0, 0, 26])
+_cb = trimesh.load(MESHES["jcase"]).bounds       # place the case: bbox-ctr x-6.85,y0,bottom z71.9
+_bc = (_cb[0] + _cb[1]) / 2
+CASE_M = T([-6.85 - _bc[0], -_bc[1], 71.9 - _cb[0][2]])
+CLAMPS = [(47.3, 50.35, -116.8), (47.3, -50.35, 116.8),
+          (-59.0, 50.35, -74.3), (-59.0, -50.35, 74.3)]
+
 STATIC = [
-    {"mesh": "shoulder", "M": mat_list(s2t(1)), "grp": "shoulder",
-     "expl": [0, 0, 60]},
-    {"mesh": "shoulder", "M": mat_list(s2t(-1)), "grp": "shoulder",
-     "expl": [0, 0, 60]},
-    {"mesh": "splate_R", "M": mat_list(s2t(1)), "grp": "shoulder",
-     "expl": [0, 0, 90]},
-    {"mesh": "splate_L", "M": mat_list(s2t(1)), "grp": "shoulder",
-     "expl": [0, 0, 90]},
-    {"mesh": "splate_R", "M": mat_list(s2t(-1)), "grp": "shoulder",
-     "expl": [0, 0, 90]},
-    {"mesh": "splate_L", "M": mat_list(s2t(-1)), "grp": "shoulder",
-     "expl": [0, 0, 90]},
-    {"mesh": "trunk", "M": mat_list(np.eye(4)), "grp": "chassis",
-     "expl": [0, 0, 0]},
-    {"mesh": "riser", "M": mat_list(np.eye(4)), "grp": "chassis",
-     "expl": [0, 0, 70]},
-    {"mesh": "battery", "M": mat_list(np.eye(4)), "grp": "chassis",
-     "expl": [0, 0, -70]},
-    {"mesh": "mast", "M": mat_list(np.eye(4)), "grp": "chassis",
-     "expl": [0, 0, 130]},
-    {"mesh": "d456", "M": mat_list(np.eye(4)), "grp": "chassis",
-     "expl": [70, 0, 40]},
-    {"mesh": "floor", "M": mat_list(np.eye(4)), "grp": "chassis",
-     "expl": [0, 0, -35]},
-    {"mesh": "skid", "M": mat_list(T([-55, 9, -39.2])), "grp": "chassis",
-     "expl": [0, 40, -95]},
-    {"mesh": "skid", "M": mat_list(T([-55, -21, -39.2])), "grp": "chassis",
-     "expl": [0, -40, -95]},
+    {"mesh": "shoulder", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 60]},
+    {"mesh": "shoulder", "M": mat_list(s2t(-1)), "grp": "shoulder", "expl": [0, 0, 60]},
+    {"mesh": "splate_R", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 90]},
+    {"mesh": "splate_L", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 90]},
+    {"mesh": "splate_R", "M": mat_list(s2t(-1)), "grp": "shoulder", "expl": [0, 0, 90]},
+    {"mesh": "splate_L", "M": mat_list(s2t(-1)), "grp": "shoulder", "expl": [0, 0, 90]},
+    # chassis
+    {"mesh": "trunk", "M": mat_list(np.eye(4)), "grp": "chassis", "expl": [0, 0, 0]},
+    {"mesh": "riser", "M": mat_list(np.eye(4)), "grp": "chassis", "expl": [0, 0, 70]},
+    {"mesh": "battery", "M": mat_list(np.eye(4)), "grp": "chassis", "expl": [0, 0, -70]},
+    {"mesh": "floor", "M": mat_list(np.eye(4)), "grp": "chassis", "expl": [0, 0, -35]},
+    {"mesh": "skid", "M": mat_list(T([-55, 9, -39.2])), "grp": "chassis", "expl": [0, 40, -95]},
+    {"mesh": "skid", "M": mat_list(T([-55, -21, -39.2])), "grp": "chassis", "expl": [0, -40, -95]},
+    # forward HEAD + sensors
+    {"mesh": "head", "M": mat_list(np.eye(4)), "grp": "head", "expl": [70, 0, 55]},
+    {"mesh": "ear_R", "M": mat_list(np.eye(4)), "grp": "head", "expl": [40, 55, 110]},
+    {"mesh": "ear_L", "M": mat_list(np.eye(4)), "grp": "head", "expl": [40, -55, 110]},
+    {"mesh": "neck", "M": mat_list(np.eye(4)), "grp": "head", "expl": [35, 0, -25]},
+    {"mesh": "l2ad", "M": mat_list(np.eye(4)), "grp": "head", "expl": [0, 0, 45]},
+    {"mesh": "l2", "M": mat_list(L2_M), "grp": "head", "expl": [0, 0, 120]},
+    {"mesh": "d456", "M": mat_list(D456_M), "grp": "head", "expl": [95, 0, 45]},
+    # electronics
+    {"mesh": "pod", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [-70, 0, 55]},
+    {"mesh": "jmount", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [0, 0, -15]},
+    {"mesh": "jcowl", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [0, -70, 0]},
+    {"mesh": "jcase", "M": mat_list(CASE_M), "grp": "elec", "expl": [0, 0, 35]},
+] + [
+    {"mesh": "jclamp", "M": mat_list(T([px, py, 102.8]) @ R(ang, [0, 0, 1])),
+     "grp": "elec", "expl": [0, 0, 55]} for (px, py, ang) in CLAMPS
 ]
 
 DATA = {
@@ -233,6 +258,8 @@ HTML = r"""<!doctype html><html><head><meta charset=utf8>
  <label class=ck><input type=checkbox id=gLegs checked>legs + feet</label>
  <label class=ck><input type=checkbox id=gShoulder checked>shoulders</label>
  <label class=ck><input type=checkbox id=gChassis checked>chassis</label>
+ <label class=ck><input type=checkbox id=gHead checked>head + sensors</label>
+ <label class=ck><input type=checkbox id=gElec checked>jetson + pod</label>
  <button class=act id=reset>reset view</button>
  <div class=tip>drag rotate · scroll zoom · right-drag pan.
    Sliders honor the CAD fit-gate ROM (haa inboard cap 15°, hfe +50 fold,
@@ -292,8 +319,11 @@ for(const k in D.geo){const a=b64f32(D.geo[k]);const b=gl.createBuffer();
 const COL={R:[.62,.70,.82],L:[.58,.66,.78],knee_arm:[.80,.62,.36],
   shoe:[.85,.35,.30],shoulder:[.55,.72,.60],splate:[.80,.62,.36],
   chassis:[.48,.54,.64],trunk:[.40,.45,.55],riser:[.52,.60,.72],
-  battery:[.75,.55,.30],mast:[.55,.65,.78],d456:[.70,.45,.55],
-  floor:[.5,.56,.66],skid:[.85,.35,.30]};
+  battery:[.75,.55,.30],floor:[.5,.56,.66],skid:[.85,.35,.30],
+  head:[.62,.58,.74],ear_R:[.68,.60,.50],ear_L:[.68,.60,.50],neck:[.50,.62,.72],
+  l2ad:[.72,.72,.50],l2:[.45,.55,.72],d456:[.70,.45,.55],
+  pod:[.50,.78,.70],jmount:[.80,.62,.36],jcowl:[.85,.42,.32],
+  jcase:[.50,.56,.66],jclamp:[.90,.55,.30]};
 // ---------- build instance list ----------
 const P=[];               // {mesh,color,base(mat),expl(vec),grp,legParts?}
 function legPartMesh(part,side){
@@ -326,7 +356,7 @@ for(const s of D.static)P.push({mesh:s.mesh,grp:s.grp,exS:s.expl,
 // ---------- state ----------
 let joints={FR:[0,40,80],FL:[0,40,80],RR:[0,40,80],RL:[0,40,80]};
 let sel='all',explode=0;
-let show={legs:1,shoulder:1,chassis:1};
+let show={legs:1,shoulder:1,chassis:1,head:1,elec:1};
 const CAM0={az:-0.9,el:0.42,r:600,tx:0,ty:0,tz:0};
 let cam=Object.assign({},CAM0);
 // center of assembly (approx, mm) for explode + camera target
@@ -416,7 +446,7 @@ $('exp').oninput=e=>{explode=+e.target.value;$('vexp').textContent=explode+'%';d
 document.querySelectorAll('#legsel button').forEach(b=>b.onclick=()=>{
  document.querySelectorAll('#legsel button').forEach(x=>x.classList.remove('on'));
  b.classList.add('on');sel=b.dataset.l;refreshSliders();});
-for(const[id,g]of[['gLegs','legs'],['gShoulder','shoulder'],['gChassis','chassis']])
+for(const[id,g]of[['gLegs','legs'],['gShoulder','shoulder'],['gChassis','chassis'],['gHead','head'],['gElec','elec']])
  $(id).onchange=e=>{show[g]=e.target.checked;draw();};
 $('stance').onclick=()=>{for(const L in joints)joints[L]=[0,40,80];
  explode=0;$('exp').value=0;$('vexp').textContent='0%';refreshSliders();draw();};
