@@ -96,8 +96,11 @@ M3_CLEAR   = 3.4;
 // Kept commented for the reused-geometry knowledge.
 // MAST_BX = [54, 59.0];  MAST_BY = [-14, 14];  // HEAD L2-column base
 // L2_DROP = [53.5, 0];                          // head cable-bore drop
-CASE_SLOT = [-25, 25, -53, -47];  // case -Y-FLANK cable drop (#38; was rear-ctr
-                                  // x-58..-46) -> into the bay to the boards
+CASE_SLOT = [-30, 30, -51.5, -47]; // case -Y-FLANK cable drop (#38). Long+thin,
+                                  // fully in the ~4.8 channel between the case
+                                  // footprint (y-46.95) and the riser skirt inner
+                                  // (y-51.8) -> clean drop into the bay, doesn't
+                                  // notch the skirt. Cables -> board -y edges.
 // SMA bulkheads RETIRED 2026-07-07 — WiFi MIMO antennas consolidated to the
 // head ears (higher, clear of the CF chassis). Kept commented for reference.
 // SMA  = [[57, 40], [57, -40]];  // O6.5, front strip, 80 apart (MIMO)

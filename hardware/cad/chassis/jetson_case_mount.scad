@@ -109,11 +109,11 @@ module jetson_case_mount() {
     lip_wall(IN_X1, IN_X1 + FRONT_WALL, -IN_Y - WALL, IN_Y + WALL);
     // +Y locating lip (full length)
     lip_wall(CX0, IN_X1 + FRONT_WALL, IN_Y, IN_Y + WALL);
-    // -Y side: LOW rail (h3) only — locates the case's -y bottom edge + ties the
-    // two -y uprights into one body, but stays BELOW the port cables (which exit
-    // the -Y face above it and route down outboard of it). #38.
+    // -Y side: a LOW rail (h1.5) only — locates the case's -y bottom edge + ties
+    // the two -y uprights into one body. Kept to 1.5 so the -y port cables drape
+    // straight over it + drop through the riser CASE_SLOT into the bay (#38).
     translate([CX0, -IN_Y - WALL, DECK])
-        cube([IN_X1 + FRONT_WALL - CX0, WALL, 3.1]);
+        cube([IN_X1 + FRONT_WALL - CX0, WALL, 1.5]);
     // 4 corner uprights (locate + retain via the removable clamps + tie to deck)
     upright(true, 1);  upright(true, -1);
     upright(false, 1); upright(false, -1);
