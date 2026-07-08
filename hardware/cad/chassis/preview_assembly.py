@@ -82,12 +82,20 @@ def main():
              trimesh.load('control_pod.stl'),   # rear-top E-stop + OLED pod
              trimesh.load('floor_plate.stl'),
              trimesh.load('jetson_case_mount.stl')]
-    # E-stop envelope (Mxuteuk HB2-ES544): Ø32 contact block hangs into the
-    # pocket (z40..90) + Ø40 mushroom head up (z90..118), at pod ES x-87.
-    parts.append(trimesh.creation.cylinder(radius=16, height=50,
-        transform=T([-87, 0, 65])))                          # block
-    parts.append(trimesh.creation.cylinder(radius=20, height=28,
-        transform=T([-87, 0, 104])))                         # mushroom
+    # E-stop (Mxuteuk HB2-ES544) drawn REALISTICALLY at pod ES x-87, deck z95:
+    # contact block below the deck, Ø22 barrel through it, collar + mushroom
+    # cap above (a panel-mount button — cap up, block + nut below the panel).
+    ex, dz = -87, 95
+    parts.append(box(ex-15, ex+15, -15, 15, dz-45, dz-3))            # contact block
+    parts.append(trimesh.creation.cylinder(radius=11, height=22,
+        transform=T([ex, 0, dz-4])))                                # Ø22 barrel thru deck
+    parts.append(trimesh.creation.cylinder(radius=15, height=5,
+        transform=T([ex, 0, dz+9])))                                # twist collar
+    parts.append(trimesh.creation.cylinder(radius=20, height=13,
+        transform=T([ex, 0, dz+18])))                               # mushroom cap body
+    dome = trimesh.creation.icosphere(radius=20); dome.apply_scale([1, 1, 0.42])
+    dome.apply_translation([ex, 0, dz+24])
+    parts.append(dome)                                              # domed top
     # official Jetson case (ref mesh) at its chosen placement: bbox-centre
     # (x-6.85, y0), bottom on the deck (z71.9). Port END faces -x (rear).
     caseref = trimesh.load('jetson_case_ref.stl')
