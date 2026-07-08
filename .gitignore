@@ -114,3 +114,4 @@ _autosave-*
 *.erc.json
 *-drc.rpt
 *-erc.rpt
+hardware/cad/chassis/jetson_case_ref.stl.orig
