@@ -81,11 +81,12 @@ def sweep_checks(servo, pts0):
     arm = trimesh.load('knee_arm.stl')
     arm.apply_transform(trimesh.transformations.translation_matrix([59, 0, 17.2]))
     tibia = trimesh.load('tibia_R.stl')
-    # (tibia_pad RETIRED 2026-07-07 — it sat on the LATERAL mid-blade face
-    #  (normal world +Y), so it never led into the ground on any collapse/fold
-    #  pose; collapse_study.py showed it +22..69 mm above the real contact.
-    #  Replacement = knee-outer bumper + controlled-limp sit. See backlog #15.)
+    # knee_bumper (TPU, backlog #15 B) wraps the knee-end pocket block ±Y faces
+    # + under the bottom; it RIDES the tibia through the kfe fold, so sweep it
+    # WITH the tibia against the femur fork. (Replaces the retired tibia_pad.)
+    kb = trimesh.load('knee_bumper.stl')
     tib_pts = np.vstack([trimesh.sample.sample_surface(tibia, 6000, seed=0)[0],
+                         trimesh.sample.sample_surface(kb, 2000, seed=0)[0],
                          trimesh.transform_points(pts0, rot_z180())])
     T_knee = trimesh.transformations.translation_matrix([106.9, 0, 0])
     print('-- knee fold sweep (tibia+servo vs femur+knee_arm)')

@@ -51,6 +51,7 @@ def leg_mesh():
                   (trimesh.load(f'{LEG}/femur_R.stl'), S @ M_f),
                   (arm, S @ M_f),
                   (trimesh.load(f'{LEG}/tibia_R.stl'), M_tib),
+                  (trimesh.load(f'{LEG}/knee_bumper.stl'), M_tib),  # TPU knee guard
                   (shoe, M_tib)]:   # (tibia_pad RETIRED — misplaced, backlog #15)
         c = m.copy()
         c.apply_transform(Tm)
