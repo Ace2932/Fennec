@@ -47,12 +47,14 @@
 $fn = 64;
 EPS = 0.05;
 M3_CLEAR = 3.4;
-STYLE = true;    // FENNEC fox styling (ears + antenna bores). GATE-CLEAN at the
-                 // fwd position: ears root on a REARWARD SKULL SHELF behind the
-                 // L2 (x<89) so they clear the seated L2 body + touch only the
-                 // blind rear LiDAR sector. First pass — STILL TODO (deferred;
-                 // they touch sensor FoV so they need the L2 ring / D456 cone
-                 // gate): L2 skull shroud, D456 eye-band accent, pointed snout.
+STYLE = true;    // FENNEC fox styling — GATE-CLEAN + FoV-CLEAN (head_fov_check.py).
+                 // Ears on a rear skull shelf (blind rear sector); FACETED CHEEKS
+                 // flare the crown into the wide D456 eye-band (the fox face) +
+                 // a BROW visor; the tilted eye-face reads as a down-muzzle. All
+                 // kept BEHIND the camera (x<136) + BELOW the L2 seat (z<128) so
+                 // neither sensor FoV is touched. (L2 skull SHROUD + pointed
+                 // SNOUT are RULED OUT, not deferred — a shroud blocks the L2
+                 // ring/down-cone, a snout enters the D456 ground view.)
                  // Set false for the bare functional head.
 EAR_T = 6;
 
@@ -150,6 +152,20 @@ module head() {
                         translate([64, sy * 44 - EAR_T / 2, 200])
                             cube([12, EAR_T, 4]);            // tall splayed tip
                     }
+                // FACETED CHEEKS: flare the narrow crown (y±21, under the L2)
+                // out to the wide D456 eye-band -> the fox FACE. Kept BEHIND the
+                // camera back-corner (x<136 -> never in the 87x58 view) and
+                // BELOW the L2 seat (z<128). FoV-gated.
+                for (sy = [-1, 1])
+                    flare(128, 135, min(sy*46, sy*56), max(sy*46, sy*56),
+                          112, 134, min(sy*16, sy*21), max(sy*16, sy*21),
+                          101, 124);
+                // BROW: an angular visor over the eyes — behind the lens plane
+                // (x<136) + above the FoV cone. The fennec expression.
+                hull() {
+                    translate([120, -24, 123]) cube([14, 48, 3]);
+                    translate([131, -26, 116]) cube([4, 52, 3]);
+                }
             }
         }
         // --- L2 cable bore + crown pigtail slot ---
