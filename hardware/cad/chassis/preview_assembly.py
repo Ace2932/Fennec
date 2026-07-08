@@ -76,6 +76,8 @@ def main():
              trimesh.load('riser_bay.stl'),
              trimesh.load('battery_pocket.stl'),
              trimesh.load('head.stl'),        # fwd head (D456 face + L2 crown)
+             trimesh.load('head_ear.stl'),      # fennec ear / antenna mast (R)
+             trimesh.load('head_ear_L.stl'),    # ear (L)
              trimesh.load('neck_bracket.stl'),  # front-shoulder-deck adapter
              trimesh.load('floor_plate.stl'),
              trimesh.load('jetson_case_mount.stl')]

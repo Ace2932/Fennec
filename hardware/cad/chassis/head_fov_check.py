@@ -19,7 +19,10 @@ def S(m,n=8000): return trimesh.sample.sample_surface(m,n,seed=0)[0]
 
 # occluders near the head (trunk frame)
 head=trimesh.load('head.stl'); brk=trimesh.load('neck_bracket.stl')
-parts={'head':S(head), 'bracket':S(brk,3000),
+# ears are separate parts now (head_ear.scad) — include them as occluders
+earR=trimesh.load('head_ear.stl'); earL=trimesh.load('head_ear_L.stl')
+parts={'head':S(head), 'ears':np.vstack([S(earR,3000),S(earL,3000)]),
+       'bracket':S(brk,3000),
        'jetson_case':S(box(-62,48.3,-46.95,46.95,71.9,110.1),4000),
        'front_shoulderL':S(box(109,158,26,59.4,0,80),2000),
        'front_shoulderR':S(box(109,158,-59.4,-26,0,80),2000),

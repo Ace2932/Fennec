@@ -38,7 +38,7 @@ real parts. Print it in Wave 1 as a fit-check article, not the final head.
 | Material | Parts |
 |---|---|
 | PA6-CF (DRY 80 °C/10 h; no anneal — §3) | coax, femur, tibia, knee_arm, shoulder, shoulder_plate (+L variants), strap ×4, **`head`**, **`neck_bracket`** — 4 walls / 40 % / gyroid (**AUDITED** `neck_bracket_analysis.py`: faceplant SF ~12; ⚠ the L2-scan **vibration/resonance** is a stiffness concern, unverified — modal check on the first print) |
-| PETG-CF | riser_bay, floor_plate, battery_pocket |
+| PETG-CF | riser_bay, floor_plate, battery_pocket, **`head_ear` ×2** (split off the head 2026-07-07 — prints FLAT, low-warp; PA6-CF also fine. Bolts to the head ear-pad; OPTIONAL per the WiFi-antenna decision #32) |
 | TPU 95A | SM3_Foot shoe ×4+1 (STOCK geometry — crush-zone v2 waits for first-article, #20), skid_rail ×2, cable_clip ×20, ~~tibia_pad~~ → **knee_bumper ×4+1** (backlog #15 B, replaces the retired tibia_pad — wraps the tibia knee-block, ~8 g TPU, U opening up), **grommet_insert ×6** |
 
 ## 2. Slicer spec
@@ -79,8 +79,12 @@ Every insert site depth-probed in the built STLs:
 - [ ] 1× RIGHT leg set (coax_R, femur_R, tibia_R, knee_arm), 1× shoulder,
       1× shoulder_plate pair, 1× shoe, 1× skid_rail, 2× cable_clip,
       1× knee_bumper, 1× strap
-- [ ] 1× head + 1× neck_bracket (FIT-CHECK articles — new mounts + fennec
-      styling not final; prove the L2 Ø51 + D456 patterns vs the real parts)
+- [ ] 1× head + 1× neck_bracket + 2× head_ear (FIT-CHECK — prove the L2 Ø51 +
+      D456 ±47.5 patterns vs the real parts; the ear feet bolt to the pad)
+- [ ] **ASSEMBLY ORDER (head):** (1) head→bracket 4× M3 FIRST (ball-key from the
+      boss front — the D456 blocks this once mounted); (2) L2 from below the
+      crown; (3) D456 to the face plate on the bench; (4) ears bolt to the pad
+      last. bracket→deck bolts drilled at first assembly (nyloc from below)
 - [ ] Fit checks (leg_v6 README "Verify"): **servo drop-in — the pocket is
       0.45 slip + NEW 0.1 anti-rotation ribs (±Y case flats): the servo should
       drop FREE, then not rotate; if a tight print binds, file the rib tips (a

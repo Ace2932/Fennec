@@ -41,8 +41,12 @@
 //   ON THE BENCH (rear screws unreachable installed).
 // FIT GATE: check_fit.py HEAD case (head+bracket vs trunk/riser/case/shoulders
 //   + the front-leg sweep at hfe -50 + the L2 360/CoM), at the forward x.
-// PRINT: BOSS-DOWN (rear boss face on the bed): the column + crown + face rise
-//   as a short tower; tree supports under the tilted face-plate overhang. PA6-CF.
+// PRINT: the EARS print SEPARATELY (head_ear.scad ×2) — the head body is then
+//   compact (x74..150, z84..131, no tall spans). Orient CROWN/PAD-DOWN (the flat
+//   crown top on the bed = best L2-seat + ear-pad surface); the boss + tilted
+//   face + cheeks rise -> tree supports under the tilted-face + cheek overhangs.
+//   PA6-CF. ⚠ verify the support layout in the slicer (the tilted face is the
+//   one real overhang). Alt: face-plate-down (tilt 27°) for the cleanest face.
 
 $fn = 64;
 EPS = 0.05;
@@ -136,26 +140,19 @@ module head() {
             // eye accent + snout deferred: they touch sensor FoV, need the
             // ring/down-cone gate.)
             if (STYLE) {
-                // REAR SKULL SHELF: extends the crown rearward (x74..112) to
-                // root the ears clear of the L2 footprint. Top z127.5 stays
-                // BELOW the L2 body bottom (128), so even the under-L2 part
-                // (x89..112) doesn't lift into the seated L2.
+                // REAR SKULL SHELF -> EAR-MOUNT PAD: the crown extends rearward
+                // (x74..112) to a 6mm-thick pad (z124..130). The EARS ARE NOW
+                // SEPARATE bolt-on parts (head_ear.scad) — the head no longer
+                // prints the tall/warpy ears (see PRINT note). The pad carries
+                // 2x M3 heat-sets per side; the ear foot bolts down onto it.
+                // Top z130 stays BELOW the L2 body bottom (only where x<89 does
+                // the pad go this high; the x89..112 part is capped at 127.5).
                 translate([74, -CROWN_HALF_Y, CROWN_Z0])
-                    cube([38, 2 * CROWN_HALF_Y, 3.5]);
-                // EARS: BIG BROAD fennec triangles = the ANTENNA MASTS. Flat
-                // ~5mm panels, broad face fwd, wide base tapering to a tall apex
-                // that leans out+back. Behind the L2 (x<89) -> rear sector only.
-                // cube center=true -> the two ears are TRUE MIRRORS (the old
-                // +y-extending cubes were asymmetric). Each carries an antenna
-                // BOSS at the tip so the SMA whip points UP (vertical = omni RF).
-                for (sy = [-1, 1]) {
-                    hull() {
-                        translate([82, sy * 10, CROWN_Z0 + 3]) cube([6, 5, 4], center = true);
-                        translate([82, sy * 36, CROWN_Z0 + 3]) cube([6, 5, 4], center = true);
-                        translate([71, sy * 50, 196])          cube([6, 5, 4], center = true);
-                    }
-                    translate([71, sy * 50, 189]) cylinder(d = 10, h = 15);  // antenna boss
-                }
+                    cube([13, 2 * CROWN_HALF_Y, 7]);         // x74..87 pad z124..131
+                                                              //  (2mm clear of L2 x89)
+                translate([84, -CROWN_HALF_Y, CROWN_Z0])
+                    cube([28, 2 * CROWN_HALF_Y, 3.5]);       // x84..112 thin (overlaps
+                                                              //  the tall pad -> one body)
                 // FACETED CHEEKS: flare the narrow crown (y±21, under the L2)
                 // out to the wide D456 eye-band -> the fox FACE. Kept BEHIND the
                 // camera back-corner (x<136 -> never in the 87x58 view) and
@@ -205,10 +202,13 @@ module head() {
         //     U.FL->SMA pigtail up the neck -> bulkhead here -> whip. Highest,
         //     clearest-of-CF spot. PROVISION — onboard WiFi works; order only
         //     if bench range needs it (verify the card exposes U.FL). ---
+        // ear-mount M3 heat-sets in the pad (2 per side, from the pad TOP z131
+        // before the ears go on). The ear foot bolts down into these. (The SMA
+        // antenna bore now lives in head_ear.scad, not here.)
         if (STYLE)
-            for (sy = [-1, 1])                       // SMA bulkhead up the tip
-                translate([71, sy * 50, 182])        // boss -> whip points UP
-                    cylinder(d = 6.5, h = 30);
+            for (sy = [-1, 1], ex = [77, 83])
+                translate([ex, sy * 14, CROWN_Z0 + 7 - 6.2])
+                    cylinder(d = 4.0, h = 6.2 + EPS);
     }
 }
 
