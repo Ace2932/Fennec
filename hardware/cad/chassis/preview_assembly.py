@@ -82,20 +82,19 @@ def main():
              trimesh.load('control_pod.stl'),   # rear-top E-stop + OLED pod
              trimesh.load('floor_plate.stl'),
              trimesh.load('jetson_case_mount.stl')]
-    # E-stop (Mxuteuk HB2-ES544) drawn REALISTICALLY at pod ES x-87, deck z95:
-    # contact block below the deck, Ø22 barrel through it, collar + mushroom
-    # cap above (a panel-mount button — cap up, block + nut below the panel).
+    # E-stop (mxuteuk 22mm 2NC — VERIFIED dims: Ø40 mushroom, Ø22 barrel, 77
+    # total, ~30x30x48 contact block) at pod ES x-87, deck top z95:
     ex, dz = -87, 95
-    parts.append(box(ex-15, ex+15, -15, 15, dz-45, dz-3))            # contact block
-    parts.append(trimesh.creation.cylinder(radius=11, height=22,
-        transform=T([ex, 0, dz-4])))                                # Ø22 barrel thru deck
-    parts.append(trimesh.creation.cylinder(radius=15, height=5,
-        transform=T([ex, 0, dz+9])))                                # twist collar
-    parts.append(trimesh.creation.cylinder(radius=20, height=13,
-        transform=T([ex, 0, dz+18])))                               # mushroom cap body
+    parts.append(box(ex-15, ex+15, -15, 15, dz-48, dz))             # 30x30x48 contact block
+    parts.append(trimesh.creation.cylinder(radius=11, height=8,
+        transform=T([ex, 0, dz-1])))                               # Ø22 barrel thru the 5mm deck
+    parts.append(trimesh.creation.cylinder(radius=15, height=4,
+        transform=T([ex, 0, dz+4])))                               # twist collar (above panel)
+    parts.append(trimesh.creation.cylinder(radius=20, height=12,
+        transform=T([ex, 0, dz+11])))                              # mushroom cap body (z99..111)
     dome = trimesh.creation.icosphere(radius=20); dome.apply_scale([1, 1, 0.42])
-    dome.apply_translation([ex, 0, dz+24])
-    parts.append(dome)                                              # domed top
+    dome.apply_translation([ex, 0, dz+17])
+    parts.append(dome)                                             # domed top (~z123)
     # 4 removable Jetson case clamps (jetson_clamp.stl) — bolt to the upright
     # tops, cap the case corner columns (z102.8). Local: bolt@origin, pad@+x.
     clamp = trimesh.load('jetson_clamp.stl')

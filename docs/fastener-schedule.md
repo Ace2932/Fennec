@@ -29,7 +29,7 @@ part is <6mm. All insert walls now pass.
 | **case clamp → upright** ×4 | **M2×8** SHCS | clamp clear Ø2.3; **M2×4 insert** in the upright top; clamp bears the case corner | 4.0 | 1.4 | ✅ |
 | **cowl → upright** ×2 | **M2×10** SHCS | cowl end-wall Ø5.5 c'bore + Ø2.3 shank; **M2×4 insert** in the upright −y face | 4.0 | 1.4 | ✅ (c'bore avoids a silly M2×25) |
 | **OLED → pod panel** ×4 | M2×6 SHCS + **M2 nut** | pod panel clear Ø2.3; SSD1331 PCB behind, nut on the +x side | nut | n/a | ✅ |
-| **E-stop** ×1 | HB2-ES544 **Ø22 barrel + supplied nut** | Ø22.6 deck hole; 2× NC block below | — | — | ✅ (panel-mount, not a machine screw) |
+| **E-stop** ×1 | mxuteuk 22mm 2NC **Ø22 barrel + supplied nut** | Ø22.6 deck hole; Ø40 mushroom; 77mm total; **panel max 6mm** (deck 5 ✓); ~30×30×48 block below (pod gussets flank it y±17) | — | — | ✅ verified vs the Amazon part 2026-07-08 |
 
 leg_v6 fasteners (coax/femur/tibia/shoulder/horn/wheel/foot) were audited
 2026-07-06 (memory: heat-set insert notes) — M3/M2.5/M2 clearances + Ruthex M3

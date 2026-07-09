@@ -20,8 +20,10 @@
 // rises above the shoulder line (z>80) where it's clear.
 //
 // Frame = TRUNK frame (+x FRONT, z up).
-// E-STOP (Mxuteuk HB2-ES544, Ø22 hole, Ø40 mushroom, 2x NC): UP on the deck
-//   (z90); the ~Ø32×50 contact block hangs into the pocket. Panel nut clamps it.
+// E-STOP (mxuteuk 22mm 2NC, HB2-ES544, VERIFIED specs 2026-07-08: Ø22 hole,
+//   Ø40 mushroom, 77 total length, panel max 6mm): UP on the deck (z90, 5mm <
+//   6mm max OK). The ~30×30 × ~48-deep contact block hangs into the pocket
+//   (gussets flank it at y±17); Ø22 barrel through the Ø22.6 hole + supplied nut.
 // OLED (SSD1331 96×64, ~27×20 active): the Ø40 E-stop mushroom cap fouls any
 //   panel directly behind it, so the OLED sits BESIDE it — the deck extends to
 //   +y48 (above the shoulder line, clear) and a vertical panel there faces -x
@@ -58,9 +60,13 @@ module control_pod() {
             // --- top deck (E-stop seat + OLED shelf), cantilevered over pocket ---
             translate([DECK_X0, DECK_Y0, DECK_Z])
                 cube([DECK_X1 - DECK_X0, DECK_Y1 - DECK_Y0, DECK_T]);
-            // --- gussets: column -> deck underside, stiffen the cantilever ---
+            // --- gussets: stiffen the deck cantilever. Moved OUTBOARD to y17..21
+            //     (were y10..14) to FLANK the real ~30mm E-stop contact block
+            //     (y±15) hanging below — the block is wider than the old gap.
+            //     (E-stop = mxuteuk 22mm 2NC, Ø40 mushroom, 77 total, ~30×48
+            //     block behind the panel; specs 2026-07-08.) ---
             for (sy = [-1, 1])
-                translate([DECK_X0, sy > 0 ? COL_HY - 4 : -COL_HY, 78])
+                translate([DECK_X0, sy > 0 ? 17 : -21, 78])
                     cube([BOSS_X - DECK_X0, 4, DECK_Z - 78 + 1]);
             // --- OLED panel: VERTICAL, on the +y deck extension beside the
             //     mushroom (y22..46, clear of the Ø40 cap), faces -x ---
