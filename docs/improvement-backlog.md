@@ -123,6 +123,17 @@ fixed — noted for a dedicated pass.
 
 | 39 | **check_fit doesn't gate the newer parts** | `check_fit.py` explicitly loads only its known parts — the L2 ADAPTER, CONTROL POD, JETSON COWL + CLAMPS are NOT in it, so their interferences aren't gated (the 2026-07-08 all-pairs sweep caught 3 clashes it missed). Add them (or wire an all-pairs `contains` sweep into build_all) so future edits are gated automatically. | **TODO** |
 
+## Design-review improvements (2026-07-08 — rear-top de-workaround)
+
+| # | Item | Why / detail | Status |
+|---|---|---|---|
+| 40 | **Split the OLED off the E-stop pod** | `control_pod` is awkward because it carries BOTH the E-stop (needs the deep rear pocket for the ~48mm contact block) AND the OLED (only needs a readable face). Carrying both forced: the cantilevered +y deck extension, the OLED-BESIDE-mushroom dodge (the Ø40 cap fouls a screen directly behind), + that panel jutting up. **Move the OLED to a flat spot** (Jetson case top, or a small riser-deck-rear bracket) → the pod collapses to a compact, symmetric, better-anchored block-holder + the screen gets a clean readable home. Removes ~3 workarounds. ⚠ OLED SPI cable still routes to the Nano in the bay. | **TODO — biggest simplification** |
+| 41 | **Right-angle plug adapters → delete the −Y cowl** | `jetson_cowl` (a separate PA6-CF part cantilevering ~19mm past the right flank = snag + side-fall crush point, + the M2×10 counterbore hack) exists ONLY to shield STRAIGHT plugs. A ~$6 right-angle USB/barrel adapter turns the cable at the port → drops straight through the −Y `CASE_SLOT`. No cowl, no protrusion, no fall risk. (Originally recommended; user chose the cowl w/o adapters — revisit.) | **TODO (needs the $6 adapters)** |
+| 42 | **Head-joint breakaway fuse** | Head cantilevers forward on the bolted neck joint; a faceplant loads the L2 + D456 (expensive). Swap the 4 head→bracket bolts to **nylon M3** so the head pops off in a hard fall vs snapping the neck / cracking the LiDAR; sensors stay tethered on their cables. (= backlog #2 re-mapped to the fwd-head joint.) | **TODO (cheap safety)** |
+| 43 | **Battery rearward for CoM** | Head-forward puts the CoM ~+12.5mm ahead of centre; a ~57mm rearward pack shift → ~+5mm (steadier trot, less nose-heavy). Modeled in `mass_model.py`. | **GATED on trot/balance controller** |
+| 44 | **Consolidate cradle retention** | 4 clamps + 4 deck-ties + 2 cowl + pod + OLED = many tiny M2 screws at assembly. The 4 corner clamps could be **2 side-bars** — fewer loose parts, same hold. | **TODO (minor, assembly ease)** |
+| 45 | **Split the D456 face off the head (print de-risk)** | Head prints crown-down w/ tree supports under the ONE real overhang (the tilted camera face). Splitting the face into a flat bolt-on piece (like the ears) → the head body prints clean. Trade: +1 part + a bolted joint. | **TODO (print robustness)** |
+
 ## Process debt
 
 | # | Item | Why | Status |
