@@ -2,19 +2,20 @@
 """Build chassis_assembly_preview.stl — everything designed so far in one
 mesh for CAD Viewer review: trunk + riser + shoulders + battery pocket +
 L2 mast + 4 legs (stance pose, inside chassis-safe ROM) + the REAL power
-board (power_board_model.power_board_mesh(), replacing the old flat
-mezzanine-stack placeholder box) + ENVELOPE boxes for the rest (logic
-board + Teensy above the power board, Jetson+heatsink, L2 body, belly
-pack). Remaining boxes are still envelopes, not parts. The power board's
-real rear components (J1) still poke the trunk's rear corner slab on one
-side (the known trim finding, now board-accurate — see check_fit.py case
-11). Run after any part change:
+board (power_board_model.power_board_mesh()) + the REAL logic board
+(power_board_model.logic_board_mesh(), replacing the old flat logic-
+board/Teensy envelope boxes — both mezzanine boards are now kicad_pcb-
+parsed per-component geometry, not placeholders) + ENVELOPE boxes for the
+rest (Jetson+heatsink, L2 body, belly pack). Remaining boxes are still
+envelopes, not parts. The power board's real rear components (J1) still
+poke the trunk's rear corner slab on one side (the known trim finding,
+now board-accurate — see check_fit.py case 11). Run after any part change:
   ../../../.venv/bin/python preview_assembly.py
 """
 import numpy as np
 import trimesh
 
-from power_board_model import power_board_mesh, LOGIC_BOARD_Z0, LOGIC_BOARD_Z1, STACK_TOP_Z
+from power_board_model import power_board_mesh, logic_board_mesh
 
 T = trimesh.transformations.translation_matrix
 NOVA = '/Users/afox/codebases/NOVA'
@@ -163,19 +164,23 @@ def main():
     # See check_fit.py case 11 for the riser/floor/rear-slab/logic-board-
     # underside clearance assertions run against this mesh.
     pb_mesh, pb_components, _ = power_board_mesh()
-    # LOGIC BOARD + TEENSY envelope: still a box, not modeled per-component
-    # this phase, but now correctly COMPONENT-SIDE UP -- the Teensy 4.1 +
-    # USB face UP toward the removable riser deck (resolves the earlier
-    # "lid-off service" concern; corrects the prior side-down/ambiguous
-    # modeling and the matching README.md error). Sits on the pb->lb
-    # standoff directly above the power board's TOP FACE -- NOT pinned to
-    # Q1's height; Q1 clearing the logic-board underside is instead an
-    # explicit assertion in check_fit.py case 11 (~2mm margin at the
-    # current heights). Planes centralized in power_board_model.py so this
-    # file and check_fit.py can't drift apart.
+    # LOGIC BOARD (nova_pcb_v6_logic): REAL kicad_pcb-parsed geometry, no
+    # longer an envelope box -- power_board_model.logic_board_mesh() parses
+    # the live .kicad_pcb the same way power_board_mesh() does (same
+    # footprint parser, courtyard handling, TRUNK_DX/DY transform -- the
+    # logic board shares the power board's exact mount-hole pattern) and
+    # extrudes every populated component: F.Cu (Teensy 4.1, Arduino Nano,
+    # headers, etc.) UP from the top/component face toward the removable
+    # riser deck (resolves the earlier "lid-off service" concern; corrects
+    # the prior side-down/ambiguous modeling and the matching README.md
+    # error), B.Cu (3x 0.6mm resistors) DOWN toward the power board. Planes
+    # (LOGIC_BOARD_Z0/Z1) and the real parsed stack ceiling (STACK_TOP_Z)
+    # are centralized in power_board_model.py so this file and check_fit.py
+    # can't drift apart. Q1 clearing the logic-board underside is an
+    # explicit assertion in check_fit.py case 11.
+    lb_mesh, lb_components = logic_board_mesh()
     parts += [pb_mesh,                                 # real power board, ctr -3.5
-              box(-59.5, 52.5, -45, 45, LOGIC_BOARD_Z0, LOGIC_BOARD_Z1),  # logic board PCB
-              box(-59.5, 52.5, -45, 45, LOGIC_BOARD_Z1, STACK_TOP_Z),     # Teensy+USB, face UP
+              lb_mesh,                                 # real logic board, kicad_pcb-parsed
               l2, trimesh.load('l2_adapter.stl'),        # real L2 + its adapter
               box(-77.5, 77.5, -23.4, 23.4, -35.9, -0.9),  # pack 46.8 caliper
               cam]                                       # real D456 (down-tilted)

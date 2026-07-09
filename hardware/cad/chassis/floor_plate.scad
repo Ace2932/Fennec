@@ -30,12 +30,15 @@
 //      caps are ALREADY ORDERED/FIXED, so the chassis standoff is the free
 //      dimension. Fit window S in [~18, 24.7mm]: floor min ~18 clears the
 //      17mm cans, ceiling 24.7 is the riser-deck headroom for the FULL
-//      stack (power board + pb->lb standoff + logic board + Teensy/USB,
-//      component-side up). 20mm gives 3.0mm floor / 4.7mm deck margins —
-//      see power_board_model.py (STANDOFF_FLOOR_MM) + check_fit.py case 11
-//      for live numbers. Remaining gate: the Teensy/USB stack height
-//      (~14mm est, tightest at 4.7mm to deck) — caliper-confirm. Cap
-//      height is now known (17mm), no longer the binding unknown.
+//      stack (power board + pb->lb standoff + logic board, component-side
+//      up). 20mm gives 3.0mm floor / 5.68mm deck margins — see
+//      power_board_model.py (STANDOFF_FLOOR_MM) + check_fit.py case 11 for
+//      live numbers. The logic board's stack height is no longer an
+//      estimate: power_board_model.logic_board_mesh() parses
+//      nova_pcb_v6_logic.kicad_pcb directly, tallest deck-facing part is
+//      the Teensy 4.1 / Arduino Nano socket footprint (catalog part,
+//      13.0mm) -> stack top z62.22, 5.68mm clear of the deck (z67.9). No
+//      Teensy calipering needed.
 //   3. DRILL TEMPLATE: clamp the plate, drill O3.4 (battery) + O2.5
 //      (stack) through the stock floor using these holes as guides.
 //

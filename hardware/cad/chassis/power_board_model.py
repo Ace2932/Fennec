@@ -32,6 +32,8 @@ T = trimesh.transformations.translation_matrix
 NOVA = '/Users/afox/codebases/NOVA'
 PCB_FILE = (f'{NOVA}/proj/hardware/pcb-mods/nova_pcb_v6_power_v2/'
             'nova_pcb_v6_power_v2.kicad_pcb')
+LOGIC_PCB_FILE = (f'{NOVA}/proj/hardware/pcb-mods/nova_pcb_v6_logic/'
+                   'nova_pcb_v6_logic.kicad_pcb')
 
 # ---- verified board <-> trunk placement transform (do NOT re-derive) ------
 # trunk_x = local_x - TRUNK_DX ; trunk_y = local_y - TRUNK_DY ; no rotation.
@@ -68,7 +70,7 @@ STANDOFF_PB_LB_MM = 20.0
 BOARD_BOTTOM_Z = FLOOR_TOP_Z + STANDOFF_FLOOR_MM   # 26.0 at 20mm standoff
 BOARD_TOP_Z = BOARD_BOTTOM_Z + BOARD_THK           # 27.62
 
-# ---- upper stack: logic board + Teensy, COMPONENT-SIDE UP -----------------
+# ---- upper stack: logic board, COMPONENT-SIDE UP --------------------------
 # Teensy 4.1 + USB face UP toward the removable riser deck (resolves the
 # earlier "lid-off service" concern; corrects a prior side-down/ambiguous
 # modeling pass and a matching README.md error). Centralized here (rather
@@ -79,13 +81,16 @@ BOARD_TOP_Z = BOARD_BOTTOM_Z + BOARD_THK           # 27.62
 # pinned to clear Q1's height by construction, so Q1 clearance is instead
 # an explicit check_fit.py case-11 assertion.
 LOGIC_BOARD_THK = 1.6      # generic 2-layer PCB thickness (matches power board ~1.62)
-# ESTIMATE -- caliper-confirm before finalizing the standoff length:
-# socketed Teensy 4.1 (2x24 socket footprint) + USB-connector envelope
-# height above the logic board's TOP (component) face.
-TEENSY_ENVELOPE_H = 14.0
 LOGIC_BOARD_Z0 = BOARD_TOP_Z + STANDOFF_PB_LB_MM     # 47.62 -- logic board underside
 LOGIC_BOARD_Z1 = LOGIC_BOARD_Z0 + LOGIC_BOARD_THK    # 49.22 -- logic board top (component face)
-STACK_TOP_Z = LOGIC_BOARD_Z1 + TEENSY_ENVELOPE_H     # 63.22 -- Teensy/USB envelope top
+# STACK_TOP_Z (the stack ceiling checked against the riser deck underside)
+# is NO LONGER a hand-picked "Teensy envelope" guess -- it's set below, after
+# logic_board_mesh() is defined, from that mesh's real parsed bounds
+# (nova_pcb_v6_logic.kicad_pcb, kicad_pcb-parsed per-component geometry, same
+# as the power board). Tallest F.Cu part on the logic board is the Teensy
+# 4.1 / Arduino Nano socket footprint (13.0mm each) -> stack top ~z62.22,
+# ~5.68mm clear of RISER_UNDERSIDE_Z (67.9mm). No Teensy calipering needed
+# any more -- it's a catalog part height parsed against real KiCad geometry.
 
 
 def box(x0, x1, y0, y1, z0, z1):
@@ -273,6 +278,94 @@ def power_board_mesh(pcb_path=PCB_FILE):
 
     mesh = trimesh.util.concatenate(parts)
     return mesh, components, fps_by_ref
+
+
+# ---- logic board (nova_pcb_v6_logic) parsing -------------------------------
+# SAME mount-hole pattern (local 103/177, 63/129) as the power board, so it
+# uses the SAME TRUNK_DX/DY transform, no rotation. Mounted COMPONENT-SIDE
+# UP: F.Cu components face UP toward the riser deck, B.Cu faces DOWN toward
+# the power board (only 3 B.Cu parts on this board, all 0.6mm 0603
+# resistors -- negligible, well clear of the power board's top components
+# in the 20mm pb->lb gap; see check_fit.py case 11).
+
+# Component height (mm above the F.Cu/component face, or below the B.Cu
+# face) keyed by the footprint's KiCad Value field -- the logic board's BOM
+# is small and stable enough that a Value lookup is more legible than the
+# power board's per-reference HEIGHT_MM table. Real mechanical heights
+# (catalog parts + measured survey), not estimates.
+LOGIC_VALUE_HEIGHT_MM = {
+    'Teensy4.1': 13.0,
+    'Arduino_Nano_v3.x': 13.0,
+    'IB_2x06': 9.0,
+    'WS2812B_Strip': 8.5,
+    'Conn_01x02': 8.5,
+    'SSD1331_OLED': 8.5,
+    'JP_BUS_MASTER': 6.0,
+    'FE-URT-1': 6.0,
+    '74LVC125': 1.75,
+    'Ferrite_600R': 1.0,
+    '100nF': 1.0,
+}
+LOGIC_DEFAULT_HEIGHT = 2.0   # unlisted small SMD -- matches power board's DEFAULT_HEIGHT
+# 0603 resistors (10k, 1k, 22R, ...) and any other bare-number Value: 0.6mm.
+_BARE_RESISTOR_VALUE_RE = re.compile(r'^[\d.]+[A-Za-z]?$')
+
+
+def _logic_component_height(value):
+    if value in LOGIC_VALUE_HEIGHT_MM:
+        return LOGIC_VALUE_HEIGHT_MM[value]
+    if _BARE_RESISTOR_VALUE_RE.match(value):
+        return 0.6
+    return LOGIC_DEFAULT_HEIGHT
+
+
+def _logic_component_mesh(fp):
+    height = _logic_component_height(fp['value'])
+    tx, ty = fp['x'] - TRUNK_DX, fp['y'] - TRUNK_DY
+    xw, yw = _footprint_xy_extent(fp)
+    top_side = fp['layer'] == 'F.Cu'
+    if top_side:
+        z0, z1 = LOGIC_BOARD_Z1, LOGIC_BOARD_Z1 + height
+    else:
+        z0, z1 = LOGIC_BOARD_Z0 - height, LOGIC_BOARD_Z0
+    m = box(tx - xw / 2, tx + xw / 2, ty - yw / 2, ty + yw / 2, z0, z1)
+    info = dict(ref=fp['ref'], value=fp['value'], x=tx, y=ty, z0=z0, z1=z1,
+                top_side=top_side)
+    return m, info
+
+
+def logic_board_mesh(pcb_path=LOGIC_PCB_FILE):
+    """Return (mesh, components): the logic board (nova_pcb_v6_logic) --
+    1.6mm slab spanning LOGIC_BOARD_Z0..LOGIC_BOARD_Z1 + every populated F.Cu
+    component extruded UP from the top (component) face + every B.Cu
+    component extruded DOWN from the underside -- parsed straight from the
+    live .kicad_pcb via the SAME footprint parser / courtyard handling as
+    power_board_mesh() (_parse_footprints, _footprint_xy_extent, box()).
+    Same TRUNK-frame transform as the power board (identical mount-hole
+    pattern -> identical TRUNK_DX/DY, no rotation). `components` excludes
+    the slab and MountingHole footprints (through holes, no body)."""
+    fps = _parse_footprints(pcb_path)
+    # Board outline local X 98..182, Y 57..135 -> trunk -45.5..38.5, -39..39
+    # (inset within the power board, centered at trunk (-3.5, 0)).
+    slab = box(98 - TRUNK_DX, 182 - TRUNK_DX, 57 - TRUNK_DY, 135 - TRUNK_DY,
+               LOGIC_BOARD_Z0, LOGIC_BOARD_Z1)
+    parts = [slab]
+    components = []
+    for fp in fps:
+        if fp['footprint'].startswith('MountingHole:'):
+            continue   # M3 clearance hole, no body
+        m, info = _logic_component_mesh(fp)
+        parts.append(m)
+        components.append(info)
+    mesh = trimesh.util.concatenate(parts)
+    return mesh, components
+
+
+# STACK_TOP_Z: the real stack ceiling, replacing the old TEENSY_ENVELOPE_H
+# guess -- computed from logic_board_mesh()'s actual parsed bounds, not a
+# hardcoded number.
+_stack_mesh, _stack_components = logic_board_mesh()
+STACK_TOP_Z = float(_stack_mesh.bounds[1][2])   # ~62.22 (Teensy/Nano F.Cu top)
 
 
 def _fitment_report(mesh, components):

@@ -24,21 +24,32 @@ point inside the designed part = the part cuts its counterpart. Cases:
      (deck seat excluded) / mast / D456 / shoulders / L2 / each other
  11. REAL power board (power_board_model.power_board_mesh(), kicad_pcb-parsed
      per-component geometry, replaces the old flat stack-envelope box for the
-     bottom/power layer), floor->power standoff = STANDOFF_FLOOR_MM (20mm,
-     the M3x20 standoffs on hand; corrected 2026-07-09 from a stale 16mm
-     spec — CHASSIS-side only, the board + every component are already
+     bottom/power layer) AND the REAL logic board
+     (power_board_model.logic_board_mesh(), kicad_pcb-parsed per-component
+     geometry, replaces the old logic-board/Teensy ENVELOPE box — the top
+     mezzanine layer is no longer an estimate, it's parsed straight out of
+     nova_pcb_v6_logic.kicad_pcb), floor->power standoff = STANDOFF_FLOOR_MM
+     (20mm, the M3x20 standoffs on hand; corrected 2026-07-09 from a stale
+     16mm spec — CHASSIS-side only, the board + every component are already
      ordered/fixed). Asserts: (a) the 5 bottom-side 1000uF caps (C1-C5,
      Ø10x17mm cans) clear the floor plate top AND the stock trunk's own
      floor slab underneath it — hard fail, no known exception (at 16mm the
      17mm cans sat 1mm proud; at 20mm they bottom at z9, 3mm clear);
-     (b) EVERY top-side part clears the riser deck underside
-     (z67.9), Q1 (TO-220) the tallest; (c) Q1 specifically clears the LOGIC
-     BOARD underside (pb top + the unchanged 20mm pb->lb standoff) — the
-     logic-board plane is no longer pinned to Q1's height by construction,
-     so this is now an explicit assert (~2mm margin); (d) trunk rear corner
-     SLABS/posts (z24.5..47.2) — same known-zone logic as case 2, but
-     board-accurate: only J1 (XT60 battery-in connector) actually reaches
-     into the zone.
+     (b) EVERY power-board top-side part clears the riser deck underside
+     (z67.9), Q1 (TO-220) the tallest, AND the real logic board's tallest
+     parsed point (Teensy 4.1 / Arduino Nano socket, 13mm off the component
+     face -> STACK_TOP_Z≈62.22) clears the same deck underside — no longer
+     a Teensy "envelope" guess, ~5.68mm margin; (c) Q1 specifically clears
+     the LOGIC BOARD underside (pb top + the unchanged 20mm pb->lb
+     standoff) — the logic-board plane is no longer pinned to Q1's height
+     by construction, so this is now an explicit assert (~2mm margin);
+     (d) trunk rear corner SLABS/posts (z24.5..47.2) — same known-zone
+     logic as case 2, but board-accurate: only J1 (XT60 battery-in
+     connector) actually reaches into the zone; (e) the logic board's own
+     B.Cu underside (3x 0.6mm 0603 resistors, the parsed parts reaching
+     lowest into the 20mm pb->lb gap) clears Q1's top — trivially true by
+     construction but now asserted against real parsed geometry on both
+     sides of the gap instead of assumed.
 
 Exit 0 = clean, 1 = interference. Run via build_all.sh after every change.
 """
@@ -46,7 +57,7 @@ import sys
 import numpy as np
 import trimesh
 
-from power_board_model import (power_board_mesh, FLOOR_TOP_Z,
+from power_board_model import (power_board_mesh, logic_board_mesh, FLOOR_TOP_Z,
                                 STANDOFF_FLOOR_MM, LOGIC_BOARD_Z0, STACK_TOP_Z)
 
 NOVA = '/Users/afox/codebases/NOVA'
@@ -534,11 +545,18 @@ def main():
         hits = near[cradle.contains(near)] if len(near) else near
         bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs cradle', hits)
 
-    # ---- 11. REAL power board (power_board_model), STANDOFF_FLOOR_MM=22 ----------
+    # ---- 11. REAL power board + REAL logic board (power_board_model),
+    # STANDOFF_FLOOR_MM=20 ------------------------------------------------------
     pb_mesh, pb_components, _ = power_board_mesh()
     pb_tops = [c for c in pb_components if c['top_side']]
     pb_bots = [c for c in pb_components if not c['top_side']]
     pbp = sample(pb_mesh, 10000, 3000, seed=1)
+
+    # Logic board (nova_pcb_v6_logic): kicad_pcb-parsed, same as the power
+    # board -- no more logic-board/Teensy envelope box.
+    lb_mesh, lb_components = logic_board_mesh()
+    lb_tops = [c for c in lb_components if c['top_side']]
+    lb_bots = [c for c in lb_components if not c['top_side']]
 
     # (a) caps clear floor: EVERY bottom-side component (the 20mm C1-C5
     # 1000uF caps are the tallest/lowest) must bottom at or above the floor
@@ -565,10 +583,12 @@ def main():
 
     # (b) stack top / riser deck clearance. Two parts: the power board's own
     # top-side components (Q1, the TO-220 IRLB3034, is tallest -- huge
-    # margin) AND the FULL stack top (STACK_TOP_Z, power_board_model.py --
-    # power board + pb->lb standoff + logic board + Teensy/USB envelope,
-    # component-side up), which is the tight one (~2.7mm at current
-    # heights, all downstream of the still-ESTIMATED Teensy stack height).
+    # margin) AND the REAL logic board's tallest parsed point (Teensy 4.1 /
+    # Arduino Nano socket footprint, 13mm off the component face -- the
+    # logic layer is kicad_pcb-parsed geometry now, NOT the old Teensy
+    # envelope guess), which is the tight one (~5.68mm at current heights).
+    # Checked directly off lb_mesh's own bounds (not just the STACK_TOP_Z
+    # constant) so this assert is tied to the real geometry, not an import.
     pb_top_z = max(c['z1'] for c in pb_tops)
     pb_top_ref = max(pb_tops, key=lambda c: c['z1'])['ref']
     ok = pb_top_z <= DECK_BOT
@@ -577,10 +597,14 @@ def main():
           f'margin={DECK_BOT - pb_top_z:.2f}mm')
     bad |= not ok
 
-    ok = STACK_TOP_Z <= DECK_BOT
-    print(('OK    ' if ok else 'FAIL  ') + f'full stack top (Teensy/USB envelope '
-          f'z={STACK_TOP_Z:.2f}) clears riser deck underside ({DECK_BOT}), '
-          f'margin={DECK_BOT - STACK_TOP_Z:.2f}mm')
+    lb_top_z = float(lb_mesh.bounds[1][2])
+    lb_top_ref = max(lb_tops, key=lambda c: c['z1'])['ref']
+    assert abs(lb_top_z - STACK_TOP_Z) < 1e-6, \
+        'lb_mesh bounds drifted from power_board_model.STACK_TOP_Z'
+    ok = lb_top_z <= DECK_BOT
+    print(('OK    ' if ok else 'FAIL  ') + f'logic board top ({lb_top_ref} '
+          f'z={lb_top_z:.2f}, real parsed geometry) clears riser deck '
+          f'underside ({DECK_BOT}), margin={DECK_BOT - lb_top_z:.2f}mm')
     bad |= not ok
 
     # (c) Q1 (TO-220, top ≈ board_top + 18) clears the logic board
@@ -608,6 +632,21 @@ def main():
     else:
         bad |= report('power board vs trunk REAR corner slab OUTSIDE the known zone',
                       hits[~known] if len(hits) else hits)
+
+    # (e) logic board B.Cu underside (3x 0.6mm 0603 resistors -- the only
+    # B.Cu parts on this board, the parsed parts reaching lowest into the
+    # 20mm pb->lb gap) clears Q1's top (the power board's tallest top-side
+    # part, which sits in the same gap). Trivially true by construction
+    # (Q1 top z45.62, logic B.Cu underside z47.02+ -> ~1.4mm) but now
+    # asserted against real parsed geometry on both sides of the gap
+    # instead of assumed.
+    lb_bot_z = min(c['z0'] for c in lb_bots)
+    lb_bot_ref = min(lb_bots, key=lambda c: c['z0'])['ref']
+    ok = lb_bot_z >= q1['z1']
+    print(('OK    ' if ok else 'FAIL  ') + f'logic board B.Cu underside ({lb_bot_ref} '
+          f'z={lb_bot_z:.2f}) clears Q1 top ({q1["z1"]:.2f}) in the pb->lb gap, '
+          f'margin={lb_bot_z - q1["z1"]:.2f}mm')
+    bad |= not ok
 
     # ---- 5. static fixture asserts ----------------------------------------------
     case_top = 110.1     # official case top (deck 71.9 + 38.2 calipered)
