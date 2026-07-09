@@ -83,7 +83,8 @@ MESHES = {
     "jmount": f"{CH}/jetson_case_mount.stl",
     "jcowl": f"{CH}/jetson_cowl.stl",
     "jcase": f"{CH}/jetson_case_ref.stl",
-    "jclamp": f"{CH}/jetson_clamp.stl",
+    "jbar": f"{CH}/jetson_clamp_bar.stl",
+    "oled": f"{CH}/oled_mount.stl",
 }
 geo = {}
 total = 0
@@ -158,8 +159,7 @@ D456_M = T([143, 0, 111.5]) @ R(27, [0, 1, 0]) @ M2 @ T([0, 0, 26])
 _cb = trimesh.load(MESHES["jcase"]).bounds       # place the case: bbox-ctr x-6.85,y0,bottom z71.9
 _bc = (_cb[0] + _cb[1]) / 2
 CASE_M = T([-6.85 - _bc[0], -_bc[1], 71.9 - _cb[0][2]])
-CLAMPS = [(47.3, 50.35, -116.8), (47.3, -50.35, 116.8),
-          (-59.0, 50.35, -74.3), (-59.0, -50.35, 74.3)]
+MY_BAR = np.eye(4); MY_BAR[1, 1] = -1     # -y clamp bar = +y bar mirrored
 
 STATIC = [
     {"mesh": "shoulder", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 60]},
@@ -188,9 +188,9 @@ STATIC = [
     {"mesh": "jmount", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [0, 0, -15]},
     {"mesh": "jcowl", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [0, -70, 0]},
     {"mesh": "jcase", "M": mat_list(CASE_M), "grp": "elec", "expl": [0, 0, 35]},
-] + [
-    {"mesh": "jclamp", "M": mat_list(T([px, py, 102.8]) @ R(ang, [0, 0, 1])),
-     "grp": "elec", "expl": [0, 0, 55]} for (px, py, ang) in CLAMPS
+    {"mesh": "oled", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [-70, 30, 60]},
+    {"mesh": "jbar", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [0, 0, 55]},
+    {"mesh": "jbar", "M": mat_list(MY_BAR), "grp": "elec", "expl": [0, 0, 55]},
 ]
 
 DATA = {
@@ -326,7 +326,7 @@ const COL={R:[.62,.70,.82],L:[.58,.66,.78],knee_arm:[.80,.62,.36],
   head:[.62,.58,.74],ear_R:[.68,.60,.50],ear_L:[.68,.60,.50],neck:[.50,.62,.72],
   l2ad:[.72,.72,.50],l2:[.45,.55,.72],d456:[.70,.45,.55],
   pod:[.50,.78,.70],jmount:[.80,.62,.36],jcowl:[.85,.42,.32],
-  jcase:[.50,.56,.66],jclamp:[.90,.55,.30]};
+  jcase:[.50,.56,.66],jbar:[.90,.55,.30],oled:[.40,.85,.55]};
 // ---------- build instance list ----------
 const P=[];               // {mesh,color,base(mat),expl(vec),grp,legParts?}
 function legPartMesh(part,side){

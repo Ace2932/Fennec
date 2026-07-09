@@ -95,14 +95,10 @@ def main():
     dome = trimesh.creation.icosphere(radius=20); dome.apply_scale([1, 1, 0.42])
     dome.apply_translation([ex, 0, dz+17])
     parts.append(dome)                                             # domed top (~z123)
-    # 4 removable Jetson case clamps (jetson_clamp.stl) — bolt to the upright
-    # tops, cap the case corner columns (z102.8). Local: bolt@origin, pad@+x.
-    clamp = trimesh.load('jetson_clamp.stl')
-    for (px, py, ang) in [(47.3, 50.35, -116.8), (47.3, -50.35, 116.8),
-                          (-59.0, 50.35, -74.3), (-59.0, -50.35, 74.3)]:
-        cl = clamp.copy()
-        cl.apply_transform(T([px, py, 102.8]) @ rot(ang, [0, 0, 1]))
-        parts.append(cl)
+    # 2 case hold-down BARS (#44, replaced the 4 clamps) + OLED bracket (#40)
+    bar=trimesh.load('jetson_clamp_bar.stl'); parts.append(bar)
+    MYb=np.eye(4); MYb[1,1]=-1; b2=bar.copy(); b2.apply_transform(MYb); parts.append(b2)
+    parts.append(trimesh.load('oled_mount.stl'))
     parts.append(trimesh.load('jetson_cowl.stl'))   # -y cable cowl (straight-plug shield)
     # official Jetson case (ref mesh) at its chosen placement: bbox-centre
     # (x-6.85, y0), bottom on the deck (z71.9). Port END faces -x (rear).

@@ -22,10 +22,14 @@
 //     camera bottom clears the front horn-plate top flanges (z82.75 + heads).
 //
 // MOUNT (mirrors the retired riser wall-row, proven): a REAR BOSS (x121..133)
-//   sits against the bracket's front mount face (x121) and takes 4x M3x16 that
-//   thread REARWARD into the bracket wall heat-sets (rows z89/100, y+-11 — a
-//   tall couple vs the forward-tipping moment). Bolt heads counterbored on the
-//   boss front (x133), reached before the D456 face + styling close in.
+//   sits against the bracket's front mount face (x121) + takes 4x M3x12 (rows
+//   z89/100, y+-10 — a tall couple vs the fwd-tipping moment) driven from BEHIND
+//   the bracket wall into heat-sets in the BOSS (access audit 2026-07-08).
+//   BREAKAWAY FUSE (#42): these 4 are NYLON M3 — a faceplant shears them at the
+//   x121 joint plane (single shear) so the head + L2 + D456 POP OFF (tethered on
+//   their cables) instead of snapping the neck or cracking the LiDAR. The joint
+//   has no interlock, so it separates cleanly. ⚠ tune preload at bench: must
+//   hold trot/vibration (<<nylon M3 ~200N shear) yet shed on a hard fall.
 // STRUCTURE (trunk mm):
 //   REAR BOSS -> COLUMN -> CROWN (L2 seat z124..128; L2 on its 4x M3 22.5
 //     square, bolted from BELOW, ball-key). Cable bore x126.5, y+-5.5 drops the
@@ -211,11 +215,7 @@ module head() {
             for (sy = [-1, 1]) hull() for (dz = [-MOUNT_SLOT, MOUNT_SLOT])
                 translate([-FACE_T - EPS, sy * MOUNT_Y, dz]) rotate([0, 90, 0])
                     cylinder(d = M3_CLEAR, h = FACE_T + 3);
-        // --- D456 driver-access pockets: the 2 rear plate screws are driven on
-        //     the bench along -x' (backward-up); the fennec CHEEKS sat ~3mm
-        //     behind them -> cramped. Pocket the cheek behind each bolt (Ø11,
-        //     at y±47.2 = outboard of the pillar/column, styling-only material).
-        //     access audit 2026-07-08. ---
+        // --- D456 driver-access pockets (cheek behind each bolt, Ø11) ---
         if (STYLE)
             translate(CAM_M) rotate([0, TILT, 0])
                 for (sy = [-1, 1])

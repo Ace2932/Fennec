@@ -33,19 +33,20 @@
 //   2. RETAIN (lift/tumble, ~250-510 g): 4 corner UPRIGHTS in the +-y strips
 //      rise to the real corner height (z102.8), each with a VERTICAL M3
 //      heat-set in its top. After the case DROPS IN (uprights are outboard in
-//      y -> nothing overhangs, straight drop), 4 REMOVABLE CLAMPS (jetson_clamp
-//      .scad) bolt DOWN into the upright tops and cap the case's solid corner
-//      columns. NO case drilling (bear-only); add a TPU/EVA shim on the clamp
-//      pad for preload + damping. Lift path: case corner -> clamp -> upright ->
-//      deck-tie(M2) -> riser deck.
+//      y -> nothing overhangs, straight drop), 2 REMOVABLE CLAMP BARS
+//      (jetson_clamp_bar.scad, #44 — one per ±y side, each spans its 2 uprights
+//      + 2x M2 down) bolt DOWN into the upright tops and cap the case's solid
+//      corner columns. NO case drilling (bear-only); add a TPU/EVA shim on the
+//      bar pads for preload + damping. Lift path: case corner -> bar -> upright
+//      -> deck-tie(M2) -> riser deck.
 //   3. TIE TO DECK: each upright bolts straight down (M3) into a riser-deck
 //      cradle heat-set under it (riser CRADLE_TIE — keep in sync).
 //
 // ASSEMBLY: press the upright BASE heat-sets (from below) + TOP heat-sets (from
 //   above) -> bolt the cradle to the deck -> drop the assembled case in -> set
-//   the 4 clamps + M2x8 down into the upright tops. Bezel is already on.
+//   the 2 clamp bars + 4x M2x8 down into the upright tops. Bezel is already on.
 // Print: base-down (deck face on the bed); uprights rise (no overhangs now).
-//   PA6-CF, ONE piece. Clamps print separately (jetson_clamp.scad, x4, flat).
+//   PA6-CF, ONE piece. Bars print separately (jetson_clamp_bar.scad, x2, flat).
 //
 // Fit gate: check_fit.py (the case is an AABB envelope there). build_all.sh.
 

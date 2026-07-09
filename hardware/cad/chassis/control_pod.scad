@@ -24,10 +24,10 @@
 //   Ø40 mushroom, 77 total length, panel max 6mm): UP on the deck (z90, 5mm <
 //   6mm max OK). The ~30×30 × ~48-deep contact block hangs into the pocket
 //   (gussets flank it at y±17); Ø22 barrel through the Ø22.6 hole + supplied nut.
-// OLED (SSD1331 96×64, ~27×20 active): the Ø40 E-stop mushroom cap fouls any
-//   panel directly behind it, so the OLED sits BESIDE it — the deck extends to
-//   +y48 (above the shoulder line, clear) and a vertical panel there faces -x
-//   for an operator behind-right. 4x M2 + a window.
+// OLED: SPLIT OFF (#40) — it's now a SEPARATE part (oled_mount.scad) that bolts
+//   to the pod deck's +y edge (2x M2). The pod deck is back to SYMMETRIC (y±26,
+//   E-stop only) — no more +y extension, no fused panel, no OLED-beside-mushroom
+//   dodge. The OLED bracket holds the SSD1331 clear of the Ø40 mushroom cap.
 // CABLE: E-stop NC pair + OLED SPI drop through the column grommet (Ø12, y0 z63,
 //   above the trunk lip) -> the matching riser rear-wall slot -> the bay
 //   (power-board NC lines + the Arduino Nano SPI). Provision; route at wiring.
@@ -48,8 +48,7 @@ ES       = [-87, 0];               // E-stop panel-hole center (x,y)
 ES_HOLE  = 22.6;                   // Ø22 thread + clearance
 DECK_Z   = 90; DECK_T = 5;         // top deck z90..95 (E-stop mounts here)
 DECK_X0  = -103; DECK_X1 = -63.35; // deck x-103..-63.35 (over the pocket)
-DECK_Y0  = -26; DECK_Y1 = 48;      // deck asymmetric: +y extension carries the OLED
-OLED_X   = -100;                   // OLED panel face (x), beside the mushroom (+y)
+DECK_Y0  = -26; DECK_Y1 = 26;      // deck SYMMETRIC now (OLED split off, #40)
 
 module control_pod() {
     difference() {
@@ -68,9 +67,6 @@ module control_pod() {
             for (sy = [-1, 1])
                 translate([DECK_X0, sy > 0 ? 17 : -21, 78])
                     cube([BOSS_X - DECK_X0, 4, DECK_Z - 78 + 1]);
-            // --- OLED panel: VERTICAL, on the +y deck extension beside the
-            //     mushroom (y22..46, clear of the Ø40 cap), faces -x ---
-            translate([OLED_X, 22, 88]) cube([3.5, 24, 30]);        // z88..118 (laps deck)
         }
         // ---- mount bolt clearances (axis x, through the column into the bosses)
         for (b = MOUNT)
@@ -78,11 +74,10 @@ module control_pod() {
                 cylinder(d = M2_CLEAR, h = BOSS_X - COL_X0 + 2*EPS);  // M2 (pinched pad)
         // ---- E-stop panel hole ----
         translate([ES[0], ES[1], DECK_Z - EPS]) cylinder(d = ES_HOLE, h = DECK_T + 2*EPS);
-        // ---- OLED window + 4x M2 (on the vertical +y panel, x-face) ----
-        translate([OLED_X - EPS, 34, 96]) cube([3.5 + 2*EPS, 21, 20]);   // window, ctr y34 z106
-        for (my = [-1, 1], mz = [-1, 1])
-            translate([OLED_X - EPS, 34 + my*10, 106 + mz*8]) rotate([0, 90, 0])
-                cylinder(d = M2_CLEAR, h = 3.5 + 2*EPS);                 // 4x M2 corners
+        // ---- 2x M2 heat-sets in the deck +y edge -> the OLED bracket bolts here
+        //      (oled_mount.scad, #40). Pressed from the deck TOP. ----
+        for (mx = [-96, -71])
+            translate([mx, 23, DECK_Z + DECK_T - 4]) cylinder(d = 3.0, h = 4 + EPS);
         // ---- cable grommet: E-stop NC + OLED SPI drop into the bay (y0 z63) ----
         translate([COL_X0 - EPS, 0, 63]) rotate([0, 90, 0])
             cylinder(d = 12, h = BOSS_X - COL_X0 + 2*EPS);
