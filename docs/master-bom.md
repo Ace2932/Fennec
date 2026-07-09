@@ -96,7 +96,7 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 | Heat-shrink assortment | every XT / TVS / fuse joint | ✅ owned (Ginsco 580pc) |
 | M3 standoffs ~20 mm | mezzanine board-to-board | ✅ received (PATIKIL brass M3×20 ×50; safe on all 4 holes — 7mm copper keepout) |
 | M3 screws/nuts/washers | board → chassis | ✅ owned (Fgruh 1220pc) |
-| M3 standoffs ~16 mm | power board → floor plate (bucks + de-cased switch live underneath — chassis README §9) | 🛒 order — confirm height after buck caliper |
+| M3 standoffs 20 mm | power board → floor plate (bucks + de-cased switch live underneath — chassis README §9) | ✅ use the M3×20 ×50 already received (line 97). Corrected 16→20mm 2026-07-09: the ordered Ø10×17 C1–C5 caps need the 20mm gap to clear the floor (check_fit case 11). |
 | Right-angle USB-C (USB 3.x) cable | D456 → Jetson (straight plug doesn't fit the periscope bracket gap) | 🛒 order |
 | Velcro strap ~300 mm | battery pocket rear-corner fence | 🛒 order (or cut from owned roll) |
 | JST-XH plug + crimps | board ↔ servo-bus pigtail | ✅ owned (PEBA crimp+connector kit) |

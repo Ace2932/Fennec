@@ -667,7 +667,7 @@ def main():
         ('L2 body bottom (128) far clears the case top (110.1)',
          128.0 - case_top >= 4.0),
         ('neck-bracket deck-through bolts span (36 fore-aft) >= 30',
-         148 - 110 >= 30),
+         146 - 110 >= 30),   # front bolt x=146 (was literal 148; matched the "36" label after fix)
     ]
     for label, ok in checks:
         print(('OK    ' if ok else 'FAIL  ') + label)

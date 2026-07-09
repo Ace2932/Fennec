@@ -82,12 +82,12 @@ extends −X:
 |---|---|---|
 | Body W × D × H | 75.0 × 75.0 × 65.0 | ✅ |
 | Weight | 230 g | ✅ |
-| Bottom mount holes | **4× M3 on 22.5 mm square pattern** | ✅ (CORRECTS earlier 50 mm placeholder in patterns.md §8) |
+| Bottom mount holes | **4× M3 on 36 mm square** (±18; ≡ Ø51 bolt-circle at 45°) — per the L2 3D model (`l2_adapter.scad` L2_BCD=18) | ⚠ physical-measure pending (user to confirm). Supersedes the earlier "22.5 mm square" (wrong) and the "50 mm" placeholder before it. |
 | Mount hole thread depth | 6.0 | ✅ |
 | Power barrel | **3.5 × 1.35 mm** | ✅ CALIPER 2026-07-07 — the OEM connector that SHIPPED with the L2 measures 3.4 OD (3.5×1.35 class); supersedes the manual's ambiguous 5.5×2.1/2.5. The purchased 3.5×1.35 bare-wire pigtail matches → wires to the 12V L2 rail. Mast bore unaffected (molded housing ~Ø8 passes; RJ45 11.7×8 is the binding constraint) |
 | Ethernet | RJ-45 (standard) | ✅ |
 | FoV | 360° × 90° | ✅ |
-| **Chassis mount** | `chassis/head.scad` CROWN — 4× M3 22.5 square, bolted from BELOW the crown plate; optical center at trunk z~154 (crown seat top 122). Replaces the retired standalone `l2_mast.scad`. 360° ring clear (nearest structure 36 mm below); rear-down cone blind only below −83° (Jetson case) | ✅ 2026-07-07 (head_study.py) |
+| **Chassis mount** | `chassis/head.scad` CROWN via `l2_adapter.scad` — 4× M3 on 36 mm square (±18), bolted from BELOW the crown plate; optical center at trunk z~154 (crown seat top 122). Replaces the retired standalone `l2_mast.scad`. 360° ring clear (nearest structure 36 mm below); rear-down cone blind only below −83° (Jetson case) | ✅ 2026-07-07 (head_study.py) |
 | Self-heat / cold-boot delay | ~30-60 s below 30 °C ambient | ✅ |
 
 ---
@@ -617,7 +617,7 @@ flanges); nothing exists above z 29.0 except the four corner wedges.
 
 These differ from values currently in `patterns.md` or `nova_sm3_patterns.md`:
 
-1. **L2 LiDAR mount BCD = 22.5 mm**, NOT 50 mm. The earlier 50 mm in `patterns.md` §8 was a placeholder. Update `L2_LIDAR['bolt_circle_d']` from 50.0 → 22.5.
+1. **L2 LiDAR mount = 36 mm square** (±18; ≡ Ø51 bolt-circle at 45°), per the L2 3D model / `l2_adapter.scad`. NOT 22.5 mm, NOT the older 50 mm placeholder. ⚠ physical-measure pending (user to confirm). Update `L2_LIDAR['bolt_circle_d']` to the Ø51-at-45° form.
 2. **STS3215 horn-disc OD = 20 mm**, NOT 25 mm as written in some older notes. STEP file is authoritative.
 3. **STS3215 spline X offset = +12.5 mm** from body center. CRITICAL: every cavity in leg V3.1 reflects this. Old OpenSCAD `coxa.scad` had it at 0 (bug).
 4. **STS3215 horn screws are M2.5, NOT M3.** STEP shows holes at r=1.25 mm (∅2.5 = M2.5 clearance). Older notes / `patterns.md` calling them M3 are wrong. BCD measured at 13.86 mm (call it 14 mm).
