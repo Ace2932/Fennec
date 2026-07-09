@@ -13,7 +13,7 @@
 // preview_assembly.py places 4 (rotated toward each corner). Print 4x, PA6-CF.
 
 $fn = 32; EPS = 0.05;
-M3_CLEAR = 3.4;
+M2_CLEAR = 2.3;   // clamp bolts to the upright with M2 (fastener audit)
 CLAMP_T = 4;          // plate thickness
 REACH   = 10;         // bolt(upright) -> pad(corner column) centre distance
 

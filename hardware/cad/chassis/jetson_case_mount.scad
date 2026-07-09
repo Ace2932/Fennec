@@ -37,13 +37,13 @@
 //      .scad) bolt DOWN into the upright tops and cap the case's solid corner
 //      columns. NO case drilling (bear-only); add a TPU/EVA shim on the clamp
 //      pad for preload + damping. Lift path: case corner -> clamp -> upright ->
-//      deck-tie -> riser deck.
+//      deck-tie(M2) -> riser deck.
 //   3. TIE TO DECK: each upright bolts straight down (M3) into a riser-deck
 //      cradle heat-set under it (riser CRADLE_TIE — keep in sync).
 //
 // ASSEMBLY: press the upright BASE heat-sets (from below) + TOP heat-sets (from
 //   above) -> bolt the cradle to the deck -> drop the assembled case in -> set
-//   the 4 clamps + M3x8 down into the upright tops. Bezel is already on.
+//   the 4 clamps + M2x8 down into the upright tops. Bezel is already on.
 // Print: base-down (deck face on the bed); uprights rise (no overhangs now).
 //   PA6-CF, ONE piece. Clamps print separately (jetson_clamp.scad, x4, flat).
 //
@@ -67,7 +67,11 @@ FRONT_WALL = 1.8;                  // thinner: only 3.0 to the mast flange
 POST_W = 6.0;                      // corner-post square (in the +-y strip)
 POST_TOP = CORNER_Z;               // 102.8 — uprights end AT the real corner top
 M3_CLEAR = 3.4;
-HEATSET_D = 4.0; HEATSET_L = 6.2;  // Ruthex M3 (deck ties + clamp bolts)
+HEATSET_D = 4.0; HEATSET_L = 6.2;  // Ruthex M3 (deck ties — structural)
+// The 6mm uprights can't give an M3 insert (OD4.6) its >=1.5mm wall, so the
+// LIGHT hold-downs (clamps + cowl) use M2 inserts (OD3.2 -> 1.4mm wall in a 6mm
+// post). M2 is plenty for a bear-only clamp + a fall-shield. (fastener audit)
+M2_HD = 3.0; M2_HL = 4.0;          // Ruthex M2 insert bore + length
 
 IN_X1 = CX1 + LIP;                 // front inner lip face 48.7
 IN_Y  = CYH + LIP;                 // side inner lip face  47.35
@@ -98,16 +102,17 @@ module upright(front, sy) {
     difference() {
         translate([pxc - POST_W / 2, pyc - POST_W / 2, DECK])
             cube([POST_W, POST_W, POST_TOP - DECK]);
-        // clamp heat-set — pressed from the TOP (M3 down through the clamp)
-        translate([pxc, pyc, POST_TOP - HEATSET_L])
-            cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
-        // deck tie heat-set — pressed from BELOW (M3 up from under the deck)
+        // clamp heat-set — M2, pressed from the TOP (M2 down through the clamp)
+        translate([pxc, pyc, POST_TOP - M2_HL])
+            cylinder(d = M2_HD, h = M2_HL + EPS);
+        // deck tie heat-set — M2, pressed from BELOW the deck (the 6mm post
+        // can't wall an M3; the cradle+case are light -> M2 has huge margin)
         translate([pxc, pyc, DECK - EPS])
-            cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
-        // -Y cowl heat-set — pressed from the -y FACE (jetson_cowl bolts here)
+            cylinder(d = M2_HD, h = M2_HL + EPS);
+        // -Y cowl heat-set — M2, pressed from the -y FACE (jetson_cowl bolts here)
         if (sy < 0)
             translate([pxc, pyc - POST_W / 2 - EPS, COWL_BOLT_Z]) rotate([-90, 0, 0])
-                cylinder(d = HEATSET_D, h = 4.5 + EPS);
+                cylinder(d = M2_HD, h = M2_HL + EPS);
     }
 }
 

@@ -184,19 +184,20 @@ module riser_bay() {
             // OUTWARD into the clear central pocket (to POD_BOSS_X). Holds the 4
             // pod heat-sets. y±13 (clears the rear shoulders at y15); z57..69
             // (above the trunk lip z58, spans both bolt rows).
-            translate([POD_BOSS_X, -13, 58])
-                cube([6.0, 26, 11]);   // x-66.5..-60.5, z58..69 (z58 clears the rear
+            translate([POD_BOSS_X, -14, 58])
+                cube([6.0, 28, 11]);   // x-66.5..-60.5, y±14, z58..69 (z58 clears the rear
                                        // shoulder top z57.5 at the centre — gate catch)
         }
         // deck through-features
         // (head L2-column deck bores + the L2 cable drop RETIRED 2026-07-07 —
         //  the L2 pigtail now drops the neck cable slot -> shoulder C-box.)
         rounded_slot(CASE_SLOT[0], CASE_SLOT[1], CASE_SLOT[2], CASE_SLOT[3], 4);
-        // case-cradle deck ties (M3 clearance, up from below into the cradle
-        // post-base heat-sets — the head hangs below the deck in open space)
+        // case-cradle deck ties (M2 clearance, up from below into the cradle
+        // post-base M2 heat-sets — the 6mm cradle posts can't wall an M3 insert;
+        // M2 has huge margin for the light cradle. fastener audit 2026-07-08)
         for (t = CRADLE_TIE)
             translate([t[0], t[1], DECK_BOT - EPS])
-                cylinder(d = M3_CLEAR, h = DECK_T + 2 * EPS);
+                cylinder(d = 2.3, h = DECK_T + 2 * EPS);
         // (SMA bulkheads RETIRED 2026-07-07 — WiFi antennas consolidated to
         //  the HEAD EARS: higher/clearer of the CF chassis = better range, one
         //  home instead of two. See head.scad STYLE SMA bores.)
@@ -221,7 +222,7 @@ module riser_bay() {
         // (y0, z63) through the pad into the bay (E-stop NC + OLED SPI drop).
         for (b = POD_MOUNT)
             translate([POD_BOSS_X - EPS, b[0], b[1]]) rotate([0, 90, 0])
-                cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
+                cylinder(d = 3.0, h = 4.0 + EPS);   // M2 insert (pinched pad; M3 can't wall)
         translate([POD_BOSS_X - EPS, 0, 63.5]) rotate([0, 90, 0])
             cylinder(d = 10, h = (-OUT_X + WALL) - POD_BOSS_X + 5);   // Ø10 at z63.5
                                                  // (0.5 off the pad z58/69 edges — no tangent)

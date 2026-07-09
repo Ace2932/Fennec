@@ -59,7 +59,7 @@ WALL_X0 = 113; WALL_X1 = 121;     // 8mm face (front x121): holds M3 heat-sets
 WALL_Y  = 16;                      // half-span
 WALL_Z0 = 79.55; WALL_Z1 = 106;   // rises from the deck to under the L2 body
 HM_Z    = [89, 100];               // bolt rows (tall couple vs the fwd moment)
-HM_Y    = 11;                      // bolt half-span
+HM_Y    = 10;                      // bolt half-span (centered bore<->edge for insert wall; matches head)
 
 module gusset(x_apex, z_apex, x_base0, x_base1, y0, y1) {
     // wedge in the x-z plane, extruded across y

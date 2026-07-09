@@ -35,10 +35,14 @@ module l2_adapter() {
             translate([CTR + sx * L2_BCD, sy * L2_BCD, Z0 - EPS])
                 cylinder(d1 = 6.2, d2 = M3_CLEAR, h = 2.2);      // countersink
         }
-        // 2x REAR crown-mount heat-sets (from the plate BOTTOM z128, +z 4mm) —
-        // the bolt comes UP from below the crown rear lip into these.
+        // 2x REAR crown-mount heat-sets (from the plate BOTTOM z128, +z 4mm).
+        // The bolt comes UP from below the crown into these. SHORT M3 insert
+        // (Ruthex M3x3.8, bore 4.0) — the plate is only 5mm + the L2 sits on top
+        // (can't boss upward), so a full 5.7 insert won't fit. At (114,±9): clears
+        // the L2 CSK at (108.5,±18) by 10.5mm (was 110,±14 = 4.3, too close).
+        // fastener audit 2026-07-08.
         for (sy = [-1, 1])
-            translate([110, sy * 14, Z0 - EPS]) cylinder(d = 4.0, h = 4.2);
+            translate([114, sy * 9, Z0 - EPS]) cylinder(d = 4.0, h = 4.2);
     }
 }
 

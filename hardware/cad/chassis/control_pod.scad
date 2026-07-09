@@ -69,7 +69,7 @@ module control_pod() {
         // ---- mount bolt clearances (axis x, through the column into the bosses)
         for (b = MOUNT)
             translate([COL_X0 - EPS, b[0], b[1]]) rotate([0, 90, 0])
-                cylinder(d = M3_CLEAR, h = BOSS_X - COL_X0 + 2*EPS);
+                cylinder(d = M2_CLEAR, h = BOSS_X - COL_X0 + 2*EPS);  // M2 (pinched pad)
         // ---- E-stop panel hole ----
         translate([ES[0], ES[1], DECK_Z - EPS]) cylinder(d = ES_HOLE, h = DECK_T + 2*EPS);
         // ---- OLED window + 4x M2 (on the vertical +y panel, x-face) ----

@@ -20,7 +20,7 @@
 //   -y edge (y-55) — mid-body, verified clear of the legs.
 // PRINT: PA6-CF (impact part), OUTER-WALL-DOWN or end-down; ~8g. print 1.
 
-$fn = 48; EPS = 0.05; M3_CLEAR = 3.4;
+$fn = 48; EPS = 0.05; M2_CLEAR = 2.3;   // bolts to the -y uprights with M2 (fastener audit)
 
 // ---- shared with jetson_case_mount (KEEP IN SYNC) ----
 FRONT_PXC = 47.3; REAR_PXC = -59.0;   // -y upright x centres
@@ -48,10 +48,16 @@ module jetson_cowl() {
             translate([REAR_PXC, COWL_YI, DECK])
                 cube([FRONT_PXC - REAR_PXC, -55 - COWL_YI, 2]);
         }
-        // 2x M3 clearance (axis y) through the end walls -> the upright heat-sets
-        for (px = [REAR_PXC, FRONT_PXC])
+        // 2x M2 bolt into the upright -y-face inserts. The end wall is ~20mm
+        // thick, so COUNTERBORE from the outer face (Ø5.5) to leave a short
+        // M2x10 bolt (head recessed, reached with a long 1.5mm hex key) — not a
+        // silly M2x25. Clearance for the last stretch into the upright.
+        for (px = [REAR_PXC, FRONT_PXC]) {
             translate([px, COWL_YO - EPS, COWL_BOLT_Z]) rotate([-90, 0, 0])
-                cylinder(d = M3_CLEAR, h = UP_FACE - COWL_YO + 2 * EPS);
+                cylinder(d = 5.5, h = (UP_FACE - COWL_YO) - 6);      // head counterbore
+            translate([px, COWL_YO - EPS, COWL_BOLT_Z]) rotate([-90, 0, 0])
+                cylinder(d = M2_CLEAR, h = UP_FACE - COWL_YO + 2 * EPS);  // M2 shank
+        }
     }
 }
 

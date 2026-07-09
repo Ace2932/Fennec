@@ -69,10 +69,12 @@ CAM_M     = [143, 0, 111.5];      // D456 back-face center (mount reference)
 
 // ---- mount boss -> bracket wall ---------------------------------------------
 MB_X0 = 121; MB_X1 = 133;         // rear face x121 mates bracket front x121
-MB_Y  = 14;                        // half-span
+MB_Y  = 14;                        // half-span (can't grow — the bracket side
+                                   // webs sit at y16..20; instead the head-mount
+                                   // bolts moved inboard, HM_Y 11->8, for wall)
 MB_Z0 = 84; MB_Z1 = 106;
 HM_Z  = [89, 100];                 // bolt rows (MUST match neck_bracket HM_Z)
-HM_Y  = 11;
+HM_Y  = 10;                        // bolt half-span: centered between the cable bore (y5.5) and the boss edge (y14) -> ~1.7-2.2mm insert wall both sides (fastener audit)
 
 // ---- column + crown (L2) ----------------------------------------------------
 COL_X0 = 121; COL_X1 = 138;       // rear FLUSH with the boss/bracket-wall face
@@ -156,9 +158,12 @@ module head() {
                 // 2x M3 heat-sets per side; the ear foot bolts down onto it.
                 // Top z130 stays BELOW the L2 body bottom (only where x<89 does
                 // the pad go this high; the x89..112 part is capped at 127.5).
-                translate([74, -CROWN_HALF_Y, CROWN_Z0])
-                    cube([13, 2 * CROWN_HALF_Y, 7]);         // x74..87 pad z124..131
-                                                              //  (2mm clear of L2 x89)
+                translate([71, -CROWN_HALF_Y, CROWN_Z0])
+                    cube([16, 2 * CROWN_HALF_Y, 7]);         // x71..87 pad z124..131
+                                                              //  (2mm clear of L2 x89; rear
+                                                              //  extended 74->71 so the x77
+                                                              //  ear heat-set clears the edge
+                                                              //  — fastener audit 2026-07-08)
                 translate([84, -CROWN_HALF_Y, CROWN_Z0])
                     cube([28, 2 * CROWN_HALF_Y, 3.5]);       // x84..112 thin (overlaps
                                                               //  the tall pad -> one body)
@@ -197,8 +202,10 @@ module head() {
         //     crown rear lip up into the adapter heat-sets; the adapter's front
         //     tongue slides under the crown front lip (added in the union). ---
         for (sy = [-1, 1])
-            translate([110, sy * 14, CROWN_Z0 - EPS])
-                cylinder(d = M3_CLEAR, h = CROWN_T + 2 * EPS);
+            translate([114, sy * 9, CROWN_Z0 - EPS])         // (was 110,±14 — moved to
+                cylinder(d = M3_CLEAR, h = CROWN_T + 2 * EPS);  // 114,±9 so the adapter insert
+                                                             // clears the L2 CSK at 108.5,±18
+                                                             // — fastener audit 2026-07-08)
         // --- D456 2x centerline M3 (+-3 z-slot), through the tilted plate ---
         translate(CAM_M) rotate([0, TILT, 0])
             for (sy = [-1, 1]) hull() for (dz = [-MOUNT_SLOT, MOUNT_SLOT])
