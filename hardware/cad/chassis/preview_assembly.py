@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """Build chassis_assembly_preview.stl — everything designed so far in one
 mesh for CAD Viewer review: trunk + riser + shoulders + battery pocket +
-L2 mast + 4 legs (stance pose, inside chassis-safe ROM) + ENVELOPE boxes
-(mezzanine stack, Jetson+heatsink, L2 body, belly pack). Boxes are
-envelopes, not parts — the stack box visibly pokes the trunk corner slabs
-(the known trim finding). Run after any part change:
+L2 mast + 4 legs (stance pose, inside chassis-safe ROM) + the REAL power
+board (power_board_model.power_board_mesh(), replacing the old flat
+mezzanine-stack placeholder box) + ENVELOPE boxes for the rest (logic
+board + Teensy above the power board, Jetson+heatsink, L2 body, belly
+pack). Remaining boxes are still envelopes, not parts. The power board's
+real rear components (J1) still poke the trunk's rear corner slab on one
+side (the known trim finding, now board-accurate — see check_fit.py case
+11). Run after any part change:
   ../../../.venv/bin/python preview_assembly.py
 """
 import numpy as np
 import trimesh
+
+from power_board_model import power_board_mesh, LOGIC_BOARD_Z0, LOGIC_BOARD_Z1, STACK_TOP_Z
 
 T = trimesh.transformations.translation_matrix
 NOVA = '/Users/afox/codebases/NOVA'
@@ -150,7 +156,26 @@ def main():
     l2 = trimesh.load('l2_ref.stl')
     l2.apply_transform(T([126.5, 0, 133]) @ rot(-22, [0, 0, 1])
                        @ T([-7.7, -14.66, 6.7]))
-    parts += [box(-59.5, 52.5, -45, 45, 6.0, 64.0),    # stack on plate, ctr -3.5
+    # REAL power board (power_board_model.py): slab + every populated
+    # footprint (kicad_pcb-parsed) + the 5 off-board buck cards, TRUNK frame,
+    # standoff off the floor now STANDOFF_FLOOR_MM=22 (power_board_model.py)
+    # -- chassis-side fix, board/components unchanged (ordered/locked BOM).
+    # See check_fit.py case 11 for the riser/floor/rear-slab/logic-board-
+    # underside clearance assertions run against this mesh.
+    pb_mesh, pb_components, _ = power_board_mesh()
+    # LOGIC BOARD + TEENSY envelope: still a box, not modeled per-component
+    # this phase, but now correctly COMPONENT-SIDE UP -- the Teensy 4.1 +
+    # USB face UP toward the removable riser deck (resolves the earlier
+    # "lid-off service" concern; corrects the prior side-down/ambiguous
+    # modeling and the matching README.md error). Sits on the pb->lb
+    # standoff directly above the power board's TOP FACE -- NOT pinned to
+    # Q1's height; Q1 clearing the logic-board underside is instead an
+    # explicit assertion in check_fit.py case 11 (~2mm margin at the
+    # current heights). Planes centralized in power_board_model.py so this
+    # file and check_fit.py can't drift apart.
+    parts += [pb_mesh,                                 # real power board, ctr -3.5
+              box(-59.5, 52.5, -45, 45, LOGIC_BOARD_Z0, LOGIC_BOARD_Z1),  # logic board PCB
+              box(-59.5, 52.5, -45, 45, LOGIC_BOARD_Z1, STACK_TOP_Z),     # Teensy+USB, face UP
               l2, trimesh.load('l2_adapter.stl'),        # real L2 + its adapter
               box(-77.5, 77.5, -23.4, 23.4, -35.9, -0.9),  # pack 46.8 caliper
               cam]                                       # real D456 (down-tilted)

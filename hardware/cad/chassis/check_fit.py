@@ -22,12 +22,32 @@ point inside the designed part = the part cuts its counterpart. Cases:
      trunk/riser/mast/case/shoulders + the crouch sweep
  10. Official Jetson case AABB + jetson_case_mount cradle vs trunk / riser
      (deck seat excluded) / mast / D456 / shoulders / L2 / each other
+ 11. REAL power board (power_board_model.power_board_mesh(), kicad_pcb-parsed
+     per-component geometry, replaces the old flat stack-envelope box for the
+     bottom/power layer), floor->power standoff = STANDOFF_FLOOR_MM (20mm,
+     the M3x20 standoffs on hand; corrected 2026-07-09 from a stale 16mm
+     spec — CHASSIS-side only, the board + every component are already
+     ordered/fixed). Asserts: (a) the 5 bottom-side 1000uF caps (C1-C5,
+     Ø10x17mm cans) clear the floor plate top AND the stock trunk's own
+     floor slab underneath it — hard fail, no known exception (at 16mm the
+     17mm cans sat 1mm proud; at 20mm they bottom at z9, 3mm clear);
+     (b) EVERY top-side part clears the riser deck underside
+     (z67.9), Q1 (TO-220) the tallest; (c) Q1 specifically clears the LOGIC
+     BOARD underside (pb top + the unchanged 20mm pb->lb standoff) — the
+     logic-board plane is no longer pinned to Q1's height by construction,
+     so this is now an explicit assert (~2mm margin); (d) trunk rear corner
+     SLABS/posts (z24.5..47.2) — same known-zone logic as case 2, but
+     board-accurate: only J1 (XT60 battery-in connector) actually reaches
+     into the zone.
 
 Exit 0 = clean, 1 = interference. Run via build_all.sh after every change.
 """
 import sys
 import numpy as np
 import trimesh
+
+from power_board_model import (power_board_mesh, FLOOR_TOP_Z,
+                                STANDOFF_FLOOR_MM, LOGIC_BOARD_Z0, STACK_TOP_Z)
 
 NOVA = '/Users/afox/codebases/NOVA'
 TRUNK = f'{NOVA}/original_body_files/SM3_Frame_ChassisTrunk.stl'
@@ -51,6 +71,19 @@ HIP_FA, HIP_LAT, HIP_Z = 141.2, 39.05, 38.05
 # ever supported the stock covers. Front slabs stay untouched; any front
 # hit fails the gate. SIGNED x range.
 EXPECTED_STACK_ZONE = dict(x=(-60.0, -52.9), y=(28.5, 48.5), z=(24.5, 47.2))
+
+# ---- REAL power board vs floor (case 11) -----------------------------------
+# HISTORY: an early modeling pass assumed generic 20mm caps on a 16mm
+# standoff, which put C1-C5 over SOLID floor_plate material AND into the
+# stock trunk floor -- a known, non-failing exception was carved out. Both
+# inputs were wrong: the ordered caps are Ø10x17mm cans (memory arm-phase4
+# order note) and the standoffs on hand are M3x20, not 16mm. 2026-07-09:
+# corrected STANDOFF_FLOOR_MM to 20mm (power_board_model.py) and cap height
+# to 17mm -- caps now bottom at z9, 3mm clear of the floor plate top
+# (FLOOR_TOP_Z=6). The carve-out is REMOVED: case 11 asserts hard clearance
+# with no known-exception zones, so a regression (e.g. a caliper-measured
+# part taller than assumed pushing past the S<=24.7 fit-window ceiling)
+# fails the gate instead of silently passing.
 
 
 def sample(m, n_surf=12000, n_vol=4000, seed=0):
@@ -500,6 +533,81 @@ def main():
         near = p[np.abs(p[:, 0]) < 66]
         hits = near[cradle.contains(near)] if len(near) else near
         bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs cradle', hits)
+
+    # ---- 11. REAL power board (power_board_model), STANDOFF_FLOOR_MM=22 ----------
+    pb_mesh, pb_components, _ = power_board_mesh()
+    pb_tops = [c for c in pb_components if c['top_side']]
+    pb_bots = [c for c in pb_components if not c['top_side']]
+    pbp = sample(pb_mesh, 10000, 3000, seed=1)
+
+    # (a) caps clear floor: EVERY bottom-side component (the 20mm C1-C5
+    # 1000uF caps are the tallest/lowest) must bottom at or above the floor
+    # plate top now that the standoff is 22mm. Hard assert, no known
+    # exception -- the 16mm-standoff collision this used to carve out is
+    # fixed on the chassis side (see the case-11 HISTORY note above
+    # EXPECTED_STACK_ZONE). Backed by two geometric mesh checks: our own
+    # floor_plate.stl, and the stock trunk's own floor slab underneath it.
+    pb_bot_z = min(c['z0'] for c in pb_bots)
+    pb_bot_ref = min(pb_bots, key=lambda c: c['z0'])['ref']
+    ok = pb_bot_z >= FLOOR_TOP_Z
+    print(('OK    ' if ok else 'FAIL  ') + f'power board bottom ({pb_bot_ref} '
+          f'z={pb_bot_z:.2f}) clears floor top ({FLOOR_TOP_Z}), '
+          f'margin={pb_bot_z - FLOOR_TOP_Z:.2f}mm '
+          f'[standoff={STANDOFF_FLOOR_MM}mm]')
+    bad |= not ok
+
+    hits = pbp[plate.contains(pbp)]
+    bad |= report('power board vs floor plate', hits)
+
+    pb_floor = pbp[pbp[:, 2] < 10.0]     # z0..3.9 stock-floor band only
+    hits = pb_floor[trunk.contains(pb_floor)] if len(pb_floor) else pb_floor
+    bad |= report('power board vs stock trunk floor (z0..3.9)', hits)
+
+    # (b) stack top / riser deck clearance. Two parts: the power board's own
+    # top-side components (Q1, the TO-220 IRLB3034, is tallest -- huge
+    # margin) AND the FULL stack top (STACK_TOP_Z, power_board_model.py --
+    # power board + pb->lb standoff + logic board + Teensy/USB envelope,
+    # component-side up), which is the tight one (~2.7mm at current
+    # heights, all downstream of the still-ESTIMATED Teensy stack height).
+    pb_top_z = max(c['z1'] for c in pb_tops)
+    pb_top_ref = max(pb_tops, key=lambda c: c['z1'])['ref']
+    ok = pb_top_z <= DECK_BOT
+    print(('OK    ' if ok else 'FAIL  ') + f'power board top ({pb_top_ref} '
+          f'z={pb_top_z:.2f}) clears riser deck underside ({DECK_BOT}), '
+          f'margin={DECK_BOT - pb_top_z:.2f}mm')
+    bad |= not ok
+
+    ok = STACK_TOP_Z <= DECK_BOT
+    print(('OK    ' if ok else 'FAIL  ') + f'full stack top (Teensy/USB envelope '
+          f'z={STACK_TOP_Z:.2f}) clears riser deck underside ({DECK_BOT}), '
+          f'margin={DECK_BOT - STACK_TOP_Z:.2f}mm')
+    bad |= not ok
+
+    # (c) Q1 (TO-220, top ≈ board_top + 18) clears the logic board
+    # underside (LOGIC_BOARD_Z0, power_board_model.py). The logic board
+    # sits on the pb->lb standoff directly above the power board's TOP
+    # FACE -- NOT pinned to Q1's height (preview_assembly.py) -- so this
+    # must be checked explicitly rather than assumed by construction.
+    q1 = next(c for c in pb_tops if c['ref'] == 'Q1')
+    ok = q1['z1'] <= LOGIC_BOARD_Z0
+    print(('OK    ' if ok else 'FAIL  ') + f"Q1 top (z={q1['z1']:.2f}) clears logic "
+          f'board underside ({LOGIC_BOARD_Z0:.2f}), '
+          f'margin={LOGIC_BOARD_Z0 - q1["z1"]:.2f}mm')
+    bad |= not ok
+
+    # (d) trunk rear corner slabs (POSTS, z24.5..47.2 -- distinct from the
+    # z0..3.9 stock floor above): same known-zone logic as case 2, but run
+    # against the REAL board (only J1, the XT60 battery-in connector, is
+    # close enough to the rear edge + tall enough to reach the zone).
+    pb_near = pbp[(pbp[:, 0] < -45) & (np.abs(pbp[:, 1]) > 20) & (pbp[:, 2] > 20)]
+    hits = pb_near[trunk.contains(pb_near)] if len(pb_near) else pb_near
+    known = in_zone(hits, EXPECTED_STACK_ZONE) if len(hits) else np.array([], bool)
+    if len(hits) and known.all():
+        print(f'HIT   power board vs trunk REAR corner slab: {len(hits)} pts — '
+              f'KNOWN (J1 XT60 connector; same x<=-60.5 trim as case 2)')
+    else:
+        bad |= report('power board vs trunk REAR corner slab OUTSIDE the known zone',
+                      hits[~known] if len(hits) else hits)
 
     # ---- 5. static fixture asserts ----------------------------------------------
     case_top = 110.1     # official case top (deck 71.9 + 38.2 calipered)

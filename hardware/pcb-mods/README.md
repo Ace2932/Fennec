@@ -99,9 +99,9 @@ Other safety:
 
 ## Mezzanine stack — cross-board coordinate contract
 
-The 2-board stack is **face-to-face vertical**, NOT an edge-mate. Logic board on TOP (component side DOWN), power board on BOTTOM (component side UP), joined by inter-board connector **J20** (2×6 IDC + ribbon) and **4 corner M3 standoffs** (20 mm). Stack ≈41 mm tall, fits the ~46.9 mm chassis trunk depth. All user I/O (both USB, OLED cable, LED cable, FE-URT bus) exits the **front (low-Y) edge**.
+The 2-board stack is **face-to-face vertical**, NOT an edge-mate. Logic board on TOP (component side UP — Teensy 4.1 + USB face the removable riser deck, so the deck lifts off for service without unstacking the boards), power board on BOTTOM (component side UP), joined by inter-board connector **J20** (2×6 IDC + ribbon) and **4 corner M3 standoffs** (20 mm). Stack ≈41 mm tall, fits the ~46.9 mm chassis trunk depth. All user I/O (both USB, OLED cable, LED cable, FE-URT bus) exits the **front (low-Y) edge**.
 
-**Both boards share ONE absolute KiCad coordinate frame.** Holes + J20 only mate if their XY match across boards. Logic board is mounted component-side-down by **flipping about the vertical centerline x=140** — so everything in the contract is symmetric about x=140 and survives that flip.
+**Both boards share ONE absolute KiCad coordinate frame.** Holes + J20 only mate if their XY match across boards. Logic board is mounted component-side-up by **flipping about the vertical centerline x=140** — so everything in the contract is symmetric about x=140 and survives that flip.
 
 ### Locked values (logic board `nova_pcb_v6_logic`, floorplan DONE)
 

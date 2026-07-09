@@ -10,13 +10,32 @@
 //      floor, into the pocket's nut-trap columns at (x +/-40/0, y +/-26.5).
 //      The plate spreads the 510g pack's load across the floor slab.
 //   2. MEZZANINE SEAT: 4x O2.5 pilots at (-41/+33, +/-33) — the power_v2
-//      board's MEASURED mount pattern (74 x 66, from the fab .kicad_pcb),
-//      stack center at x = -4: shifted 4 rearward so the FRONT stack
-//      corners clear the trunk's corner slabs entirely (front trim no
-//      longer needed; rear slabs still get trimmed to x <= -60.5) and the
-//      CoM pulls 4 of the wanted 8 rearward. M3x10 SELF-TAP through the
+//      board's MEASURED mount pattern (74 x 66, from the fab .kicad_pcb;
+//      hole XY unchanged by the standoff-height fix below — do not touch).
+//      stack center at x = -3.5 (STACK_CTR below): shifted 3.5 rearward so
+//      the FRONT stack corners clear the trunk's corner slabs entirely
+//      (front trim no longer needed; rear slabs still get trimmed to
+//      x <= -60.5) and the CoM pulls ~3.5 of the wanted 8 rearward. (An
+//      earlier draft of this note said -4; -3.5 is the built value.)
+//      M3x10 SELF-TAP through the
 //      board standoff bases into plate+floor (5.9 of bite; the belly pack
 //      sits under the floor center, so under-floor nuts are impossible).
+//      STANDOFF LENGTH (floor top z5.9 -> power board bottom): 20mm, the
+//      M3x20 brass standoffs already ON HAND (order note, memory
+//      project-power-board-arm-phase4 2026-06-14). Corrected 2026-07-09
+//      from a stale ~16mm spec: the ordered 1000uF caps (C1-C5) are the
+//      Ø10x17mm cans, so 16mm left them 1mm proud of the floor (the order
+//      note flagged "1mm over the 16mm spec"). At 20mm the caps bottom at
+//      z9 -> 3.0mm clear of the floor plate/stock trunk floor. The board +
+//      caps are ALREADY ORDERED/FIXED, so the chassis standoff is the free
+//      dimension. Fit window S in [~18, 24.7mm]: floor min ~18 clears the
+//      17mm cans, ceiling 24.7 is the riser-deck headroom for the FULL
+//      stack (power board + pb->lb standoff + logic board + Teensy/USB,
+//      component-side up). 20mm gives 3.0mm floor / 4.7mm deck margins —
+//      see power_board_model.py (STANDOFF_FLOOR_MM) + check_fit.py case 11
+//      for live numbers. Remaining gate: the Teensy/USB stack height
+//      (~14mm est, tightest at 4.7mm to deck) — caliper-confirm. Cap
+//      height is now known (17mm), no longer the binding unknown.
 //   3. DRILL TEMPLATE: clamp the plate, drill O3.4 (battery) + O2.5
 //      (stack) through the stock floor using these holes as guides.
 //
