@@ -82,6 +82,10 @@ WALL_TOP, PLATEAU_Z = 29.0, 46.91
 DECK_BOT, DECK_TOP = 67.9, 71.9
 FLOOR_TOP = 3.9
 PLATE_T = 2.0            # part-5 floor plate: mezzanine seat plane 5.9
+# battery_pocket.scad: RIM_Z=-0.2, CAV_Z0 = RIM_Z-(PACK[2]+CLR) = -0.2-(35+0.6)
+# = -35.8 -- the tray floor top the pack physically RESTS ON (designed seat,
+# not a collision). AUD-1 gate case 6 pack-vs-pocket check.
+TRAY_FLOOR_Z = -35.8
 # stack (112 x 90 x 58 measured) CENTERED AT x = -3.5 on the plate: front
 # corners clear the front slabs (0.8), rear board edge 0.5 off the trunk's
 # corner posts, CoM pulls 3.5 rearward. 0.1 seat gap above the plate.
@@ -586,6 +590,38 @@ def main():
     kp = sample(pack, 6000, 1500)
     hits = kp[trunk.contains(kp)]
     bad |= report('battery pack vs trunk', hits)
+    # AUD-6 (2026-07-10): case 6 previously never checked whether the pack
+    # actually fits its OWN tray -- it only checked pocket-vs-trunk and
+    # pack-vs-trunk, so a boss straddling the cavity wall (AUD-1: BOSS_Y=26.5
+    # puts the mount bosses' inner edge at 22.25, 1.15mm inside the 23.4
+    # pack half-width) went ungated. Sample the PACK box and assert 0 points
+    # land inside the battery_pocket SOLID (walls/bosses/floor) -- this is
+    # the direct "does the battery fit its own pocket" proof. Exclude the
+    # designed pack-rests-on-tray-floor seat (pack z0=-35.9 vs the tray
+    # floor's own top TRAY_FLOOR_Z=-35.8 -- a 0.1mm designed bearing
+    # contact, not a collision) before checking: without the exclusion this
+    # case reports ~1580 pts (nearly all sampling noise at that shared
+    # plane); with it, 259 real pts remain, all clustered at the boss x/y
+    # (bx +/-40/0, sy*BOSS_Y +/-2), i.e. genuinely the AUD-1 boss intrusion,
+    # not floor-seat noise (verified by inspecting the hit cloud directly).
+    # AUD-1 ITSELF IS STILL OPEN as of this gate case landing: a same-shaped
+    # fix (push BOSS_Y out so the boss inner edge clears CAV_Y+WALL=27.2, as
+    # the backlog originally proposed) was tried and reverted -- widening
+    # the boss outer edge that far reaches into the documented chassis-safe
+    # crouch ROM (inboard haa<=15 sw, hfe fold<=50 sw) and creates a NEW
+    # leg-vs-pocket collision (verified: BOSS_Y=30.0, the smallest value
+    # that clears the pack with reasonable margin, hits at inboard haa=15
+    # + hfe fold 45-50 across every kfe, all four hips -- shrinking the
+    # boss OD to buy outer-edge headroom isn't safely available either, the
+    # M3 nut-trap already leaves only ~1.4mm of wall on each side at the
+    # current d=8.5). Real fix needs a design call (ROM cap trim -- haa
+    # <=12 sw clears it per a quick sweep -- OR a different mount scheme),
+    # see docs/improvement-backlog.md AUD-1. Until then this case is
+    # EXPECTED to fail -- that failure is now honest instead of silent.
+    kp_f = kp[np.abs(kp[:, 2] - TRAY_FLOOR_Z) >= 0.3]
+    hits = kp_f[pocket.contains(kp_f)]
+    bad |= report('battery pack vs pocket (pack must fit its own tray, '
+                  'floor seat excluded) -- AUD-1 OPEN, see backlog', hits)
     sh_pts = trimesh.sample.sample_surface(
         trimesh.load(f'{LEG}/shoulder.stl'), 8000, seed=0)[0]
     for end in (1, -1):
