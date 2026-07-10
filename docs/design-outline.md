@@ -10,9 +10,9 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
 
 ```
         FRONT                                        REAR
-      ┌─ D456 head ─┐┌────── riser-bay top ─────────┐
-      │ (flared,    ││  L2 mast          Jetson     │   ← +25mm printed riser
-      │  124 wide)  ││  75×75×65      100×79 fan-up │     (replaces stock lid)
+      ┌─D456+L2 head┐┌──────── riser-bay top ───────┐
+      │ L2 on crown ││            Jetson            │   ← +25mm printed riser
+      │ (flared 124)││        100×79 fan-up         │     (replaces stock lid)
    ┌──┴─────────────┴┴───────────────────────────────┴──┐
    │ shoulder │  STOCK TRUNK BOTTOM 127×110             │ shoulder │
    │ v6 (new) │  mezzanine stack 112×90×58, Teensy up   │ v6 (new) │
@@ -42,12 +42,14 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
 - **Power**: belly battery (lowest CoM, swap without tools) → MRBF-30 at the
   pack → SW1 → boards. Dual-voltage servo harness per
   `hardware/wiring/README.md` (VCC-pulled daisy links + local XT30 spurs).
-- **Perception**: L2 on a center-front mast (~100 above trunk top, sees over
-  the Jetson case + legs), Ethernet down the mast; D456 in a flared front
-  head shell, USB3 side channel to the rear riser.
+- **Perception**: L2 on the head crown via `l2_adapter` (front-top, sees over
+  the Jetson case + legs), Ethernet routes down through the head/neck; D456
+  in the same flared front head shell (tilted face), USB3 side channel to
+  the rear riser.
 - **Compute**: Jetson official case on the riser top, rear, cradle-mounted
-  (hood retired — see #33/#34), fan up; SMA bulkheads on the tray; barrel
-  V12_JET + RJ45 + USB rise through the rear grommet.
+  (hood retired — see #33/#34), fan up; SMA WiFi bulkheads on the head EARS
+  (tray retired — #32); barrel V12_JET + RJ45 + USB rise through the rear
+  grommet.
 - **CoM**: battery centered under the hip grid; Jetson-rear balances
   L2+head-front; ~4.15kg total.
 
@@ -72,7 +74,7 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
 | Legs (leg_v6) | ✅ designed + gated | **v6 shoulder** (haa yoke ↔ trunk, sweeps haa×hfe, keeps coax bay reachable) |
 | Firmware safety | ✅ torque limits, limp, LVC | boot-settle PR #17 · stand-up choreography |
 | Chassis | ✅ riser bay designed + gated (`hardware/cad/chassis/`) | hand-trim of 4 trunk slab ends when boards arrive |
-| Chassis | ✅ belly battery pocket + L2 mast designed + gated | battery leads route through the shoulder-flange bottom notch; assembly: BARE mast to deck first (M3×10!), L2 from below second |
+| Chassis | ✅ belly battery pocket + L2 crown mount designed + gated | battery leads route through the shoulder-flange bottom notch; assembly: the L2 mounts on the head crown via `l2_adapter` (bench: L2→adapter M3×10 CSK, then adapter→crown M3×8 SHCS); head+L2 ride the neck on the 4 nylon M3 breakaway (#42) |
 | Chassis | ✅ D456 head designed + gated (**PERISCOPE**, rear-pattern screw-in — user call) | camera z 80.5..109.5 above the shoulder deck extension: the ONLY leg-safe home for the 124-wide body (under-chin dies on the folded front femur; riser-wall dies on the shoulder webs). ⚠ rear 4×M3 pattern unverified — caliper before printing |
 | Chassis | ✅ floor plate designed + gated | mezzanine seat + battery sandwich + drill template; stack ctr x −3.5 (power_v2 fab-file holes); rear-only slab trim; 5191 slots ⚠ caliper |
 | Chassis | ✅ E-stop + OLED re-homed (`control_pod.scad`, rear-top, bolts to the riser rear wall — hood retired) | wire the E-stop NC pair + OLED SPI down the pod grommet at assembly |
@@ -108,9 +110,12 @@ riser is never structural, so it lifts off with the robot standing.
 STOCK bottom shell (kept; reprint in PA6-CF later if the stock print proves soft) → shoulders ×2 (same part) → riser bay (seats on the wall-top rails
 z 29 + corner plateau tabs; **4× M3×12 horizontal through the shoulder
 flanges into riser heat-sets** — the imagined "shell bosses" don't exist,
-mesh-measured 2026-07-06, `hardware/cad/chassis/README.md`) → Jetson tray
-hood + L2 mast + D456 head shell (each 2-4× M3 onto reserved riser bosses;
-head shell ceiling trunk z 72.8 — the shoulder deck extension is above).
+mesh-measured 2026-07-06, `hardware/cad/chassis/README.md`) → the Jetson
+rides the case cradle on the riser top; the single head unit (D456 face + L2
+crown + ears) bolts to the neck_bracket via 4 nylon M3 breakaway (#42) —
+head shell ceiling trunk z 72.8 — the shoulder deck extension is above.
+(Jetson tray hood + standalone L2 mast RETIRED 2026-07-07, folded into
+head.scad + the case cradle.)
 
 ## P1S print plan (bed 256×256×256 — everything fits flat)
 | Plate | Parts | Note |
@@ -126,9 +131,9 @@ PA6-CF dried + annealed, 0.2mm, ≥4 walls, ≥40% infill (doctrine).
 | To service | Remove | Screws |
 |---|---|---|
 | Battery swap | strap only | 0 |
-| Teensy USB / JP1 / SD / boards | riser lifts — Jetson/mast/L2/D456 ALL ride along (4 flange screws + unplug 2 cables at the Jetson) | 4 |
+| Teensy USB / JP1 / SD / boards | riser lifts — Jetson/L2/D456 ride along (L2+D456 on the head, Jetson on the cradle) (4 flange screws + unplug 2 cables at the Jetson) | 4 |
 | Jetson | unbolt 2 clamp bars (4× M2 from above) + cowl if fitted (2× M2); case lifts out — tray hood RETIRED | 4-6 |
-| L2 | 4× plate screws under the L2 (mast + Jetson stay) | 4 |
+| L2 | 4× `l2_adapter` screws off the crown (head + Jetson stay) | 4 |
 | One whole leg | shoulder outer plate + unplug at coax bay | 4 |
 | One servo | its leg off → that joint's yoke discs → strap/columns | ~15-20 |
 | Shoulder | its 2 legs off → trunk screws | 4-6 |
