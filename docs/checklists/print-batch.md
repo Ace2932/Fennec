@@ -130,6 +130,10 @@ Every insert site depth-probed in the built STLs:
       the stack's static load, whichever is defined first); inspect for
       stripped threads / cracked pilot wall before trusting the pattern
       across the full mezzanine
+- [ ] **Mezzanine assembly (AUD-4): clock the M3×20 standoff at (−40.5,−33)
+      hex-FLAT toward Q1 (the TO-220).** Across-flats = +0.15mm clearance to
+      Q1; across-corners = −0.27mm overlap. Free win at assembly, but the
+      gate doesn't model the standoff hardware — do it by hand.
 - [ ] Weigh every part → nova.urdf.xacro masses (backlog #5/#13)
 
 ## 5. Wave 2 — batch (after wave 1 passes)
