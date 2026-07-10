@@ -203,6 +203,16 @@ Switch can be pulled from its case to save ~60 % volume inside the chassis.
   (`../cad/chassis/`); add a TPU strain-relief insert (patterns.md §8b
   pattern) into the slot AFTER feeding the RJ45/DC plugs through
 - Servo wire entry at each leg gets a TPU strain relief (same source)
+- **Jetson −Y bundle** (DC barrel + RJ45 + USB-C right-angle adapters,
+  backlog #41): sleeve the 3-cable run in spiral wrap (BOM §9) before
+  dropping it through the riser's −Y `CASE_SLOT`, seat the TPU
+  `case_slot_grommet` (`../cad/chassis/case_slot_grommet.scad`) on the
+  slot's cable-bearing edge, then zip-anchor the bundle to the
+  grommet's strain-relief tab right where it enters the bay — so plug
+  tension at the Jetson ports is relieved by the zip tie + grommet, not
+  carried by the port connectors themselves. **Blocked on a riser_bay.scad
+  fix** (see the grommet file's header FLAG) before the grommet actually
+  seats — verify at assembly, not just on paper.
 - Battery leads: 18 AWG silicone, exit the pack's REAR face behind the
   trunk end, rise through the shoulder-flange bottom notch (y ±10 →
   z 12) to the MRBF block on the floor plate (`../cad/chassis/README.md`)

@@ -307,7 +307,7 @@ def load_leg_parts():
     servo = trimesh.load(SERVO)
     servo.apply_translation([-12.5, 0, 0])
     arm = trimesh.load(f'{LEG}/knee_arm.stl')
-    arm.apply_transform(T([59, 0, 17.2]))
+    arm.apply_transform(T([59, 0, 17.75]))  # rev 3 (2026-07-10): 17.2->17.75
     tib = trimesh.load(f'{LEG}/tibia_R.stl')
     coax_mesh = trimesh.load(f'{LEG}/coax_R.stl')
     cb = coax_mesh.bounds
@@ -860,6 +860,43 @@ def main():
                         pod, noise_mm=NOISE_PART_MM)
     hits = olp[riser.contains(olp)]
     bad |= report_depth('oled mount vs riser', hits, riser, noise_mm=NOISE_PART_MM)
+
+    # -- case_slot_grommet (TPU -Y CASE_SLOT edge liner, #41 follow-up) vs the
+    # REAL neighboring hardware it has to clear: the cradle uprights + -y tie
+    # rail (jetson_case_mount.stl), both clamp bars, and the official case
+    # envelope. These are all real, unaffected meshes -- any hit here is a
+    # genuine design collision, hard-failed like every other case-12 pair.
+    grommet = trimesh.load('case_slot_grommet.stl')
+    grp = sample(grommet, 6000, 1500, seed=9)
+    hits = grp[cradle.contains(grp)]
+    bad |= report_depth('case_slot_grommet vs cradle (jetson_case_mount)',
+                        hits, cradle, noise_mm=NOISE_PART_MM)
+    for side, bar in (('+y', clamp_bar_R), ('-y', clamp_bar_L)):
+        hits = grp[bar.contains(grp)]
+        bad |= report_depth(f'case_slot_grommet vs clamp bar ({side})',
+                            hits, bar, noise_mm=NOISE_PART_MM)
+    hits = grp[case.contains(grp)]
+    bad |= report('case_slot_grommet vs official case envelope', hits)
+
+    # WARN (informational, does not fail the gate): riser_bay.scad's
+    # CASE_SLOT cut (rounded_slot(..., r=4) on a 4.5mm-wide slot) blows out
+    # past its own documented bounds -- see case_slot_grommet.scad's header
+    # FLAG for the full writeup. Quantify it every gate run so it stays
+    # visible until riser_bay.scad gets the r-fix: what fraction of the
+    # grommet's own volume actually lands inside SOLID riser material in
+    # the CURRENT (unfixed) mesh -- low means the liner has nothing to grip.
+    lo, hi = grommet.bounds
+    rng = np.random.default_rng(9)
+    gvol = rng.uniform(lo, hi, (20000, 3))
+    gvol = gvol[grommet.contains(gvol)][:4000]
+    grip_frac = float(riser.contains(gvol).mean()) if len(gvol) else 0.0
+    tag = 'OK  ' if grip_frac > 0.85 else 'WARN'
+    print(f'{tag}  case_slot_grommet grip check: {grip_frac * 100:.0f}% of its own '
+          f'volume sits inside CURRENT riser material (want >85%) -- low means '
+          f'riser_bay.scad\'s CASE_SLOT cut (see FLAG in case_slot_grommet.scad) '
+          f'has eaten the edge this liner is designed to clip onto; NOT '
+          f'counted toward the gate result (riser_bay.scad fix is out of this '
+          f'part\'s scope), but should read >85% once that follow-up lands.')
 
     # ---- 5. static fixture asserts ----------------------------------------------
     case_top = 110.1     # official case top (deck 71.9 + 38.2 calipered)

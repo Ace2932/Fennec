@@ -18,8 +18,9 @@ $OS -o floor_plate.stl floor_plate.scad
 $OS -o jetson_case_mount.stl jetson_case_mount.scad
 $OS -o jetson_clamp_bar.stl jetson_clamp_bar.scad  # case hold-down bar (x2, #44)
 $OS -o oled_mount.stl oled_mount.scad          # OLED bracket (split off pod, #40)
+$OS -o case_slot_grommet.stl case_slot_grommet.scad  # -Y CASE_SLOT TPU edge liner (#41 follow-up)
 $OS -o ../leg_v6/shoulder.stl ../leg_v6/shoulder.scad
-../../../.venv/bin/python ../mesh_health.py head.stl head_ear.stl head_ear_L.stl l2_adapter.stl control_pod.stl jetson_case_mount.stl jetson_clamp_bar.stl oled_mount.stl neck_bracket.stl
+../../../.venv/bin/python ../mesh_health.py head.stl head_ear.stl head_ear_L.stl l2_adapter.stl control_pod.stl jetson_case_mount.stl jetson_clamp_bar.stl oled_mount.stl neck_bracket.stl case_slot_grommet.stl
 ls -la riser_bay.stl spacer.stl battery_pocket.stl head.stl neck_bracket.stl floor_plate.stl jetson_case_mount.stl
 ../../../.venv/bin/python check_fit.py
 echo "chassis gate clean — now re-gate leg_v6 (shoulder rev):"
