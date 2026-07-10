@@ -238,6 +238,7 @@ STS3215 = {
     "body_w":        24.80,   # STEP-verified
     "body_h":        34.30,   # STEP-verified, between top/bottom horn-disc faces
     "bbox_total_z":  39.60,   # body + both horn discs (don't use for pocket — use body_h)
+                              # SUPERSEDED 2026-07-10 — real CALIPERED total is 39.1 (0.5 mm less; fixed in commit 52d387f)
     "horn_face_z":   18.70,   # top horn disc Z position from body center
     "horn_disc_od":  20.0,    # both top + bottom horn disc OD
     "horn_disc_t":   8.80,    # top horn disc thickness (dimensions.md §1)
@@ -277,9 +278,16 @@ def nova_sts3215_dual_mount(workplane, clearance_mat="PA6-CF"):
           .hole(STS3215["mount_screw_d"]))
 
     # Back-shaft U-bracket: bearing pocket (688ZZ) on opposite link
+    # **leg_v5 only — RETIRED for leg_v6** (servo integral wheel) — see
+    # nova_sts3215_back_bearing_seat() note below.
     # Caller is responsible for placing this on the mating bracket
     return wp
 
+# **leg_v5 only — RETIRED for leg_v6** (servo integral wheel). This bearing
+# press-fit geometry (688ZZ back-shaft seat) applied to v5-style external-
+# bearing joints; leg_v6 bolts the yoke bottom arm straight to the servo's
+# own integral free-spinning idler wheel — no external bearing, no sleeve
+# adapter, no press-fit pocket. Kept for reference / v5 provenance.
 def nova_sts3215_back_bearing_seat(workplane):
     """688ZZ bearing seat for the back-shaft side of the STS3215.
     Place on the opposing bracket so the rear pivot rotates on a real

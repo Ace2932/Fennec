@@ -20,17 +20,20 @@ real-world batch variation listed where known.
 ## 1. Actuators
 
 ### Feetech STS3215 servo (12V 30 kg + 7.4V 19 kg share same body)
-**AUTHORITY (2026-07-02 rev 2): the mesh-verified spline-frame table in
-`leg_v6/leg_v6_common.scad`** (from `feetech_servo_models/converted_stl/servo.stl`,
-= `STS3215_03a v1` incl. horn+wheel bodies). Spline-relative, shaft = +Z, case
-extends −X:
+**AUTHORITY (rev 3 2026-07-10): the spline-frame table in
+`leg_v6/leg_v6_common.scad`** (mesh base = `feetech_servo_models/converted_stl/servo.stl`,
+`STS3215_03a v1` incl. horn+wheel bodies). Spline-relative, shaft = +Z, case
+extends −X. **rev 3: the disc FACES (= the yoke seat planes) were reconciled to
+the CALIPERED disc-to-disc = 35.5 mm — HORN top 17.2→17.75, WHEEL −17.7→−17.75,
+split symmetric about the shaft (commit 52d387f). The old 17.2/−17.7 (34.9 gap)
+was 0.6 mm too narrow.**
 
 | Dim | Value | Status |
 |---|---|---|
 | Case box | x −35.2..+10.2 · y ±12.4 · z −15.5..+14.7 | ✅ mesh 2026-07-02 |
 | Rear top cap ridge | to z 17.4 (x −34.8..−28.5, y ±7) | ✅ mesh |
-| Output HORN disc | Ø20 × 2.5, z 14.7..17.2 (+boss to 20.2) | ✅ mesh |
-| Bottom WHEEL disc | Ø20 × 2.1, z −17.7..−15.6 — **standard-fitted** | ✅ mesh |
+| Output HORN disc | Ø20 × ~3.05, z 14.7..**17.75** (+boss to 20.2) | ✅ mesh + CALIPER 2026-07-10 |
+| Bottom WHEEL disc | Ø20 × ~2.15, z **−17.75**..−15.6 — **standard-fitted** | ✅ mesh + CALIPER 2026-07-10 |
 | Disc screw pattern (BOTH discs) | 4× M2.5 on Ø14 BCD ±45° + center (horn ctr M3, wheel ctr M2.5) | ✅ mesh |
 | Connector bay | rear-bottom to z −19.4 over x<−5.3, **FULL width ±12.35**; 2× 3-pin sockets mid-body facing rear | ✅ mesh (fit-gate catch) |
 | **REAL case mounting** | the 4 case-screw columns (Ø2 self-tap, heads at the bay): (−8.3, ±10.2) & (−32.8, ±10.25) — use longer M2 through the printed floor | ✅ mesh |
@@ -310,6 +313,8 @@ band axis = z. Angles below = azimuth about the crescent center.
 > pockets fix it; residual rotational slop ±~2°).
 
 ### 688ZZ ball bearing
+**RETIRED 2026-07-10 — leg_v6 uses the servo's integral idler wheel, not external bearings (vestigial from leg_v5)**
+
 **Source:** standard deep-groove ball bearing
 
 | Dim | Value | Status |
@@ -320,6 +325,8 @@ band axis = z. Angles below = azimuth about the crescent center.
 | Bore press-fit clearance (PA6-CF) | +0.05 mm OD pocket | ✅ |
 
 ### 6 → 8 mm shaft sleeve adapter
+**RETIRED 2026-07-10 — leg_v6 uses the servo's integral idler wheel, not external bearings (vestigial from leg_v5)**
+
 **Source:** STS3215 bottom shaft is 6 mm; 688ZZ ID is 8 mm. Need 6 mm ID × 8 mm OD × ~5 mm long sleeve.
 
 | Dim | Value | Status |
@@ -622,7 +629,7 @@ These differ from values currently in `patterns.md` or `nova_sm3_patterns.md`:
 2. **STS3215 horn-disc OD = 20 mm**, NOT 25 mm as written in some older notes. STEP file is authoritative.
 3. **STS3215 spline X offset = +12.5 mm** from body center. CRITICAL: every cavity in leg V3.1 reflects this. Old OpenSCAD `coxa.scad` had it at 0 (bug).
 4. **STS3215 horn screws are M2.5, NOT M3.** STEP shows holes at r=1.25 mm (∅2.5 = M2.5 clearance). Older notes / `patterns.md` calling them M3 are wrong. BCD measured at 13.86 mm (call it 14 mm).
-5. **STS3215 body Z (between horn faces) = 34.3 mm**, not 36.8. Older 36.8 figure conflated body height with bbox-including-horn-discs. Bbox total Z = 39.6 (39.6 - 34.3 = 5.3 mm of horn-disc stack on top + bottom). Use 34.3 for bracket pocket depth.
+5. **SUPERSEDED 2026-07-10 — see caliper reconciliation below.** ~~STS3215 body Z (between horn faces) = 34.3 mm~~, not 36.8. Older 36.8 figure conflated body height with bbox-including-horn-discs. ~~Bbox total Z = 39.6~~ (39.6 - 34.3 = 5.3 mm of horn-disc stack on top + bottom). ~~Use 34.3 for bracket pocket depth.~~ **The 34.3 / 34.9 / 36.8 figures are all superseded — the CALIPERED disc-to-disc (the yoke seating faces) = 35.5 mm** (real bbox total Z = 39.1 mm; fixed in commit 52d387f). Use **35.5** going forward.
 6. **patterns.md §3 mount_x_pitch=49 / mount_y_pitch=10 IS WRONG** — body is only 45.4 mm long, so 49 mm pitch is impossible. ✅ **RESOLVED (2026-06-07, see note 9):** STEP inspected — real pattern is a **9.9 × 9.9 mm square** of 4× M2.5, centered on the spline axis. Update `patterns.md` mount macro to this; do NOT use the old 49×10 numbers.
 7. **Pololu buck board sizes in §4 were pre-drawing estimates — all three corrected** from the Pololu dimension drawings (reg19a / reg34a / reg34c): D42V110 = **31.8 × 43.2** (was 25.4×25.4, badly wrong), D24V22 = **17.8 × 17.8** (was 20.3×17.8; also has 2× ⌀2.18 mounts, not "none"), D42V55 = **25.4 × 25.4** (was 22.9×17.8). Chassis buck-carrier pockets must use the corrected sizes. Connector L→R pin orders now recorded per buck — **verify against the physical module before PCB fab** (a wrong order is a coordinate swap in `nova_v6.pretty`).
 8. **Class-T fuse is OFF-board + all 3 INA226 are modules (2026-06-04).** F1 fuse block dropped from the PCB (now an inline block in the battery lead); leg/hip INA226 (U9/U10) changed from bare VSSOP-10 + external 2 mΩ 2512 shunt to the same `INA226_Module_Breakout` U11 uses, and shunts R13/R14 were deleted. Board now carries **zero fine-pitch (VSSOP-10) parts**. Schematic done + ERC-clean; `.kicad_pcb` needs **Update PCB from Schematic (F8)** to realize it.

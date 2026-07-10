@@ -57,8 +57,9 @@ under trot cyclic loads. Now triangulated + redundant.**
 ## 3. HAA joint (leg ↔ shoulder)
 
 Roll moment 60 N × 64.3 mm (IK d) = 3.86 N·m → couple across the
-horn-plate (+17.2) / wheel-boss (−17.7) planes, 34.9 apart → **111 N**
-per face.
+horn-plate (+17.75) / wheel-boss (−17.75) planes, 35.5 apart (reconciled
+2026-07-10 to the calipered disc-to-disc — was +17.2/−17.7, 34.9 apart) →
+**~109 N** per face (was 111 N; ~1.7% change, negligible).
 
 | Element | Number | Margin |
 |---|---|---|

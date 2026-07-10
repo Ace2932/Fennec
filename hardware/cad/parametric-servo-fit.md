@@ -26,7 +26,7 @@ Variable Studio `leg-vars` (element id `0dc53880d81b63d47a7402ff` in doc `dc7221
 | `sts_body_l` | 45.40 mm | STEP `STS3215_03a v1.step`, body long axis |
 | `sts_body_w` | 24.80 mm | STEP, body short axis |
 | `sts_body_h` | 34.30 mm | STEP, **between horn-disc faces** (NOT bbox z) |
-| `sts_bbox_z` | 39.60 mm | full bbox z including both horn discs |
+| `sts_bbox_z` | 39.60 mm | full bbox z including both horn discs — **SUPERSEDED 2026-07-10: real CALIPERED total is 39.1 mm** (0.5 mm less; fixed in commit 52d387f) |
 | `sts_spline_x` | 12.50 mm | spline X offset from body center (CRITICAL) |
 | `horn_disc_od` | 20.0 mm | top horn disc OD |
 | `horn_bcd` | 14.0 mm | horn screw bolt-circle dia |

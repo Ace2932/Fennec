@@ -158,7 +158,7 @@ Switch can be pulled out of its case to save ~60% volume inside the chassis if n
 | Item | Price | Status |
 |------|-------|--------|
 | M3/M4/M5/M6 stainless hex screw kit | $35 | ✅ Ordered |
-| 8x16x5mm ball bearings × 8 | $15 | ✅ Ordered |
+| 8x16x5mm ball bearings × 8 | $15 | ✅ Ordered — **SPARE — leg_v6 uses the servo's integral idler wheel, not external 688ZZ (vestigial from leg_v5); repurpose or ignore** |
 | Standoffs, zip ties, heat shrink (assorted) | $30 | ✅ Ordered |
 | **Mezzanine standoffs — 4× M3 × 20 mm M-F brass + 8× M3 screws** | $6 | 🆕 Order — set the power↔logic board gap (clears 16 mm bulk caps + ~15 mm Pololu bucks with margin). Total stack ≈ 41 mm < 46.9 mm trunk. Specific length, separate from the assorted standoffs above. |
 | **Threadlocker (Loctite 243 blue)** | **$8** | 🆕 Order |
@@ -167,7 +167,7 @@ Switch can be pulled out of its case to save ~60% volume inside the chassis if n
 | **M3 flat washers (DIN 125, ~50 pk)** | **$4** | 🆕 Order — under EVERY head that bears on the stock trunk shell (8× shoulder-flange bolts, 4× foot bolts from below, battery-sandwich heads): spreads load into unknown-material print (load-analysis §6) |
 | **M3×14 countersunk + M3 nyloc ×4** | **$3** | 🆕 Order — shoulder rev4 flange floor feet: csk head flush under the floor, nyloc + washer on the pad (drill Ø3.2 + csk the 4 floor holes at first assembly, floor_plate template) |
 | **ICM-42688-P breakout (SPI/I²C)** | **$12** | 🆕 Order — **dedicated gait IMU near CoM** (backlog #14): D456/L2 IMUs are mast-mounted (high, vibey, breakaway-fused, USB/Ethernet latency) — wrong tool for the 1 kHz balance loop. Rides the existing INA226 I²C bus (0x68, 4 wires) on the mezzanine at x −3.5 ≈ CoM; permanent footprint → v7 respin |
-| **Spiral cable wrap Ø6, 2 m** | **$5** | 🆕 Order — covers the free service loops between cable clips (backlog #18, `leg_v6/cable_clip.scad`); hip + knee loops ×4 legs |
+| **Spiral cable wrap Ø6, 2 m → 3 m** | **$6** (+$1 for the extra metre) | 🆕 Order — covers the free service loops between cable clips (backlog #18, `leg_v6/cable_clip.scad`); hip + knee loops ×4 legs. **2026-07-10: qty bumped to also cover the Jetson −Y `CASE_SLOT` bundle** (DC barrel + RJ45 + USB-C, port-to-bay run, backlog #41) — same spool, no separate line needed. |
 | **EVA foam 3 mm adhesive sheet + felt/kapton tape** | **$8** | 🆕 Order — battery tray floor pad (preloads the 0.8 mm slide-in slack against the shell floor, kills the 510 g rattle) + chafe strips on the shoulder-flange bottom edges over the pack (0.25 gap, integration audit #29) |
 | **100 Ω 5 W resistor (precharge)** | **$2** | 🆕 Order — bridge the main switch (backlog #19): spares the switch contacts from cap-inrush arcing on every battery connect |
 
@@ -224,7 +224,8 @@ a mobile robot. Audio is novelty. Kept: status display + LEDs only.
 | 22AWG hookup wire | $15 | ✅ Ordered |
 | JST / Dupont connector kit | $30 | ✅ Ordered — verify crimper included |
 | **M8 ring terminals, 10 AWG (×4+)** | **$5** | 🆕 Order — 5191 fuse-block stud CALIPERED **M8** (7.8 mm), 2026-07-07. Battery-in + output-out lugs on the 10 AWG feed (battery XT60 pigtail → M8 ring → 5191 stud → MRBF-30 → M8 ring → J1). Get 10 AWG barrel, M8 hole |
-| **Right-angle plug adapters (−Y Jetson ports, backlog #41)** | **$10-15** | 🆕 Order — 1× USB-A right-angle, 1× USB-C right-angle, 1× RJ45 (ethernet) right-angle, 1× DC barrel right-angle (V12_JET power in). Turns each cable DOWN at the port instead of sideways off the −Y flank, so it drops straight through the riser's existing −Y `CASE_SLOT` — no cowl needed (`jetson_cowl.scad` retired in place, see `hardware/cad/chassis/jetson_cowl.scad`). |
+| **Right-angle plug adapters (−Y Jetson ports, backlog #41)** | **$8-12** | 🆕 Order — **3 ports cabled** (confirmed 2026-07-10): 1× DC barrel right-angle **5.5×2.5mm** (V12_JET power in), 1× RJ45 (ethernet) right-angle (L2 LiDAR data), 1× USB-C right-angle (D456). USB-A **dropped — not cabled** on the −Y flank. Turns each cable DOWN at the port instead of sideways off the −Y flank, so it drops straight through the riser's existing −Y `CASE_SLOT` — no cowl needed (`jetson_cowl.scad` retired in place, see `hardware/cad/chassis/jetson_cowl.scad`). Bundle sleeved in spiral wrap (§6, qty-bumped) + strain-relieved by `case_slot_grommet` below. |
+| **case_slot_grommet (TPU, print ×1)** | $0 (filament only) | 🆕 Print — TPU 95A edge liner for the riser −Y `CASE_SLOT`'s cable-bearing edge (backlog #41 follow-up, replaces the retired `jetson_cowl.scad`'s protection role). `hardware/cad/chassis/case_slot_grommet.scad`, ~0.7 g. **Blocked on a riser_bay.scad fix first** — see the part file's header FLAG: the current `CASE_SLOT` cut (`rounded_slot(..., r=4)` on a 4.5mm-wide slot) blows out past its documented bounds, so there's nothing crisp for the liner to clip onto yet. |
 
 ---
 
