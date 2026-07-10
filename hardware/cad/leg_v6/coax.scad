@@ -15,7 +15,12 @@
 //     at x = 16.6 = femur horn face); outboard arm at x 56.2..60.2 carries
 //     a Ø19 boss inboard to 51.5 = the femur wheel face, and bolts it
 //   * cables: bay faces +Y (rear); tunnel exits the BOTTOM end toward the
-//     femur — wires drop down the leg
+//     femur — wires drop down the leg. CALIPER-CONFIRMED 2026-07-10: the
+//     servo body + cable dropping out the bottom needs ~37mm; the pocket's
+//     vertical drop-channel is ~52mm (coax z -38.4..+13.8) → ~15mm spare,
+//     clears. NB the cable routes out the BOTTOM, NOT beside the servo —
+//     the pocket WIDTH is only 25.4mm (fits the 24.8 case + ~0.6, no room
+//     for a cable alongside). Harness plan #31.
 //
 // Print: rear face (+Y) down; supports under the yoke bridge span.
 
