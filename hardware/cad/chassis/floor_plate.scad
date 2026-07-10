@@ -6,9 +6,15 @@
 // the mezzanine seat (the riser's headroom math budgeted exactly this).
 //
 // Three jobs:
-//   1. BATTERY SANDWICH: 6x M3x12 countersunk here, through the (drilled)
-//      floor, into the pocket's nut-trap columns at (x +/-40/0, y +/-26.5).
-//      The plate spreads the 510g pack's load across the floor slab.
+//   1. BATTERY SANDWICH: 6x M3x8 countersunk here (was M3x12 — AUD-1
+//      top-flange-mount fix, 2026-07-10: battery_pocket.scad's full-height
+//      boss columns are gone, replaced by local pads thickening the rim
+//      flange, so the load path shortened from a 39mm column to a ~6mm
+//      pad; a shorter screw follows), through the (drilled) floor, into
+//      the pocket's flange-pad nut traps at (x +/-40/0, y +/-26.5) — XY
+//      UNCHANGED by the AUD-1 fix, only the pocket-side mount depth and
+//      screw length moved. The plate spreads the 510g pack's load across
+//      the floor slab.
 //   2. MEZZANINE SEAT: 4x O2.5 pilots at (-41/+33, +/-33) — the power_v2
 //      board's MEASURED mount pattern (74 x 66, from the fab .kicad_pcb;
 //      hole XY unchanged by the standoff-height fix below — do not touch).

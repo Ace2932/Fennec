@@ -5,26 +5,29 @@
 // +x FRONT). Lowest-CoM pack, swap WITHOUT tools (design-outline service
 // table: battery = strap only, 0 screws).
 //
-// PRINT: PETG-CF, FLOOR-DOWN (tray bottom on the bed; opening + rim bosses up)
-//   — zero supports. 3 walls / 0.25 / 20% (print-batch §2). Heat-sets into the
-//   rim bosses from the OPEN (cavity) side, iron reaches from above.
+// PRINT: PETG-CF, FLOOR-DOWN (tray bottom on the bed; opening + rim flange
+//   up) — zero supports. 3 walls / 0.25 / 20% (print-batch §2).
 //
 // Shape: open-TOP tray hanging under the stock shell — the shell floor caps
 // the cavity. Pack slides in from the REAR opening; a velcro strap fences
 // the opening through two side-wall slots. Front wall + side walls guide,
 // tray bottom carries the pack.
 //
-// Mount: 6x M3 x 12 driven from INSIDE the trunk, through the 3.9 floor
-// slab, into a side-loaded M3 NUT TRAP in the rim bosses at (x -40/0/+40,
-// y +/-26.5) — NOT a heat-set insert (design-review fix: a full-height
-// column can't take an insert from either end, and a nut beats an insert
-// for the pocket's highest-load joint anyway; see the trap detail below).
-// The stock floor has NO holes there — drill Ø3.4 at first assembly.
-// **The part-5 floor boss plate must adopt this same 6-hole pattern**:
-// screws then sandwich plate + floor + tray (plate spreads the load; the
-// tray bores double as the drill template from below). The nut slides in
-// from the outboard face so screw tension pulls the boss DOWN onto it
-// (pack weight = extraction-safe direction).
+// Mount: TOP-FLANGE MOUNT (AUD-1 fix, 2026-07-10 — replaces the retired
+// full-height boss columns, which fouled the pack: their inner edge sat
+// 1.15mm inside the pack half-width for the WHOLE column height, and no
+// column position cleared the pack without also fouling the leg-sweep ROM;
+// see docs/improvement-backlog.md AUD-1 for the full history). 6x M3 x 8
+// driven from INSIDE the trunk, through the 3.9 floor slab, into a
+// side-loaded M3 NUT TRAP held in a LOCAL PAD thickening the rim flange
+// (not a full-height column) at (x -40/0/+40, y +/-26.5) — NOT a heat-set
+// insert (a nut beats an insert for this joint, and the flange is too thin
+// to take one anyway). The stock floor has NO holes there — drill Ø3.4 at
+// first assembly. **The part-5 floor boss plate must adopt this same
+// 6-hole pattern** (unchanged XY — only the pocket-side mount depth
+// changed): screws sandwich plate + floor + tray (plate spreads the load;
+// the tray bores double as the drill template from below). The nut slides
+// in from the pad's outboard face (the pad's own outer surface, y=30.75).
 //
 // Pack: 155 fore-aft (overhangs the 127 trunk by ~14.8/end, passing 0.25
 // under the shoulder flange bottoms at z 0.05); leads exit the pack's REAR
@@ -58,6 +61,17 @@ BOSS_X = [-40, 0, 40];
 BOSS_Y = 26.5;
 HEATSET_D = 4.0;  HEATSET_L = 6.2;   // Ruthex M3: bore 4.0
 M3_CLEAR = 3.4;
+// AUD-1 fix (top-flange mount, 2026-07-10): the 6 nut-trap mounts are now
+// LOCAL PADS thickening the rim flange, not full-height boss columns (see
+// the union()/difference() comments below for the full writeup).
+PAD_Z0  = RIM_Z - 6;      // local pad bottom -> 6mm local flange thickness
+                          // (vs the base flange's 4mm; +2mm local, HIGH near
+                          // the rim -- old columns reached BOT_Z=-39.2)
+PAD_HW  = 4.25;            // pad half-width in x (was the old boss radius)
+TRAP_H  = 2.7;              // M3 nut trap height (nut thickness + clearance)
+TRAP_Z1 = RIM_Z - 0.6;    // trap top (0.6mm web under the rim, printable
+                          // roof over the trap slot)
+TRAP_Z0 = TRAP_Z1 - TRAP_H; // trap bottom (leaves ~2.7mm solid to PAD_Z0)
 
 module battery_pocket() {
     difference() {
@@ -72,33 +86,65 @@ module battery_pocket() {
             // front wall
             translate([CAV_X, -CAV_Y - WALL, BOT_Z])
                 cube([WALL, 2 * (CAV_Y + WALL), -BOT_Z + RIM_Z]);
-            // rim mount bosses: FULL-HEIGHT columns fused to the wall
-            // outer faces (a hanging 8-deep boss overhung its print
-            // orientation — design-review fix; columns print from the bed)
-            for (bx = BOSS_X, sy = [-1, 1])
-                translate([bx, sy * BOSS_Y, BOT_Z])
-                    cylinder(d = 8.5, h = -BOT_Z + RIM_Z);
-            // rim flange tying bosses to the wall tops
+            // rim flange tying the wall tops to the front wall — thin,
+            // full-length structural rib (KEPT; unrelated to the AUD-1 fix)
             for (sy = [-1, 1])
                 translate([-45, min(sy * (BOSS_Y + 4.25), sy * CAV_Y), RIM_Z - 4])
                     cube([90, BOSS_Y + 4.25 - CAV_Y, 4]);
+            // AUD-1 FIX (top-flange mount, 2026-07-10): the 6 M3 nut-trap
+            // mounts are now LOCAL PADS thickening the rim flange only at
+            // (x BOSS_X, y +/-BOSS_Y) — the full-height boss columns are
+            // GONE. Their inner edge (26.5-4.25=22.25) sat 1.15mm inside
+            // the pack half-width (23.4) for the ENTIRE column height, so
+            // the pack could never pass them; pushing them outboard to
+            // clear the pack pushed their (also full-height) outer
+            // material into the leg-sweep ROM — no column position worked
+            // (see docs/improvement-backlog.md AUD-1).
+            //
+            // Each pad spans y [CAV_Y, BOSS_Y+4.25] = [24.0, 30.75] — the
+            // SAME outer edge the old full-height column proved leg-sweep-
+            // clean at (check_fit.py case 4 crouch sweep) — and starts
+            // flush at CAV_Y, i.e. ALWAYS outboard of the pack (half-width
+            // 23.4), never intruding it. Pad depth only reaches PAD_Z0
+            // (6mm below the rim, vs the old column's 39mm) — strictly
+            // less material at the SAME outer edge that was already
+            // gate-clean, so the pad is leg-clean a fortiori (verified by
+            // re-running the full crouch sweep after this change).
+            //
+            // Each pad fuses to the full-height side wall along a whole
+            // rectangular face (x 8.5 wide x 6mm tall, at y=CAV_Y+WALL=
+            // 27.2, the wall's outer face) — real face-to-face fusion, not
+            // the old boss's thin tangent-line contact at the flange top
+            // (the old boss only really tied in through the 4mm top
+            // flange down a 35mm cantilever — mesh_health said "1 body"
+            // but a z-section showed the join was a near-tangent line).
+            // Section-verified fused mass: see check_fit.py run notes.
+            for (bx = BOSS_X, sy = [-1, 1])
+                translate([bx - PAD_HW,
+                           min(sy * (BOSS_Y + 4.25), sy * CAV_Y), PAD_Z0])
+                    cube([2 * PAD_HW, BOSS_Y + 4.25 - CAV_Y, RIM_Z - PAD_Z0]);
         }
-        // boss fastening: O3.4 down the column into a side-loaded M3 NUT
-        // NUT TRAP (design-review fix: a full-height column can't take a
-        // heat-set from either end, and a nut beats an insert for the
-        // pocket's highest-load joint anyway). Nut slides in from the
-        // outboard face. CR-2 fix 2026-07-09: trap RAISED 2.5mm (was
-        // RIM_Z-8.3 -> now RIM_Z-5.8). At the old height the M3x12 CSK tip
-        // (z-6.1) only reached the trap top (z-5.8) = ~0.3mm engagement;
-        // raised, the trap spans z[-6.0,-3.3] so the same standard M3x12
-        // passes fully through the nut = ~full engagement. No screw-length
-        // or BOM change (keeps the owned M3x12/M3 nuts).
+        // AUD-1 FIX (top-flange mount, 2026-07-10): O3.4 clearance bore
+        // meets a side-loaded M3 NUT TRAP immediately under the rim (was a
+        // deep column bore/trap at RIM_Z-8.6/RIM_Z-5.8, see git history).
+        // Nut slides in from the outboard face — the trap spans the pad's
+        // FULL y-width (24.0 -> 30.75, the pad's own outer face), same
+        // "insert from the outboard face" scheme as before. Load path is
+        // now the ~6mm flange pad, not a 39mm column, so a SHORTER screw
+        // is used: M3x8 (was M3x12) — CSK head seats in floor_plate.scad's
+        // existing countersink (top z5.9), tip lands ~z-2.1, landing
+        // mid-trap (trap z[-3.5,-0.8]) for ~1.3mm/48% nut engagement.
+        // ⚠ verify engagement at first article (the floor_plate + stock-
+        // floor stack above the rim is a fixed ~6.1mm of "dead" reach
+        // before the screw even enters the pocket); step to M3x10 if the
+        // fit feels marginal. BOM: M3x8 socket/CSK screws replace M3x12
+        // for these 6 fasteners; M3 nuts unchanged.
         for (bx = BOSS_X, sy = [-1, 1]) {
-            translate([bx, sy * BOSS_Y, RIM_Z - 8.6])
-                cylinder(d = M3_CLEAR, h = 8.6 + EPS);
-            translate([bx - 2.85, min(sy * (BOSS_Y + 4.3), sy * (BOSS_Y - 2.7)),
-                       RIM_Z - 5.8])
-                cube([5.7, 7, 2.7]);
+            translate([bx, sy * BOSS_Y, TRAP_Z1])
+                cylinder(d = M3_CLEAR, h = RIM_Z - TRAP_Z1 + EPS);
+            translate([bx - 2.85, min(sy * (BOSS_Y + 4.25), sy * CAV_Y),
+                       TRAP_Z0])
+                cube([5.7, BOSS_Y + 4.25 - CAV_Y, TRAP_H]);
         }
         // strap slots AT the rear opening: the strap wraps the pack's REAR
         // CORNER (direct tension against slide-out — friction-only

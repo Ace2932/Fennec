@@ -595,33 +595,39 @@ def main():
     # pack-vs-trunk, so a boss straddling the cavity wall (AUD-1: BOSS_Y=26.5
     # puts the mount bosses' inner edge at 22.25, 1.15mm inside the 23.4
     # pack half-width) went ungated. Sample the PACK box and assert 0 points
-    # land inside the battery_pocket SOLID (walls/bosses/floor) -- this is
-    # the direct "does the battery fit its own pocket" proof. Exclude the
+    # land inside the battery_pocket SOLID (walls/pads/floor) -- this is the
+    # direct "does the battery fit its own pocket" proof. Exclude the
     # designed pack-rests-on-tray-floor seat (pack z0=-35.9 vs the tray
     # floor's own top TRAY_FLOOR_Z=-35.8 -- a 0.1mm designed bearing
     # contact, not a collision) before checking: without the exclusion this
     # case reports ~1580 pts (nearly all sampling noise at that shared
-    # plane); with it, 259 real pts remain, all clustered at the boss x/y
-    # (bx +/-40/0, sy*BOSS_Y +/-2), i.e. genuinely the AUD-1 boss intrusion,
-    # not floor-seat noise (verified by inspecting the hit cloud directly).
-    # AUD-1 ITSELF IS STILL OPEN as of this gate case landing: a same-shaped
-    # fix (push BOSS_Y out so the boss inner edge clears CAV_Y+WALL=27.2, as
-    # the backlog originally proposed) was tried and reverted -- widening
-    # the boss outer edge that far reaches into the documented chassis-safe
-    # crouch ROM (inboard haa<=15 sw, hfe fold<=50 sw) and creates a NEW
-    # leg-vs-pocket collision (verified: BOSS_Y=30.0, the smallest value
-    # that clears the pack with reasonable margin, hits at inboard haa=15
-    # + hfe fold 45-50 across every kfe, all four hips -- shrinking the
-    # boss OD to buy outer-edge headroom isn't safely available either, the
-    # M3 nut-trap already leaves only ~1.4mm of wall on each side at the
-    # current d=8.5). Real fix needs a design call (ROM cap trim -- haa
-    # <=12 sw clears it per a quick sweep -- OR a different mount scheme),
-    # see docs/improvement-backlog.md AUD-1. Until then this case is
-    # EXPECTED to fail -- that failure is now honest instead of silent.
+    # plane); with the exclusion, the ORIGINAL full-height-boss geometry
+    # left 259 real pts, all clustered at the boss x/y (bx +/-40/0,
+    # sy*BOSS_Y +/-2) -- genuinely the AUD-1 boss intrusion, not floor-seat
+    # noise (verified by inspecting the hit cloud directly).
+    #
+    # AUD-1 RESOLVED 2026-07-10 (top-flange mount): the full-height boss
+    # columns are gone. A same-shaped fix (push BOSS_Y out so the column's
+    # inner edge clears CAV_Y+WALL=27.2) was tried earlier and reverted --
+    # widening a FULL-HEIGHT column's outer edge that far reaches into the
+    # documented chassis-safe crouch ROM and creates a NEW leg-vs-pocket
+    # collision (BOSS_Y=30.0 hit at inboard haa=15 + hfe fold 45-50, every
+    # kfe, all four hips). The real fix (user-chosen direction) instead
+    # holds the 6 nut-traps in LOCAL PADS thickening the existing rim
+    # flange (battery_pocket.scad PAD_Z0/PAD_HW/TRAP_*): each pad spans y
+    # [CAV_Y, BOSS_Y+4.25] = [24.0, 30.75] -- the SAME outer edge the old
+    # full-height column proved leg-sweep-clean at -- but only reaches 6mm
+    # below the rim (PAD_Z0 = RIM_Z-6) instead of the old column's 39mm
+    # (BOT_Z), so it never dips into the leg-sweep depth, AND its inner
+    # edge starts flush at CAV_Y=24.0 (never intrudes the pack's 23.4
+    # half-width, unlike the old column's 22.25). This case is now a HARD-
+    # FAIL regression guard: it must read 0 pts going forward -- if it
+    # doesn't, the pack no longer fits its own tray.
     kp_f = kp[np.abs(kp[:, 2] - TRAY_FLOOR_Z) >= 0.3]
     hits = kp_f[pocket.contains(kp_f)]
     bad |= report('battery pack vs pocket (pack must fit its own tray, '
-                  'floor seat excluded) -- AUD-1 OPEN, see backlog', hits)
+                  'floor seat excluded) -- AUD-1 RESOLVED 2026-07-10, '
+                  'top-flange mount', hits)
     sh_pts = trimesh.sample.sample_surface(
         trimesh.load(f'{LEG}/shoulder.stl'), 8000, seed=0)[0]
     for end in (1, -1):
