@@ -50,9 +50,11 @@ point inside the designed part = the part cuts its counterpart. Cases:
      lowest into the 20mm pb->lb gap) clears Q1's top — trivially true by
      construction but now asserted against real parsed geometry on both
      sides of the gap instead of assumed.
- 12. CR-7 (was #39): the 5 newest chassis parts, never gated before now —
-     jetson_clamp_bar (+y/-y mirror), jetson_cowl, l2_adapter, control_pod,
-     oled_mount. jetson_clamp_bar vs jetson_case_ref.stl is checked via a
+ 12. CR-7 (was #39): the newest chassis parts, never gated before now —
+     jetson_clamp_bar (+y/-y mirror), l2_adapter, control_pod, oled_mount.
+     (jetson_cowl was gated here too until #41 retired it 2026-07-10 —
+     superseded by right-angle plug adapters; see jetson_cowl.scad banner.)
+     jetson_clamp_bar vs jetson_case_ref.stl is checked via a
      SURFACE-HEIGHT envelope (case_surface_clash()), not contains(): the ref
      mesh is not watertight (euler_number ~-2223 / 2 bodies — almost
      certainly the vent-grille perforations), so volumetric containment is
@@ -93,7 +95,7 @@ HIP_FA, HIP_LAT, HIP_Z = 141.2, 39.05, 38.05
 # hit fails the gate. SIGNED x range.
 EXPECTED_STACK_ZONE = dict(x=(-60.0, -52.9), y=(28.5, 48.5), z=(24.5, 47.2))
 
-# ---- case 12 constants (CR-7/#39: jetson_clamp_bar.scad, jetson_cowl.scad,
+# ---- case 12 constants (CR-7/#39: jetson_clamp_bar.scad,
 # jetson_case_mount.scad, riser_bay.scad, control_pod.scad, l2_adapter.scad,
 # head.scad -- mirrors those files' own "shared consts, KEEP IN SYNC" comments) --
 CRADLE_FRONT_PXC, CRADLE_REAR_PXC = 47.3, -59.0    # cradle upright x centres
@@ -101,7 +103,6 @@ CRADLE_POST_YC, CRADLE_POST_W = 50.35, 6.0         # cradle upright y centre/siz
 CRADLE_CORNER_Z = 102.8                            # upright top = clamp-bar seat
 BAR_HY = 41.45                    # clamp-bar inner edge = case corner-column y
 CASE_FRONT_HX, CASE_REAR_HX = 42.8, -56.5          # case corner-column x centres
-COWL_UP_FACE = -CRADLE_POST_YC - CRADLE_POST_W / 2  # -53.35, -y upright outer face
 POD_BOSS_X = -66.5                 # riser rear-wall pad <-> pod column interface
 POD_HY, POD_Z0, POD_Z1 = 14.0, 58.0, 69.0
 L2A_SEAT_Z = 128.0                  # crown top = l2_adapter bottom seat
@@ -243,15 +244,6 @@ def bar_seat_mask(p):
                   (np.abs(p[:, 0] - CRADLE_REAR_PXC) < CRADLE_POST_W / 2 + 1)
     near_post_y = np.abs(np.abs(p[:, 1]) - CRADLE_POST_YC) < CRADLE_POST_W / 2 + 1
     return (near_z & near_case_x & near_case_y) | (near_z & near_post_x & near_post_y)
-
-
-def cowl_seat_mask(p):
-    """Designed cowl-end-wall <-> -y cradle-upright butt joint: the walls
-    meet flush at y=COWL_UP_FACE (zero-gap by construction)."""
-    near_x = (np.abs(p[:, 0] - CRADLE_FRONT_PXC) < CRADLE_POST_W / 2 + 1) | \
-             (np.abs(p[:, 0] - CRADLE_REAR_PXC) < CRADLE_POST_W / 2 + 1)
-    near_face = np.abs(p[:, 1] - COWL_UP_FACE) < 0.6
-    return near_x & near_face
 
 
 def pod_riser_seat_mask(p):
@@ -442,7 +434,6 @@ def main():
     clamp_bar_R = trimesh.load('jetson_clamp_bar.stl')  # designed +y side (#44)
     MYb = np.eye(4); MYb[1, 1] = -1
     clamp_bar_L = clamp_bar_R.copy(); clamp_bar_L.apply_transform(MYb)
-    cowl = trimesh.load('jetson_cowl.stl')               # designed -y side (#38)
     l2_adapter = trimesh.load('l2_adapter.stl')
     pod = trimesh.load('control_pod.stl')
     oled = trimesh.load('oled_mount.stl')
@@ -802,7 +793,7 @@ def main():
     bad |= not ok
 
     # ---- 12. NEW chassis parts (CR-7, was #39): jetson_clamp_bar (+y/-y),
-    # jetson_cowl, l2_adapter, control_pod, oled_mount. These have had real
+    # l2_adapter, control_pod, oled_mount. These have had real
     # STLs since build_all.sh grew them (2026-07-08) but were never added to
     # this gate -- the +y clamp-bar vs jetson_case_ref graze (~0.2mm probe,
     # 4/13000 pts) went uncaught as a result. Settled below.
@@ -831,25 +822,8 @@ def main():
     hits = r_pts[clamp_bar_L.contains(r_pts)]
     bad |= report('clamp bar +y vs clamp bar -y', hits)
 
-    # -- jetson_cowl vs clamp bar (-y), cradle (butt-joint excluded), case ref --
-    cwp = sample(cowl, 8000, 2000, seed=4)
-    cwp_f = cwp[~cowl_seat_mask(cwp)]
-    hits = cwp_f[clamp_bar_L.contains(cwp_f)]
-    bad |= report_depth('cowl vs clamp bar (-y)', hits, clamp_bar_L,
-                        noise_mm=NOISE_PART_MM)
-    hits = cwp_f[cradle.contains(cwp_f)]
-    bad |= report_depth('cowl vs cradle (upright butt-joint excluded)', hits,
-                        cradle, noise_mm=NOISE_PART_MM)
-    # case ref bbox y-extent (+-46.95, calipered) never reaches the cowl's
-    # nearest element (upright outer face / end wall, y=COWL_UP_FACE=-53.35)
-    # -- true by the calipered case width alone, no mesh sampling needed.
-    case_y_max = float(np.abs(caseref.bounds).max(axis=0)[1])
-    cowl_gap = abs(COWL_UP_FACE) - case_y_max
-    ok = cowl_gap > 0
-    print(('OK    ' if ok else 'FAIL  ') + f'cowl vs case ref (#38 straight-plug '
-          f'shield): case |y| max {case_y_max:.2f} vs cowl inner extent '
-          f'{abs(COWL_UP_FACE):.2f}, gap={cowl_gap:.2f}mm')
-    bad |= not ok
+    # jetson_cowl vs clamp bar (-y) / cradle / case ref: RETIRED 2026-07-10
+    # (#41) — cowl superseded by right-angle plug adapters, checks removed.
 
     # -- l2_adapter vs crown/head (seat excluded; the tongue<->crown-lip
     # interlock needs no mask -- head.scad hollows a matching slot, so
@@ -913,9 +887,10 @@ def main():
         bad |= not ok
     print('NOTE  Case dims 110.3x93.9x38.2 CALIPERED (dimensions.md); the ref '
           'mesh is now SCALED to those dims (was ~1.3 oversize -> grazed the '
-          'cradle lips 0.25 in the viewer). Ports on the -Y flank -> STRAIGHT '
-          'plugs are shielded by jetson_cowl + drop the -Y CASE_SLOT to the bay '
-          '(#38); verify the bundle fit + drop-to-boards at wiring.')
+          'cradle lips 0.25 in the viewer). Ports on the -Y flank -> '
+          'right-angle plug adapters (#41) turn each cable DOWN at the port '
+          'so it drops through the -Y CASE_SLOT to the bay (#38, jetson_cowl '
+          'retired); verify the bundle fit + drop-to-boards at wiring.')
 
     sys.exit(1 if bad else 0)
 

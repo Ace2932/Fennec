@@ -224,6 +224,7 @@ a mobile robot. Audio is novelty. Kept: status display + LEDs only.
 | 22AWG hookup wire | $15 | ✅ Ordered |
 | JST / Dupont connector kit | $30 | ✅ Ordered — verify crimper included |
 | **M8 ring terminals, 10 AWG (×4+)** | **$5** | 🆕 Order — 5191 fuse-block stud CALIPERED **M8** (7.8 mm), 2026-07-07. Battery-in + output-out lugs on the 10 AWG feed (battery XT60 pigtail → M8 ring → 5191 stud → MRBF-30 → M8 ring → J1). Get 10 AWG barrel, M8 hole |
+| **Right-angle plug adapters (−Y Jetson ports, backlog #41)** | **$10-15** | 🆕 Order — 1× USB-A right-angle, 1× USB-C right-angle, 1× RJ45 (ethernet) right-angle, 1× DC barrel right-angle (V12_JET power in). Turns each cable DOWN at the port instead of sideways off the −Y flank, so it drops straight through the riser's existing −Y `CASE_SLOT` — no cowl needed (`jetson_cowl.scad` retired in place, see `hardware/cad/chassis/jetson_cowl.scad`). |
 
 ---
 

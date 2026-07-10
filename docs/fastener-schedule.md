@@ -10,7 +10,7 @@ around the insert — verified by ring-in-mesh test.
 ## Why this audit happened
 Bosses were originally sized ~Ø5–6 → 0.3–0.7mm insert walls (M3 heat-sets split
 below ~0.75mm). Fixed: widened/relocated the M3 bosses where structural; switched
-the LIGHT, pinched mounts (cradle clamps + deck-ties, cowl, control-pod) to **M2**
+the LIGHT, pinched mounts (cradle clamps + deck-ties, control-pod) to **M2**
 (1.0–1.4mm wall in the 6mm posts, huge load margin); short M3×3.8 inserts where a
 part is <6mm. All insert walls now pass.
 
@@ -28,7 +28,6 @@ part is <6mm. All insert walls now pass.
 | **control_pod → riser** ×4 | **M2×8** SHCS | pod column clear Ø2.3; **M2×4 insert** in the riser pocket-pad (pad y widened ±14) | 4.0 | ≥1.0 | ✅ (light mount; pinched pad → M2) |
 | **cradle → deck (tie)** ×4 | **M2×8** SHCS (from below) | riser deck clear Ø2.3; **M2×4 insert** in the upright base | 4.0 | 1.4 | ✅ (6mm post → M2; huge margin) |
 | **clamp bar → upright** ×4 (2/bar) | **M2×8** SHCS | bar clear Ø2.3; **M2×4 insert** in the upright top; bar underside bears the case corner columns (z102.8) | 4.0 | 1.4 | ✅ (#44: 2 bars replaced the 4 clamps) |
-| **cowl → upright** ×2 | **M2×10** SHCS | cowl end-wall Ø5.5 c'bore + Ø2.3 shank; **M2×4 insert** in the upright −y face | 4.0 | 1.4 | ✅ (c'bore avoids a silly M2×25) |
 | **OLED bracket → pod deck** ×2 | **M2×8** SHCS (down) | bracket foot clear Ø2.3; **M2×4 insert** in the pod deck +y edge (x-96/-71, y23) | 4.0 | 1.5 | ✅ (#40: OLED split off pod) |
 | **SSD1331 → OLED bracket** ×4 | M2×6 SHCS + **M2 nut** | bracket panel clear Ø2.3; PCB behind, nut on the +x side | nut | n/a | ✅ |
 | **E-stop** ×1 | mxuteuk 22mm 2NC **Ø22 barrel + supplied nut** | Ø22.6 deck hole; Ø40 mushroom; 77mm total; **panel max 6mm** (deck 5 ✓); ~30×30×48 block below (pod gussets flank it y±17) | — | — | ✅ verified vs the Amazon part 2026-07-08 |
@@ -37,11 +36,15 @@ leg_v6 fasteners (coax/femur/tibia/shoulder/horn/wheel/foot) were audited
 2026-07-06 (memory: heat-set insert notes) — M3/M2.5/M2 clearances + Ruthex M3
 bores, all standard; not re-listed here.
 
+**cowl → upright ×2 (M2×10 SHCS + M2×4 insert, Ø5.5 c'bore)** — REMOVED
+2026-07-10 (backlog #41): `jetson_cowl.scad` retired in place, superseded by
+right-angle plug adapters (`BOM.md`). No cowl bolts/inserts to source.
+
 ## Purchase summary (chassis/head/electronics)
 - **M3 SHCS**: ×4 **NYLON** M3×12 (head→bracket, breakaway), ×4 M3×12 (riser→flange), ×4 M3×16 (bracket→deck), ×2 M3×8 (adapter→crown), ×4 M3×10 (ears)
 - **M3 CSK**: ×4 M3×10 (L2→adapter), ×4 M3×14 (shoulder flange feet → trunk floor, CR-8 #2)
 - **M3 nyloc**: ×4 (bracket→deck), ×4 (shoulder flange feet, w/ washer)
-- **M2 SHCS**: ×4 M2×8 (pod), ×4 M2×8 (deck-tie), ×4 M2×8 (clamp bar), ×2 M2×10 (cowl), ×2 M2×8 (OLED bracket foot), ×4 M2×6 (SSD1331)
+- **M2 SHCS**: ×4 M2×8 (pod), ×4 M2×8 (deck-tie), ×4 M2×8 (clamp bar), ×2 M2×8 (OLED bracket foot), ×4 M2×6 (SSD1331)
 - **M2 nut**: ×4 (SSD1331)
-- **Ruthex inserts**: M3×5.7 ×16 (head 4, ears 4, riser flange 4, + spares), M3×3.8 ×2 (adapter), M2×4 ×16 (pod 4, deck-tie 4, clamp bar 4, cowl 2, OLED-bracket-in-pod-deck 2)
+- **Ruthex inserts**: M3×5.7 ×16 (head 4, ears 4, riser flange 4, + spares), M3×3.8 ×2 (adapter), M2×4 ×14 (pod 4, deck-tie 4, clamp bar 4, OLED-bracket-in-pod-deck 2)
 - **E-stop**: HB2-ES544 (Ø22, owned)

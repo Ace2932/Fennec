@@ -1,4 +1,22 @@
 // =============================================================================
+// *** RETIRED 2026-07-10 — SUPERSEDED BY RIGHT-ANGLE PLUG ADAPTERS (#41) ***
+// This −Y cable cowl existed ONLY to shield STRAIGHT plugs exiting the
+// Jetson's −Y (robot-right) ports (barrel V12_JET, USB-A, USB-C, RJ45) that
+// stuck out ~13-25mm past the tight flank channel — a snag + side-fall
+// crush risk, cantilevering ~19mm past the riser −y edge. RESOLUTION
+// (backlog #41): ~$6-15 right-angle plug adapters at each port turn the
+// cable DOWN at the port instead of sideways, so it drops straight through
+// the riser's existing −Y CASE_SLOT (x-30..30, y-51.5..-47 — unchanged,
+// still built by riser_bay.scad, see #38) with zero −Y protrusion. The
+// cowl's protection role is gone; the CASE_SLOT relocation it depended on
+// stays.
+// Kept in place (not deleted) for its reused knowledge — impact-wall/
+// end-wall geometry, the M2-into-upright bolt pattern, the counterbore
+// idiom for a short M2x10 in a thick wall — NOT built (removed from
+// build_all.sh) and NOT gated (removed from check_fit.py case 12). See
+// docs/improvement-backlog.md #41 (this retirement) + #38 (cowl's origin,
+// CASE_SLOT still active).
+// =============================================================================
 // JETSON -Y CABLE COWL — bolt-on flank shield for STRAIGHT port plugs (#38)
 // =============================================================================
 // The Jetson ports face -Y (robot RIGHT). With no right-angle plugs, STRAIGHT
@@ -61,4 +79,5 @@ module jetson_cowl() {
     }
 }
 
-jetson_cowl();
+// RETIRED — not called. See banner above.
+// jetson_cowl();

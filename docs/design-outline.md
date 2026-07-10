@@ -124,7 +124,7 @@ head.scad + the case cradle.)
 | 2 | tibia R+L, 4× knee_arm, 8× strap | supports under tibia blades |
 | 3 | shoulder ×2 + 4× outer horn plates | plates seat-face-down |
 | 4 | riser bay | largest part 126.7×110×42.9 (8× Jetson spacer RETIRED — Jetson now rides the official-case cradle) |
-| 5 | battery pocket, head + neck_bracket + l2_adapter + ears, control_pod + oled_mount, jetson_case_mount + clamp_bars (±cowl) | (L2 mast + D456 head + tray hood RETIRED 2026-07-07 → geometry folded into head.scad + the case cradle) |
+| 5 | battery pocket, head + neck_bracket + l2_adapter + ears, control_pod + oled_mount, jetson_case_mount + clamp_bars | (L2 mast + D456 head + tray hood RETIRED 2026-07-07 → geometry folded into head.scad + the case cradle; jetson_cowl RETIRED 2026-07-10 → right-angle plug adapters, backlog #41) |
 PA6-CF dried + annealed, 0.2mm, ≥4 walls, ≥40% infill (doctrine).
 
 ## Service paths (design requirement: reach anything without teardown)
@@ -132,7 +132,7 @@ PA6-CF dried + annealed, 0.2mm, ≥4 walls, ≥40% infill (doctrine).
 |---|---|---|
 | Battery swap | strap only | 0 |
 | Teensy USB / JP1 / SD / boards | riser lifts — Jetson/L2/D456 ride along (L2+D456 on the head, Jetson on the cradle) (4 flange screws + unplug 2 cables at the Jetson) | 4 |
-| Jetson | unbolt 2 clamp bars (4× M2 from above) + cowl if fitted (2× M2); case lifts out — tray hood RETIRED | 4-6 |
+| Jetson | unbolt 2 clamp bars (4× M2 from above); case lifts out — tray hood RETIRED | 4 |
 | L2 | 4× `l2_adapter` screws off the crown (head + Jetson stay) | 4 |
 | One whole leg | shoulder outer plate + unplug at coax bay | 4 |
 | One servo | its leg off → that joint's yoke discs → strap/columns | ~15-20 |
