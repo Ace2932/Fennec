@@ -49,7 +49,12 @@ point inside the designed part = the part cuts its counterpart. Cases:
      B.Cu underside (3x 0.6mm 0603 resistors, the parsed parts reaching
      lowest into the 20mm pb->lb gap) clears Q1's top — trivially true by
      construction but now asserted against real parsed geometry on both
-     sides of the gap instead of assumed.
+     sides of the gap instead of assumed; (f) the 4 floor->power-board
+     mezzanine standoffs (M3x20, Ø5 posts, AUD-4) are now modeled as real
+     cylinder geometry and checked against Q1 + C1-C6 (the tightest
+     top-side and bottom-side parts) — Q1 is XY-closest to the
+     (-40.5,-33) post (~1.55mm across-flats / ~1.16mm across-corners,
+     both clear) plus a volumetric backstop vs the full board mesh.
  12. CR-7 (was #39): the newest chassis parts, never gated before now —
      jetson_clamp_bar (+y/-y mirror), l2_adapter, control_pod, oled_mount.
      (jetson_cowl was gated here too until #41 retired it 2026-07-10 —
@@ -70,7 +75,9 @@ import numpy as np
 import trimesh
 
 from power_board_model import (power_board_mesh, logic_board_mesh, FLOOR_TOP_Z,
-                                STANDOFF_FLOOR_MM, LOGIC_BOARD_Z0, STACK_TOP_Z)
+                                STANDOFF_FLOOR_MM, LOGIC_BOARD_Z0, STACK_TOP_Z,
+                                BOARD_BOTTOM_Z)
+import power_board_model as pbm
 
 NOVA = '/Users/afox/codebases/NOVA'
 TRUNK = f'{NOVA}/original_body_files/SM3_Frame_ChassisTrunk.stl'
@@ -124,6 +131,21 @@ OLED_SEAT_Z = 95.0                  # control_pod deck top = oled_mount foot sea
 # with no known-exception zones, so a regression (e.g. a caliper-measured
 # part taller than assumed pushing past the S<=24.7 fit-window ceiling)
 # fails the gate instead of silently passing.
+
+# ---- case 11f: mezzanine floor->power-board standoff hardware (AUD-4,
+# 2026-07-10) -- case 11 checked the boards vs the trunk but never modeled
+# the physical standoff hardware, so the audit's Q1-vs-standoff near-miss
+# went ungated. 4x M3x20, Ø5 posts (radius 2.5mm "across flats" -- the
+# hex-flat clocking is a real assembly choice, not fixed by this model, so
+# the gate also reports the worst-case "across corners" radius, a hex
+# whose flat-to-flat = Ø5: across-corners = across-flats * 2/sqrt(3)),
+# 20mm tall (FLOOR_TOP_Z -> BOARD_BOTTOM_Z, power_board_model.py). XY
+# cross-checked against floor_plate.scad's STK_X=[-40.5,33.5] / STK_Y=33
+# mezzanine-pilot pattern (74 x 66, power_v2 fab pattern) -- both files
+# must stay in sync.
+STANDOFF_XY = [(-40.5, -33), (-40.5, 33), (33.5, -33), (33.5, 33)]
+STANDOFF_R_FLATS = 2.5                                  # Ø5, as modeled
+STANDOFF_R_CORNERS = STANDOFF_R_FLATS * 2 / np.sqrt(3)  # hex worst case, ~2.887mm
 
 
 def sample(m, n_surf=12000, n_vol=4000, seed=0):
@@ -260,16 +282,34 @@ def pod_riser_seat_mask(p):
 
 
 def l2a_seat_mask(p):
-    """Designed l2_adapter <-> crown-top seat (z=L2A_SEAT_Z). The front
-    tongue<->crown-lip interlock needs no separate mask: head.scad
-    difference()s a matching slot out of the lip, so head.contains() is
-    already False there by construction."""
-    return np.abs(p[:, 2] - L2A_SEAT_Z) < 0.6
+    """Designed l2_adapter <-> crown-top seat (z=L2A_SEAT_Z): the main
+    plate's flat bottom face only, x104..146 y-24..24 (l2_adapter.scad's
+    main plate `translate([104, -24, Z0]) cube([42, 48, T])`) -- the ONLY
+    part of l2_adapter that actually rests on the crown top. The front
+    tongue (x146..158, thin 2mm slab) does NOT touch the crown -- it
+    slides UNDER a crown lip through a matching slot head.scad hollows
+    out, so head.contains() is already False there by construction and
+    needs no mask. AUD-6 (2026-07-10): tightened from a z-band-only mask
+    (no x/y bound at all -- the loosest mask in this file) to the real
+    seat footprint, so anything proud elsewhere on the z=L2A_SEAT_Z plane
+    is no longer silently excluded."""
+    near_z = np.abs(p[:, 2] - L2A_SEAT_Z) < 0.6
+    near_xy = (p[:, 0] > 103.4) & (p[:, 0] < 146.6) & (np.abs(p[:, 1]) < 24.6)
+    return near_z & near_xy
 
 
 def oled_seat_mask(p):
-    """Designed oled_mount foot <-> control_pod deck-top seat (z=OLED_SEAT_Z)."""
-    return np.abs(p[:, 2] - OLED_SEAT_Z) < 0.6
+    """Designed oled_mount foot <-> control_pod deck-top seat (z=OLED_SEAT_Z):
+    the foot's flat bottom face only, x-99..-69 y22..27 (oled_mount.scad's
+    foot `translate([-99, 22, 95]) cube([30, 5, 3])`) -- the vertical
+    display panel (x-99..-96, y26..53, z98..124) sits well above this
+    z-band and shares no seat contact, so it needs no exclusion. AUD-6
+    (2026-07-10): tightened from a z-band-only mask (no x/y bound) to the
+    real foot footprint."""
+    near_z = np.abs(p[:, 2] - OLED_SEAT_Z) < 0.6
+    near_xy = (p[:, 0] > -99.6) & (p[:, 0] < -68.4) & \
+              (p[:, 1] > 21.4) & (p[:, 1] < 27.6)
+    return near_z & near_xy
 
 
 # ---- leg assembly point cloud (leg_v6 gate composition, coax frame) --------
@@ -733,7 +773,7 @@ def main():
 
     # ---- 11. REAL power board + REAL logic board (power_board_model),
     # STANDOFF_FLOOR_MM=20 ------------------------------------------------------
-    pb_mesh, pb_components, _ = power_board_mesh()
+    pb_mesh, pb_components, pb_fps = power_board_mesh()
     pb_tops = [c for c in pb_components if c['top_side']]
     pb_bots = [c for c in pb_components if not c['top_side']]
     pbp = sample(pb_mesh, 10000, 3000, seed=1)
@@ -833,6 +873,65 @@ def main():
           f'z={lb_bot_z:.2f}) clears Q1 top ({q1["z1"]:.2f}) in the pb->lb gap, '
           f'margin={lb_bot_z - q1["z1"]:.2f}mm')
     bad |= not ok
+
+    # (f) mezzanine standoff hardware (AUD-4): model the 4 floor->power
+    # standoffs as real geometry and check the power-board components
+    # against them -- reusing power_board_model's own footprint-extent /
+    # component-mesh helpers (pbm._component_mesh, pbm._footprint_xy_extent)
+    # so the clearance is measured against the SAME box/cylinder shapes the
+    # gate already builds pb_mesh out of, not a re-derived approximation.
+    # Q1 (TO-220) is the tallest top-side part and, per the audit, the
+    # tightest XY neighbor of the standoff at (-40.5,-33); C1-C6 are the
+    # bottom-side caps whose z-band (9..26) actually overlaps the standoff
+    # barrel's z-band (6..26), so they're the ones with a genuine 3D
+    # coincidence risk, not just an XY graze like Q1 (Q1 sits on TOP of the
+    # board, z>=27.62, a full board-thickness above the standoff top at
+    # z=26 -- no z-overlap is possible, so this is a plan-view XY clearance
+    # check: does anything reaching toward that corner, on either face,
+    # crowd the post).
+    standoffs = trimesh.util.concatenate([
+        trimesh.creation.cylinder(
+            radius=STANDOFF_R_FLATS, height=BOARD_BOTTOM_Z - FLOOR_TOP_Z,
+            transform=trimesh.transformations.translation_matrix(
+                [sx, sy, (FLOOR_TOP_Z + BOARD_BOTTOM_Z) / 2]))
+        for sx, sy in STANDOFF_XY])
+    print('-- case 11f: mezzanine standoff hardware (AUD-4) --')
+    for ref in ('Q1', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6'):
+        info = next(c for c in pb_components if c['ref'] == ref)
+        fp = pb_fps[ref]
+        sx, sy = min(STANDOFF_XY,
+                     key=lambda s: (s[0] - info['x']) ** 2 + (s[1] - info['y']) ** 2)
+        if fp['diameter'] is not None:
+            center_d = float(np.hypot(info['x'] - sx, info['y'] - sy))
+            gap = lambda r, d=center_d, cr=fp['diameter'] / 2: d - cr - r
+        else:
+            xw, yw = pbm._footprint_xy_extent(fp)
+            rx0, rx1 = info['x'] - xw / 2, info['x'] + xw / 2
+            ry0, ry1 = info['y'] - yw / 2, info['y'] + yw / 2
+            nx = min(max(sx, rx0), rx1)
+            ny = min(max(sy, ry0), ry1)
+            edge_d = float(np.hypot(sx - nx, sy - ny))
+            gap = lambda r, d=edge_d: d - r
+        gap_flats, gap_corners = gap(STANDOFF_R_FLATS), gap(STANDOFF_R_CORNERS)
+        tag = 'OK  ' if gap_flats >= 0 else 'FAIL'
+        clock_note = ('  (clocking-sensitive: worst-case hex corner interferes)'
+                      if gap_corners < 0 else '')
+        print(f'{tag}  {ref} vs standoff ({sx:+.1f},{sy:+.1f}): '
+              f'{gap_flats:+.2f}mm across-flats, {gap_corners:+.2f}mm '
+              f'across-corners{clock_note}')
+        bad |= gap_flats < 0
+    # volumetric backstop: sample the standoff posts themselves and check
+    # against the REAL power-board mesh (not just the two named part
+    # families above) -- catches anything else crowding a post that the
+    # per-ref loop didn't name. The slab's own underside is a designed
+    # seat (board bottom z=BOARD_BOTTOM_Z rests directly on the standoff
+    # top), so exclude points within jitter of that mating plane the same
+    # way the floor-plate/deck seats are excluded elsewhere in this file.
+    sop = sample(standoffs, 6000, 1500, seed=11)
+    sop_f = sop[sop[:, 2] < BOARD_BOTTOM_Z - 0.3]
+    hits = sop_f[pb_mesh.contains(sop_f)] if len(sop_f) else sop_f
+    bad |= report_depth('standoff posts vs power board (mating seat excluded)',
+                        hits, pb_mesh, noise_mm=0.05)
 
     # ---- 12. NEW chassis parts (CR-7, was #39): jetson_clamp_bar (+y/-y),
     # l2_adapter, control_pod, oled_mount. These have had real
@@ -940,11 +1039,14 @@ def main():
     # closed-bore grommet_insert intuition and is not meaningful here. Primary
     # retention = the zip-tie tab (per the .scad header); spine interference +
     # bottom leg are secondary. Report FYI; only flag if implausibly low.
-    tag = 'NOTE' if grip_frac >= 0.15 else 'WARN'
-    print(f'{tag}  case_slot_grommet edge-clip: {grip_frac * 100:.0f}% of its '
-          f'volume overlaps solid riser (spine interference + bottom-leg wrap; '
-          f'the rest is the exposed cable channel, by design). Primary '
-          f'retention = zip-tie tab. Informational, not a gate failure.')
+    # grip% is an INVERTED proxy for this open edge liner: more overlap = the
+    # leg jammed deeper into the rigid skirt = LESS installable, not more
+    # secure. Retention is the zip-tie tab by design, so this NEVER gates --
+    # pure FYI (LEG_REACH is sized for installability, which reads ~12%).
+    print(f'NOTE  case_slot_grommet edge-clip: {grip_frac * 100:.0f}% of its '
+          f'volume overlaps solid riser (leg backstops on the skirt inner face; '
+          f'the rest is the exposed cable channel + bay air, by design). '
+          f'grip% is an inverted proxy — retention = the zip-tie tab. FYI only.')
 
     # ---- 5. static fixture asserts ----------------------------------------------
     case_top = 110.1     # official case top (deck 71.9 + 38.2 calipered)

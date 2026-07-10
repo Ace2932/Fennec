@@ -134,7 +134,12 @@ LEG_T      = 1.2;       // leg wall thickness (matches grommet_insert.scad FLG_T
 // original design), putting ~2.7mm of the leg's 5.5mm reach inside the
 // 3.2mm-thick skirt (the real grip target -- the deck plate itself is
 // only ~0.05mm thick at the leg's z-band, see Z0/Z1 below).
-LEG_REACH  = 5.5;       // leg reach onto the deck face, away from the passage
+LEG_REACH  = 2.8;       // leg backstops on the skirt inner face (~y-51.8) —
+                        // INSTALLABLE. 5.5 jammed ~2.7mm of TPU into the now-
+                        // restored rigid skirt = too much interference for a
+                        // press-fit (2026-07-10 review). Retention is the
+                        // zip-tie tab, not leg grip, so a shorter installable
+                        // leg is correct even though the (inverted) grip% drops.
 SPINE_BACK = 0.3;       // spine's flat core reaches this far onto the
                         // material side (-y), overlapping the leg
 SPINE_FWD  = 1.0;       // spine protrusion into the cable passage (+y) —
