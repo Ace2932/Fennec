@@ -55,10 +55,21 @@ SQUEEZE = 0.3;         // CR-8 #3: TOTAL inner-span interference (~0.15/side)
                        //   up by the CA dab (part header). Only the GRIP arms
                        //   are squeezed; the wrap-under base is an outer hook,
                        //   not a mating face, so it stays at the nominal BW.
+LEAD = 3;              // AUD-5 (2026-07-10): install lead-in. The bracket
+                       //   slides UP FROM BELOW onto the tibia block (part
+                       //   header), so the arm TOP (z near ZTOP) is the
+                       //   MOUTH — the leading edge that first rides onto the
+                       //   block — while the wrap-under (bottom) seats last.
+                       //   Eases the SQUEEZE interference from fit_hy (full
+                       //   grip) to hy (~0 interference) over the last LEAD mm
+                       //   of arm travel, so install force ramps in instead of
+                       //   hitting full interference at first contact. Seated
+                       //   grip below (z < ZTOP-LEAD) is untouched.
 
 module knee_bumper() {
     hy = BW / 2;                       // 16.05, the nominal ±Y block face plane
     fit_hy = hy - SQUEEZE / 2;         // 15.90, the squeezed ARM inner-face plane
+    relief = hy - fit_hy;              // 0.15, the eased-to amount at the mouth
     union() {
         // wrap-under base (below the blade bottom) — FRONT only (x24..40),
         // clear of the fold-collision zone; provides the bottom grip hook.
@@ -70,10 +81,25 @@ module knee_bumper() {
                 cube([X1 - XB0, 2 * (hy + WALL - CH), EPS]);
         }
         // two side arms on the ±Y faces (full strike span x15..40) — squeezed
-        // fit_hy inward of the nominal block face (SQUEEZE interference)
+        // fit_hy inward of the nominal block face (SQUEEZE interference),
+        // with the AUD-5 lead-in taper cut from the inner face at the mouth
+        // (the arm top, the last LEAD mm of z).
         for (sy = [-1, 1])
-            translate([X0, sy * fit_hy - (sy < 0 ? WALL : 0), BZ0])
-                cube([X1 - X0, WALL, ZTOP - BZ0]);
+            difference() {
+                translate([X0, sy * fit_hy - (sy < 0 ? WALL : 0), BZ0])
+                    cube([X1 - X0, WALL, ZTOP - BZ0]);
+                // lead-in cut: tapers from 0 relief (z = ZTOP-LEAD, matches
+                // the seated inner face exactly) to full relief (z = ZTOP,
+                // inner face eased out to the nominal hy plane)
+                hull() {
+                    translate([X0 - EPS, sy * fit_hy - (sy < 0 ? EPS : 0),
+                               ZTOP - LEAD])
+                        cube([X1 - X0 + 2 * EPS, EPS, EPS]);
+                    translate([X0 - EPS, sy * fit_hy - (sy < 0 ? relief : 0),
+                               ZTOP - EPS])
+                        cube([X1 - X0 + 2 * EPS, relief, 2 * EPS]);
+                }
+            }
     }
 }
 

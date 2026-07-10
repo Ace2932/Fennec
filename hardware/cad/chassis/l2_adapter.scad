@@ -33,7 +33,12 @@ module l2_adapter() {
             translate([CTR + sx * L2_BCD, sy * L2_BCD, Z0 - EPS])
                 cylinder(d = M3_CLEAR, h = T + 2 * EPS);
             translate([CTR + sx * L2_BCD, sy * L2_BCD, Z0 - EPS])
-                cylinder(d1 = 6.2, d2 = M3_CLEAR, h = 2.2);      // countersink
+                // AUD-2 (2026-07-10): true 90 deg CSK (was h=2.2 -> a ~65 deg
+                // cone, too shallow for a flat-head to seat flush at the
+                // crown-seat mating face z128). 90 deg needs a 1:1
+                // radial:depth ratio (proven in floor_plate.scad d1=3.4/
+                // d2=6.8/h=1.7): (6.2-3.4)/2 = 1.4 -> h=1.4.
+                cylinder(d1 = 6.2, d2 = M3_CLEAR, h = 1.4);      // countersink
         }
         // 2x REAR crown-mount heat-sets (from the plate BOTTOM z128, +z 4mm).
         // The bolt comes UP from below the crown into these. SHORT M3 insert
