@@ -7,8 +7,17 @@
 // horn/wheel discs. Real case anatomy (spline-relative, shaft = +Z):
 //   case box     x -35.2..+10.2, y ±12.4, z -15.5..+14.7
 //   top rear cap ridge to z 17.4 (x -34.8..-28.5, y ±7)
-//   OUTPUT HORN  Ø20 x 2.5, z 14.7..17.2, 4x M2.5 on Ø14 BCD ±45° + center
-//   BOTTOM WHEEL Ø20 x 2.1, z -17.7..-15.6, same screw pattern (standard!)
+//   OUTPUT HORN  Ø20 x ~3.05, z 14.7..17.75, 4x M2.5 on Ø14 BCD ±45° + center
+//   BOTTOM WHEEL Ø20 x ~2.15, z -17.75..-15.6, same screw pattern (standard!)
+//   rev 3 (2026-07-10): disc-to-disc CALIPERED on the bare servo = 35.5mm
+//   (tip-to-tip incl. protrusions = 39.1). The mesh-derived 34.9mm gap
+//   (17.2 top / -17.7 bottom) was 0.6mm too narrow — arms wouldn't seat
+//   flat. HORN_Z1/WHEEL_Z0 (the yoke SEAT planes, not the case/pocket
+//   envelope) moved outward to ±17.75, split symmetrically about the
+//   shaft (Z=0) so no joint axis moves — only the two seat planes do.
+//   Driven-side retention screw (Ø5.4, ~1.5mm proud) and idler-side
+//   plastic boss (Ø6, ~1-2mm proud) now get real center reliefs instead
+//   of a Ø3.4 through-hole that couldn't clear either.
 //   connector BAY: rear-bottom drops to z -19.4 over case x < -5.3; the two
 //     3-pin sockets sit mid-body facing the rear
 //   4x CASE-SCREW COLUMNS (Ø2 self-tap, heads at bottom): the REAL mounting
@@ -16,7 +25,7 @@
 //     (-8.3, ±10.2) and (-32.8, ±10.25)
 //
 // Joint pattern (SO-ARM-style, bolted BOTH sides):
-//   * driven yoke TOP arm bolts the horn (underside contacts horn face 17.2)
+//   * driven yoke TOP arm bolts the horn (underside contacts horn face 17.75)
 //   * driven yoke BOTTOM arm carries a Ø19 boss up through the pocket
 //     floor's Ø24 window and BOLTS THE WHEEL (face -17.7)
 //   * servo body: drops into the open-top pocket; floor seats the bay
@@ -39,10 +48,15 @@ CASE_BOT  = -15.5;                       // front-zone bottom face
 CAP_TOP   = 17.4;                        // rear top cap ridge
 BAY_X1    = -5.3;                        // bay extends CASE_X0..BAY_X1
 BAY_BOT   = -19.4;                       // bay bottom face
-HORN_Z0   = 14.7;   HORN_Z1 = 17.2;      // output horn disc faces
+HORN_Z0   = 14.7;   HORN_Z1 = 17.75;     // output horn disc faces. HORN_Z1 =
+                                          // yoke SEAT plane, CALIPERED (rev 3):
+                                          // disc-to-disc 35.5 split symmetric
+                                          // about the shaft (Z=0) -> ±17.75.
+                                          // HORN_Z0 (case-side face) unmoved.
 HORN_OD   = 20.0;
 HORN_BCD  = 14.0;                        // 4x M2.5 at ±45° + center (both discs)
-WHEEL_Z0  = -17.7;  WHEEL_Z1 = -15.6;    // bottom wheel faces
+WHEEL_Z0  = -17.75; WHEEL_Z1 = -15.6;    // bottom wheel faces. WHEEL_Z0 = yoke
+                                          // SEAT plane, same rev-3 caliper fix.
 WHEEL_OD  = 20.0;
 COL_PTS   = [[-8.3, 10.2], [-8.3, -10.2], [-32.8, 10.25], [-32.8, -10.25]];
 
@@ -70,7 +84,20 @@ CLR_POCKET = 0.45;   // DROP-IN slip fit. NOT the 0.30 press calibration
 CLR_HORN   = 0.15;
 M2_CLEAR   = 2.3;    // case-column replacement screws (M2 self-tap)
 M25_CLEAR  = 2.9;    // horn / wheel disc screws
-M3_CLEAR   = 3.4;    // horn center (fits M3; wheel center is M2.5 -> 2.9)
+M3_CLEAR   = 3.4;    // general M3 clearance (knee_arm/shoulder_plate mounting
+                     // screws). NOT the horn/wheel center relief any more —
+                     // see HORN_CTR_D / WHEEL_CTR_D below (rev 3).
+HORN_CTR_D    = 6.5;  // driven-side center counterbore: clears the horn's
+                       // own retention screw head, Ø5.4 x ~1.5mm proud
+                       // (MEASURED). Was Ø3.4/M3_CLEAR — too narrow.
+HORN_CTR_DEEP = 2.5;   // counterbore depth from the seat face (screw head
+                       // 1.5 proud + margin; arm is 4mm thick, so 1.5mm of
+                       // solid material remains above the pocket).
+WHEEL_CTR_D    = 7.0;  // idler-side center relief: clears the wheel's black
+                        // plastic boss, Ø6 x ~1-2mm proud (MEASURED). The
+                        // idler has NO retention screw (unlike the driven
+                        // side) — this is boss clearance only.
+WHEEL_CTR_DEEP = 2.5;   // relief depth from the wheel-seat face (boss face)
 HEATSET_D  = 4.0;    // Ruthex M3 insert BORE — insert OD is 4.6, bore must
                      // be 4.0 (tolerance audit). Referenced by femur +
                      // shoulder but NEVER DEFINED until 2026-07-06: OpenSCAD
@@ -86,8 +113,14 @@ ARM_THK    = 4.0;
 WHEEL_WIN_D  = 21.5;                     // floor window (wheel Ø20 + boss Ø19 clear)
 WHEEL_BOSS_D = 19.0;                     // yoke bottom-arm boss through it
 // yoke arm planes (contact, bolted):
-YOKE_TOP_IN = HORN_Z1;                   // 17.2  top-arm underside ON horn
+YOKE_TOP_IN = HORN_Z1;                   // 17.75  top-arm underside ON horn
+                                          // (rev 3: was 17.2 -- see HORN_Z1)
 YOKE_BOT_IN = FLOOR_BOT - 0.4;           // -22.6 bottom-arm plate top (0.4: PA6-CF shrink robustness)
+                                          // NOTE: NOT the wheel seat -- that's
+                                          // WHEEL_Z0, reached by the boss.
+                                          // YOKE_BOT_IN is unaffected by the
+                                          // rev-3 gap fix (only the boss
+                                          // lengthens to reach WHEEL_Z0).
 
 // =============================================================================
 // MODULES — SPLINE AXIS = Z THROUGH ORIGIN. Case body extends toward -X.
@@ -166,14 +199,16 @@ module pocket_platform_pos() {
 }
 
 // Horn coupling NEGATIVE for a yoke TOP arm spanning z [YOKE_TOP_IN,
-// YOKE_TOP_IN+ARM_THK]: shallow Ø20 locating recess + 4x M2.5 BCD + center.
+// YOKE_TOP_IN+ARM_THK]: shallow Ø20 locating recess + 4x M2.5 BCD + a center
+// counterbore (rev 3) that clears the horn's own proud retention screw head
+// (Ø5.4, ~1.5mm proud, MEASURED) — was a Ø3.4 hole, too narrow to clear it.
 module horn_couple_neg() {
     translate([0, 0, YOKE_TOP_IN - EPS]) {
         cylinder(d = HORN_OD + 2*CLR_HORN, h = 0.4 + EPS);   // locating recess
         for (a = [45 : 90 : 315])
             rotate([0, 0, a]) translate([HORN_BCD/2, 0, 0])
                 cylinder(d = M25_CLEAR, h = ARM_THK + 2*EPS);
-        cylinder(d = M3_CLEAR, h = ARM_THK + 2*EPS);
+        cylinder(d = HORN_CTR_D, h = HORN_CTR_DEEP + EPS);   // blind counterbore
     }
 }
 
@@ -200,6 +235,12 @@ module wheel_couple_neg() {
         cylinder(d = M25_CLEAR, h = h_all);        // center (wheel is M2.5)
         cylinder(d = 5.2, h = 1 + 1.6);
     }
+    // idler-boss relief (rev 3): the wheel side has NO retention screw —
+    // instead a black plastic boss (Ø6, ~1-2mm proud, MEASURED) sits proud
+    // of the wheel face. Blind counterbore from the wheel-seat face
+    // (WHEEL_Z0 = the yoke boss's own top/contact face) clears it.
+    translate([0, 0, WHEEL_Z0 - WHEEL_CTR_DEEP])
+        cylinder(d = WHEEL_CTR_D, h = WHEEL_CTR_DEEP + EPS);
 }
 
 // Pocket side-wall VENT window NEGATIVE (CR-6, 2026-07-09): rounded-end

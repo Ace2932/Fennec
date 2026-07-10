@@ -79,7 +79,8 @@ def sweep_checks(servo, pts0):
     bad = False
     femur = trimesh.load('femur_R.stl')
     arm = trimesh.load('knee_arm.stl')
-    arm.apply_transform(trimesh.transformations.translation_matrix([59, 0, 17.2]))
+    # rev 3 (2026-07-10): knee_arm seats at YOKE_TOP_IN, moved 17.2->17.75
+    arm.apply_transform(trimesh.transformations.translation_matrix([59, 0, 17.75]))
     tibia = trimesh.load('tibia_R.stl')
     # knee_bumper (TPU, backlog #15 B) wraps the knee-end pocket block ±Y faces
     # + under the bottom; it RIDES the tibia through the kfe fold, so sweep it
@@ -135,7 +136,8 @@ def shoulder_checks(servo, pts0):
     femur = trimesh.load('femur_R.stl')
     tibia = trimesh.load('tibia_R.stl')
     arm = trimesh.load('knee_arm.stl')
-    arm.apply_transform(trimesh.transformations.translation_matrix([59, 0, 17.2]))
+    # rev 3 (2026-07-10): knee_arm seats at YOKE_TOP_IN, moved 17.2->17.75
+    arm.apply_transform(trimesh.transformations.translation_matrix([59, 0, 17.75]))
     # leg points in COAX frame (coax + haa servo + femur/tibia/arm assembly)
     M_f = (trimesh.transformations.translation_matrix([33.8, 11.6, -9.5])
            @ rot_z180()

@@ -7,7 +7,7 @@
 //
 // STRUCTURE DICTATED BY THE COAX SWEPT WEDGE (haa ±40°+): the coax bottom
 // corner sweeps r41.5, reaching ~x2.8 of centerline; top corners r20.8.
-// Between the wheel plane (-17.7) and horn plane (+17.2) nothing may exist
+// Between the wheel plane (-17.75) and horn plane (+17.75) nothing may exist
 // below z +23.5 → C-box over the legs:
 //   REAR WALL (-26.6..-22.6) with the Ø19 WHEEL BOSSES (0.4 behind the
 //     rotating coax floor, same pattern as the leg yokes)
@@ -23,8 +23,11 @@
 include <leg_v6_common.scad>
 
 HIP_X     = 39.05;
-HORN_Y    = 17.2;              // horn face plane (haa spline-z -> shoulder y)
-WHEEL_FACE_Y = -17.7;          // wheel face plane
+HORN_Y    = 17.75;             // horn face plane (haa spline-z -> shoulder y)
+                                // rev 3 (2026-07-10): 17.2->17.75, caliper
+                                // gap fix, matches leg_v6_common HORN_Z1 +
+                                // shoulder_plate.scad FACE_Y0.
+WHEEL_FACE_Y = -17.75;         // wheel face plane, same rev-3 fix (was -17.7)
 REAR_W0   = -32.1;  REAR_W1 = -28.1;  // face 0.5 behind the coax YOKE-ARM
                                        // extreme (-27.6 — the yoke reaches
                                        // 5.4 PAST the coax floor; sweep-gate
@@ -173,6 +176,14 @@ module shoulder_v6() {
                 cylinder(d = M25_CLEAR, h = (WHEEL_FACE_Y - REAR_W0) + 2);
             translate([sx*HIP_X, REAR_W0 - EPS, 0]) rotate([-90, 0, 0])
                 cylinder(d = 5.2, h = 1.8);
+            // idler-boss relief (rev 3): the haa wheel has NO retention
+            // screw — a black plastic boss (Ø6, ~1-2mm proud, MEASURED)
+            // sits proud of the wheel face instead. Blind counterbore from
+            // the wheel-seat face (WHEEL_FACE_Y = this boss's own tip)
+            // clears it, same treatment as leg_v6_common's wheel_couple_neg.
+            translate([sx*HIP_X, WHEEL_FACE_Y - WHEEL_CTR_DEEP, 0])
+                rotate([-90, 0, 0])
+                    cylinder(d = WHEEL_CTR_D, h = WHEEL_CTR_DEEP + EPS);
         }
 
         // neck_bracket bolt-landing pilot dimples (backlog #36) — FRONT end

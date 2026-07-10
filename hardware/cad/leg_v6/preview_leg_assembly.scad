@@ -21,7 +21,7 @@ color([0.2,0.4,1,0.45])  // haa servo ghost
 translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0,0,180]) rotate([0,90,0]) {
   femur_v6();
   // bolt-on knee arm (knee_arm.scad prints separately; placed here)
-  color([0.9,0.8,0.3]) translate([59, 0, 17.2]) import("knee_arm.stl");
+  color([0.9,0.8,0.3]) translate([59, 0, 17.75]) import("knee_arm.stl");
   color([1,0.2,0.2,0.45]) rotate([0,0,180]) sts3215_real();
   // tibia at the knee
   translate([FEMUR_LEN,0,0]) {

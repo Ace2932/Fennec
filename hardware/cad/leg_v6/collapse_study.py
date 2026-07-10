@@ -17,7 +17,7 @@ def load():
     P['coax']=trimesh.load(f'{LEG}/coax_R.stl')
     s=trimesh.load(f'{NOVA}/feetech_servo_models/converted_stl/servo.stl'); s.apply_translation([-12.5,0,0]); P['servo']=s
     P['femur']=trimesh.load(f'{LEG}/femur_R.stl')
-    a=trimesh.load(f'{LEG}/knee_arm.stl'); a.apply_transform(T([59,0,17.2])); P['arm']=a
+    a=trimesh.load(f'{LEG}/knee_arm.stl'); a.apply_transform(T([59,0,17.75])); P['arm']=a  # rev 3: 17.2->17.75
     P['tibia']=trimesh.load(f'{LEG}/tibia_R.stl')
     P['pad']=trimesh.load(f'{LEG}/tibia_pad.stl')
     sh=trimesh.load(f'{NOVA}/original_body_files/SM3_Foot.stl'); sh.apply_transform(T([129,0,-30.5])@rot(54,[0,0,1])@T([0,-7.0,0])); P['foot']=sh
