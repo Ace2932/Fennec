@@ -73,7 +73,14 @@ through the three buck ENs, Jetson stays up — power-budget checklist line
 
 Verified fine this pass: pocket vents (coax/femur/tibia all vented), joint
 idler sides ride the Feetech wheel bearing, standoffs, bulk-cap placement.
-Still open from leg_v6 doctrine: 25T horn-disc kit variant (blocker-grade).
+~~Still open from leg_v6 doctrine: 25T horn-disc kit variant (blocker-grade).~~
+**RESOLVED 2026-07-10** (user calipered the bare STS3215): the yoke bolts to the
+stock **metal Ø20 disc horn** (driven) + idler wheel — disc-to-disc **35.5mm**
+(was modeled 34.9, 0.6mm too tight → arms wouldn't seat). Fixed: yoke gap →35.5
+symmetric about the shaft (axes/FEMUR_LEN/TIBIA_LEN unchanged), + Ø6.5/Ø7.0
+center reliefs for the proud retention screw + idler boss. `52d387f`, --sweep
+exit 0. ⚠ first-article still dry-fits the real servo in the printed yoke
+(print tolerance on 35.5 + the reliefs).
 
 ## Stress audit both-directions (2026-07-06 fifth pass — real STL sections)
 
