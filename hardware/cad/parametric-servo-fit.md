@@ -207,6 +207,6 @@ That's the parametric workflow.
 
 - `dimensions.md` — canonical STS3215 STEP-verified dims (single source of truth — variables mirror these)
 - `patterns.md` — CadQuery macros for the same dims (for non-OnShape utility parts)
-- `leg_v5/README.md` — canonical leg design (V5 OpenSCAD); pulls `CLR_BODY` from this file
+- `leg_v6/README.md` — canonical leg design (V6 OpenSCAD designed-for-assembly); pulls `CLR_POCKET` drop-in clearance, superseding this file's `CLR_BODY` press-fit calibration for leg pockets
 - `archive/leg_v4/README.md` — rejected V4 OnShape build summary (hardcoded, pre-parametric)
 - Jarvis OnShape MCP skill at `~/.claude/plugins/cache/jarvis-onshape-mcp/jarvis-onshape-mcp/1.2.0/skills/onshape/SKILL.md` — full OnShape MCP protocol reference

@@ -22,7 +22,7 @@ Project-specific macros live in [`hardware/cad/patterns.md`](./patterns.md) (ver
 - **STS3215** (19kg + 30kg variants) — pull STEP from GrabCAD or Feetech site, import to OnShape
 - **NovaSM3 reference chassis** — `cguweb-com/Arduino-Projects/tree/main/Nova-SM3` (the `SovGVD/NovaSM3` URL in old docs was a misattribution; that repo does not exist). **STEP files NOT in repo — only STL.** For OnShape import: (a) import STL as static body, (b) re-model from STL + datasheet + caliper, or (c) contact Chris Locke for original Fusion source. See [`docs/research/2026-05-17-notes.md`](../../docs/research/2026-05-17-notes.md) §8.
 - **Feetech 25T servo horns** — datasheet dims, model in OnShape from scratch
-- **688ZZ ball bearings** (8 × 16 × 5 mm) — **RETIRED 2026-07-10** — leg_v6 uses the servo's integral idler wheel, not external bearings (vestigial from leg_v5); generic deep-groove, no STEP needed; press-fit pocket geometry is in [`patterns.md`](./patterns.md) §6
+- **688ZZ ball bearings** (8 × 16 × 5 mm) — **RETIRED 2026-07-10** — leg_v6 uses the servo's integral idler wheel, not external bearings (vestigial from leg_v5); generic deep-groove, no STEP needed; press-fit pocket geometry is in [`patterns.md`](./patterns.md) §3
 - **Calipers** for in-hand cross-check — STS3215 body tolerance is ±0.1 mm batch-to-batch, never trust a single datasheet number for press-fit work
 
 ## Print workflow
@@ -35,7 +35,8 @@ Project-specific macros live in [`hardware/cad/patterns.md`](./patterns.md) (ver
 
 ## Files in this directory
 
-- [`leg_v5/`](./leg_v5/) — canonical leg design (OpenSCAD `.scad` sources + 9 exported STLs). Start at [`leg_v5/README.md`](./leg_v5/README.md), iterate via [`leg_v5/ITERATE.md`](./leg_v5/ITERATE.md).
+- [`leg_v6/`](./leg_v6/) — canonical leg design (OpenSCAD designed-for-assembly sources + STLs). Start at [`leg_v6/README.md`](./leg_v6/README.md).
+- [`leg_v5/`](./leg_v5/) — SUPERSEDED shell-carve leg design, kept for the shape-preserving carve technique + stock-STL provenance. Not for new leg work.
 - [`dimensions.md`](./dimensions.md) — canonical part dims (✅ verified / ⚠️ review / ❌ missing). Wins on any conflict.
 - [`patterns.md`](./patterns.md) — CadQuery macros for project utility parts.
 - [`parametric-servo-fit.md`](./parametric-servo-fit.md) — PA6-CF press-fit clearance calibration (V5 pulls `CLR_BODY` from here). The OnShape-Variable-Studio parametric workflow it describes is superseded by V5's literal clearance.

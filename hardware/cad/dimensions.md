@@ -354,6 +354,28 @@ Standard ISO 4762 / DIN 912. Heads:
 | M3 × 12 | 5.5 | 3.0 | M3 |
 | M3 × 16 | 5.5 | 3.0 | M3 |
 
+### DIN 965 countersunk (CSK) M3
+**Source:** ISO 7046 / DIN 965 standard
+
+| Dim | Value | Status |
+|---|---|---|
+| Head OD | 6.0 | ✅ |
+| Included angle | 90° | ✅ |
+| Head height | ~1.65 | ✅ |
+| Thread | M3 | ✅ |
+
+### DIN 985 nyloc (nylon-insert lock nut) M3
+**Source:** ISO 10511 / DIN 985 standard
+
+| Dim | Value | Status |
+|---|---|---|
+| Height | ~4.0 | ✅ |
+| Thread | M3 | ✅ |
+
+> **vs plain DIN 934 hex nut (~2.4 mm height):** nyloc is **1.6 mm taller** —
+> that extra height can bind in tight pockets (neck_bracket / shoulder-foot
+> joints). Verify clearance before specifying nyloc in a shallow nut pocket.
+
 ### Loctite 243 (medium-strength blue threadlocker)
 Standard consumable. No mechanical dim. ✅
 
@@ -645,7 +667,7 @@ When designing a new CAD part:
 2. **If ⚠️ REVIEW, caliper-measure the actual part before committing.**
 3. **If ❌ MISSING, you must measure — no fallback.**
 4. **Add the verification to this file** when you measure — bump ⚠️ to ✅ and cite source (e.g., "caliper 2026-05-24 on Ovonic pack A").
-5. **Cross-reference** with `patterns.md` macros, `leg_v5/leg_v5_common.scad` (canonical leg dims), and `archive/leg_v3/leg_common.py` constants. If they disagree, this file wins.
+5. **Cross-reference** with `patterns.md` macros, `leg_v6/leg_v6_common.scad` (canonical leg dims), and `archive/leg_v3/leg_common.py` constants. If they disagree, this file wins.
 
 ---
 

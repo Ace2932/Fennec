@@ -133,11 +133,11 @@ PA6-CF dried + annealed, 0.2mm, ≥4 walls, ≥40% infill (doctrine).
 | Battery swap | strap only | 0 |
 | Teensy USB / JP1 / SD / boards | riser lifts — Jetson/L2/D456 ride along (L2+D456 on the head, Jetson on the cradle) (4 flange screws + unplug 2 cables at the Jetson) | 4 |
 | Jetson | unbolt 2 clamp bars (4× M2 from above); case lifts out — tray hood RETIRED | 4 |
-| L2 | 4× `l2_adapter` screws off the crown (head + Jetson stay) | 4 |
+| L2 | `l2_adapter` off the crown: 2 rear bolts (up from below the crown, into the adapter heat-sets) + 1 front tongue/hook (slides under the crown front lip, no bolt) — head + Jetson stay. Needs a stubby/right-angle driver (2 rear bolts up a tight ~18mm pocket shared with neck_bracket access) | 2 |
 | One whole leg | shoulder outer plate + unplug at coax bay | 4 |
 | One servo | its leg off → that joint's yoke discs → strap/columns | ~15-20 |
 | Shoulder | its 2 legs off → trunk screws | 4-6 |
-| D456 | camera rides the periscope bracket: bracket off = 4 riser-row screws (camera↔bracket = bench-only) | 4 |
+| D456 | camera is part of the forward neck-mounted head unit (D456 face + L2 crown, ONE part) — bolts to `neck_bracket` via 4 nylon M3 breakaway; camera↔head is not separately serviceable in the field (bench-only rework) | 4 |
 
 ## Doc graph (start → detail)
 `docs/design-outline.md` (this) → `hardware/cad/leg_v6/README.md` (legs) ·

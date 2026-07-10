@@ -1,6 +1,6 @@
 ---
 name: nova-sm3-cad
-description: "Use this skill when designing a 3D-printable utility part for the NovaSM3 quadruped build (this project). Triggers: any mention of a NovaSM3 part, Feetech STS3215 mount, 688ZZ bearing seat, hip pocket, femur U-bracket, tibia, foot pad, LiPo pocket, XT60/XT30/E-stop/RJ-45 panel cutout, Pololu buck carrier, INA226 mount, Teensy 4.1 / Arduino Nano footprint, RealSense D456 bracket, Unitree L2 LiDAR riser, LC filter pocket, MPU-6050 mount, leg-rail star injection, cable strain relief, WS2812B status LED, servo zero-position calibration jig, antenna mount; or any CAD work in ~/codebases/NOVA/proj/. Do NOT use for: the leg links shoulder/coax/femur/tibia (use the V5 OpenSCAD original-shell-carve at hardware/cad/leg_v5/ instead), the chassis + multi-body assemblies (use OnShape via Jarvis MCP), or non-NovaSM3 robotics work (use the upstream parametric-3d-printing skill alone)."
+description: "Use this skill when designing a 3D-printable utility part for the NovaSM3 quadruped build (this project). Triggers: any mention of a NovaSM3 part, Feetech STS3215 mount, 688ZZ bearing seat, hip pocket, femur U-bracket, tibia, foot pad, LiPo pocket, XT60/XT30/E-stop/RJ-45 panel cutout, Pololu buck carrier, INA226 mount, Teensy 4.1 / Arduino Nano footprint, RealSense D456 bracket, Unitree L2 LiDAR riser, LC filter pocket, MPU-6050 mount, leg-rail star injection, cable strain relief, WS2812B status LED, servo zero-position calibration jig, antenna mount; or any CAD work in ~/codebases/NOVA/proj/. Do NOT use for: the leg links shoulder/coax/femur/tibia (use the V6 designed-for-assembly track at hardware/cad/leg_v6/ instead), the chassis + multi-body assemblies (use OnShape via Jarvis MCP), or non-NovaSM3 robotics work (use the upstream parametric-3d-printing skill alone)."
 ---
 
 # NovaSM3 CAD Patterns
@@ -32,11 +32,14 @@ from this repo (`hardware/cad/patterns.md`) and the upstream parametric-
 
 2. **For the leg links** (shoulder, coax, femur, tibia):
    - Do NOT use this skill, and do NOT model from scratch. The canonical
-     design is **V5 OpenSCAD original-shell-carve** at `hardware/cad/leg_v5/`:
-     import the original NovaSM3 STL, carve an STS3215 cavity via boolean
-     `difference()`. Read `hardware/cad/leg_v5/README.md` + `ITERATE.md`.
-   - Build: `cd hardware/cad/leg_v5 && ./build_all.sh`. Edit cavity placement
-     in the per-part `.scad` (femur's is shared via `femur_params.scad`).
+     design is **V6 designed-for-assembly** at `hardware/cad/leg_v6/`:
+     ground-up parts around the real STS3215 mesh with drop-in pockets,
+     both-discs-bolted joints, and a real-mesh fit gate. Read
+     `hardware/cad/leg_v6/README.md`.
+   - Build: `cd hardware/cad/leg_v6 && ./build_all.sh`. Runs the full fit
+     gate (6 pockets + pose sweeps) on every build.
+   - `hardware/cad/leg_v5/` (shell-carve) is SUPERSEDED — kept for
+     reference / provenance only, do not route new leg work there.
 
 3. **For the chassis + multi-body assemblies** (chassis-to-shoulder bolt
    patterns, sensor mount-to-chassis interfaces, anything where mate
@@ -53,8 +56,8 @@ from this repo (`hardware/cad/patterns.md`) and the upstream parametric-
 ## Reference
 
 - **CAD tooling setup:** `docs/cad-tooling.md` (three-track workflow:
-  V5 OpenSCAD legs + CadQuery utility + Jarvis OnShape MCP chassis)
-- **Canonical leg design:** `hardware/cad/leg_v5/README.md` + `ITERATE.md`
+  V6 OpenSCAD legs + CadQuery utility + Jarvis OnShape MCP chassis)
+- **Canonical leg design:** `hardware/cad/leg_v6/README.md`
 - Canonical macros: `hardware/cad/patterns.md` (in this repo, version-
   controlled, source of truth)
 - Canonical part dimensions: `hardware/cad/dimensions.md`

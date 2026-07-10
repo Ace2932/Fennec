@@ -19,12 +19,14 @@ This skill (CadQuery + preview loop) is for **utility parts**:
 - Anything single-body or single-assembly that doesn't need full
   kinematic constraints
 
-**Use the V5 OpenSCAD track (not this skill) for the leg links:**
+**Use the V6 OpenSCAD track (not this skill) for the leg links:**
 
-- Shoulder, coax, femur, tibia — canonical design at `hardware/cad/leg_v5/`.
-  Reuse the original NovaSM3 STL, carve an STS3215 cavity via boolean
-  `difference()`. **Do not re-derive leg geometry in CadQuery** — wrong tool,
-  and from-scratch attempts (V3.1, V4) were rejected (in `hardware/cad/archive/`).
+- Shoulder, coax, femur, tibia — canonical design at `hardware/cad/leg_v6/`.
+  Ground-up designed-for-assembly parts built around the real STS3215 mesh
+  (drop-in pockets, both-discs-bolted joints, real-mesh fit gate). **Do not
+  re-derive leg geometry in CadQuery** — wrong tool, and from-scratch
+  attempts (V3.1, V4) were rejected (in `hardware/cad/archive/`); the earlier
+  V5 shell-carve is superseded (kept at `hardware/cad/leg_v5/` for reference).
 
 **Use OnShape (not this skill) for the chassis + multi-body assemblies:**
 
