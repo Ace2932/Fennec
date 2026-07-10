@@ -75,7 +75,7 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
 | Firmware safety | ✅ torque limits, limp, LVC | boot-settle PR #17 · stand-up choreography |
 | Chassis | ✅ riser bay designed + gated (`hardware/cad/chassis/`) | hand-trim of 4 trunk slab ends when boards arrive |
 | Chassis | ✅ belly battery pocket + L2 crown mount designed + gated | battery leads route through the shoulder-flange bottom notch; assembly: the L2 mounts on the head crown via `l2_adapter` (bench: L2→adapter M3×10 CSK, then adapter→crown M3×8 SHCS); head+L2 ride the neck on the 4 nylon M3 breakaway (#42) |
-| Chassis | ✅ D456 head designed + gated (**PERISCOPE**, rear-pattern screw-in — user call) | camera z 80.5..109.5 above the shoulder deck extension: the ONLY leg-safe home for the 124-wide body (under-chin dies on the folded front femur; riser-wall dies on the shoulder webs). ⚠ rear 4×M3 pattern unverified — caliper before printing |
+| Chassis | ✅ D456 head designed + gated (forward 27° down-tilt face + L2 crown, ONE part — user call) | camera forward of the chassis (body x136–173, back-face ctr 143,0,111.5, tilted 27° down) so near-ground is in frame; head_study = 0 leg-sweep hits at front hfe −50. Rear **2× M3 @94.4 centerline** mount, CALIPER 07-07 (periscope retired 07-07) |
 | Chassis | ✅ floor plate designed + gated | mezzanine seat + battery sandwich + drill template; stack ctr x −3.5 (power_v2 fab-file holes); rear-only slab trim; 5191 slots ⚠ caliper |
 | Chassis | ✅ E-stop + OLED re-homed (`control_pod.scad`, rear-top, bolts to the riser rear wall — hood retired) | wire the E-stop NC pair + OLED SPI down the pod grommet at assembly |
 | Kinematics | ✅ measured (B2) | masses from prints → URDF; joint ranges = sweep gate values |

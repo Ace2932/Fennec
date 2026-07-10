@@ -10,12 +10,13 @@ One evening, calipers + the real parts. Every number lands in
 - [ ] → `dimensions.md` Jetson row; then hood design + E-stop pod ride
 
 ## 2. D456 camera (blocks: d456_head print)
-- [ ] Rear-panel 4× M3 pattern: exact x/y centers (docs guess slots at
-      y ±54, rows z 84-91 / 94-99 — "expect to touch these")
-- [ ] Thread depth of the rear M3s (screw length pick)
+- [x] ~~Rear mount pattern~~ — DONE 2026-07-07: **2× M3, 94.4 apart** on the
+      back-face centerline (±47.2, width-centered). The old "4× corner (±54)"
+      guess was WRONG — captured in `head.scad` MOUNT_Y=47.2 + dimensions.md.
+- [ ] Thread depth of the 2× rear M3s (screw-length pick) — still open
 - [ ] Right-angle USB-C plug head: L × W × H (must pass the 20-wide
-      flange notch + plate window y 2..19)
-- [ ] → `d456_head.scad` SLOT_Y / SLOT_ROWS + dimensions.md
+      flange notch + plate window y 2..19; also sizes the #41 adapter)
+- [ ] → `head.scad` MOUNT_Y / MOUNT_SLOT + dimensions.md (d456_head.scad RETIRED)
 
 ## 3. Blue Sea 5191 MRBF block (blocks: floor_plate slots, harness plan)
 - [ ] Base footprint + mounting hole pattern + stud height w/ fuse
