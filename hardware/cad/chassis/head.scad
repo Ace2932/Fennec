@@ -31,8 +31,8 @@
 //   has no interlock, so it separates cleanly. ⚠ tune preload at bench: must
 //   hold trot/vibration (<<nylon M3 ~200N shear) yet shed on a hard fall.
 // STRUCTURE (trunk mm):
-//   REAR BOSS -> COLUMN -> CROWN (L2 seat z124..128; L2 on its 4x M3 22.5
-//     square, bolted from BELOW, ball-key). Cable bore x126.5, y+-5.5 drops the
+//   REAR BOSS -> COLUMN -> CROWN (L2 seat z124..128; L2 on its 4x M3 on the
+//     Ø51 (±18) BCD, bolted from BELOW, ball-key). Cable bore x126.5, y+-5.5 drops the
 //     L2 pigtail through the boss bottom (z84) into the bracket cable slot ->
 //     deck window -> C-box -> trunk (RJ45 11.7x8 + DC plug; caliper).
 //   FACE PILLAR (x128..138) hangs off the column front, BEHIND the camera
@@ -239,6 +239,10 @@ module head() {
             for (sy = [-1, 1], ex = [77, 83])
                 translate([ex, sy * 10, CROWN_Z0 + 7 - 6.2])
                     cylinder(d = 4.0, h = 6.2 + EPS);
+        // (#46 TPU fox-mask snout-anchor bores REMOVED 2026-07-10: the fox
+        //  mask was banked, so these were dead — and their z86 Ø4 bore
+        //  overlapped the z89 HM breakaway-insert bore, breaking that insert's
+        //  360° wall (CR-3). Removing them clears CR-3.)
     }
 }
 
