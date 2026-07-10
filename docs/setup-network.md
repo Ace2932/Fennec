@@ -15,10 +15,18 @@ JetPack uses systemd predictable names, not `wlan0`/`eth0`:
 | `can0` | CAN bus (unused for v1) |
 | `docker0` | Docker virtual bridge (172.17.0.0/16) |
 
+## Topology decision (2026-07-10): switch is BENCH-ONLY, robot goes L2-DIRECT
+On the deployed robot the ONLY wired ethernet device is the L2 (a walking
+quadruped can't trail a cable — laptop access is WiFi). So **L2 → straight Cat6
+→ Jetson `enP8p1s0`**, point-to-point, no onboard switch (GbE auto-MDIX, no
+crossover). Same static IPs. The 5-port switch stays on the BENCH — it only
+exists so the dev laptop (.10) + L2 can share the wired LAN while tethered.
+Nothing to house/power/crush-protect on the robot. (See harness plan #31.)
+
 ## Will cover
 - Jetson `enP8p1s0` static IP: 192.168.1.2/24
 - Unitree L2 default IP: 192.168.1.62, UDP target port 6101
-- 5-port Gigabit unmanaged switch wiring (Jetson + L2 + dev laptop)
+- 5-port Gigabit unmanaged switch wiring — **bench dev only** (Jetson + L2 + dev laptop)
 - Dev laptop static IP: 192.168.1.10
 - Verifying L2 UDP packet flow (`tcpdump`, rviz2)
 - Simultaneous SSH-over-WiFi while LiDAR streams on Ethernet

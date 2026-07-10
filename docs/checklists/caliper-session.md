@@ -1,48 +1,58 @@
-# Caliper Session (critical path — unblocks hood, E-stop pod, D456 print, floor plate, harness plan)
+# Caliper Session
 
-One evening, calipers + the real parts. Every number lands in
-`hardware/cad/dimensions.md` (new/updated rows) and the named part file.
+**STATUS 2026-07-10: nearly all closed 2026-07-07.** The bulk of this session
+was done — numbers landed in `hardware/cad/dimensions.md` + the part files and
+the geometry re-gated. What remains is the **servo SKU label read (#23)** plus
+two minor D456 sub-items. Kept below as the record; ✅ = done, ⏳ = still open.
 
-## 1. Jetson heatsink (blocks: hood → E-stop pod)
-- [ ] Heatsink TOP height above the carrier board plane (dimensions.md
-      says 21.5 ⚠ REVIEW; hood + L2-overhang clearance math uses it)
-- [ ] Fan housing outline (x/y) + cable exit side
-- [ ] → `dimensions.md` Jetson row; then hood design + E-stop pod ride
+## 1. Jetson heatsink — ✅ MOOT (hood retired)
+The hood this blocked was retired 2026-07-07 (Jetson now on the official-case
+cradle). The case itself is calipered: **110.3 × 93.9 × 38.2** (dimensions.md;
+cradle POST_TOP/corner columns measured 07-08, #33/#34). No bare-heatsink
+measurement needed.
 
-## 2. D456 camera (blocks: d456_head print)
-- [x] ~~Rear mount pattern~~ — DONE 2026-07-07: **2× M3, 94.4 apart** on the
-      back-face centerline (±47.2, width-centered). The old "4× corner (±54)"
-      guess was WRONG — captured in `head.scad` MOUNT_Y=47.2 + dimensions.md.
-- [ ] Thread depth of the 2× rear M3s (screw-length pick) — still open
-- [ ] Right-angle USB-C plug head: L × W × H (must pass the 20-wide
-      flange notch + plate window y 2..19; also sizes the #41 adapter)
-- [ ] → `head.scad` MOUNT_Y / MOUNT_SLOT + dimensions.md (d456_head.scad RETIRED)
+## 2. D456 camera — ✅ mostly done
+- [x] Rear mount pattern — **2× M3, 94.4 apart** on the back-face centerline
+      (±47.2, width-centered). The old "4× corner" guess was WRONG. Captured in
+      `head.scad` MOUNT_Y=47.2 + dimensions.md (CALIPER 2026-07-07).
+- [x] Body L×W×H — **123.8 × 26.0 × 29.0** (CALIPER 2026-07-07).
+- [ ] ⏳ Thread depth of the 2× rear M3s (screw-length pick) — minor
+- [ ] ⏳ Right-angle USB-C plug head L×W×H (must pass the 20-wide flange notch +
+      plate window y2..19; also sizes the #41 USB-C adapter) — minor
+- [ ] → `head.scad` MOUNT_SLOT + dimensions.md (d456_head.scad RETIRED)
 
-## 3. Blue Sea 5191 MRBF block (blocks: floor_plate slots, harness plan)
-- [ ] Base footprint + mounting hole pattern + stud height w/ fuse
-- [ ] Ring-terminal lead exit directions (drives the internal harness
-      plan, backlog #31)
-- [ ] → `floor_plate.scad` 5191 slots + dimensions.md
+## 3. Blue Sea 5191 MRBF block — ✅ DONE
+- [x] Body **61.6 × 20.0 × 46.5**, terminal stud Ø7.8 → **M8** lugs (CALIPER
+      2026-07-07).
+- [x] Mount DECIDED: **external, assembly-time** (zip/bracket to the
+      rear-shoulder exterior or trunk-rear at the battery-lead entry) — no
+      captive spot fits it, so the `floor_plate.scad` 5191 slots were REMOVED
+      07-07. Drives the #31 harness plan.
 
-## 4. Battery pack (blocks: pocket clearance confidence, #29 chafe gap)
-- [ ] Real L × W × H incl. shrink-wrap bulge (listing 155×46×35; cavity
-      cut at +0.8/side — re-gate if fatter)
-- [ ] Lead + balance-connector exit geometry (rear-notch fit; balance
-      lead stowage decision)
-- [ ] → dimensions.md pack row; `battery_pocket.scad` CLR if needed
+## 4. Battery pack — ✅ DONE
+- [x] Real L×W×H **155.0 × 46.8 × 35.0** (width +0.8 vs the 46 listing; L/H
+      matched). CALIPER 2026-07-07. `battery_pocket.scad` CLR tightened
+      0.8→0.6/side → cavity re-cut, chassis gate re-run clean.
+- [ ] ⏳ Lead + balance-connector exit geometry — confirm at harness dress (#31)
 
-## 5. L2 pigtail plugs (blocks: mast bore confidence)
-- [ ] RJ45 plug head W × H (claim 11.7 × 8 — mast bore is 13 × 11)
-- [ ] DC barrel plug Ø + length (claim ~Ø10)
-- [ ] → dimensions.md L2 row; `l2_mast.scad` BORE if needed
+## 5. L2 leads — ✅ DONE (mast retired)
+- [x] Mount pattern CONFIRMED from the manual (CR-1): 4× M3 on Ø51, depth 6.
+- [x] Power barrel **3.5 × 1.35** (CALIPER 2026-07-07) → 12V L2 rail.
+- [x] L2 data = **RJ45 ethernet** → Jetson `enP8p1s0` (via a switch; static
+      IPs L2 192.168.1.62 / Jetson .2). Serial GH1.25-4Y unused.
+- Note: the "mast bore" this once blocked is gone (l2_mast RETIRED; L2 now on
+  the head crown via l2_adapter). RJ45 head size only matters for head/neck
+  cable routing now — low priority.
 
 ## Same bench session (not caliper)
-- [ ] Servo SKU audit (#23): read all 12 + spare labels — 7.4 V vs 12 V
-      SKU. LABEL hips vs legs physically. (+58% knee torque question)
-- [ ] Jetson SMA/U.FL pigtail reach to the riser bulkhead positions
-      (−15/+25, +44) — verify on the real board
-- [ ] Filament stock check: PA6-CF ~1.5 kg, PETG-CF ~0.6 kg, TPU ~100 g
+- [ ] ⏳ **Servo SKU audit (#23)** — read all 12 + spare labels: 7.4V vs 12V
+      SKU. LABEL hips vs legs physically. (+58% knee-torque question.) **← the
+      one real open bench item.**
+- [ ] ⏳ Jetson SMA/U.FL pigtail reach to the ear bulkhead positions — gated on
+      the #32 WiFi bench-range test (decides if the ears become antenna masts).
+- [ ] ⏳ Filament stock check: PA6-CF ~1.5 kg, PETG-CF ~0.6 kg, TPU ~100 g
+      (PETG-CF now needed for riser/floor/head-brackets per #24).
 
 ## Possibly stale (check then close)
-- [x] ~~femur-knee-fix memory~~ — confirmed leg_v5-era, superseded by
-      the leg_v6 knee_arm redesign; memory deleted 2026-07-06
+- [x] ~~femur-knee-fix memory~~ — leg_v5-era, superseded by the leg_v6
+      knee_arm redesign; memory deleted 2026-07-06.

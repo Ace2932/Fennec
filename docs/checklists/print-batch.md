@@ -8,7 +8,8 @@ CLEARED (Jetson heatsink 34.9, D456 rear pattern confirmed, pack 510 g, 5191
 
 **RETIRED — do NOT print:** `l2_mast`, `d456_head` (→ folded into `head`),
 `hood` (→ official Jetson case), `tibia_pad` (misplaced → `knee_bumper`),
-`spacer` (board in the case).
+`spacer` (board in the case), `jetson_cowl` (→ right-angle plug adapters, #41
+2026-07-10).
 
 **NEW parts:** `head.scad` (fwd integrated head, PA6-CF), `neck_bracket.scad`
 (front-shoulder-deck adapter, PA6-CF), `knee_bumper.scad` (TPU collapse guard),
@@ -43,8 +44,8 @@ real parts. Print it in Wave 1 as a fit-check article, not the final head.
 
 | Material | Parts |
 |---|---|
-| PA6-CF (DRY 80 °C/10 h; no anneal — §3) | coax, femur, tibia, knee_arm, shoulder, shoulder_plate (+L variants), strap ×4, **`head`**, **`neck_bracket`** — 4 walls / 40 % / gyroid (**AUDITED** `neck_bracket_analysis.py`: faceplant SF ~12; ⚠ the L2-scan **vibration/resonance** is a stiffness concern, unverified — modal check on the first print) |
-| PETG-CF | riser_bay, floor_plate, battery_pocket, **`head_ear` ×2** (split off the head 2026-07-07 — prints FLAT, low-warp; PA6-CF also fine. Bolts to the head ear-pad; OPTIONAL per the WiFi-antenna decision #32), **`l2_adapter`** (FLAT bottom-down, ~6 g; PA6-CF also fine — it carries the L2 mass so PA6-CF preferred if in stock), **`control_pod`** (COLUMN-FACE-DOWN, ~24 g; rear-top E-stop + OLED mount) |
+| PA6-CF (DRY 80 °C/10 h; no anneal — §3) | coax, femur, tibia, knee_arm, shoulder, shoulder_plate (+L variants), strap ×4, **`head`**, **`neck_bracket`**, **`battery_pocket`** (#24 2026-07-10: stays PA6-CF — belly crush guard over the LiPo, puncture=fire #15; impact toughness > flatness) — 4 walls / 40 % / gyroid (**AUDITED** `neck_bracket_analysis.py`: faceplant SF ~12; ⚠ the L2-scan **vibration/resonance** is a stiffness concern, unverified — modal check on the first print) |
+| PETG-CF | riser_bay, floor_plate, **`head_ear` ×2** (split off the head 2026-07-07 — prints FLAT, low-warp; PA6-CF also fine. Bolts to the head ear-pad; OPTIONAL per the WiFi-antenna decision #32), **`l2_adapter`** (FLAT bottom-down, ~6 g; PA6-CF also fine — it carries the L2 mass so PA6-CF preferred if in stock), **`control_pod`** (COLUMN-FACE-DOWN, ~24 g; rear-top E-stop + OLED mount) |
 | TPU 95A | SM3_Foot shoe ×4+1 (STOCK geometry — crush-zone v2 waits for first-article, #20), skid_rail ×2, cable_clip ×20, ~~tibia_pad~~ → **knee_bumper ×4+1** (backlog #15 B, replaces the retired tibia_pad — wraps the tibia knee-block, ~8 g TPU, U opening up), **grommet_insert ×6** |
 
 ## 2. Slicer spec
@@ -53,7 +54,7 @@ real parts. Print it in Wave 1 as a fit-check article, not the final head.
 |---|---|---|---|---|
 | legs PA6-CF | 4 | 0.2 | 40% (**tibia 25%** — stress audit SF 35) | orientations per part headers: femur/tibia flat −Z, coax rear-face-down + supports under the yoke bridge, shoulder rear-face-down + tree supports, tibia tab-down + pillars, shoulder_plate horn-seat-down, knee_arm underside-down, strap flat |
 | head/bracket PA6-CF | 4–5 | 0.2 | 40–60% | `head` CROWN/PAD-DOWN (the flat crown top on the bed = best L2-seat + ear-pad surface; the boss + tilted face + cheeks rise → tree supports under the tilted-face + cheek overhangs); `neck_bracket` BASE-DOWN (deck face on the bed, wall+gussets rise); `l2_adapter` FLAT bottom-down (zero supports) |
-| chassis PETG-CF | 3 | 0.25 | 20% | riser DECK-FACE-DOWN (zero supports); floor_plate flat (zero supports); battery_pocket FLOOR-DOWN (opening up, zero supports); jetson_case_mount base-down (uprights rise, no overhangs after the #34 rework); `jetson_clamp` ×4 flat (PA6-CF; the removable case hold-downs); `jetson_cowl` ×1 (PA6-CF impact part, outer-wall/end-down, ~8 g; the −y straight-plug shield); `control_pod` COLUMN-FACE-DOWN (riser-facing face on the bed; light supports under the deck + OLED-panel overhangs) |
+| chassis PETG-CF | 3 | 0.25 | 20% | riser DECK-FACE-DOWN (zero supports); floor_plate flat (zero supports); jetson_case_mount base-down (uprights rise, no overhangs after the #34 rework); `jetson_clamp_bar` ×2 flat (PA6-CF; #44 — removable case hold-downs, replaced the 4 clamps); `control_pod` COLUMN-FACE-DOWN (riser-facing face on the bed; light supports under the deck + OLED-panel overhangs). **`battery_pocket` prints PA6-CF settings** (§1 row / #24, not PETG), FLOOR-DOWN opening-up, zero supports. (`jetson_cowl` RETIRED #41 — do NOT print) |
 | TPU | 2 | 0.2 | 100% | clips/rails/grommet flat; **knee_bumper U-opening-UP**; shoe per stock orientation |
 
 ## 3. DRY yes, ANNEAL no (corrected 2026-07-06 — user catch)
