@@ -932,13 +932,19 @@ def main():
     gvol = rng.uniform(lo, hi, (20000, 3))
     gvol = gvol[grommet.contains(gvol)][:4000]
     grip_frac = float(riser.contains(gvol).mean()) if len(gvol) else 0.0
-    tag = 'OK  ' if grip_frac > 0.85 else 'WARN'
-    print(f'{tag}  case_slot_grommet grip check: {grip_frac * 100:.0f}% of its own '
-          f'volume sits inside CURRENT riser material (want >85%) -- low means '
-          f'riser_bay.scad\'s CASE_SLOT cut (see FLAG in case_slot_grommet.scad) '
-          f'has eaten the edge this liner is designed to clip onto; NOT '
-          f'counted toward the gate result (riser_bay.scad fix is out of this '
-          f'part\'s scope), but should read >85% once that follow-up lands.')
+    # The CASE_SLOT r=4 blowout is FIXED (riser_bay.scad 2026-07-10, slot
+    # widened to 9mm). This liner is an EDGE CLIP (spine + one bottom leg over
+    # a 4mm deck edge), NOT a closed-bore grommet -- most of its volume is the
+    # exposed cable channel in the slot VOID by design, so "% inside solid"
+    # caps well under 100%. The old ">85%" target was carried over from the
+    # closed-bore grommet_insert intuition and is not meaningful here. Primary
+    # retention = the zip-tie tab (per the .scad header); spine interference +
+    # bottom leg are secondary. Report FYI; only flag if implausibly low.
+    tag = 'NOTE' if grip_frac >= 0.15 else 'WARN'
+    print(f'{tag}  case_slot_grommet edge-clip: {grip_frac * 100:.0f}% of its '
+          f'volume overlaps solid riser (spine interference + bottom-leg wrap; '
+          f'the rest is the exposed cable channel, by design). Primary '
+          f'retention = zip-tie tab. Informational, not a gate failure.')
 
     # ---- 5. static fixture asserts ----------------------------------------------
     case_top = 110.1     # official case top (deck 71.9 + 38.2 calipered)

@@ -45,11 +45,25 @@
 // chassis = better range). See head.scad STYLE SMA bores + README.
 //
 // Deck fixtures (trunk x,y) after the case pivot:
-//   CASE_SLOT x -25..25, y -53..-47: the case -Y-FLANK cable drop (2026-07-08,
+//   CASE_SLOT x -30..30, y -49..-40: the case -Y-FLANK cable drop (2026-07-08,
 //     #38 — the Jetson ports face -Y/robot-right, so cables exit the -Y side +
 //     drop here into the bay; was rear-centre x-58..-46 when the port end was
-//     assumed rearward). Outboard of the case footprint (y-47), clear of the
-//     -y register tab (x-48..-32) + the cradle -y deck ties (x47.3/-59).
+//     assumed rearward). RE-SIZED 2026-07-10 (real bug behind the
+//     case_slot_grommet 34% grip WARN): the old [-30,30,-51.5,-47] slot was
+//     only 4.5mm wide in y — too narrow for the cable bundle (fattest = RJ45
+//     ~6mm) — AND its rounded_slot(..., r=4) call required r <= half the
+//     4.5mm short span (2.25); with r=4 the corner-circle hull blew the cut
+//     out to y approx -55..-43.5, breaching the deck's own -Y edge
+//     (OUT_Y=55, zero rim left) and undercutting the Jetson case footprint.
+//     New bounds: 9mm wide (clears the ~6mm RJ45 cable + margin), outer edge
+//     y-49 leaves a 6mm solid rim to OUT_Y=55 (and clear of the cradle -y
+//     tie-rail at y-52..-55, jetson_case_mount.scad) — sits inboard of both.
+//     Inner edge y-40 sits under/inboard of the -Y port face (~y-47) so the
+//     down-turned cables (right-angle adapters, #41) actually drop into it.
+//     rounded_slot r dropped 4 -> 2.0 (<= half the new 9mm short span) so
+//     the cut now matches these bounds exactly. Clear of the -y register
+//     tab (x-48..-32, gap 2mm) + the cradle -y deck ties (x47.3/-59.0, x
+//     outside the slot's -30..30 span).
 //   Cradle deck ties 4x O3.4 at (47.3/-59.0, +/-50.35): M3 up from below
 //     into the cradle post-base heat-sets.
 // Wall fixtures: riser<->flange pads (both ends, y +/-40, bores z 67.4). Vent
@@ -96,11 +110,15 @@ M3_CLEAR   = 3.4;
 // Kept commented for the reused-geometry knowledge.
 // MAST_BX = [54, 59.0];  MAST_BY = [-14, 14];  // HEAD L2-column base
 // L2_DROP = [53.5, 0];                          // head cable-bore drop
-CASE_SLOT = [-30, 30, -51.5, -47]; // case -Y-FLANK cable drop (#38). Long+thin,
-                                  // fully in the ~4.8 channel between the case
-                                  // footprint (y-46.95) and the riser skirt inner
-                                  // (y-51.8) -> clean drop into the bay, doesn't
-                                  // notch the skirt. Cables -> board -y edges.
+CASE_SLOT = [-30, 30, -49, -40]; // case -Y-FLANK cable drop (#38), RE-SIZED
+                                  // 2026-07-10 (see banner above): 9mm wide
+                                  // (was 4.5, too narrow for the cable bundle),
+                                  // outer edge -49 keeps a 6mm solid rim to the
+                                  // deck's own -Y edge (OUT_Y=55) + stays clear
+                                  // of the cradle -y tie-rail (y-52..-55);
+                                  // inner edge -40 sits under/inboard of the
+                                  // -Y port face (~y-47) to catch the
+                                  // down-turned cables.
 // SMA bulkheads RETIRED 2026-07-07 — WiFi MIMO antennas consolidated to the
 // head ears (higher, clear of the CF chassis). Kept commented for reference.
 // SMA  = [[57, 40], [57, -40]];  // O6.5, front strip, 80 apart (MIMO)
@@ -191,7 +209,7 @@ module riser_bay() {
         // deck through-features
         // (head L2-column deck bores + the L2 cable drop RETIRED 2026-07-07 —
         //  the L2 pigtail now drops the neck cable slot -> shoulder C-box.)
-        rounded_slot(CASE_SLOT[0], CASE_SLOT[1], CASE_SLOT[2], CASE_SLOT[3], 4);
+        rounded_slot(CASE_SLOT[0], CASE_SLOT[1], CASE_SLOT[2], CASE_SLOT[3], 2.0);
         // case-cradle deck ties (M2 clearance, up from below into the cradle
         // post-base M2 heat-sets — the 6mm cradle posts can't wall an M3 insert;
         // M2 has huge margin for the light cradle. fastener audit 2026-07-08)
