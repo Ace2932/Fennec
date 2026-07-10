@@ -179,8 +179,12 @@ module shoulder_v6() {
         // shoulder stays ONE part. Horn plates start at x 27 — untouched.
         translate([-26, FLANGE_Y0 - 0.1, 19.5])
             cube([52, REAR_W0 - FLANGE_Y0 + 0.1 + EPS, DECK_Z1 - 19.5 + 0.1]);
-        // riser hold-down holes: M3x10 from outside into heat-sets in the
+        // riser hold-down holes: M3x12 from outside into heat-sets in the
         // riser end walls at (x +/-40, z 29.35) = trunk (y +/-40, z 67.4)
+        // (CR-8 #1: stack-verified 2026-07-10 — 4mm flange + 2.0mm clear
+        // wall zone + 5.7mm insert engagement = 11.7 min, M3x12 fits with
+        // 0.3mm spare before the bore bottom; M3x10 under-engages the
+        // insert by 1.7mm. Was mis-commented M3x10, matches fastener-schedule.)
         for (sx = [-1, 1])
             translate([sx*40, FLANGE_Y0 - 1, 29.35]) rotate([-90, 0, 0])
                 cylinder(d = 3.4, h = FLANGE_Y1 - FLANGE_Y0 + 2);

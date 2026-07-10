@@ -35,7 +35,7 @@ include <leg_v6_common.scad>
 // kept on disk as the stock-toe reference only.
 
 TIBIA_LEN   = 129.0;   // kfe axis -> foot hole axis (MEASURED, B2)
-SLAB_W      = 2*(CASE_HW + CLR_POCKET + WALL);   // 31.7
+SLAB_W      = 2*(CASE_HW + CLR_POCKET + WALL);   // 32.1
 SLAB_Z0     = FLOOR_BOT;                          // -22.2
 SLAB_Z1     = CASE_TOP;                           // +14.7
 TIP_R       = SLAB_W/2;

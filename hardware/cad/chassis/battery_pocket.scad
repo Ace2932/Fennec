@@ -15,12 +15,15 @@
 // tray bottom carries the pack.
 //
 // Mount: 6x M3 x 12 driven from INSIDE the trunk, through the 3.9 floor
-// slab, into heat-set inserts in the rim bosses at (x -40/0/+40,
-// y +/-26.5). The stock floor has NO holes there — drill Ø3.4 at first
-// assembly. **The part-5 floor boss plate must adopt this same 6-hole
-// pattern**: screws then sandwich plate + floor + tray (plate spreads the
-// load; the tray bores double as the drill template from below). Inserts
-// press from BELOW so screw tension pulls them DEEPER into the boss
+// slab, into a side-loaded M3 NUT TRAP in the rim bosses at (x -40/0/+40,
+// y +/-26.5) — NOT a heat-set insert (design-review fix: a full-height
+// column can't take an insert from either end, and a nut beats an insert
+// for the pocket's highest-load joint anyway; see the trap detail below).
+// The stock floor has NO holes there — drill Ø3.4 at first assembly.
+// **The part-5 floor boss plate must adopt this same 6-hole pattern**:
+// screws then sandwich plate + floor + tray (plate spreads the load; the
+// tray bores double as the drill template from below). The nut slides in
+// from the outboard face so screw tension pulls the boss DOWN onto it
 // (pack weight = extraction-safe direction).
 //
 // Pack: 155 fore-aft (overhangs the 127 trunk by ~14.8/end, passing 0.25
@@ -43,8 +46,8 @@ PACK = [155, 46.8, 35];          // CALIPER 2026-07-07 (was 46 listing width)
 CLR  = 0.6;                       // per side (width caliper landed +0.8 → keep
                                   // ~0.6/side; pack slides on the tray, EVA
                                   // pad + strap preload it, backlog #29)
-CAV_X = PACK[0] / 2 + CLR;        // 78.3
-CAV_Y = PACK[1] / 2 + CLR;        // 23.8
+CAV_X = PACK[0] / 2 + CLR;        // 78.1
+CAV_Y = PACK[1] / 2 + CLR;        // 24.0
 WALL  = 3.2;
 RIM_Z = -0.2;                     // tray top plane (0.2 under the shell)
 CAV_Z0 = RIM_Z - (PACK[2] + CLR); // -36.0 cavity floor

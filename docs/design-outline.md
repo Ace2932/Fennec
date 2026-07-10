@@ -43,10 +43,11 @@ the linked docs. Sibling memories: `~/claude-memory/nova-proj/`
   pack → SW1 → boards. Dual-voltage servo harness per
   `hardware/wiring/README.md` (VCC-pulled daisy links + local XT30 spurs).
 - **Perception**: L2 on a center-front mast (~100 above trunk top, sees over
-  the Jetson hood + legs), Ethernet down the mast; D456 in a flared front
+  the Jetson case + legs), Ethernet down the mast; D456 in a flared front
   head shell, USB3 side channel to the rear riser.
-- **Compute**: Jetson on the riser top, rear, hooded, fan up; SMA bulkheads
-  on the tray; barrel V12_JET + RJ45 + USB rise through the rear grommet.
+- **Compute**: Jetson official case on the riser top, rear, cradle-mounted
+  (hood retired — see #33/#34), fan up; SMA bulkheads on the tray; barrel
+  V12_JET + RJ45 + USB rise through the rear grommet.
 - **CoM**: battery centered under the hip grid; Jetson-rear balances
   L2+head-front; ~4.15kg total.
 
@@ -105,7 +106,7 @@ ChassisTrunk mesh at design time). Legs load the bottom shell ONLY — the
 riser is never structural, so it lifts off with the robot standing.
 **Body stack (bottom-up).** belly battery pocket (bolts under the shell) →
 STOCK bottom shell (kept; reprint in PA6-CF later if the stock print proves soft) → shoulders ×2 (same part) → riser bay (seats on the wall-top rails
-z 29 + corner plateau tabs; **4× M3×10 horizontal through the shoulder
+z 29 + corner plateau tabs; **4× M3×12 horizontal through the shoulder
 flanges into riser heat-sets** — the imagined "shell bosses" don't exist,
 mesh-measured 2026-07-06, `hardware/cad/chassis/README.md`) → Jetson tray
 hood + L2 mast + D456 head shell (each 2-4× M3 onto reserved riser bosses;

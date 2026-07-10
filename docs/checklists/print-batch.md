@@ -122,6 +122,13 @@ Every insert site depth-probed in the built STLs:
 - [ ] **Static test B — shoulder**: bolt the flange to the stock trunk
       (4× M3 only, NO feet — worst config); **7 kg sandbag on the deck**
       (≈1.15× worst landing); inspect flange/webs/insert bosses
+- [ ] **Static test C — mezzanine standoff self-tap pull test** (CR-8 #4):
+      the 4× Ø2.5 pilots in `floor_plate.scad` (mezzanine seat, self-tap M3
+      into PA6/PETG) are unbenchmarked. On the first-article floor_plate,
+      drive an M3 standoff into one pilot and pull-test to failure (or to
+      the stack's static load, whichever is defined first); inspect for
+      stripped threads / cracked pilot wall before trusting the pattern
+      across the full mezzanine
 - [ ] Weigh every part → nova.urdf.xacro masses (backlog #5/#13)
 
 ## 5. Wave 2 — batch (after wave 1 passes)

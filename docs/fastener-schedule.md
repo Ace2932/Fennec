@@ -23,7 +23,8 @@ part is <6mm. All insert walls now pass.
 | **L2 → l2_adapter** ×4 | M3×10 **CSK** (90° flat) | adapter CSK Ø6.2→3.4; into the **Unitree L2 base M3 threads** | ~5 | n/a | ✅ ⚠ confirm L2 base is M3-threaded at bench |
 | **l2_adapter → crown** ×2 | M3×8 SHCS (from below) | crown clear Ø3.4; **M3×3.8 SHORT insert** in the 5mm adapter (L2 sits on top, can't boss up) | 3.8 | ≥1.5 | ✅ (relocated 114,±9 clear of the L2 CSK) |
 | **ears → head pad** ×4 (2/ear) | M3×10 SHCS | ear-foot clear Ø3.4; **M3×5.7 insert** in the pad (pad rear extended x71 for wall) | 5.7 | 1.7 | ✅ |
-| **riser → shoulder flange** ×4 | M3×12 SHCS | flange clear; **M3×5.7 insert** in the riser end-wall pad (pressed inner) | 5.7 | ok | ✅ (pre-audited 2026-07-06) |
+| **riser → shoulder flange** ×4 | M3×12 SHCS | flange clear; **M3×5.7 insert** in the riser end-wall pad (pressed inner) | 5.7 | ok | ✅ (pre-audited 2026-07-06; CR-8 #1 stack-verified 2026-07-10 — reconciled shoulder.scad/design-outline.md off M3×10) |
+| **shoulder flange feet → trunk floor** ×4 | **M3×14 CSK** + **M3 nyloc** + washer | drill-at-assembly Ø3.2 + csk through the 3.9mm stock floor slab; up through the 4mm FOOT pad; nyloc+washer on top (reached through the open trunk-end aperture before the riser goes on) | nut | n/a | ✅ (CR-8 #2, stack-verified 2026-07-10: 3.9 floor + 0.1 gap + 4.0 pad + 0.5 washer = 8.5mm before the nut; M3×12 leaves only ~3.5mm for the nyloc — no margin; M3×16 leaves ~7.5mm — 3-4mm of bare proud thread. M3×14 leaves ~5.5mm = full nyloc engagement + ~1.5mm proud. Sourced explicitly, `BOM.md`:168) |
 | **control_pod → riser** ×4 | **M2×8** SHCS | pod column clear Ø2.3; **M2×4 insert** in the riser pocket-pad (pad y widened ±14) | 4.0 | ≥1.0 | ✅ (light mount; pinched pad → M2) |
 | **cradle → deck (tie)** ×4 | **M2×8** SHCS (from below) | riser deck clear Ø2.3; **M2×4 insert** in the upright base | 4.0 | 1.4 | ✅ (6mm post → M2; huge margin) |
 | **clamp bar → upright** ×4 (2/bar) | **M2×8** SHCS | bar clear Ø2.3; **M2×4 insert** in the upright top; bar underside bears the case corner columns (z102.8) | 4.0 | 1.4 | ✅ (#44: 2 bars replaced the 4 clamps) |
@@ -38,8 +39,8 @@ bores, all standard; not re-listed here.
 
 ## Purchase summary (chassis/head/electronics)
 - **M3 SHCS**: ×4 **NYLON** M3×12 (head→bracket, breakaway), ×4 M3×12 (riser→flange), ×4 M3×16 (bracket→deck), ×2 M3×8 (adapter→crown), ×4 M3×10 (ears)
-- **M3 CSK**: ×4 M3×10 (L2→adapter)
-- **M3 nyloc**: ×4 (bracket→deck)
+- **M3 CSK**: ×4 M3×10 (L2→adapter), ×4 M3×14 (shoulder flange feet → trunk floor, CR-8 #2)
+- **M3 nyloc**: ×4 (bracket→deck), ×4 (shoulder flange feet, w/ washer)
 - **M2 SHCS**: ×4 M2×8 (pod), ×4 M2×8 (deck-tie), ×4 M2×8 (clamp bar), ×2 M2×10 (cowl), ×2 M2×8 (OLED bracket foot), ×4 M2×6 (SSD1331)
 - **M2 nut**: ×4 (SSD1331)
 - **Ruthex inserts**: M3×5.7 ×16 (head 4, ears 4, riser flange 4, + spares), M3×3.8 ×2 (adapter), M2×4 ×16 (pod 4, deck-tie 4, clamp bar 4, cowl 2, OLED-bracket-in-pod-deck 2)

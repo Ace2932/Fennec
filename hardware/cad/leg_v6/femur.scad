@@ -19,7 +19,7 @@
 include <leg_v6_common.scad>
 
 FEMUR_LEN = 106.9;            // hfe -> kfe axis distance (MEASURED, B2)
-SLAB_W    = 2*(CASE_HW + CLR_POCKET + WALL);   // 31.7
+SLAB_W    = 2*(CASE_HW + CLR_POCKET + WALL);   // 32.1
 SLAB_Z0   = FLOOR_BOT;                          // -22.2
 SLAB_Z1   = CASE_TOP;                           // +14.7
 FORK_X0   = 72;

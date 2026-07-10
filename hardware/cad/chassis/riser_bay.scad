@@ -18,7 +18,7 @@
 // full-length rails); end walls stop 0.1 above the wedge plateaus
 // (secondary). Lateral register: 4 tabs inside the wall inner faces
 // (0.45 clearance, leg_v6 drop-in doctrine). Fore-aft register + hold-down:
-// 4x M3x10 HORIZONTAL through the shoulder-flange holes into heat-set pads
+// 4x M3x12 HORIZONTAL through the shoulder-flange holes into heat-set pads
 // in the riser end walls (2 front + 2 rear, trunk y +/-40 z 65) — ZERO
 // mods to the stock shell. Riser is NEVER structural; lifts off with the
 // robot standing: D456 head shell off (2) + 4 flange screws.
