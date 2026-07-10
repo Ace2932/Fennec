@@ -105,7 +105,7 @@ print(f"decimated total faces: {total}")
 Mf = mat_list(T([33.8, 11.6, -9.5]) @ R(180, [0, 0, 1]) @ R(90, [0, 1, 0]))
 HFE_PT = [33.8, 11.6, -9.5]
 KNEE = mat_list(T([106.9, 0, 0]))
-ARM_OFF = mat_list(T([59, 0, 17.2]))
+ARM_OFF = mat_list(T([59, 0, 17.75]))  # rev 3 (2026-07-10): 17.2->17.75
 SHOE_OFF = mat_list(T([129, 0, -30.5]) @ R(54, [0, 0, 1]) @ T([0, -7.0, 0]))
 
 # per-part op recipe in the coax frame (JS builds the matrix live):

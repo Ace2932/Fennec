@@ -39,7 +39,7 @@ def leg_mesh():
     servo = trimesh.load(f'{NOVA}/feetech_servo_models/converted_stl/servo.stl')
     servo.apply_translation([-12.5, 0, 0])
     arm = trimesh.load(f'{LEG}/knee_arm.stl')
-    arm.apply_transform(T([59, 0, 17.2]))
+    arm.apply_transform(T([59, 0, 17.75]))  # rev 3 (2026-07-10): 17.2->17.75
     # SM3_Foot tread crescent on the toe_v2 seat (mesh survey v3): crescent
     # center shoe-local (0,7) -> the O7 post; theta = 54 EXACTLY (band ctr
     # 270 + 54 = stance-plumb -36; the toe_v2 key pockets now fix it).
