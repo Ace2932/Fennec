@@ -43,6 +43,41 @@ WALL_Z0   = -25;
 PLATE_BX  = [27, 51];
 PLATE_BY  = [6.2, 15.2];
 
+// ---- neck_bracket bolt-landing pilot dimples (backlog #36, cosmetic-clarity
+// only) -----------------------------------------------------------------
+// chassis/neck_bracket.scad has 4 drill-at-assembly M3+nyloc BOLT_XY bolts
+// (trunk frame) that land on the FRONT shoulder's deck top with no mating
+// feature modeled here -- functionally fine (solid deck), but the assembled
+// preview shows them as orphaned dead-end holes. These are BLIND pilot
+// dimples, NOT through-holes -- the joint is still drilled at assembly.
+// Transform: FRONT shoulder placement (preview_assembly.py / chassis/
+// check_fit.py) is S2T = [[0,1,0,HIP_FA],[1,0,0,0],[0,0,1,HIP_Z],[0,0,0,1]]
+// (end=+1), i.e. world = M @ shoulder-local. Inverting: shoulder-local
+// sx = world_y, sy = world_x - HIP_FA(141.2), sz = world_z - HIP_Z(38.05).
+// DECK_TOP (neck_bracket.scad, 79.55) - 38.05 = 41.5 = DECK_Z1 exactly,
+// confirming the deck top surfaces coincide under this transform.
+// neck_bracket BOLT_XY -> shoulder-local (all at DECK_Z1):
+//   (110, 20)   -> (20, -31.2)   (110, -20)  -> (-20, -31.2)
+//   (146, 19.5) -> (19.5, 4.8)   (146, -19.5)-> (-19.5, 4.8)
+// All 4 clear the lightening window (|sx|<=16, |sy| -14..12) and the
+// horn-plate heat-set grid (sx=+-27/+-51, sy=6.2/15.2); (20,-31.2) sits in
+// the deck+rear-wall overlap band (REAR_W0..REAR_W1 = -32.1..-28.1), the
+// thickest part of the deck.
+NECK_DIMPLE_D      = 2.5;    // pilot dimple dia (drill-start guide)
+NECK_DIMPLE_DEPTH  = 1.5;    // blind depth from the deck top (deck is 6.5 thick)
+NECK_DIMPLE_CHAMF  = 0.3;    // mouth chamfer depth
+NECK_DIMPLE_D_TOP  = 3.2;    // chamfer mouth dia
+NECK_DIMPLE_XY = [[20, -31.2], [-20, -31.2], [19.5, 4.8], [-19.5, 4.8]];
+
+module neck_dimple(x, y) {
+    translate([x, y, DECK_Z1 - NECK_DIMPLE_DEPTH])
+        cylinder(d = NECK_DIMPLE_D,
+                 h = NECK_DIMPLE_DEPTH - NECK_DIMPLE_CHAMF + EPS);
+    translate([x, y, DECK_Z1 - NECK_DIMPLE_CHAMF])
+        cylinder(d1 = NECK_DIMPLE_D, d2 = NECK_DIMPLE_D_TOP,
+                 h = NECK_DIMPLE_CHAMF + EPS);
+}
+
 // ---- flange floor FEET + deck gussets (2026-07-06, joint-stiffening) --------
 // The C-box hangs 77.7 fore of the trunk end on a 4-bolt flange whose
 // bolt couple is only 19 tall and sits LOW (user catch: "barely
@@ -139,6 +174,13 @@ module shoulder_v6() {
             translate([sx*HIP_X, REAR_W0 - EPS, 0]) rotate([-90, 0, 0])
                 cylinder(d = 5.2, h = 1.8);
         }
+
+        // neck_bracket bolt-landing pilot dimples (backlog #36) — FRONT end
+        // only in trunk frame, but this is the SAME part both ends, so the
+        // rear-mounted copy gets them too (harmless: no rear neck_bracket,
+        // and they're on the deck top, clear of everything else there).
+        for (xy = NECK_DIMPLE_XY)
+            neck_dimple(xy[0], xy[1]);
 
         // plate heat-set bores, down into the deck (4 per side), plus a
         // Ø3 VENT through the remaining floor (insert-audit 2026-07-06:
