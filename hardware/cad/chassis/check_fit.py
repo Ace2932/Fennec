@@ -50,6 +50,16 @@ point inside the designed part = the part cuts its counterpart. Cases:
      lowest into the 20mm pb->lb gap) clears Q1's top — trivially true by
      construction but now asserted against real parsed geometry on both
      sides of the gap instead of assumed.
+ 12. CR-7 (was #39): the 5 newest chassis parts, never gated before now —
+     jetson_clamp_bar (+y/-y mirror), jetson_cowl, l2_adapter, control_pod,
+     oled_mount. jetson_clamp_bar vs jetson_case_ref.stl is checked via a
+     SURFACE-HEIGHT envelope (case_surface_clash()), not contains(): the ref
+     mesh is not watertight (euler_number ~-2223 / 2 bodies — almost
+     certainly the vent-grille perforations), so volumetric containment is
+     unreliable there. Every other case-12 pair is watertight-vs-watertight
+     and uses report_depth() (signed_distance magnitude, sub-mm noise floor
+     — designed seats/butt-joints are excluded via *_seat_mask() first, same
+     idiom as seat_mask()/EXPECTED_STACK_ZONE above).
 
 Exit 0 = clean, 1 = interference. Run via build_all.sh after every change.
 """
@@ -82,6 +92,20 @@ HIP_FA, HIP_LAT, HIP_Z = 141.2, 39.05, 38.05
 # ever supported the stock covers. Front slabs stay untouched; any front
 # hit fails the gate. SIGNED x range.
 EXPECTED_STACK_ZONE = dict(x=(-60.0, -52.9), y=(28.5, 48.5), z=(24.5, 47.2))
+
+# ---- case 12 constants (CR-7/#39: jetson_clamp_bar.scad, jetson_cowl.scad,
+# jetson_case_mount.scad, riser_bay.scad, control_pod.scad, l2_adapter.scad,
+# head.scad -- mirrors those files' own "shared consts, KEEP IN SYNC" comments) --
+CRADLE_FRONT_PXC, CRADLE_REAR_PXC = 47.3, -59.0    # cradle upright x centres
+CRADLE_POST_YC, CRADLE_POST_W = 50.35, 6.0         # cradle upright y centre/size
+CRADLE_CORNER_Z = 102.8                            # upright top = clamp-bar seat
+BAR_HY = 41.45                    # clamp-bar inner edge = case corner-column y
+CASE_FRONT_HX, CASE_REAR_HX = 42.8, -56.5          # case corner-column x centres
+COWL_UP_FACE = -CRADLE_POST_YC - CRADLE_POST_W / 2  # -53.35, -y upright outer face
+POD_BOSS_X = -66.5                 # riser rear-wall pad <-> pod column interface
+POD_HY, POD_Z0, POD_Z1 = 14.0, 58.0, 69.0
+L2A_SEAT_Z = 128.0                  # crown top = l2_adapter bottom seat
+OLED_SEAT_Z = 95.0                  # control_pod deck top = oled_mount foot seat
 
 # ---- REAL power board vs floor (case 11) -----------------------------------
 # HISTORY: an early modeling pass assumed generic 20mm caps on a 16mm
@@ -138,6 +162,118 @@ def in_zone(p, z):
     return ((p[:, 0] > z['x'][0]) & (p[:, 0] < z['x'][1]) &
             (np.abs(p[:, 1]) > z['y'][0]) & (np.abs(p[:, 1]) < z['y'][1]) &
             (p[:, 2] > z['z'][0]) & (p[:, 2] < z['z'][1]))
+
+
+# ---- case 12 helpers (CR-7/#39) ---------------------------------------------
+def report_depth(label, hits, mesh, noise_mm=0.05):
+    """Like report(), but quantifies HOW FAR a hit set penetrates its
+    counterpart (trimesh.proximity.signed_distance, positive = inside)
+    instead of just a point count, and only fails the gate if the worst
+    point clears noise_mm -- sub-mm hits at a designed butt-joint/seat
+    boundary (sampling jitter, mesh-vs-mesh coincident faces) are reported
+    but not failed. Requires a watertight `mesh` (signed_distance needs a
+    valid inside/outside) -- do not use this on jetson_case_ref.stl (not
+    watertight; see case_surface_clash below)."""
+    n = len(hits)
+    if n == 0:
+        print(f'OK    {label}: 0 pts')
+        return False
+    sd = trimesh.proximity.signed_distance(mesh, hits)
+    depth = sd[sd > 0]
+    max_d = float(depth.max()) if len(depth) else 0.0
+    mean_d = float(depth.mean()) if len(depth) else 0.0
+    tag = 'NOISE ' if max_d < noise_mm else 'CUT   '
+    print(f'{tag}{label}: {n} pts, max penetration {max_d:.3f}mm '
+          f'(mean {mean_d:.3f}mm, noise floor {noise_mm}mm)')
+    grid = np.round(hits / 2) * 2
+    uniq, counts = np.unique(grid, axis=0, return_counts=True)
+    for u, c in list(zip(uniq[np.argsort(-counts)], counts))[:6]:
+        print(f'        cluster @ ({u[0]:+.0f},{u[1]:+.0f},{u[2]:+.0f})  {c} pts')
+    return max_d >= noise_mm
+
+
+def case_surface_clash(case_pts, x0, x1, y0, y1, z_floor, label,
+                        noise_mm=0.3, exclude=None):
+    """jetson_case_ref.stl is NOT watertight (euler_number ~-2223, 2 bodies
+    -- almost certainly the vent-grille perforations modeled as literal
+    through-holes), so a volumetric contains()/signed_distance() check on
+    it is unreliable (ray-cast in/out parity breaks at non-manifold vent
+    edges). Sidestep that entirely: sample the case's OUTER SURFACE once
+    (case_pts, world frame, no watertightness needed) and check whether any
+    sampled surface point inside the given (x, |y|) window sits ABOVE
+    z_floor -- i.e. does real, modeled case material protrude into the
+    flat bar's z-band. `exclude(pts)` -> bool mask removes designed bearing
+    pads (corner columns) from the window before the height check."""
+    m = ((case_pts[:, 0] >= x0) & (case_pts[:, 0] <= x1) &
+         (np.abs(case_pts[:, 1]) >= y0) & (np.abs(case_pts[:, 1]) <= y1))
+    sub = case_pts[m]
+    if exclude is not None and len(sub):
+        sub = sub[~exclude(sub)]
+    if not len(sub):
+        print(f'OK    {label}: 0 case-surface pts in window')
+        return False
+    over = sub[sub[:, 2] > z_floor]
+    if not len(over):
+        print(f'OK    {label}: case surface tops out {sub[:, 2].max():.2f} '
+              f'<= {z_floor} ({len(sub)} pts sampled in window)')
+        return False
+    depth = over[:, 2] - z_floor
+    tag = 'NOISE ' if depth.max() < noise_mm else 'CUT   '
+    print(f'{tag}{label}: {len(over)}/{len(sub)} case-surface pts exceed '
+          f'z={z_floor}, max penetration {depth.max():.3f}mm '
+          f'(mean {depth.mean():.3f}mm, noise floor {noise_mm}mm)')
+    grid = np.round(over / 2) * 2
+    uniq, counts = np.unique(grid, axis=0, return_counts=True)
+    for u, c in list(zip(uniq[np.argsort(-counts)], counts))[:6]:
+        print(f'        cluster @ ({u[0]:+.0f},{u[1]:+.0f},{u[2]:+.0f})  {c} pts')
+    return depth.max() >= noise_mm
+
+
+def bar_seat_mask(p):
+    """Designed clamp-bar bearing pads, excluded from the bar<->case /
+    bar<->cradle checks: the case's calipered corner-column tops (z=
+    CRADLE_CORNER_Z, x at the case's corner-column centres, y at the bar's
+    inner HY edge) AND the cradle upright tops (same z, x/y at the cradle
+    post centres). Everything else on the bar's flat underside is real."""
+    near_z = np.abs(p[:, 2] - CRADLE_CORNER_Z) < 0.6
+    near_case_x = (np.abs(p[:, 0] - CASE_FRONT_HX) < 4.0) | \
+                  (np.abs(p[:, 0] - CASE_REAR_HX) < 4.0)
+    near_case_y = np.abs(np.abs(p[:, 1]) - BAR_HY) < 4.0
+    near_post_x = (np.abs(p[:, 0] - CRADLE_FRONT_PXC) < CRADLE_POST_W / 2 + 1) | \
+                  (np.abs(p[:, 0] - CRADLE_REAR_PXC) < CRADLE_POST_W / 2 + 1)
+    near_post_y = np.abs(np.abs(p[:, 1]) - CRADLE_POST_YC) < CRADLE_POST_W / 2 + 1
+    return (near_z & near_case_x & near_case_y) | (near_z & near_post_x & near_post_y)
+
+
+def cowl_seat_mask(p):
+    """Designed cowl-end-wall <-> -y cradle-upright butt joint: the walls
+    meet flush at y=COWL_UP_FACE (zero-gap by construction)."""
+    near_x = (np.abs(p[:, 0] - CRADLE_FRONT_PXC) < CRADLE_POST_W / 2 + 1) | \
+             (np.abs(p[:, 0] - CRADLE_REAR_PXC) < CRADLE_POST_W / 2 + 1)
+    near_face = np.abs(p[:, 1] - COWL_UP_FACE) < 0.6
+    return near_x & near_face
+
+
+def pod_riser_seat_mask(p):
+    """Designed control_pod column <-> riser rear-wall pad butt joint at
+    x=POD_BOSS_X (riser pocket-boss rear face == pod column front face)."""
+    near_x = np.abs(p[:, 0] - POD_BOSS_X) < 0.6
+    near_y = np.abs(p[:, 1]) < POD_HY + 1
+    near_z = (p[:, 2] > POD_Z0 - 1) & (p[:, 2] < POD_Z1 + 1)
+    return near_x & near_y & near_z
+
+
+def l2a_seat_mask(p):
+    """Designed l2_adapter <-> crown-top seat (z=L2A_SEAT_Z). The front
+    tongue<->crown-lip interlock needs no separate mask: head.scad
+    difference()s a matching slot out of the lip, so head.contains() is
+    already False there by construction."""
+    return np.abs(p[:, 2] - L2A_SEAT_Z) < 0.6
+
+
+def oled_seat_mask(p):
+    """Designed oled_mount foot <-> control_pod deck-top seat (z=OLED_SEAT_Z)."""
+    return np.abs(p[:, 2] - OLED_SEAT_Z) < 0.6
 
 
 # ---- leg assembly point cloud (leg_v6 gate composition, coax frame) --------
@@ -300,6 +436,23 @@ def main():
         make_box(-55, 75, 9, 21, -42.2, -39.2),
         make_box(-55, 75, -21, -9, -42.2, -39.2)])
     cam = cam_box()   # tilted D456 OBB (27deg down; back-face ctr 70,0,105.5)
+
+    # ---- case 12 parts (CR-7/#39: never gated before -- added by build_all.sh
+    # after the gate was last touched) -------------------------------------------
+    clamp_bar_R = trimesh.load('jetson_clamp_bar.stl')  # designed +y side (#44)
+    MYb = np.eye(4); MYb[1, 1] = -1
+    clamp_bar_L = clamp_bar_R.copy(); clamp_bar_L.apply_transform(MYb)
+    cowl = trimesh.load('jetson_cowl.stl')               # designed -y side (#38)
+    l2_adapter = trimesh.load('l2_adapter.stl')
+    pod = trimesh.load('control_pod.stl')
+    oled = trimesh.load('oled_mount.stl')
+    # jetson_case_ref.stl: same placement transform as place_case.py /
+    # preview_assembly.py (world x-6.85 ctr, y0 ctr, bottom on the deck 71.9).
+    # NOT watertight (see case_surface_clash docstring) -- keep separate from
+    # the calipered `case` AABB used by cases 7/8/10.
+    caseref = trimesh.load('jetson_case_ref.stl')
+    bc = (caseref.bounds[0] + caseref.bounds[1]) / 2
+    caseref.apply_translation([-6.85 - bc[0], -bc[1], 71.9 - caseref.bounds[0][2]])
 
     # ---- 1. riser <-> trunk --------------------------------------------------
     rp = sample(riser)
@@ -647,6 +800,92 @@ def main():
           f'z={lb_bot_z:.2f}) clears Q1 top ({q1["z1"]:.2f}) in the pb->lb gap, '
           f'margin={lb_bot_z - q1["z1"]:.2f}mm')
     bad |= not ok
+
+    # ---- 12. NEW chassis parts (CR-7, was #39): jetson_clamp_bar (+y/-y),
+    # jetson_cowl, l2_adapter, control_pod, oled_mount. These have had real
+    # STLs since build_all.sh grew them (2026-07-08) but were never added to
+    # this gate -- the +y clamp-bar vs jetson_case_ref graze (~0.2mm probe,
+    # 4/13000 pts) went uncaught as a result. Settled below.
+    print('-- case 12: newer chassis parts (CR-7/#39) --')
+    NOISE_PART_MM = 0.05    # parametric-vs-parametric OpenSCAD parts (tight)
+    NOISE_CASE_MM = 0.3     # jetson_case_ref.stl local-contour fidelity floor
+                            # (bbox IS calipered-accurate 110.3x93.9x38.2; the
+                            # local vent-lid contour between the corner columns
+                            # is not individually caliper-verified)
+
+    # -- jetson_clamp_bar (+y / -y) vs case ref, vs cradle uprights, vs each other
+    case_surf = trimesh.sample.sample_surface(caseref, 150000, seed=8)[0]
+    BAR_X0, BAR_X1 = CRADLE_REAR_PXC - 3, CRADLE_FRONT_PXC + 3   # -62 .. 50.3
+    BAR_Y0, BAR_Y1 = BAR_HY, CRADLE_POST_YC + 3                   # 41.45 .. 53.35
+    for side, bar in (('+y', clamp_bar_R), ('-y', clamp_bar_L)):
+        bp = sample(bar, 8000, 2000, seed=2)
+        bp_f = bp[~bar_seat_mask(bp)]
+        bad |= case_surface_clash(
+            case_surf, BAR_X0, BAR_X1, BAR_Y0, BAR_Y1, CRADLE_CORNER_Z,
+            f'clamp bar ({side}) vs case ref surface (bearing pads excluded)',
+            noise_mm=NOISE_CASE_MM, exclude=bar_seat_mask)
+        hits = bp_f[cradle.contains(bp_f)]
+        bad |= report_depth(f'clamp bar ({side}) vs cradle (upright-top seat excluded)',
+                            hits, cradle, noise_mm=NOISE_PART_MM)
+    r_pts = sample(clamp_bar_R, 4000, 1000, seed=3)
+    hits = r_pts[clamp_bar_L.contains(r_pts)]
+    bad |= report('clamp bar +y vs clamp bar -y', hits)
+
+    # -- jetson_cowl vs clamp bar (-y), cradle (butt-joint excluded), case ref --
+    cwp = sample(cowl, 8000, 2000, seed=4)
+    cwp_f = cwp[~cowl_seat_mask(cwp)]
+    hits = cwp_f[clamp_bar_L.contains(cwp_f)]
+    bad |= report_depth('cowl vs clamp bar (-y)', hits, clamp_bar_L,
+                        noise_mm=NOISE_PART_MM)
+    hits = cwp_f[cradle.contains(cwp_f)]
+    bad |= report_depth('cowl vs cradle (upright butt-joint excluded)', hits,
+                        cradle, noise_mm=NOISE_PART_MM)
+    # case ref bbox y-extent (+-46.95, calipered) never reaches the cowl's
+    # nearest element (upright outer face / end wall, y=COWL_UP_FACE=-53.35)
+    # -- true by the calipered case width alone, no mesh sampling needed.
+    case_y_max = float(np.abs(caseref.bounds).max(axis=0)[1])
+    cowl_gap = abs(COWL_UP_FACE) - case_y_max
+    ok = cowl_gap > 0
+    print(('OK    ' if ok else 'FAIL  ') + f'cowl vs case ref (#38 straight-plug '
+          f'shield): case |y| max {case_y_max:.2f} vs cowl inner extent '
+          f'{abs(COWL_UP_FACE):.2f}, gap={cowl_gap:.2f}mm')
+    bad |= not ok
+
+    # -- l2_adapter vs crown/head (seat excluded; the tongue<->crown-lip
+    # interlock needs no mask -- head.scad hollows a matching slot, so
+    # head.contains() is already False there by construction) + seated L2 --
+    l2p = sample(l2_adapter, 6000, 1500, seed=5)
+    l2p_f = l2p[~l2a_seat_mask(l2p)]
+    hits = l2p_f[head.contains(l2p_f)]
+    bad |= report_depth('l2 adapter vs head/crown (seat excluded)', hits, head,
+                        noise_mm=NOISE_PART_MM)
+    hits = l2p[l2.contains(l2p)]
+    bad |= report_depth('l2 adapter vs seated L2 body envelope', hits, l2,
+                        noise_mm=NOISE_PART_MM)
+
+    # -- control_pod vs riser rear wall (pad-boss seat excluded), rear
+    # shoulders, mezzanine stack envelope --
+    podp = sample(pod, 9000, 2500, seed=6)
+    podp_f = podp[~pod_riser_seat_mask(podp)]
+    hits = podp_f[riser.contains(podp_f)]
+    bad |= report_depth('control pod vs riser (rear-wall pad seat excluded)',
+                        hits, riser, noise_mm=NOISE_PART_MM)
+    S2T_rear = np.array([[0, -1, 0, -HIP_FA],
+                        [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
+    rear_sh = tf(sh_pts, S2T_rear)
+    hits = rear_sh[pod.contains(rear_sh)] if len(rear_sh) else rear_sh
+    bad |= report('control pod vs rear shoulders', hits)
+    hits = podp[box.contains(podp)]
+    bad |= report('control pod vs mezzanine stack envelope', hits)
+
+    # -- oled_mount vs control_pod (deck seat excluded) + riser --
+    olp = sample(oled, 5000, 1200, seed=7)
+    olp_f = olp[~oled_seat_mask(olp)]
+    hits = olp_f[pod.contains(olp_f)]
+    bad |= report_depth('oled mount vs control pod (deck seat excluded)', hits,
+                        pod, noise_mm=NOISE_PART_MM)
+    hits = olp[riser.contains(olp)]
+    bad |= report_depth('oled mount vs riser', hits, riser, noise_mm=NOISE_PART_MM)
 
     # ---- 5. static fixture asserts ----------------------------------------------
     case_top = 110.1     # official case top (deck 71.9 + 38.2 calipered)

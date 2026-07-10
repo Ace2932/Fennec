@@ -76,9 +76,14 @@ module femur_v6() {
             translate([hx, hy, YOKE_TOP_IN - HEATSET_L])
                 cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
 
-        // side-wall vent windows (servo heat relief; hips hold ~22%% torque
-        // continuously). Chords keep ~80%% wall stiffness.
-        translate([2, -17, -8]) cube([22, 34, 16]);
+        // side-wall vent window (servo heat relief; hips hold ~22%% torque
+        // continuously). CR-6 fix (2026-07-09): the old 16mm-tall raw-cube
+        // cut left SF ~1.39 wet (kept only ~18%% of wall section modulus)
+        // with zero fillet on its 4 vertical reentrant corners (FDM crack
+        // risk). Shrunk to 5mm tall + stadium (fully rounded, r=2.5) profile
+        // -> residual strips top 12.2 / bottom 19.7mm, Z 263->573 mm^3,
+        // femur SF dry ~6.1 / wet ~3.0 (M=14.2 N*m, 151/75 MPa PA6-CF).
+        vent_window_neg(x0 = 2, w = 22, z_ctr = 0, h = 5, y0 = -17, y1 = 17);
 
         // side marker: 1 dot = RIGHT (the L mirror wrapper adds a 2nd —
         // mirrored parts are otherwise near-identical at assembly)

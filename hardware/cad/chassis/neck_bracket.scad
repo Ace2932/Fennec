@@ -46,13 +46,17 @@ HEATSET_L = 6.0;
 DECK_TOP = 79.55;
 
 // ---- base plate on the deck (center spine, clears window + horn flanges) ----
-BASE = [107, 150, -21, 21];       // x0 x1 y0 y1
+BASE = [107, 150, -22, 22];       // x0 x1 y0 y1 (CR-5: widened +-21 -> +-22)
 BASE_T = 4;                        // z79.55..83.55
-// deck-through bolts: drill-at-assembly M3, nyloc below. In the y+-20 solid
-// spine, clear of the window (y16) + horn bores (y>=27). Fore-aft span 36;
-// front pair pulled inboard/rearward of the horn+servo cluster for wrench
-// access to the underside nyloc.
-BOLT_XY = [[110, 20], [110, -20], [146, 19], [146, -19]];
+// deck-through bolts: drill-at-assembly M3, nyloc below. Clear of the window
+// (y16) + horn flange (solid from y23). Fore-aft span 36 (moment couple).
+// CR-5 fix 2026-07-09: BASE widened +-21->+-22 and the front pair centered
+// in the 7mm corridor (y19->19.5). This gives the front bolt symmetric
+// ~1.8mm margins to window/flange (was 1.3/2.3), lifts its own-plate-edge
+// margin 0.3->0.8mm, AND fixes a latent bug: the REAR pair (y20) previously
+// broke out of the +-21 plate edge by 0.7mm (now +0.3mm clear). Span check
+// (x-only, 146-110>=30) unaffected.
+BOLT_XY = [[110, 20], [110, -20], [146, 19.5], [146, -19.5]];
 
 // ---- rear vertical mount face (the head bolts to this) ----------------------
 WALL_X0 = 113; WALL_X1 = 121;     // 8mm face (front x121): holds M3 heat-sets

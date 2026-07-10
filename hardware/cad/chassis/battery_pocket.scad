@@ -81,15 +81,20 @@ module battery_pocket() {
                     cube([90, BOSS_Y + 4.25 - CAV_Y, 4]);
         }
         // boss fastening: O3.4 down the column into a side-loaded M3 NUT
-        // TRAP at z -8.2 (design-review fix: a full-height column can't
-        // take a heat-set from either end, and a nut beats an insert for
-        // the pocket's highest-load joint anyway). Nut slides in from the
-        // outboard face; M3x12 from inside the trunk engages it fully.
+        // NUT TRAP (design-review fix: a full-height column can't take a
+        // heat-set from either end, and a nut beats an insert for the
+        // pocket's highest-load joint anyway). Nut slides in from the
+        // outboard face. CR-2 fix 2026-07-09: trap RAISED 2.5mm (was
+        // RIM_Z-8.3 -> now RIM_Z-5.8). At the old height the M3x12 CSK tip
+        // (z-6.1) only reached the trap top (z-5.8) = ~0.3mm engagement;
+        // raised, the trap spans z[-6.0,-3.3] so the same standard M3x12
+        // passes fully through the nut = ~full engagement. No screw-length
+        // or BOM change (keeps the owned M3x12/M3 nuts).
         for (bx = BOSS_X, sy = [-1, 1]) {
             translate([bx, sy * BOSS_Y, RIM_Z - 8.6])
                 cylinder(d = M3_CLEAR, h = 8.6 + EPS);
             translate([bx - 2.85, min(sy * (BOSS_Y + 4.3), sy * (BOSS_Y - 2.7)),
-                       RIM_Z - 8.3])
+                       RIM_Z - 5.8])
                 cube([5.7, 7, 2.7]);
         }
         // strap slots AT the rear opening: the strap wraps the pack's REAR

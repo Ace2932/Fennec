@@ -202,6 +202,26 @@ module wheel_couple_neg() {
     }
 }
 
+// Pocket side-wall VENT window NEGATIVE (CR-6, 2026-07-09): rounded-end
+// (stadium) slot punched fully through BOTH ±Y pocket side walls at once.
+// Width w along X from x0, height h along Z (centered at z_ctr), full
+// pass-through along Y from y0 to y1. Corner radius = h/2 (a true stadium
+// profile) so there is NO sharp corner anywhere on the cut — the FDM
+// crack-initiation risk of the old raw cube() (0 fillet, 4 reentrant
+// vertical corners) is eliminated outright, not just reduced to the 1.5mm
+// minimum. Keep h small (<=5mm) so the residual top/bottom wall strips
+// retain enough section modulus — see femur.scad / tibia.scad for the SF
+// calc this geometry is sized against.
+module vent_window_neg(x0, w, z_ctr, h, y0, y1) {
+    r  = h / 2;
+    yd = y1 - y0;
+    hull()
+        for (xc = [x0 + r, x0 + w - r])
+            translate([xc, y0, z_ctr])
+                rotate([-90, 0, 0])
+                    cylinder(r = r, h = yd);
+}
+
 // Zip-tie anchor NEGATIVE: Ø3.2 through-hole pair, spacing 10, for
 // strain-relieving the cable bundle (daisy link + VCC spur) at tunnel
 // exits and along runs. Axis along Z at (x0, y0), full depth h from z0.

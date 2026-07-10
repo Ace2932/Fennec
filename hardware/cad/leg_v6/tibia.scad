@@ -111,9 +111,15 @@ module tibia_v6() {
         // ---- KFE servo pocket: spline AT ORIGIN, body toward foot ----
         rotate([0, 0, 180]) sts_pocket_neg();
 
-        // side-wall vent windows (servo heat relief; hips hold ~22%% torque
-        // continuously). Chords keep ~80%% wall stiffness.
-        translate([2, -17, -8]) cube([22, 34, 16]);
+        // side-wall vent window (servo heat relief; hips hold ~22%% torque
+        // continuously). CR-6 fix (2026-07-09): the old 16mm-tall raw-cube
+        // cut left SF ~1.32 wet (kept only ~18%% of wall section modulus)
+        // with zero fillet on its 4 vertical reentrant corners (FDM crack
+        // risk). Shrunk to 5mm tall + stadium (fully rounded, r=2.5) profile
+        // -> residual strips top 12.2 / bottom 19.7mm, Z 263->573 mm^3,
+        // tibia SF dry ~5.8 / wet ~2.9 (M=14.95 N*m, 151/75 MPa PA6-CF;
+        // 12kg toe proof).
+        vent_window_neg(x0 = 2, w = 22, z_ctr = 0, h = 5, y0 = -17, y1 = 17);
 
         // side marker: 1 dot = RIGHT (the L mirror wrapper adds a 2nd —
         // mirrored parts are otherwise near-identical at assembly)
