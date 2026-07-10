@@ -184,6 +184,14 @@ def main():
               l2, trimesh.load('l2_adapter.stl'),        # real L2 + its adapter
               box(-77.5, 77.5, -23.4, 23.4, -35.9, -0.9),  # pack 46.8 caliper
               cam]                                       # real D456 (down-tilted)
+    # 4 mezzanine standoffs (M3x20) — floor plate top (z6) -> power board
+    # bottom (z26) at the 74x66 mount pattern (floor_plate STK_X/STK_Y).
+    # Preview-only visual so the board visibly stands on its posts (they were
+    # missing -> the board read as floating in the bay).
+    for sx in (-40.5, 33.5):
+        for sy in (-33, 33):
+            parts.append(trimesh.creation.cylinder(
+                radius=2.5, height=20, transform=T([sx, sy, 16])))
     asm = trimesh.util.concatenate(parts)
     asm.export('chassis_assembly_preview.stl')
     print('chassis_assembly_preview.stl', asm.bounds.round(1).tolist())

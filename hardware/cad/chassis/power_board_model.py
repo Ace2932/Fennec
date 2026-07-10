@@ -143,8 +143,12 @@ ROUND_FOOTPRINT_RE = re.compile(r'CP_Radial_D([\d.]+)mm')
 # against the board underside (z1=BOARD_BOTTOM_Z) since the landing pads
 # wire straight down into the card — this z-placement is a modeling
 # choice, not a measured dimension, and leaves ~8mm clearance to the floor
-# plate (was ~2mm at the old 16mm standoff).
-BUCK_CARD_XY = (30.0, 20.0)
+# plate (was ~2mm at the old 16mm standoff). PREVIEW NOTE: the real ~30mm
+# Pololu cards live SPACED in an off-board finned holder — the U1-U5 pads are
+# only ~18mm apart (just the wire landings), so full-width boxes at the pads
+# false-overlapped in the preview. Width narrowed to 16mm here purely so the
+# placeholder boxes don't visually collide; not the real buck footprint.
+BUCK_CARD_XY = (16.0, 20.0)
 BUCK_CARD_H = 14.0
 BUCK_REFS = ('U1', 'U2', 'U3', 'U4', 'U5')
 
