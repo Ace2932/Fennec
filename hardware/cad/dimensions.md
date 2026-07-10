@@ -82,7 +82,8 @@ extends −X:
 |---|---|---|
 | Body W × D × H | 75.0 × 75.0 × 65.0 | ✅ |
 | Weight | 230 g | ✅ |
-| Bottom mount holes | **4× M3 on 36 mm square** (±18; ≡ Ø51 bolt-circle at 45°) — per the L2 3D model (`l2_adapter.scad` L2_BCD=18) | ⚠ physical-measure pending (user to confirm). Supersedes the earlier "22.5 mm square" (wrong) and the "50 mm" placeholder before it. |
+| Bottom mount holes | **4× M3 on a Ø51 bolt circle** (holes at the 4 diagonals, R25.5·cos45 = ±18 → a 36 mm axis-aligned square), depth 6 | ✅ **CONFIRMED from the manual drawing** (2024.10 v1.1 p10, "L2 Mechanical Dimensions": Ø51 BCD, "4× M3 ▽6"). Matches the model exactly (`l2_adapter.scad`/`head.scad` L2_BCD=18). Supersedes the earlier "22.5 mm square" (wrong — 22.5° is the SLOT clocking angle, not a square) and the "50 mm" placeholder. |
+| Positioning slots | **4× slots, 3.5 mm wide, on Ø60**, clocked 22.5° off the M3 holes | ✅ manual p10 — anti-rotation datum (optional; `l2_adapter` uses the 4× M3 only, no slot pins) |
 | Mount hole thread depth | 6.0 | ✅ |
 | Power barrel | **3.5 × 1.35 mm** | ✅ CALIPER 2026-07-07 — the OEM connector that SHIPPED with the L2 measures 3.4 OD (3.5×1.35 class); supersedes the manual's ambiguous 5.5×2.1/2.5. The purchased 3.5×1.35 bare-wire pigtail matches → wires to the 12V L2 rail. Mast bore unaffected (molded housing ~Ø8 passes; RJ45 11.7×8 is the binding constraint) |
 | Ethernet | RJ-45 (standard) | ✅ |
