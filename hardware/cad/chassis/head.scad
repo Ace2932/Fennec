@@ -192,6 +192,19 @@ module head() {
             cube([BORE[0], BORE[1], CROWN_Z0 + CROWN_T - MB_Z0 + 2 * EPS]);
         translate([CTR - 7.5, -6, CROWN_Z0 - 6])
             cube([15, 12, CROWN_T + 6 + EPS]);
+        // cable-bore mouth chamfer at the x121 breakaway plane (#42): in a
+        // tethered faceplant the head separates HERE and the L2/D456 cables
+        // tension over this raw edge as the head pops off — soften the
+        // corner (AUD-12c, cheap/low-risk while already in this area,
+        // 2026-07-10).
+        BORE_CHAMF = 0.75;
+        hull() {
+            translate([MB_X0 - EPS, -BORE[1] / 2 - BORE_CHAMF, MB_Z0 - BORE_CHAMF])
+                cube([EPS, BORE[1] + 2 * BORE_CHAMF,
+                      CROWN_Z0 + CROWN_T - MB_Z0 + 2 * BORE_CHAMF]);
+            translate([MB_X0 + BORE_CHAMF, -BORE[1] / 2, MB_Z0])
+                cube([EPS, BORE[1], CROWN_Z0 + CROWN_T - MB_Z0]);
+        }
         // --- boss -> bracket bolts: driven from the OPEN REAR (behind the
         //     bracket wall, x<113 = open above the deck). HEAT-SETS in the boss
         //     (from its rear face x121, +x); the wall has clearance; M3 from
@@ -224,9 +237,33 @@ module head() {
         // --- USB-C path: face-plate window -> pillar/column front -> boss ---
         translate(CAM_M) rotate([0, TILT, 0])
             translate([-FACE_T - EPS, 3, -13]) cube([FACE_T + 2 * EPS, 16, 13]);
-        // channel down the column front (x behind the plate) to the boss bottom
-        translate([COL_X1 - 11, 6, MB_Z0 - EPS])
-            cube([11, 9, PILLAR_Z1 - MB_Z0]);
+        // channel down the column front, offset under the face-plate window
+        // — REROUTED 2026-07-10 (AUD-12, confirmed defect): the old channel
+        // was a straight cube (x127..138, y6..15) run all the way down to
+        // the boss bottom (z84), which hollowed out the ENTIRE +y insert
+        // column of the rear-boss->bracket bolts (HM_Y=10, z89 & z100) — 0mm
+        // insert floor/wall measured at both (2 of 4 head-boss bolts void).
+        // There is no separate channel width available past the boss: the
+        // insert danger zone (y6.5..13.5, +-3.5mm around the y10 bore) backs
+        // right up against both the L2-bore edge (y5.5) and the boss edge
+        // (y14), leaving <1mm clear either side — not enough for a
+        // connector-sized channel. Fix: below the boss top (COL_Z0=106,
+        // ABOVE both insert z-bands) the USB-C path shares the existing L2
+        // CABLE BORE instead of cutting new boss material (13x11, already
+        // proven clear of the inserts — the -y mirror, which never had a
+        // channel, stayed solid). The offset run (x125..138, y6..15 — widened
+        // x127->125 from the original design: the old 11x9 cross-section
+        // couldn't actually clear a ~12x6.5 USB-C overmold in either
+        // orientation, measured while verifying this fix; 13x9 does, still
+        // lines up under the face-plate window above) is kept for z>=109; a
+        // short taper merges it down to the L2-bore footprint (x120..133,
+        // y-6..6) exactly at z106 — entirely within the column (z106..124),
+        // never touching the boss (z84..106), so the insert bosses stay
+        // fully solid. check_fit.py case 14 gates all 4 boss floors + the
+        // channel cross-section going forward.
+        translate([COL_X1 - 13, 6, 109])
+            cube([13, 9, PILLAR_Z1 - 109]);
+        flare(120, 133, -6, 6, 125, 138, 6, 15, COL_Z0, 109);
         // --- FENNEC: SMA antenna bore up each ear root (O6.5) — the SOLE home
         //     for the Jetson WiFi 2x2 MIMO antennas (riser bulkheads retired):
         //     U.FL->SMA pigtail up the neck -> bulkhead here -> whip. Highest,

@@ -74,6 +74,14 @@ point inside the designed part = the part cuts its counterpart. Cases:
      and uses report_depth() (signed_distance magnitude, sub-mm noise floor
      — designed seats/butt-joints are excluded via *_seat_mask() first, same
      idiom as seat_mask()/EXPECTED_STACK_ZONE above).
+ 14. HEAD-BOSS <-> NECK-BRACKET bolt-axis alignment (AUD-12, 2026-07-10):
+     the head.scad USB-C column channel used to run straight through the
+     boss, voiding the +y pair of the 4 rear-boss->bracket-wall M3 heat-set
+     inserts (0mm floor/wall at HM_Y=10, z89/100) — cases 7+8 only checked
+     head/bracket ENVELOPES against the rest of the chassis, never each
+     other's own fastener bores, so this went ungated. Same axis-probe
+     pattern as case 13, both directions: head boss must be SOLID at the
+     insert floor, neck-bracket wall must be OPEN at the matching axis.
 
 Exit 0 = clean, 1 = interference. Run via build_all.sh after every change.
 """
@@ -1104,6 +1112,46 @@ def main():
                 bad |= axis_open(trunk_holes, pts,
                                   f'shoulder-flange bolt axis end={end} '
                                   f'y={sx * 51.75:+.2f} z={hz:.1f}')
+
+    # ---- 14. HEAD-BOSS <-> NECK-BRACKET bolt-axis alignment (AUD-12,
+    # 2026-07-10, gate hardening) --------------------------------------------
+    # The confirmed defect this closes: head.scad's old USB-C column channel
+    # (a straight cube, x127..138 y6..15, run all the way down to the boss
+    # bottom z84) hollowed out the ENTIRE +y insert column of the rear-boss->
+    # bracket-wall M3 heat-sets (HM_Y=10, z89 & z100) -- 0mm insert
+    # floor/wall at both, measured. Nothing gated this axis (case 7+8 checks
+    # head/bracket ENVELOPES vs the rest of the chassis, never each other's
+    # own fastener bores), so it went in silent. Model after case 13's
+    # axis-alignment pattern: probe each of the 4 bolt axes on BOTH sides of
+    # the joint -- the head boss must have SOLID insert material just past
+    # the heat-set bore's own end (the "floor/wall" a nylon M3 actually
+    # bites into), and the neck-bracket wall must be OPEN (M3 clearance +
+    # rear counterbore, driven from behind) at the matching axis, so a bolt
+    # driven through the wall actually lands in a backed insert, not a void.
+    print('-- case 14: head-boss <-> neck-bracket bolt-axis alignment (AUD-12) --')
+
+    def axis_solid(mesh, pts, label):
+        inside = mesh.contains(pts)
+        n = int(inside.sum())
+        tag = 'OK  ' if n == len(pts) else 'FAIL'
+        print(f'{tag}  {label}: {n}/{len(pts)} axis pts land in solid')
+        return n < len(pts)
+
+    for sy in (1, -1):
+        for hz in (89, 100):
+            # head boss: insert floor/wall just past the heat-set bore's own
+            # end (bore runs x121..127.15; probe x128/129/130, the same
+            # points the AUD-12 write-up measured as 0.0 before the fix) --
+            # must be SOLID at every one.
+            pts = np.array([[x, sy * 10, hz] for x in (128, 129, 130)])
+            bad |= axis_solid(head, pts,
+                              f'head-boss insert floor y={sy * 10:+d} z={hz}')
+            # neck bracket: the wall's M3 clearance bore (drive access from
+            # behind the wall, x103..121, WALL_X0=113 -> the boss face x121)
+            # must be OPEN along the same y/z axis.
+            pts = np.array([[x, sy * 10, hz] for x in np.linspace(105, 120, 6)])
+            bad |= axis_open(bracket, pts,
+                             f'neck-bracket wall clear y={sy * 10:+d} z={hz}')
 
     # ---- 5. static fixture asserts ----------------------------------------------
     case_top = 110.1     # official case top (deck 71.9 + 38.2 calipered)

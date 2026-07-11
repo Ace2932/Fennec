@@ -109,6 +109,51 @@ FOOT_THK  = 4;
 FOOT_BOLT_X = 42;  FOOT_BOLT_Y = -81.7;   // -> trunk (59.5, +/-42)
 GUSSET_X  = 40;                    // pair, 4 thick, centered +/-40
 
+// ---- battery-lead notch (AUD-12b, 2026-07-10) --------------------------------
+// flange bottom center, x +/-10, z -38.1..-26 — the belly pack's leads (both
+// ends: pack->MRBF at the rear, D456 right-angle USB-C at the front, same
+// part) rise unsupported from the pack (trunk x~-78) into this notch. It was
+// a zero-radius 90deg through-cut in abrasive PA6-CF — chafe risk on every
+// vibration cycle. Chamfered on all 4 nominal edges at BOTH flange mouths
+// (entry + exit) below; the nominal 20x12.1 opening is untouched in the
+// middle, still >> the ~7mm lead-pair bundle. (The notch's own bottom, z=
+// -38.1, is 0.1 past the flange's real bottom edge z=-38 — same EPS-overcut
+// idiom as the y-direction -0.1 below, not a 4th real material edge; chassis/
+// lead_notch_grommet.scad — the TPU liner riding this chamfer — lines the
+// genuine 3 edges: left/right (x+/-10) and top (z=-26).)
+NOTCH_X0 = -10;    NOTCH_X1 = 10;      // x +/-10 (nominal, matches the cut below)
+NOTCH_Z0 = -38.1;  NOTCH_Z1 = -26;     // z -38.1..-26 (trunk z 0..12ish)
+NOTCH_CHAMF_Y  = 1.0;    // chamfer depth into the flange, each mouth
+NOTCH_CHAMF_XZ = 1.0;    // opening growth (x AND z) at each mouth (~45deg)
+
+module notch_bevel(y_mouth, y_inner, grow) {
+    // hull between the nominal-size cross-section (at y_inner, one chamfer
+    // depth in from the true flange face) and a GROWN cross-section (at
+    // y_mouth, the flange face itself) — kills the 90deg corner on all 4
+    // sides without touching the nominal opening beyond the chamfer depth.
+    // Same thin-slab hull() idiom as chassis/head.scad's flare().
+    hull() {
+        translate([NOTCH_X0, y_inner, NOTCH_Z0])
+            cube([NOTCH_X1 - NOTCH_X0, EPS, NOTCH_Z1 - NOTCH_Z0]);
+        translate([NOTCH_X0 - grow, y_mouth, NOTCH_Z0 - grow])
+            cube([NOTCH_X1 - NOTCH_X0 + 2 * grow, EPS,
+                  NOTCH_Z1 - NOTCH_Z0 + 2 * grow]);
+    }
+}
+
+module lead_notch() {
+    Y0 = FLANGE_Y0 - 0.1;   // mouth, interior (-y) flange face
+    Y1 = FLANGE_Y1 + 0.1;   // mouth, exterior (+y) flange face
+    union() {
+        notch_bevel(Y0, Y0 + NOTCH_CHAMF_Y, NOTCH_CHAMF_XZ);
+        translate([NOTCH_X0, Y0 + NOTCH_CHAMF_Y, NOTCH_Z0])
+            cube([NOTCH_X1 - NOTCH_X0,
+                  (Y1 - NOTCH_CHAMF_Y) - (Y0 + NOTCH_CHAMF_Y),
+                  NOTCH_Z1 - NOTCH_Z0]);
+        notch_bevel(Y1, Y1 - NOTCH_CHAMF_Y, NOTCH_CHAMF_XZ);
+    }
+}
+
 module shoulder_v6() {
     difference() {
         union() {
@@ -254,9 +299,9 @@ module shoulder_v6() {
         // (trunk z 12). The belly pack's leads rise behind the trunk end
         // and enter here to the MRBF block (battery_pocket.scad); at the
         // FRONT end the D456's right-angle USB-C uses the same notch.
-        // Kept on both ends — same part.
-        translate([-10, FLANGE_Y0 - 0.1, -38.1])
-            cube([20, FLANGE_Y1 - FLANGE_Y0 + 0.2, 12.1]);
+        // Kept on both ends — same part. Chamfered both mouths (AUD-12b,
+        // see lead_notch() above) — was a zero-radius 90deg through-cut.
+        lead_notch();
         // D456 head-bracket heat-set bores: (x +/-18, z -22.05 & -10.05)
         // = trunk (y +/-18, z 16 & 28), pressed from the outer face; the
         // rear pads (union below) thicken the 4mm flange to 7 there

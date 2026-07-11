@@ -29,6 +29,23 @@ added 2026-07-08).
 TODO) and its L2 (Ø51) + D456 mounts are gate-clean but BENCH-UNVERIFIED vs the
 real parts. Print it in Wave 1 as a fit-check article, not the final head.
 
+## Δ 2026-07-10 (AUD-12 / AUD-12b — head-boss void + battery-lead notch)
+
+**⚠ RE-PRINT if you already have an article:** `head.scad` — the USB-C column
+channel used to run straight through the rear boss, voiding the +y pair of
+the 4 breakaway heat-set inserts (0.0mm floor/wall, measured) — an ALREADY
+PRINTED head from before this fix has 2 of 4 head→neck_bracket bolts with no
+real insert backing. Channel rerouted (shares the L2 cable bore below the
+boss top instead); mouth of the L2/D456 cable bore also gained a 0.75mm
+chamfer at the x121 breakaway plane. `leg_v6/shoulder.scad` — the
+battery-lead notch (flange bottom, x±10) is now chamfered on all 4 nominal
+edges at both mouths (was a raw 90° PA6-CF corner); an already-printed
+shoulder has the sharp version. Both re-render clean via `build_all.sh`.
+
+**NEW part:** `chassis/lead_notch_grommet.scad` (TPU 95A) — edge liner for
+the (now-chamfered) battery-lead notch, same family as `case_slot_grommet`.
+~0.2 g (small — check the slicer doesn't drop stray islands at that size).
+
 ## 0. Open before starting (user)
 
 - [ ] PETG-CF spool on hand? (buy if not — or all-PA6 and accept warp
@@ -46,7 +63,7 @@ real parts. Print it in Wave 1 as a fit-check article, not the final head.
 |---|---|
 | PA6-CF (DRY 80 °C/10 h; no anneal — §3) | coax, femur, tibia, knee_arm, shoulder, shoulder_plate (+L variants), strap ×4, **`head`**, **`neck_bracket`**, **`battery_pocket`** (#24 2026-07-10: stays PA6-CF — belly crush guard over the LiPo, puncture=fire #15; impact toughness > flatness) — 4 walls / 40 % / gyroid (**AUDITED** `neck_bracket_analysis.py`: faceplant SF ~12; ⚠ the L2-scan **vibration/resonance** is a stiffness concern, unverified — modal check on the first print) |
 | PETG-CF | riser_bay, floor_plate, **`head_ear` ×2** (split off the head 2026-07-07 — prints FLAT, low-warp; PA6-CF also fine. Bolts to the head ear-pad; OPTIONAL per the WiFi-antenna decision #32), **`l2_adapter`** (FLAT bottom-down, ~6 g; PA6-CF also fine — it carries the L2 mass so PA6-CF preferred if in stock), **`control_pod`** (COLUMN-FACE-DOWN, ~24 g; rear-top E-stop + OLED mount) |
-| TPU 95A | SM3_Foot shoe ×4+1 (STOCK geometry — crush-zone v2 waits for first-article, #20), skid_rail ×2, cable_clip ×20, ~~tibia_pad~~ → **knee_bumper ×4+1** (backlog #15 B, replaces the retired tibia_pad — wraps the tibia knee-block, ~8 g TPU, U opening up), **grommet_insert ×6** |
+| TPU 95A | SM3_Foot shoe ×4+1 (STOCK geometry — crush-zone v2 waits for first-article, #20), skid_rail ×2, cable_clip ×20, ~~tibia_pad~~ → **knee_bumper ×4+1** (backlog #15 B, replaces the retired tibia_pad — wraps the tibia knee-block, ~8 g TPU, U opening up), **grommet_insert ×6**, **case_slot_grommet** (#41 follow-up, -Y CASE_SLOT edge liner), **lead_notch_grommet ×2** (AUD-12b, 2026-07-10 — battery-lead notch edge liner, one per shoulder/trunk end) |
 
 ## 2. Slicer spec
 
