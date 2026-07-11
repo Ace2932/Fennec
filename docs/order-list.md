@@ -27,8 +27,10 @@ Full multi-phase, both-board audit. Both boards are routed + DRC-clean (logic: 0
 - BSS138 SOT-23 ×5 (power Q2/Q3/Q4 + spares)
 - 74**LVC**125 SOIC-14 ×5 (logic U7 — board uses LVC, 5V-tolerant; keep it) — *Q1 IRLB3034 ✅ already ordered*
 
-**Electrolytics**
-- 470µF/25V radial Ø10 5mm-pitch ×4 (power C6/C8/C9 + L2-filter cap; e.g. Nichicon UPW1E471MPD) — *1000µF C1–C5 ✅ ordered*
+**Electrolytics** — radial Ø10 5mm-pitch (2026-06-16 board review split by rail voltage):
+- **C6 (V12_L2, 12V): 470µF/25V** (2.1× ✓) — Nichicon UPW1E471MPD
+- **C8 + C9 (VBAT_PROTECTED = raw 16.8V 4S rail): 470µF/35V** — Nichicon **UPW1V471MPD**. ⚠️ 25V here = only **1.49×** + spikes; bumped to 35V (2.1×). **Do not use 25V on C8/C9.**
+- buy ~5 (3 board + spares). *1000µF C1–C5 ✅ ordered (V7V5_LEG/V12_HIP). ⚠️ Those 25V leg caps need the **TVS clamps populated** — e-stop regen can drive V7V5_LEG to ~21V (1.19× on 25V) until the SMBJ8.5A clamps it.*
 
 **Inductor**
 - 22µH ≥2A power inductor ×1 (Bourns SRR1260-220M) — power L1 / L2-LiDAR LC filter
@@ -174,6 +176,7 @@ double duty (soft-start + zener clamp current-limit).
 ### Pololu D42V110F12 (hip 12V rail, 4× hip STS3215 30kg only) — ~$60
 - **Primary:** `pololu.com` direct, item #5677
 - **Why:** 12V fixed out, 12-60V Vin range, 9A typ @ 42V Vin (derates lower at 14.8V Vin). Sized for 4× hip STS3215 30kg sustained ~8A. **L2 LiDAR moved off this rail** to a dedicated buck (v3.4) — combined hip+L2 load was margin-thin under de-rating.
+- ⚠️ **TIGHTEST rail (2026-06-16 review):** ~8A load vs ~9A derated ≈ **1.1× margin** — the thinnest of all bucks. The bench thermal-IR step below is mandatory, not optional; have the D24V150F12 upgrade path ready if it runs hot.
 - **Bench validation:** load with 1× then 4× 30kg hip walking-stand-in. Thermal IR after 10 min sustained. Confirm derated continuous capacity matches your measured load. If sustained pull >7A and thermal is concerning, plan parallel modules or upgrade to D24V150F12.
 
 ### Pololu D24V22F12 (L2 LiDAR 12V dedicated rail, v3.4 split) — ~$19
