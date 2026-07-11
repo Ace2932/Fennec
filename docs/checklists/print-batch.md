@@ -211,6 +211,13 @@ Every insert site depth-probed in the built STLs:
       (that's a hole in floor_plate itself, not the trunk).
 - [ ] Cable dressing per leg_v6 README (clips at both loop ends, ≥40 mm
       loops, spiral wrap, tug-test all anchors + 24 connector ends)
+- [ ] **Free-loop length (backlog #18 / LA-14, `--cable` WARN gate):** per
+      leg, fold kfe + hfe to their MECHANICAL LIMITS *before* zip-tying the
+      KNEE and HIP loops — dress slack to the worst-case fold, not neutral
+      pose. Guidance: KNEE loop (femur-x84↔tibia-x44) needs enough free
+      length to stay slack at ~39mm anchor separation (full kfe fold); HIP
+      loop (coax-exit↔femur-x44) needs slack down to ~60-79mm across hfe.
+      Zip only after confirming slack at the fold limit, not before.
 - [ ] Skid rails: key + CA/VHB under the tray
 - [ ] Breakaway fuses (#2): the masts are RETIRED → re-map the nylon-M3
       breakaway concept to the HEAD mount (4× M3 boss→bracket) so the head

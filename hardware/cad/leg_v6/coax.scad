@@ -23,6 +23,12 @@
 //     for a cable alongside). Harness plan #31.
 //
 // Print: rear face (+Y) down; supports under the yoke bridge span.
+//
+// ASSEMBLY RULE (backlog #18 / LA-14, --cable WARN gate LA-20): the HIP
+// service loop anchored at this part's tunnel-exit shrinks to ~60-79mm
+// separation across hfe ROM, below the >=40mm-radius spec. Fold hfe to
+// its mechanical limit FIRST, THEN zip the loop, so it's slack (not
+// taut) at full fold. See leg_v6 README "Free-loop length" note.
 
 include <leg_v6_common.scad>
 

@@ -123,6 +123,19 @@ covers the free loop; zero tension at any plug (clips+ties take it);
 **tug-test all 24 connector ends + every anchor** at assembly (#25).
 femur x52 pair stays a bare-tie spare anchor.
 
+**Free-loop length (backlog #18 / LA-14, `--cable` WARN gate, LA-20):**
+the anchor separation itself SHRINKS across ROM below the ≥40mm-radius
+(≥80mm-span) spec — KNEE loop (femur-x84 ↔ tibia-x44) drops to **~39mm**
+at full kfe fold; HIP loop (coax tunnel-exit ↔ femur-x44) swings
+**~60-79mm** across hfe. This is left OPEN as geometry (see LA-14) and
+resolved by ASSEMBLY DISCIPLINE instead: dress each loop with slack
+sized to the loop's own worst-case (tightest) span, not its neutral-pose
+span. Concretely — **fold the joint to its mechanical limit FIRST, THEN
+route + zip-tie the loop to both clips** so the loop is slack (never
+taut) at full fold and simply has extra spare at neutral. Never dress
+a loop at mid-ROM/neutral and call it done; that leaves it taut (and a
+fatigue point) at the mechanical stop.
+
 ## Pre-walk firmware gates (from movement review)
 Boot-settle ramp (PR #17) · servo torque limits written (open audit item —
 trip backdrive protection) · stand-up keeps feet under knees (knee ≤80%

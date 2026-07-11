@@ -19,6 +19,13 @@
 // >= 40 (8x bundle O5). Assembly checklist: leg_v6 README "cable
 // dressing" + tug-test every anchor.
 //
+// ASSEMBLY RULE (backlog #18 / LA-14, --cable WARN gate LA-20): anchor
+// separation shrinks below the >=40 spec across ROM (KNEE ~39mm at kfe
+// fold, HIP ~60-79mm across hfe) -- resolved by discipline, not geometry.
+// Fold the joint to its mechanical limit FIRST, THEN zip the loop to
+// this clip, so the loop is slack (not taut) at full fold. See leg_v6
+// README "Free-loop length" note.
+//
 // Print: TPU 95A, flat (base down), 100% infill, ~1 g each (LA-28,
 // 2026-07-11: was "~2 g" -- measured mesh volume 850.7mm^3 (post LA-24
 // wall fix) x TPU 95A density ~1.2 g/cm^3 = ~1.0 g).
