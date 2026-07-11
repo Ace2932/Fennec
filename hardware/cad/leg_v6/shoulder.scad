@@ -48,7 +48,17 @@ TRUNK_HOLE_Z = [-33.05, -14.05];
 WALL_Z0   = -25;
 // plate flange bore grid (shared with shoulder_plate.scad)
 PLATE_BX  = [27, 51];
-PLATE_BY  = [6.2, 15.2];
+// LA-28b (2026-07-11): outer PLATE_BY 15.2->14.0 -- at 15.2 the Ø4.0
+// heat-set bore (r2.0) reached y=17.2, 0.2mm past DECK_Y1=17.0 (deck
+// front edge), breaching the deck front face (open arc on the insert,
+// verified by mesh signed-distance scan: solid receded to y~13.2 instead
+// of 17.0 for x in the bore's footprint). At 14.0 the bore edge sits at
+// y=16.0, giving >=1.0mm solid wall to DECK_Y1. Clear of the inner pair
+// (PLATE_BY[0]=6.2, 3.8mm edge gap), the horn BCD (separate z-band, face
+// z 0+-7 vs flange z 41.5-44.7), the LA-8 reinforcement pads (all near
+// the flange, y<-70), and the lightening window (x<=16, this bore x>=25).
+// MUST match shoulder_plate.scad's PLATE_BY (duplicated constant, LA-5).
+PLATE_BY  = [6.2, 14.0];
 
 // ---- neck_bracket base-bolt heat-set pilots (backlog #36 + NO-DRILL fix,
 // 2026-07-10) --------------------------------------------------------------

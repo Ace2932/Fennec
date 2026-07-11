@@ -6,7 +6,9 @@
 // the deck (4x M3 into its heat-sets). Removing the 4 deck screws + one
 // cable unplug drops the whole leg — the horn stays on this plate.
 // Sweep-safe by construction: every solid lives at y >= 17.75 or z >= 30.
-// Print: horn-seat face DOWN (perfect seat, knee_arm doctrine).
+// Print: back face DOWN (perfect seat on the horn face, knee_arm doctrine)
+// -- the flange dips below the horn-seat plane, so "horn-seat face down"
+// is geometrically impossible; the achievable bed face is the back face.
 // rev 3 (2026-07-10): seat plane moved 17.2->17.75 (caliper gap fix — see
 // leg_v6_common.scad HORN_Z1); matches shoulder.scad's HORN_Y.
 //
@@ -30,7 +32,12 @@ HIP_X   = 39.05;
 FACE_Y0 = 17.75; FACE_Y1 = 21.75;     // vertical face (4 thick)
 FLAN_Z0 = 41.5;  FLAN_Z1 = 44.7;      // top flange on the deck (deck top 41.5)
 PLATE_BX = [27, 51];
-PLATE_BY = [6.2, 15.2];
+// LA-28b (2026-07-11): outer PLATE_BY 15.2->14.0, matches shoulder.scad's
+// deck heat-set fix (bore was breaching DECK_Y1=17.0 by 0.2mm) -- MUST
+// stay identical to shoulder.scad's PLATE_BY (duplicated constant, LA-5)
+// so this plate's clearance/dowel holes stay concentric with the deck
+// heat-sets.
+PLATE_BY = [6.2, 14.0];
 
 module shoulder_plate_R() {
     difference() {
