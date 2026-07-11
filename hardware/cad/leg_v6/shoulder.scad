@@ -36,8 +36,12 @@ DECK_Z0   = 35;     DECK_Z1 = 41.5;   // 6.5 thick. RAISED from 23.5 (sweep-gate
                                        // the coax BRIDGE, r24-38 about the haa
                                        // axis, rolls up to z~34 inside the deck
                                        // span at 40deg — 1.0 clearance now)
-DECK_Y1   = 17.0;                     // stops 0.2 short of the plate face
-CHEEK_X0  = 55.4;   CHEEK_X1 = 59.4;
+DECK_Y1   = 17.0;                     // stops 0.75 short of the plate face
+                                       // (LA-28 doc fix 2026-07-11: was
+                                       // stale at 0.2 pre-rev-3; plate
+                                       // FACE_Y0 moved 17.2->17.75)
+CHEEK_X1  = 59.4;   // CHEEK_X0 removed (LA-28, 2026-07-11): dead constant,
+                     // grep-confirmed unused anywhere in the repo
 FLANGE_Y0 = -77.7;  FLANGE_Y1 = -73.7;
 TRUNK_HOLE_X = 51.75;
 TRUNK_HOLE_Z = [-33.05, -14.05];

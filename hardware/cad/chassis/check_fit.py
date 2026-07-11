@@ -82,6 +82,13 @@ point inside the designed part = the part cuts its counterpart. Cases:
      other's own fastener bores, so this went ungated. Same axis-probe
      pattern as case 13, both directions: head boss must be SOLID at the
      insert floor, neck-bracket wall must be OPEN at the matching axis.
+ 15. LA-22a (2026-07-11, fault audit): head_ear/head_ear_L bolt-axis (same
+     axis-probe pattern as 13/14) + L2/D456 clearance; skid_rail key vs
+     battery_pocket recess alignment (both files independently cite the
+     same trunk x -43/+58 key centers -- this is the first thing that
+     actually checks it); a mirrored-LEFT haa roll sweep (leg assembly vs
+     shoulder + shoulder_plate_L.stl) -- leg_v6/check_fit.py's own
+     shoulder_checks() only ever swept the RIGHT horn plate.
 
 Exit 0 = clean, 1 = interference. Run via build_all.sh after every change.
 """
@@ -336,6 +343,69 @@ def rot(deg, axis, point=None):
 
 def tf(pts, M):
     return trimesh.transform_points(pts, M)
+
+
+# ---- LA-22a: mirrored-LEFT shoulder sweep -----------------------------------
+def left_shoulder_sweep_check():
+    """leg_v6/check_fit.py's shoulder_checks() only ever swept the RIGHT leg
+    assembly (coax_R/femur_R/tibia_R + shoulder_plate.stl, the R horn plate)
+    against shoulder.stl -- shoulder_plate_L.stl (the genuinely distinct
+    mirrored horn-plate part that bolts the LEFT hip to the SAME shoulder
+    crossmember; shoulder.scad is "one crossmember per trunk end", hips at
+    x=+-39.05, heat-set bores "4x per side") had ZERO gate coverage.
+
+    Reuses the RIGHT leg point cloud (same coax/femur/knee_arm/tibia meshes,
+    same placement transforms as leg_v6/check_fit.py's shoulder_checks()) and
+    X-mirrors the WHOLE assembled cloud before placing it at the LEFT hip --
+    the same "chirality is irrelevant for an envelope check" precedent this
+    file already uses for the crouch sweep's MIRX (see coax_to_trunk_bases()
+    docstring / case 4). shoulder_plate_L.stl is the one real, non-mirrored
+    input under test here."""
+    bad = False
+    sh = trimesh.load(f'{LEG}/shoulder.stl')
+    pl_L = trimesh.load(f'{LEG}/shoulder_plate_L.stl')
+    coax = trimesh.load(f'{LEG}/coax_R.stl')
+    femur = trimesh.load(f'{LEG}/femur_R.stl')
+    tibia = trimesh.load(f'{LEG}/tibia_R.stl')
+    arm = trimesh.load(f'{LEG}/knee_arm.stl')
+    arm.apply_transform(trimesh.transformations.translation_matrix([59, 0, 17.75]))
+    servo = trimesh.load(SERVO)
+    servo.apply_translation([-12.5, 0, 0])
+    pts0 = trimesh.sample.sample_surface(servo, 6000, seed=0)[0]
+
+    ry = rot(-90, [0, 1, 0]); rx = rot(90, [1, 0, 0])
+    coax_pose = ry @ rx
+    HFE_Y, HFE_Z, FEMUR_MID = 11.6, -9.5, 33.8
+    M_f = (trimesh.transformations.translation_matrix([FEMUR_MID, HFE_Y, HFE_Z])
+           @ rot(180, [0, 0, 1]) @ rot(90, [0, 1, 0]))
+    T_t = trimesh.transformations.translation_matrix([106.9, 0, 0])
+    leg = np.vstack([
+        trimesh.sample.sample_surface(coax, 6000, seed=0)[0],
+        tf(pts0, coax_pose),
+        tf(trimesh.sample.sample_surface(femur, 4000, seed=0)[0], M_f),
+        tf(trimesh.sample.sample_surface(arm, 1000, seed=0)[0], M_f),
+        tf(trimesh.sample.sample_surface(tibia, 3000, seed=0)[0], M_f @ T_t),
+    ])
+    # X-mirror the whole RIGHT leg cloud -> a valid LEFT leg envelope
+    MIRX = np.eye(4); MIRX[0, 0] = -1
+    leg_L = tf(leg, MIRX)
+
+    # coax frame -> shoulder frame: mirror Y (same as the R sweep in
+    # leg_v6/check_fit.py's shoulder_checks()), then place at the LEFT hip
+    MIRY = np.eye(4); MIRY[1, 1] = -1
+    base = trimesh.transformations.translation_matrix([-HIP_LAT, 0, 0]) @ MIRY
+    print('-- LA-22a: LEFT haa roll sweep (mirrored leg assembly vs shoulder + shoulder_plate_L) --')
+    for ang in (-45, -40, -25, 0, 25, 40, 45):
+        S = rot(ang, [0, 1, 0], [-HIP_LAT, 0, 0])
+        p = tf(tf(leg_L, base), S)
+        # exclude the designed disc/boss interface about the haa axis
+        keep = np.sqrt((p[:, 0] + HIP_LAT) ** 2 + p[:, 2] ** 2) > 13
+        p = p[keep]
+        n = int(sh.contains(p).sum()) + int(pl_L.contains(p).sum())
+        status = 'OK ' if n == 0 else 'HIT'
+        if n and abs(ang) <= 40: bad = True   # beyond 40 = documenting stops
+        print(f'   {status} haa {ang:+4d}deg: {n} pts')
+    return bad
 
 
 def leg_cloud(hfe, kfe):
@@ -748,6 +818,86 @@ def main():
     lp = sample(l2, 5000, 1000)
     hits = lp[head.contains(lp)]
     bad |= report('seated L2 body vs head', hits)
+
+    # ---- 15. LA-22a: head_ear/head_ear_L bolt-axis + L2/D456 clearance,
+    # skid_rail vs battery_pocket recess alignment, mirrored-LEFT shoulder
+    # sweep -- zero prior gate coverage for any of these (fault audit
+    # 2026-07-11); build_all.sh has rendered head_ear/head_ear_L/skid_rail
+    # since 2026-07-08/07-06 but nothing ever checked them. -----------------
+    print('-- case 15 (LA-22a): head_ear / skid_rail / mirrored-LEFT shoulder --')
+    # head.scad: heat-set bore = translate([ex, sy*10, CROWN_Z0+7-6.2])
+    # cylinder(d=4.0, h=6.2+EPS) -- CROWN_Z0=124, so the bore spans z
+    # 124.8..131.05 (from the pad TOP z131 down to a BLIND floor at 124.8,
+    # only 0.8mm above CROWN_Z0=124). head_ear.scad's clearance bore
+    # (translate([ex,10,PAD_Z-EPS]) cylinder(d=M3_CLEAR,h=4+2*EPS), PAD_Z=131)
+    # spans z 130.95..135.05 through the foot flange. The two bores meet
+    # at the pad top (z~131) and share the same (ex, sy*10) axis.
+    EAR_BOLT_Z0, EAR_BOLT_Z1 = 130.95, 135.05
+    EAR_FLOOR_Z0, EAR_FLOOR_Z1 = 124.05, 124.7   # the 0.8mm blind floor below the heat-set
+    EAR_WALL_R = 2.3                              # just past the Ø4 bore's own 2mm radius
+    EAR_WALL_Z = 128.0                             # mid-bore
+    for side, ear_file, sy in (('R', 'head_ear.stl', 1), ('L', 'head_ear_L.stl', -1)):
+        ear = trimesh.load(ear_file)
+        for ex in (77, 83):
+            # ear's own M3 clearance bore must be OPEN through its foot flange
+            pts = np.array([[ex, sy * 10, z]
+                            for z in np.linspace(EAR_BOLT_Z0 + 0.3, EAR_BOLT_Z1 - 0.3, 6)])
+            n = int(ear.contains(pts).sum())
+            tag = 'OK  ' if n == 0 else 'FAIL'
+            print(f'{tag}  head_ear_{side} bolt clearance x={ex} y={sy * 10:+d}: '
+                  f'{n}/{len(pts)} axis pts land in solid')
+            bad |= n > 0
+            # matching head heat-set: the blind floor below the bore, AND
+            # the wall material just past the bore's own radius, must both
+            # be SOLID -- otherwise the insert has nothing to bite into
+            # (same concern AUD-12/case 14 caught for the head-boss inserts).
+            pts = np.array([[ex, sy * 10, z]
+                            for z in np.linspace(EAR_FLOOR_Z0, EAR_FLOOR_Z1, 5)])
+            n = int(head.contains(pts).sum())
+            tag = 'OK  ' if n == len(pts) else 'FAIL'
+            print(f'{tag}  head heat-set floor under ear_{side} x={ex} y={sy * 10:+d}: '
+                  f'{n}/{len(pts)} axis pts land in solid')
+            bad |= n < len(pts)
+            ring = np.array([[ex + EAR_WALL_R * np.cos(a), sy * 10 + EAR_WALL_R * np.sin(a),
+                             EAR_WALL_Z] for a in np.linspace(0, 2 * np.pi, 8, endpoint=False)])
+            n = int(head.contains(ring).sum())
+            tag = 'OK  ' if n == len(ring) else 'FAIL'
+            print(f'{tag}  head heat-set wall under ear_{side} x={ex} y={sy * 10:+d}: '
+                  f'{n}/{len(ring)} ring pts land in solid')
+            bad |= n < len(ring)
+        # L2 / D456 clearance: the ear panel leans up/out from the rear pad --
+        # must clear the seated L2 body and the D456 camera envelope
+        ep = sample(ear, 5000, 1200, seed=14)
+        hits = ep[l2.contains(ep)]
+        bad |= report(f'head_ear_{side} vs seated L2 body', hits)
+        hits = ep[cam.contains(ep)]
+        bad |= report(f'head_ear_{side} vs D456 camera envelope', hits)
+
+    # -- skid_rail key vs battery_pocket recess alignment (backlog #15,
+    # battery_pocket.scad "skid-rail key recesses") -- skid_rail.stl renders
+    # in its own RAIL-LOCAL frame (x 0..130, y 0..12, z -RAIL_T..~0); trunk
+    # placement (matches the case-4 sweep's `rails` envelope box AND the two
+    # files' own KEY_X/kx comments, both independently citing trunk x -43/+58):
+    # local x0 -> trunk x=-55, local y0 -> trunk y=+9 (the +y rail; the -y
+    # rail is this same STL Y-mirrored), local z0 -> trunk z=BOT_Z=-39.2
+    # (battery_pocket.scad BOT_Z). The recess is a void cut INTO the pocket
+    # solid, so a genuinely aligned key's own volume must sample OUTSIDE the
+    # pocket solid -- any point of the key landing inside pocket.contains()
+    # means the recess is missing or misaligned there.
+    BOT_Z = -39.2   # battery_pocket.scad BOT_Z = CAV_Z0 - WALL
+    rail = trimesh.load('skid_rail.stl')
+    rp = sample(rail, 4000, 1200, seed=15)
+    rp_keys = rp[rp[:, 2] > 0.02]   # the raised KEY bumps only (local z>0; rail body is z<=0)
+    T_R = trimesh.transformations.translation_matrix([-55, 9, BOT_Z])
+    MIRY2 = np.eye(4); MIRY2[1, 1] = -1
+    T_L = MIRY2 @ T_R
+    for label, M in (('+y', T_R), ('-y', T_L)):
+        kp = tf(rp_keys, M)
+        hits = kp[pocket.contains(kp)] if len(kp) else kp
+        bad |= report(f'skid_rail key ({label}) vs battery_pocket solid '
+                      f'(recess must clear the key)', hits)
+
+    bad |= left_shoulder_sweep_check()
 
     # ---- 9. floor plate ------------------------------------------------------------
     plate = trimesh.load('floor_plate.stl')

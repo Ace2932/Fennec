@@ -24,7 +24,7 @@ $OS -o skid_rail.stl skid_rail.scad          # TPU belly skid rail x2 (#15, AUD-
 $OS -o ../leg_v6/shoulder.stl ../leg_v6/shoulder.scad
 $OS -o /tmp/trunk_preview.stl trunk.scad     # parametric spec sanity render only —
                                               # NOT the shipped trunk.stl (see below)
-../../../.venv/bin/python ../mesh_health.py head.stl head_ear.stl head_ear_L.stl l2_adapter.stl control_pod.stl jetson_case_mount.stl jetson_clamp_bar.stl oled_mount.stl neck_bracket.stl case_slot_grommet.stl lead_notch_grommet.stl skid_rail.stl
+../../../.venv/bin/python ../mesh_health.py head.stl head_ear.stl head_ear_L.stl l2_adapter.stl control_pod.stl jetson_case_mount.stl jetson_clamp_bar.stl oled_mount.stl neck_bracket.stl case_slot_grommet.stl lead_notch_grommet.stl skid_rail.stl riser_bay.stl spacer.stl battery_pocket.stl floor_plate.stl
 ls -la riser_bay.stl spacer.stl battery_pocket.stl head.stl neck_bracket.stl floor_plate.stl jetson_case_mount.stl
 
 # DERIVED TRUNK (trunk.stl): stock Nova-SM3 trunk geometry + 10 modeled

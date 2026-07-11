@@ -10,6 +10,18 @@
 // Part-local: underside = z0 (PRINT THIS FACE DOWN), knee axis at x = KNEE_X.
 // PRINT: PA6-CF, UNDERSIDE (horn-seat face, z0) DOWN — zero/minimal supports,
 //   4 walls / 0.2 / 40% (print-batch §2). print 4 (no mirror).
+// LA-23 (2026-07-11): the center horn counterbore (HORN_CTR_D x HORN_CTR_DEEP
+// below) cuts into the ARM_THK=4.0 plate to depth 2.5, leaving a floor of
+// EXACTLY 1.5mm -- the print-margin gate's minimum, zero slack. ARM_THK is a
+// leg_v6_common.scad constant shared by every arm-plate feature across the
+// whole leg (coax/femur yoke arms too), so bumping it here isn't a local
+// change -- it ripples load-bearing geometry elsewhere and isn't "trivial."
+// Shallowing HORN_CTR_DEEP instead would trade floor margin for horn
+// screw-head clearance margin (same tradeoff coax.scad's LA-7 fix made),
+// not eliminate the risk. Left as-is: non-load-bearing clearance pocket.
+// FIRST-ARTICLE CHECK: after printing, probe the counterbore floor
+// thickness (should read ~1.5mm) and confirm no witness/pinhole from a
+// thin top layer before trusting this pocket on later reprints.
 include <leg_v6_common.scad>
 
 X0 = 59;                 // femur-frame plate start

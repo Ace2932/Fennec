@@ -69,7 +69,7 @@ the (now-chamfered) battery-lead notch, same family as `case_slot_grommet`.
 
 | Class | Walls | Layer | Infill | Notes |
 |---|---|---|---|---|
-| legs PA6-CF | 4 | 0.2 | 40% (**tibia 25%** — stress audit SF 35) | orientations per part headers: femur/tibia flat −Z, coax rear-face-down + supports under the yoke bridge, shoulder rear-face-down + tree supports, tibia tab-down + pillars, shoulder_plate horn-seat-down, knee_arm underside-down, strap flat |
+| legs PA6-CF | 4 | 0.2 | 40% (**tibia 25%** — stress audit SF 35) | orientations per part headers: femur/tibia flat −Z, coax rear-face-down + supports under the yoke bridge, shoulder rear-face-down + tree supports, tibia tab-down + pillars, shoulder_plate horn-seat-down, knee_arm underside-down, strap flat. **⚠ LA-3 (2026-07-11): femur_L / tibia_L do NOT share the R orientation** — the Z-mirror flips which face is flat, so "flat/tab face −Z down" applied to an L part prints it upside-down (tibia_L lands on two ~25.4mm² islands = tip-over risk). Rotate femur_L/tibia_L **180° about X from the R orientation** so they rest on the same flat face R does. |
 | head/bracket PA6-CF | 4–5 | 0.2 | 40–60% | `head` CROWN/PAD-DOWN (the flat crown top on the bed = best L2-seat + ear-pad surface; the boss + tilted face + cheeks rise → tree supports under the tilted-face + cheek overhangs); `neck_bracket` BASE-DOWN (deck face on the bed, wall+gussets rise); `l2_adapter` FLAT bottom-down (zero supports) |
 | chassis PETG-CF | 3 | 0.25 | 20% | riser DECK-FACE-DOWN (zero supports); floor_plate flat (zero supports); jetson_case_mount base-down (uprights rise, no overhangs after the #34 rework); `jetson_clamp_bar` ×2 flat (PA6-CF; #44 — removable case hold-downs, replaced the 4 clamps); `control_pod` COLUMN-FACE-DOWN (riser-facing face on the bed; light supports under the deck + OLED-panel overhangs). **`battery_pocket` prints PA6-CF settings** (§1 row / #24, not PETG), FLOOR-DOWN opening-up, zero supports. (`jetson_cowl` RETIRED #41 — do NOT print) |
 | TPU | 2 | 0.2 | 100% | clips/rails/grommet flat; **knee_bumper U-opening-UP**; shoe per stock orientation |
@@ -145,6 +145,15 @@ Every insert site depth-probed in the built STLs:
       few seconds) — they're crush ribs**; M3 through the Ø3.1 dowel pair, M2
       through columns, insert purchase at Ø4.0, countersink flush, fork-arm
       seat flatness
+- [ ] **LA-25 first-article: grommet_insert press-test.** BARREL_OD 12.2 into
+      the nominal Ø12 flange hole is only 0.2mm interference (likely inside
+      FDM/TPU noise) and the axial slit makes it a split ring — press one
+      in, tug-test retention; grow `BARREL_OD` in `grommet_insert.scad` if
+      loose.
+- [ ] **LA-26 first-article: shoulder_plate 3.1mm dowel holes.** Test-fit an
+      M3 in the 2 diagonal "dowel" flange holes before committing — FDM
+      often prints small holes 0.1–0.3mm undersize; bump to 3.2–3.3 in
+      `shoulder_plate.scad` (`PLATE_BX`/`PLATE_BY` dowel cut) if tight.
 - [ ] knee_bumper: clips over the tibia knee-block, wraps the bottom, stays put
 - [ ] head→bracket: 4× M3 boss bolts land; bracket base bolts drill the deck
 - [ ] Shoe: snap onto the toe_v2 seat (tabs into pockets, lips over the

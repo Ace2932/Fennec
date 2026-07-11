@@ -9,6 +9,20 @@
 // Print: horn-seat face DOWN (perfect seat, knee_arm doctrine).
 // rev 3 (2026-07-10): seat plane moved 17.2->17.75 (caliper gap fix — see
 // leg_v6_common.scad HORN_Z1); matches shoulder.scad's HORN_Y.
+//
+// LA-23 (2026-07-11): same zero-margin counterbore as knee_arm.scad — the
+// center horn counterbore (HORN_CTR_D x HORN_CTR_DEEP, in the cut below)
+// leaves EXACTLY 1.5mm of face material (ARM_THK 4.0 - HORN_CTR_DEEP 2.5),
+// the print-margin gate's minimum. ARM_THK is shared across the whole leg's
+// arm-plate features, so deepening it here isn't a local/trivial change; see
+// knee_arm.scad's LA-23 note for the full reasoning (same tradeoff applies).
+// Left as-is: non-load-bearing clearance pocket. FIRST-ARTICLE CHECK: probe
+// the counterbore floor (should read ~1.5mm) before trusting the pattern.
+// LA-26 (2026-07-11): the 2 diagonal 3.1mm "dowel" flange holes (PLATE_BX/
+// PLATE_BY grid below) may print tight — FDM commonly undersizes small
+// holes 0.1-0.3mm. FIRST-ARTICLE CHECK: test-fit an M3 in the dowel pair
+// before committing; bump to 3.2-3.3 in this file if the printer runs
+// tight (see print-batch.md).
 
 include <leg_v6_common.scad>
 

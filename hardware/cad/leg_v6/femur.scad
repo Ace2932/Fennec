@@ -54,7 +54,9 @@ module femur_v6() {
             // envelope (block corners reach r~41 about the hfe axis).
             // Retention = the 4 case-column screws (the SO-ARM standard);
             // once the coax yoke bolts the horn+wheel the servo is captive.
-            // knee fork block, top = FLAT SHELF at 17.2: the top arm is a
+            // knee fork block, top = FLAT SHELF at 17.75 (rev 3, LA-28 doc
+            // fix 2026-07-11: was stale at 17.2, see leg_v6_common.scad
+            // HORN_Z1): the top arm is a
             // separate bolt-on plate (knee_arm.scad) so its horn-seat face
             // prints on the bed (the integral arm printed over supports —
             // rough seat). Bonus: the TOP ARM is now zero-bridging (the old

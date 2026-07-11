@@ -19,7 +19,9 @@
 // >= 40 (8x bundle O5). Assembly checklist: leg_v6 README "cable
 // dressing" + tug-test every anchor.
 //
-// Print: TPU 95A, flat (base down), 100% infill, ~2 g each.
+// Print: TPU 95A, flat (base down), 100% infill, ~1 g each (LA-28,
+// 2026-07-11: was "~2 g" -- measured mesh volume 850.7mm^3 (post LA-24
+// wall fix) x TPU 95A density ~1.2 g/cm^3 = ~1.0 g).
 
 $fn = 48;
 EPS = 0.05;
@@ -31,14 +33,24 @@ WALL_Z1 = 6.4;
 CH_D = 6.0;        // bundle channel (daisy link + VCC spur, ~O5)
 CH_Z = 4.0;        // channel axis height -> floor z1, crest z7 (proud of
                    // the walls: the tie wraps the bundle directly)
+// LA-24 fix (2026-07-11): the bell-mouth cutters (d2=13 cone, below) reach
+// radius 6.125 by the true mouth face (x=0 / x=L) -- against the old
+// WALL_Y_OUT=7.2 outer wall edge that left only 1.075mm of wall at the
+// flex-critical mouth (< 1.2mm guideline, ray-cast confirmed). Grew the
+// OUTER wall profile (not the bore) to 7.5 -> 1.375mm remaining wall at
+// both mouths. Still 0.5mm inside the W=16 base half-width (8), so the
+// base's own outer lip just shrinks from 0.8 to 0.5mm (non-structural).
+WALL_Y_IN  = 3.2;
+WALL_Y_OUT = 7.5;
+WALL_W = WALL_Y_OUT - WALL_Y_IN;
 
 module cable_clip() {
     difference() {
         union() {
             translate([0, -W/2, 0]) cube([L, W, BASE_T]);
             for (sy = [-1, 1])
-                translate([0, min(sy*3.2, sy*7.2), 0])
-                    cube([L, 4, WALL_Z1]);
+                translate([0, min(sy*WALL_Y_IN, sy*WALL_Y_OUT), 0])
+                    cube([L, WALL_W, WALL_Z1]);
         }
         // bundle channel
         translate([-1, 0, CH_Z]) rotate([0, 90, 0])

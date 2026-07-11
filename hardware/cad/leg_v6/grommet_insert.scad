@@ -16,6 +16,15 @@
 // both by 1.5+.
 //
 // Print: TPU 95A flange-down, 100% infill, ~1 g.
+//
+// LA-25 (2026-07-11) FIRST-ARTICLE CHECK: BARREL_OD 12.2 into a nominal
+// Ø12 hole is only 0.2mm diametral interference -- likely inside FDM/TPU
+// dimensional noise -- AND the axial SLIT (see below) turns the press-fit
+// into a split/spring ring, so retention depends on spring-back rather
+// than a clean interference fit (undiscussed until now). Before trusting
+// this on the full batch: press one into a printed Ø12 hole, tug-test
+// retention, and if it's loose/spins free, grow BARREL_OD (adjust here)
+// rather than reprinting the flange hole. See print-batch.md.
 
 $fn = 64;
 EPS = 0.05;

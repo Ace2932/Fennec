@@ -34,8 +34,11 @@ BLK_X  = CASE_HW + CLR_POCKET + WALL;     // ±15.85
 BLK_Y0 = -HORN_Z1;                        // -17.2 front (horn-face plane)
 BLK_YF = -FLOOR_BOT;                      // +22.2 rear (floor bottom)
 
-ARM_IN_X0  = FEMUR_MID - HORN_Z1 - ARM_THK;  // 12.6
-ARM_IN_X1  = FEMUR_MID - HORN_Z1;            // 16.6 (contacts femur horn face)
+ARM_IN_X0  = FEMUR_MID - HORN_Z1 - ARM_THK;  // 12.05 (LA-28 doc fix
+                                              // 2026-07-11: was stale at
+                                              // 12.6 pre-rev-3 HORN_Z1)
+ARM_IN_X1  = FEMUR_MID - HORN_Z1;            // 16.05 (contacts femur horn
+                                              // face; was stale at 16.6)
 ARM_OUT_X0 = FEMUR_MID - YOKE_BOT_IN;        // 56.2 (femur floor bottom +0.2)
 ARM_OUT_X1 = ARM_OUT_X0 + ARM_THK;           // 60.2
 ARM_HALF_YZ = 16;

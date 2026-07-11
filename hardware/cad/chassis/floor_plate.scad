@@ -46,8 +46,12 @@
 //      the Teensy 4.1 / Arduino Nano socket footprint (catalog part,
 //      13.0mm) -> stack top z62.22, 5.68mm clear of the deck (z67.9). No
 //      Teensy calipering needed.
-//   3. DRILL TEMPLATE: clamp the plate, drill O3.4 (battery) + O2.5
-//      (stack) through the stock floor using these holes as guides.
+//   3. DRILL TEMPLATE (LA-28 doc fix, 2026-07-11): battery Ø3.4 holes are
+//      no longer drilled here — they're now MODELED clearance bores in the
+//      printed `trunk` part (trunk.scad/trunk_build.py; check_fit.py case
+//      13 gates hole<->bolt-axis alignment). Only the 4x Ø2.5 mezzanine
+//      pilots below still need drilling: clamp the plate, drill Ø2.5
+//      through the stock floor using these holes as a jig.
 //
 // MRBF / Blue Sea 5191 block: 2x M5 slots on the starboard-rear solid
 // floor (clear of the big rear opening) — ⚠ block dims UNMEASURED

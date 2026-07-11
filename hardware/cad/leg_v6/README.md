@@ -89,7 +89,7 @@ Every mate, its fit, and who provides location:
 | 14 | M3 heat-sets | **bore Ø4.0** (insert OD 4.6 — a 4.6 bore drops through; audit catch). ⚠ 2026-07-06: `HEATSET_D/L` were referenced but NEVER DEFINED — OpenSCAD silently dropped every insert bore from femur + shoulder STLs; now defined in `leg_v6_common.scad`, STLs rebuilt. If a printed femur/shoulder predates this, its shelf/deck has NO bores — reprint | — |
 | 15 | strap ↔ pads | Ø2.05 pilots, M2.5 self-tap; pad top 17.6+, cap gap ≥0.2 | — |
 | 16 | toe_v2 seat ↔ SM3_Foot | **designed seat** (2026-07-06, replaces the stock outline — it never mated the crescent, sloppy ring): core disc r12.35×14.2 on the shoe's inner face r12.53 (0.18 clr), boss r10.15 under the edge lips (r10.35), 2 sector key pockets take the mid-band tabs (tips r6.88); θ = 54 exactly, ±~2° slop. Contact plumb under the post by construction (dimensions.md SM3_Foot **v3**). **Gated: `check_shoe.py`** (0 penetration, seat gap median 0.28) | key pockets |
-| 17 | cable plugs ↔ tunnel | 19×5.9 vs 2× 5264 plugs (17×4.5) | — |
+| 17 | cable plugs ↔ tunnel | 19×5.9 tunnel — **✅ AUD-3 RESOLVED 2026-07-10 (user caliper)**: real servo dual-connector exits side-by-side at 15.1mm (< 19 tunnel width), plug height <5.9mm (< tunnel height) — the cabled servo passes the tunnel plugged-in, no pocket change needed | — |
 First-article: run an M3 through the Ø3.1 dowel pair (prints ~3.0), M2 through
 columns, insert purchase test at Ø4.0 before committing the knee arms.
 

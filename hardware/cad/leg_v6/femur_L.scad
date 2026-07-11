@@ -1,4 +1,10 @@
 // LEFT femur = Z-mirror of the right part (lateral axis = Z in part frame).
+// PRINT (LA-3, 2026-07-11): the Z-mirror flips which face is flat. Do NOT
+// use femur_R's "flat/tab face -Z down" orientation as-is -- print femur_L
+// rotated 180 deg about X from the R orientation (i.e. flip the part
+// upside-down relative to R) so it rests on the SAME flat face R does
+// (bed-contact ~1806mm^2, not the mirrored ~611mm^2 face). See
+// docs/checklists/print-batch.md Sec 2 for the batch-wide note.
 $fn = 64;
 use <femur.scad>
 // LA-2 fix (2026-07-11): the old 2nd dot at (28,-10,21.4) landed on the

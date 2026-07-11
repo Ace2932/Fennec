@@ -17,6 +17,18 @@ real-world batch variation listed where known.
 
 ---
 
+## 0. Robot envelope (informational)
+
+**LA-27 (2026-07-11):** no total-height/silhouette budget exists anywhere in
+`docs/design-outline.md` or this file — recording one data point here so a
+future crate/doorway constraint has a number to check against. Tallest
+modeled point on the robot: the ear/antenna mast tip (`chassis/head_ear.scad`
+/ `head_ear_L.scad`, antenna boss top) at **z 213** (chassis/trunk frame,
+above the L2 body top at z 196.6). No known constraint conflicts with this
+today — informational only.
+
+---
+
 ## 1. Actuators
 
 ### Feetech STS3215 servo (12V 30 kg + 7.4V 19 kg share same body)
