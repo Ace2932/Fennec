@@ -238,8 +238,15 @@ module wheel_couple_neg() {
                 cylinder(d = M25_CLEAR, h = h_all);
                 cylinder(d = 5.2, h = 1 + 1.6);   // head counterbore
             }
-        cylinder(d = M25_CLEAR, h = h_all);        // center (wheel is M2.5)
-        cylinder(d = 5.2, h = 1 + 1.6);
+        // #51 (2026-07-11): NO center screw hole on the wheel/idler side —
+        // the idler has no retention screw (rev 3), so a center M25_CLEAR
+        // through-cut here was PHANTOM: an open daylight hole through the
+        // flat-on-flat wheel clamp face + a debris path into the C-box (the
+        // same defect LA-5 removed from shoulder.scad's standalone cut, but it
+        // was still latent in this SHARED module -> coax HFE + femur KFE wheels).
+        // Removed. The wheel's proud center boss is cleared by the blind
+        // idler-boss relief below (Ø7 x WHEEL_CTR_DEEP), which does NOT go
+        // through. The 4 BCD screws above are the real fasteners.
     }
     // idler-boss relief (rev 3): the wheel side has NO retention screw —
     // instead a black plastic boss (Ø6, ~1-2mm proud, MEASURED) sits proud
