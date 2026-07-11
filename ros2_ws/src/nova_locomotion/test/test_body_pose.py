@@ -138,6 +138,14 @@ MODERATE = (
 
 
 def test_moderate_poses_solvable_within_x_config_rom():
+    # NOT passing leg= to within_limits below (LA-13, 2026-07-11): the
+    # +-10deg pitch/roll weight-shift cases here push FL/FR hfe WELL past
+    # the -50deg front head-clearance cap (up to ~-66deg, see
+    # leg_ik.within_limits' docstring) — the raibert/body_pose weight-shift
+    # authority was tuned against the old symmetric +-86 window. Fixing
+    # this for real means bounding that authority (a control-tuning change,
+    # not a constant swap), which needs its own pass. Flagged, not
+    # silently fixed.
     for pose in MODERATE:
         targets = foot_targets(pose, A, P)
         for leg in LEGS:

@@ -19,6 +19,7 @@ to get physical joint angles — it owns the left/right mirror (haa sign).
 from __future__ import annotations
 import math
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -36,8 +37,16 @@ class LegParams:
     # gate's INBOARD cap (belly-pack contact from ~18°). The asymmetric
     # 15-inboard/40-outboard range unlocks when HAA_INBOARD_SIGN is
     # filled at homing calibration (nova_ops limits.py).
-    hfe_min: float = -1.501  # −86° away-trunk (gate)
-    hfe_max: float = 0.873  # +50° toward-trunk fold cap (riser graze).
+    # LA-13 FIX 2026-07-11: hfe_min below is the REAR value (URDF hfe_ext,
+    # -86°). FRONT legs (FL/FR) are capped tighter by hfe_min_front (URDF
+    # hfe_ext_front, -50°): the chassis check_fit HEAD case, a -86 front
+    # reach hits the D456 face / L2 crown. Pass leg=<"FL"|"FR"|"RL"|"RR">
+    # to within_limits() to select the correct window (an omitted/
+    # unrecognized leg name defaults to this permissive rear value — see
+    # within_limits' docstring for which callers still rely on that).
+    hfe_min: float = -1.501  # −86° away-trunk (gate), REAR legs (+ default)
+    hfe_min_front: float = -0.873  # −50° away-trunk (gate), FRONT legs (head cap)
+    hfe_max: float = 0.873  # +50° toward-trunk fold cap (riser graze), all legs.
     # ⚠ leg-local→canonical sign mapping VERIFY IN SIM (URDF note).
     kfe_range: float = 1.9  # sweep-gate: mech stop ~118deg; see URDF note
 
@@ -127,17 +136,44 @@ LEG_SIDE = {"FL": "left", "FR": "right", "RL": "left", "RR": "right"}
 # keep a >=40 mm front<->rear foot exclusion (X worst-case convergence).
 KNEE_FORWARD = {"FL": True, "FR": True, "RL": False, "RR": False}
 
+# LA-13: legs whose away-trunk hfe reach is capped tighter than the rear
+# default (chassis check_fit HEAD case — a -86 front reach hits the D456
+# face / L2 crown). Matches LegParams.hfe_min_front and the URDF's
+# hfe_ext_front property (nova.urdf.xacro).
+FRONT_LEGS = frozenset({"FL", "FR"})
+REAR_LEGS = frozenset({"RL", "RR"})
 
-def within_limits(theta, p: LegParams, knee_forward: bool = True) -> bool:
+
+def within_limits(
+    theta, p: LegParams, knee_forward: bool = True, leg: Optional[str] = None
+) -> bool:
     """Check CANONICAL-frame angles against the gate ROM.
 
     The asymmetric hfe window (−86 away-trunk .. +50 toward-trunk) is
     LEG-LOCAL: a mirrored-knee leg (X-config rear, knee_forward=False)
     maps canonical pitch to leg-local NEGATED, so its canonical window
     flips to [−hfe_max, −hfe_min]. Pass the leg's KNEE_FORWARD flag.
+
+    `leg` selects the away-trunk (hfe lower) bound: FRONT_LEGS ("FL"/
+    "FR") use the tighter p.hfe_min_front (-50°, head clearance); an
+    omitted/unrecognized leg name — same as REAR_LEGS — falls back to
+    the more permissive p.hfe_min (-86°), matching this function's
+    behavior before LA-13. This is a deliberate OPT-IN, not fail-safe:
+    stand.py's pose_for() (the one runtime command-generating path that
+    calls this) passes leg= and is correctly gated. LA-13 AUDIT
+    (2026-07-11): trot.py/crawl.py/raibert.py/body_pose.py compute foot
+    targets that, run through solve_side() + within_limits(..., leg=leg),
+    DO exceed the front -50° cap at some phases/poses (see
+    test_trot.py/test_crawl.py/test_body_pose.py, where the front-cap
+    check is deliberately NOT wired in for this reason) — those modules
+    were tuned against the old, wrong, symmetric ±86 assumption and need
+    a real retune (stand height / stride / weight-shift authority) plus
+    hardware or sim validation before the front cap can be enforced
+    there too. Out of scope for this pass; flagging so it isn't lost.
     """
     t1, t2, t3 = theta
-    lo, hi = (p.hfe_min, p.hfe_max) if knee_forward else (-p.hfe_max, -p.hfe_min)
+    hfe_min = p.hfe_min_front if leg in FRONT_LEGS else p.hfe_min
+    lo, hi = (hfe_min, p.hfe_max) if knee_forward else (-p.hfe_max, -hfe_min)
     return (
         abs(t1) <= p.haa_range + 1e-9
         and lo - 1e-9 <= t2 <= hi + 1e-9

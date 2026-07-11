@@ -92,11 +92,8 @@ module lip_wall(x0, x1, y0, y1) {
     translate([x0, y0, DECK]) cube([x1 - x0, y1 - y0, WALL_H]);
 }
 
-COWL_BOLT_Z = 85;   // -y cowl bolts into the -y uprights at this z
-
 // one corner UPRIGHT: post (deck -> corner height) + top heat-set (clamp bolt)
 // + base heat-set (deck tie). NO fixed tab — the removable clamp caps the case.
-// The two -Y uprights also get a -y-face heat-set for the bolt-on cable cowl.
 module upright(front, sy) {
     pxc = front ? FRONT_PXC : REAR_PXC;
     pyc = sy * POST_YC;
@@ -110,10 +107,6 @@ module upright(front, sy) {
         // can't wall an M3; the cradle+case are light -> M2 has huge margin)
         translate([pxc, pyc, DECK - EPS])
             cylinder(d = M2_HD, h = M2_HL + EPS);
-        // -Y cowl heat-set — M2, pressed from the -y FACE (jetson_cowl bolts here)
-        if (sy < 0)
-            translate([pxc, pyc - POST_W / 2 - EPS, COWL_BOLT_Z]) rotate([-90, 0, 0])
-                cylinder(d = M2_HD, h = M2_HL + EPS);
     }
 }
 

@@ -98,6 +98,11 @@ def test_choreo_timing_indexed_by_elapsed_time():
 
 
 def test_gait_modes_produce_rom_valid_poses_over_a_cycle():
+    # NOT passing leg= to within_limits below (LA-13, 2026-07-11): trot/
+    # crawl targets push FL/FR hfe a few degrees past the -50deg front
+    # head-clearance cap at some phases (see leg_ik.within_limits'
+    # docstring and test_trot.py/test_crawl.py) — flagged, not silently
+    # fixed; needs a stand-height/stride retune.
     for mode, freq in (("trot", P.trot_freq), ("crawl", P.crawl_freq)):
         c = GaitController(P)
         c.set_mode(mode, now=0.0)

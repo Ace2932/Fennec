@@ -43,7 +43,9 @@ def test_keyframes_within_rom_all_legs_x_config():
     for name in ("lie", "crouch", "stand"):
         pose = pose_for(name, P)
         for leg in LEGS:
-            assert within_limits(_canon(leg, pose[leg]), P.leg, KNEE_FORWARD[leg]), (
+            assert within_limits(
+                _canon(leg, pose[leg]), P.leg, KNEE_FORWARD[leg], leg=leg
+            ), (
                 name,
                 leg,
             )
@@ -89,7 +91,9 @@ def test_stand_up_smooth_and_bounded():
     # every sample within ROM
     for pose in poses[::5]:
         for leg in LEGS:
-            assert within_limits(_canon(leg, pose[leg]), P.leg, KNEE_FORWARD[leg])
+            assert within_limits(
+                _canon(leg, pose[leg]), P.leg, KNEE_FORWARD[leg], leg=leg
+            )
 
 
 def test_sit_down_reaches_lie():

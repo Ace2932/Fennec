@@ -119,7 +119,13 @@ module tibia_v6() {
         // -> residual strips top 12.2 / bottom 19.7mm, Z 263->573 mm^3,
         // tibia SF dry ~5.8 / wet ~2.9 (M=14.95 N*m, 151/75 MPa PA6-CF;
         // 12kg toe proof).
-        vent_window_neg(x0 = 2, w = 22, z_ctr = 0, h = 5, y0 = -17, y1 = 17);
+        // LA-10 bonus fix (2026-07-11): the tibia shares the exact same
+        // pocket rotation + ANTIROT_X + vent params as femur.scad:86 (not
+        // separately named in the LA-10 finding, but the geometry is
+        // identical) -- the near rib at tibia-frame x=12 was bisected by
+        // this vent the same way. Same fix: trim the left edge only
+        // (x0 2->14, w 22->10), right edge unchanged at x=24.
+        vent_window_neg(x0 = 14, w = 10, z_ctr = 0, h = 5, y0 = -17, y1 = 17);
 
         // side marker: 1 dot = RIGHT (the L mirror wrapper adds a 2nd —
         // mirrored parts are otherwise near-identical at assembly)
@@ -130,8 +136,11 @@ module tibia_v6() {
 
         // zip anchors: flank the tunnel exit (strain relief before the
         // plug — cable tension must never reach the servo socket), plus
-        // the original pair along the blade
-        zip_pair_neg(44, 0, SLAB_Z0 - 1, 12);
+        // the original pair along the blade.
+        // LA-4 fix (2026-07-11): h=12 was a BLIND pocket (matches the
+        // femur.scad x44/x52 finding — same shared zip_pair_neg default
+        // usage). h=40 matches the x62/84 through-hole convention below.
+        zip_pair_neg(44, 0, SLAB_Z0 - 1, 40);
         for (zx = [62, 84])
             translate([zx, 0, SLAB_Z0 - 1]) cylinder(d = 3.2, h = 40);
 

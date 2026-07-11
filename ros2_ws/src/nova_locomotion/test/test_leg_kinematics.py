@@ -69,6 +69,25 @@ def test_within_limits():
     assert not within_limits((10.0, 0.0, 0.0), P)
 
 
+def test_within_limits_front_rear_hfe_split():
+    """LA-13: FRONT legs (FL/FR) cap away-trunk hfe reach at -50 deg (head
+    clearance, chassis check_fit HEAD case); REAR legs (RL/RR) keep -86
+    deg. -70 deg is inside the old (buggy) single symmetric window but
+    must now fail for a front leg and still pass for a rear leg."""
+    hfe_70_away = math.radians(-70.0)
+    theta = (0.0, hfe_70_away, 0.0)
+    for leg in ("FL", "FR"):
+        assert not within_limits(theta, P, leg=leg), leg
+    for leg in ("RL", "RR"):
+        assert within_limits(theta, P, leg=leg), leg
+    # an unrecognized/omitted leg name defaults to the permissive REAR
+    # window (opt-in, not fail-safe — see within_limits' docstring)
+    assert within_limits(theta, P)
+    assert within_limits(theta, P, leg="unknown")
+    # -50 deg exactly is still in-bounds for a front leg (boundary check)
+    assert within_limits((0.0, math.radians(-50.0), 0.0), P, leg="FL")
+
+
 def test_workspace_reach_matches_links():
     """Max straight-leg reach equals a1+a2 along -z (knee straight)."""
     foot = forward_kinematics((0.0, 0.0, 0.0), P)
@@ -78,18 +97,23 @@ def test_workspace_reach_matches_links():
 
 def test_solve_side_mirrors_haa_only():
     from nova_locomotion.kinematics.leg_ik import (
-        LegParams, solve_side, forward_kinematics)
+        LegParams,
+        solve_side,
+        forward_kinematics,
+    )
+
     p = LegParams()
     foot = (0.03, p.hip_offset + 0.01, -0.17)
-    l = solve_side('left', foot, p)
-    r = solve_side('right', foot, p)
+    l = solve_side("left", foot, p)
+    r = solve_side("right", foot, p)
     assert r[0] == -l[0] and r[1] == l[1] and r[2] == l[2]
     # canonical FK of the left solution reproduces the target
-    assert forward_kinematics(l, p) == __import__('pytest').approx(foot)
+    assert forward_kinematics(l, p) == __import__("pytest").approx(foot)
 
 
 def test_solve_side_rejects_unknown():
     import pytest
     from nova_locomotion.kinematics.leg_ik import LegParams, solve_side
+
     with pytest.raises(ValueError):
-        solve_side('starboard', (0, 0.07, -0.17), LegParams())
+        solve_side("starboard", (0, 0.07, -0.17), LegParams())

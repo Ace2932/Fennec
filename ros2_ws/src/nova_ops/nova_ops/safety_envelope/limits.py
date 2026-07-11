@@ -81,30 +81,37 @@ def _hip_abduction(joint_id: int) -> JointLimit:
     )
 
 
-def _thigh_flexion() -> JointLimit:
-    # -30 deg (forward) to +90 deg (rear-up). Mammalian quadruped placeholder.
-    # NOTE: the URDF is the authority (notes-qol §3) and now caps hfe
-    # ASYMMETRICALLY by leg (chassis check_fit HEAD case, 2026-07-07): FRONT
-    # legs (hfe IDs 2 = FL, 5 = FR) protract to only -50 deg because the
-    # forward integrated head (head.scad: D456 face + L2 crown, x70..100
-    # z80..120) occupies the space a -86 front reach would sweep; REAR legs
-    # (IDs 8, 11) keep -86. Fold (+) is +50 for all four. This -30..+90
-    # placeholder is already inside the -50 front cap, so it is conservative
-    # for both; replace with URDF-derived per-ID limits when the URDF loader
-    # lands (front hfe lower = -50, rear = -86).
+def _thigh_flexion(front: bool) -> JointLimit:
+    # URDF-derived (nova.urdf.xacro hfe_fold/hfe_ext/hfe_ext_front, chassis
+    # check_fit HEAD case, 2026-07-07): fold (+, toward-trunk) caps at +50 deg
+    # for ALL four legs (hfe_fold=0.873 rad — tibia flank grazes the riser
+    # skirt from ~+55). Away-trunk (-, forward protraction) is LEG-DEPENDENT:
+    # FRONT legs (hfe IDs 2 = FL, 5 = FR) cap at -50 deg (hfe_ext_front=0.873
+    # rad) because the forward integrated head (head.scad: D456 face + L2
+    # crown, x70..100 z80..120) occupies the space a -86 front reach would
+    # sweep; REAR legs (IDs 8, 11) keep -86 deg (hfe_ext=1.501 rad).
+    # LA-12 FIX 2026-07-11: was a flat -30..+90 placeholder, ~40 deg beyond
+    # the true +50 fold cap on every leg and blind to the front/rear split.
+    lower = -50.0 if front else -86.0
     return JointLimit(
-        lower=math.radians(-30.0),
-        upper=math.radians(90.0),
+        lower=math.radians(lower),
+        upper=math.radians(50.0),
         velocity=math.radians(220.0),
         effort=0.70,
     )
 
 
 def _knee() -> JointLimit:
-    # 0 deg (straight) to 130 deg (folded). Never lock to 0.
+    # URDF-derived (nova.urdf.xacro kfe_range=1.9 rad = 108.86 deg ~= 109 deg,
+    # matching leg_ik.LegParams.kfe_range and the chassis/leg_v6 check_fit
+    # sweep gates, which test kfe software limit at +-109 and treat +-118 as
+    # the measured mechanical stop). LA-11 FIX 2026-07-11: was 130 deg, above
+    # the ~113-115 deg CAD plastic-contact sweep and the 109 sw ROM used
+    # everywhere else — would have crashed the knee into its hard stop.
+    # Never lock to 0 (lower margin unchanged).
     return JointLimit(
         lower=math.radians(5.0),
-        upper=math.radians(130.0),
+        upper=math.radians(109.0),
         velocity=math.radians(240.0),
         effort=0.70,
     )
@@ -143,8 +150,9 @@ def load_default_limits(include_arm: bool = False) -> JointLimits:
     # PER-LEG-SEQUENTIAL: each leg = (haa, hfe, kfe) in ID order (FL,FR,RL,RR).
     for leg in range(4):
         base = 1 + leg * 3
+        front = leg < 2  # leg 0=FL, 1=FR, 2=RL, 3=RR (joint_id_map.yaml)
         table[base] = _hip_abduction(base)  # haa  (IDs 1,4,7,10)
-        table[base + 1] = _thigh_flexion()  # hfe  (IDs 2,5,8,11)
+        table[base + 1] = _thigh_flexion(front)  # hfe  (IDs 2,5,8,11)
         table[base + 2] = _knee()  # kfe  (IDs 3,6,9,12)
     if include_arm:
         for i in range(13, 19):

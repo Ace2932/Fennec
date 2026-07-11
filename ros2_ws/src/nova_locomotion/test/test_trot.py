@@ -53,6 +53,12 @@ def test_gait_targets_are_ik_reachable():
     assert T.stand_height < p.femur + p.tibia, (
         "stand height exceeds leg reach (adjust TrotParams/LegParams)"
     )
+    # NOT passing leg= here (LA-13, 2026-07-11): at T.stand_height=0.18 some
+    # trot phases push FL/FR hfe a few degrees past the -50° front head-
+    # clearance cap (see leg_ik.within_limits' docstring) — TrotParams was
+    # tuned against the old symmetric +-86 window and needs a real retune
+    # (stand height/stride) before this can enforce the front split too.
+    # Flagged, not silently fixed.
     for i in range(100):
         ph = i / 100.0
         for leg, foot in all_feet(ph, T).items():

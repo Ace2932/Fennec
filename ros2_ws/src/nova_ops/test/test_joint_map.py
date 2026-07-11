@@ -80,8 +80,8 @@ def test_limits_type_grouping_matches_yaml():
     lims = load_default_limits()
     expected_upper = {
         "haa": math.radians(15.0),  # conservative cap (firmware-limits lane)
-        "hfe": math.radians(90.0),
-        "kfe": math.radians(130.0),
+        "hfe": math.radians(50.0),  # LA-12: URDF hfe_fold cap (was 90, wrong)
+        "kfe": math.radians(109.0),  # LA-11: URDF kfe_range cap (was 130, wrong)
     }
     for name, jid in m.items():
         jtype = name.split("_")[1]

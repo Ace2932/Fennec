@@ -81,6 +81,14 @@ def test_stance_feet_at_stand_height():
 # ---- reachability (X-config) ----------------------------------------------
 
 
+# NOT passing leg= to within_limits below (LA-13, 2026-07-11): some crawl
+# phases/CoM shifts push FL/FR hfe past the -50° front head-clearance cap
+# (see leg_ik.within_limits' docstring) — CrawlParams/BodyPoseParams were
+# tuned against the old symmetric +-86 window and need a real retune
+# before this suite can enforce the front split too. Flagged, not
+# silently fixed.
+
+
 def test_targets_ik_reachable_within_x_config_limits():
     for i in range(100):
         ph = i / 100.0
