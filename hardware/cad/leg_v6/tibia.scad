@@ -128,8 +128,15 @@ module tibia_v6() {
         vent_window_neg(x0 = 14, w = 10, z_ctr = 0, h = 5, y0 = -17, y1 = 17);
 
         // side marker: 1 dot = RIGHT (the L mirror wrapper adds a 2nd —
-        // mirrored parts are otherwise near-identical at assembly)
-        translate([22, 10, SLAB_Z1 - 0.8]) cylinder(d = 3, h = 1);
+        // mirrored parts are otherwise near-identical at assembly).
+        // LA-2 fix (2026-07-11): same bug as femur.scad -- (22,10) sat
+        // inside the KFE pocket's open-top XY footprint, cutting air (0
+        // solid hits). Relocated to (39,10): the tibia's flat full-height
+        // top face only survives x35.65..40 (pocket cut boundary to the
+        // blade taper start) -- narrow but clear of the pocket, the
+        // x44 zip hole, and the x31 strap bosses. Ray-cast confirmed solid
+        // z13.9-14.7, air above.
+        translate([39, 10, SLAB_Z1 - 0.8]) cylinder(d = 3, h = 1);
 
         // strap pilots (into the raised bosses)
         strap_pilot_neg(31, 14.25, SLAB_Z1 + 3.2);

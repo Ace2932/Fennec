@@ -111,8 +111,19 @@ module femur_v6() {
         vent_window_neg(x0 = 14, w = 10, z_ctr = 0, h = 5, y0 = -17, y1 = 17);
 
         // side marker: 1 dot = RIGHT (the L mirror wrapper adds a 2nd —
-        // mirrored parts are otherwise near-identical at assembly)
-        translate([22, 10, SLAB_Z1 - 0.8]) cylinder(d = 3, h = 1);
+        // mirrored parts are otherwise near-identical at assembly).
+        // LA-2 fix (2026-07-11): the old (22,10) site sat inside the HFE
+        // pocket's XY footprint (pocket cut spans femur-frame x -10.65..
+        // 35.65 after the 180 deg rotate) -- the pocket is open-top past
+        // z=14.7 (extra_top=30), so this cutter removed nothing (ray-cast:
+        // 0 solid hits, ALL RIGHT parts printed with zero dots). Relocated
+        // to (45,10): past the pocket's x35.65 boundary, before the fork
+        // hull's rounded-cap zone (bulges the top face taller than 14.7
+        // starting ~x55.95), clear of the x44/52 zip through-holes (y=+-5)
+        // and the x65/75 heat-set columns. Ray-cast confirmed solid at
+        // z13.9-14.7 (real material) and air above z14.7 (true external
+        // top face) -- see mesh_health/LA-2 verification notes.
+        translate([45, 10, SLAB_Z1 - 0.8]) cylinder(d = 3, h = 1);
 
         // ---- cable management (review 2026-07-03) ----
         // NOTE: the fork-block hull footprint spans x 56.15..122.75 at full

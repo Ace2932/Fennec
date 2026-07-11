@@ -52,6 +52,17 @@ module shoulder_plate_R() {
                          h = FLAN_Z1 - FLAN_Z0 + 2*EPS);
             translate([bx, by, FLAN_Z1 - 1.8]) cylinder(d = 6.4, h = 2);
         }
+
+        // side marker (LA-2, 2026-07-11): shoulder_plate carried NO L/R
+        // convention at all before this fix. 1 dot = RIGHT (L wrapper adds
+        // a 2nd). Front face of the vertical face (y=FACE_Y1=21.75, the
+        // face opposite the horn) at (x=45,z=10): clear of the horn BCD
+        // screw holes (radius 7 about HIP_X=39.05, holes at z+-4.95) and
+        // the flange dowel/clear holes (higher z, FLAN_Z0..FLAN_Z1).
+        // Ray-cast confirmed solid to ~3mm depth (real material, the face
+        // is 4mm thick) and air just outside y=21.75.
+        translate([45, FACE_Y1 + EPS, 10]) rotate([90, 0, 0])
+            cylinder(d = 3, h = 1);
     }
 }
 

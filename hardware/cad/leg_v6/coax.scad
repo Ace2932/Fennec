@@ -121,8 +121,17 @@ module coax_v6() {
             wheel_couple_neg();
         }
 
-        // side marker: 1 dot = RIGHT (L wrapper adds a 2nd)
-        translate([6, BLK_Y0 - EPS, 8]) rotate([-90, 0, 0]) cylinder(d = 3, h = 1);
+        // side marker: 1 dot = RIGHT (L wrapper adds a 2nd).
+        // LA-2 fix (2026-07-11): the old site (6, BLK_Y0-EPS, 8) targeted
+        // the HORN-FACE plane (y=BLK_Y0=-17.75) -- but that plane is the
+        // HAA pocket's open coupling face (spline=Y, horn faces -Y per the
+        // file header), not a closed wall: ray-cast confirmed 0 solid hits
+        // across the whole scanned x/z grid there. Relocated to the REAR
+        // face (y=BLK_YF=+22.2, the pocket-floor-equivalent plane, closed
+        // except at the column-screw/wheel-window/tunnel cuts): (x=-12,
+        // z=8) ray-cast confirmed solid to a depth of >=1.5mm (real
+        // material, clear of those cuts) and air just outside y=22.2.
+        translate([-12, BLK_YF + EPS, 8]) rotate([90, 0, 0]) cylinder(d = 3, h = 1);
 
         // vent window, OUTBOARD (-X) wall only (the inboard wall carries
         // the femur-yoke arm root)
