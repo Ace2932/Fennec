@@ -102,7 +102,21 @@ module coax_v6() {
         translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0]) {
             // inboard arm: coupling +z maps to -x (inboard); femur horn face
             // lands on x = 16.6, screws run 16.6 -> 12.6
-            horn_couple_neg();
+            // LA-7 fix (2026-07-11): the default HORN_CTR_DEEP=2.5 assumes a
+            // full ARM_THK=4.0 slab behind the counterbore, but here the
+            // inboard arm's back face butts the HAA pocket cavity wall
+            // (CASE_HW+CLR_POCKET=12.85) at only 3.2mm from the horn seat
+            // (16.05) -- NOT the 4.0mm ARM_THK gives -> floor was 0.7mm
+            // (ray-cast confirmed; disabling the femur-swept-clearance void
+            // entirely made ZERO difference, so that void -- the audit's
+            // original suspect -- isn't the actual cause). "Add material
+            // behind" isn't possible either: that space IS the servo pocket
+            // clearance wall, a hard fit constraint. Shallow the cut instead:
+            // ctr_deep=1.65 -> floor 3.2-1.65=1.55mm (>=1.5 gate, 0.05
+            // spare) and screw-head margin 1.65-1.5(proud)=0.15mm (thin but
+            // positive -- the 3.2mm local budget can't give both more than
+            // this split).
+            horn_couple_neg(ctr_deep = 1.65);
             // screw-head counterbores into the pocket wall's inner face
             // (heads must not intrude into the haa servo space). Depth 4
             // (was 3): the 3-deep bores ended COINCIDENT with the pocket
@@ -139,9 +153,22 @@ module coax_v6() {
 
         // zip anchors flanking the bottom cable-tunnel exit (hip service
         // loop anchors here; the femur's first anchor takes the other end)
-        for (sy = [-1, 1])
-            translate([-BLK_X - 1, 3 + sy*5, -34]) rotate([0, 90, 0])
-                cylinder(d = 3.2, h = 6);
+        // LA-16 fix (2026-07-11): the old pair sat on the OUTBOARD wall
+        // (x=-BLK_X-1, y=3±5) but the tunnel exit (common-frame tunnel,
+        // rotated into this part) opens at world x~0, y~16.85, z
+        // -42.4..-31.2 -- ~22mm away, straight path through solid ~50% of
+        // it (raw 90° corner). Relocated to genuinely flank the tunnel:
+        // grid-scanned the real mesh at the tunnel's own z-band and found a
+        // clean gap x[-9,9], y[14,19] at z=-36 (below z=-34, where the HAA
+        // pocket cavity ALSO overlaps and thins the side walls to 3.2mm).
+        // Holes now start at x=∓7 (inside the open tunnel void -- reachable
+        // from the tunnel, robust CSG overlap) and punch straight out
+        // through the side wall (genuine through-hole, not a blind pocket --
+        // matches the femur/tibia LA-4 convention: a blind pocket can't
+        // loop a zip tie). y=17 matches the tunnel's own y-center.
+        for (sx = [-1, 1])
+            translate([sx * 7, 17, -36]) rotate([0, sx*90, 0])
+                cylinder(d = 3.2, h = BLK_X - 6);
 
         // femur swept clearance between the arms (stops at the boss face)
         translate([ARM_IN_X1 + EPS, HFE_Y, HFE_Z]) rotate([0, 90, 0])

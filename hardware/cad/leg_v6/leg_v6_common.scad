@@ -202,13 +202,19 @@ module pocket_platform_pos() {
 // YOKE_TOP_IN+ARM_THK]: shallow Ø20 locating recess + 4x M2.5 BCD + a center
 // counterbore (rev 3) that clears the horn's own proud retention screw head
 // (Ø5.4, ~1.5mm proud, MEASURED) — was a Ø3.4 hole, too narrow to clear it.
-module horn_couple_neg() {
+// ctr_deep overrides HORN_CTR_DEEP for callers whose backing material behind
+// the counterbore is thinner than the generic ARM_THK slab assumes (LA-7,
+// 2026-07-11: coax.scad's inboard arm backs onto the HAA pocket cavity, not
+// a full ARM_THK of solid — see coax.scad's horn_couple_neg() call). Only
+// coax.scad calls this module, so the default (HORN_CTR_DEEP, unchanged)
+// leaves every other geometry-generation path byte-identical.
+module horn_couple_neg(ctr_deep = HORN_CTR_DEEP) {
     translate([0, 0, YOKE_TOP_IN - EPS]) {
         cylinder(d = HORN_OD + 2*CLR_HORN, h = 0.4 + EPS);   // locating recess
         for (a = [45 : 90 : 315])
             rotate([0, 0, a]) translate([HORN_BCD/2, 0, 0])
                 cylinder(d = M25_CLEAR, h = ARM_THK + 2*EPS);
-        cylinder(d = HORN_CTR_D, h = HORN_CTR_DEEP + EPS);   // blind counterbore
+        cylinder(d = HORN_CTR_D, h = ctr_deep + EPS);   // blind counterbore
     }
 }
 

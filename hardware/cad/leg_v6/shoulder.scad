@@ -200,17 +200,30 @@ module shoulder_v6() {
             // already backed by the shear webs (x 51..55 spans z -25..41.5)
             // but the lower pair (z -33.05) sits below the web bottom —
             // pad to 7 for full engagement (97 N prying SF 2.5 -> ~5).
+            // LA-8 (2026-07-11): pad depth 3->3.7 (7.0->7.7 total local
+            // thickness) so the 6.2-deep bore leaves a >=1.5mm floor
+            // (was 0.8mm — 4+3-6.2). Near/flush edge (at FLANGE_Y1) is
+            // unchanged so the boss still merges cleanly into the flange;
+            // only the free (deep) end grows, into open C-box air below
+            // the shear-web z-band — no collision (checked against
+            // FOOT_*/GUSSET_X/shear-web extents, all clear in x and z).
             for (sx = [-1, 1])
                 translate([sx*TRUNK_HOLE_X - 4.5, FLANGE_Y1 - EPS,
                            TRUNK_HOLE_Z[0] - 4.5])
-                    cube([9, 3 + EPS, 9]);
+                    cube([9, 3.7 + EPS, 9]);
             // D456 head-bracket insert pads: thicken the flange to 7 on
             // its inner face around the 4 bores (bracket = chassis lane;
             // hangs in the open trunk-end aperture, riser end wall is at
             // z >= 47 trunk). Both ends — same part.
+            // LA-8 (2026-07-11): same pad-depth fix, mirrored direction
+            // (this pad grows on the FLANGE_Y0/interior side) — flush edge
+            // at FLANGE_Y0-3.7..-73.65-ish stays anchored to the flange,
+            // free end grows deeper; floor 0.8->1.5mm. Checked clear of
+            // FOOT_* (x-band 38..46 vs this pad's 13..23/-23..-13) and the
+            // lead_notch (x +/-10, doesn't reach x 13).
             for (sx = [-1, 1])
-                translate([sx*18 - 5, FLANGE_Y0 - 3, -27.05])
-                    cube([10, 3 + EPS, 22]);
+                translate([sx*18 - 5, FLANGE_Y0 - 3.7, -27.05])
+                    cube([10, 3.7 + EPS, 22]);
         }
 
         // ---- wheel couplings, drilled straight along Y ----
@@ -225,10 +238,6 @@ module shoulder_v6() {
                            HORN_BCD/2*sin(a)])
                     rotate([-90, 0, 0]) cylinder(d = 5.2, h = 1.8);
             }
-            translate([sx*HIP_X, REAR_W0 - 1, 0]) rotate([-90, 0, 0])
-                cylinder(d = M25_CLEAR, h = (WHEEL_FACE_Y - REAR_W0) + 2);
-            translate([sx*HIP_X, REAR_W0 - EPS, 0]) rotate([-90, 0, 0])
-                cylinder(d = 5.2, h = 1.8);
             // idler-boss relief (rev 3): the haa wheel has NO retention
             // screw — a black plastic boss (Ø6, ~1-2mm proud, MEASURED)
             // sits proud of the wheel face instead. Blind counterbore from
@@ -248,16 +257,26 @@ module shoulder_v6() {
             neck_heatset(xy[0], xy[1]);
 
         // plate heat-set bores, down into the deck (4 per side), plus a
-        // Ø3 VENT through the remaining floor (insert-audit 2026-07-06:
-        // 6.2 bore in the 6.5 deck left a 0.25 floor — guaranteed
-        // melt-through mess when setting. The vent lets melt + air
-        // escape into the open box below and backs the iron cleanly;
+        // full-diameter VENT through the remaining floor (insert-audit
+        // 2026-07-06: 6.2 bore in the 6.5 deck left a 0.25 floor —
+        // guaranteed melt-through mess when setting. The vent lets melt +
+        // air escape into the open box below and backs the iron cleanly;
         // same pattern as the riser's through-vented deck bosses.)
+        // LA-9 (2026-07-11): vent widened Ø3.0->HEATSET_D(4.0) to match the
+        // bore exactly. At Ø3.0 the vent was narrower than the bore, so a
+        // 0.5mm-wide x 0.3mm-thick annular shelf (r1.5..r2.0) survived at
+        // the bore/vent transition — not a deliberate insert seat (the
+        // insert OD 4.6 is already bigger than the bore, so it never rides
+        // that ring) and thin enough to crush/crack unpredictably instead
+        // of the clean full melt-through the comment above describes.
+        // Matching the diameters removes the shelf and makes the whole
+        // bore a straight through-hole, exactly the "widen the vent to the
+        // counterbore" fix.
         for (sx = [-1, 1], bx = PLATE_BX, by = PLATE_BY) {
             translate([sx*bx, by, DECK_Z1 - HEATSET_L])
                 cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
             translate([sx*bx, by, DECK_Z0 - EPS])
-                cylinder(d = 3.0, h = DECK_Z1 - DECK_Z0 + 2*EPS);
+                cylinder(d = HEATSET_D, h = DECK_Z1 - DECK_Z0 + 2*EPS);
         }
 
         // trunk-flange heat-sets (screws from inside the trunk, rearward face)
