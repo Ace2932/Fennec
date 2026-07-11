@@ -51,7 +51,8 @@ def leg_mesh():
                   (trimesh.load(f'{LEG}/femur_R.stl'), S @ M_f),
                   (arm, S @ M_f),
                   (trimesh.load(f'{LEG}/tibia_R.stl'), M_tib),
-                  (shoe, M_tib)]:
+                  (trimesh.load(f'{LEG}/knee_bumper.stl'), M_tib),  # TPU knee guard
+                  (shoe, M_tib)]:   # (tibia_pad RETIRED — misplaced, backlog #15)
         c = m.copy()
         c.apply_transform(Tm)
         out.append(c)
@@ -74,9 +75,35 @@ def main():
     parts = [trimesh.load(f'{NOVA}/original_body_files/SM3_Frame_ChassisTrunk.stl'),
              trimesh.load('riser_bay.stl'),
              trimesh.load('battery_pocket.stl'),
-             trimesh.load('head.stl'),        # integrated D456 face + L2 crown
+             trimesh.load('head.stl'),        # fwd head (D456 face + L2 crown)
+             trimesh.load('head_ear.stl'),      # fennec ear / antenna mast (R)
+             trimesh.load('head_ear_L.stl'),    # ear (L)
+             trimesh.load('neck_bracket.stl'),  # front-shoulder-deck adapter
+             trimesh.load('control_pod.stl'),   # rear-top E-stop + OLED pod
              trimesh.load('floor_plate.stl'),
              trimesh.load('jetson_case_mount.stl')]
+    # E-stop (mxuteuk 22mm 2NC — VERIFIED dims: Ø40 mushroom, Ø22 barrel, 77
+    # total, ~30x30x48 contact block) at pod ES x-87, deck top z95:
+    ex, dz = -87, 95
+    parts.append(box(ex-15, ex+15, -15, 15, dz-48, dz))             # 30x30x48 contact block
+    parts.append(trimesh.creation.cylinder(radius=11, height=8,
+        transform=T([ex, 0, dz-1])))                               # Ø22 barrel thru the 5mm deck
+    parts.append(trimesh.creation.cylinder(radius=15, height=4,
+        transform=T([ex, 0, dz+4])))                               # twist collar (above panel)
+    parts.append(trimesh.creation.cylinder(radius=20, height=12,
+        transform=T([ex, 0, dz+11])))                              # mushroom cap body (z99..111)
+    dome = trimesh.creation.icosphere(radius=20); dome.apply_scale([1, 1, 0.42])
+    dome.apply_translation([ex, 0, dz+17])
+    parts.append(dome)                                             # domed top (~z123)
+    # 4 removable Jetson case clamps (jetson_clamp.stl) — bolt to the upright
+    # tops, cap the case corner columns (z102.8). Local: bolt@origin, pad@+x.
+    clamp = trimesh.load('jetson_clamp.stl')
+    for (px, py, ang) in [(47.3, 50.35, -116.8), (47.3, -50.35, 116.8),
+                          (-59.0, 50.35, -74.3), (-59.0, -50.35, 74.3)]:
+        cl = clamp.copy()
+        cl.apply_transform(T([px, py, 102.8]) @ rot(ang, [0, 0, 1]))
+        parts.append(cl)
+    parts.append(trimesh.load('jetson_cowl.stl'))   # -y cable cowl (straight-plug shield)
     # official Jetson case (ref mesh) at its chosen placement: bbox-centre
     # (x-6.85, y0), bottom on the deck (z71.9). Port END faces -x (rear).
     caseref = trimesh.load('jetson_case_ref.stl')
@@ -111,16 +138,26 @@ def main():
     FL = FR.copy(); FL.apply_transform(MY)
     RL = RR.copy(); RL.apply_transform(MY)
     parts += [FR, RR, FL, RL]
-    # D456 tilted OBB (27deg down; back-face ctr 70,0,105.5) — the head "face"
-    th = np.radians(27.0)
-    fwd = np.array([np.cos(th), 0, -np.sin(th)])
-    cam = trimesh.creation.box(
-        extents=[26.0, 123.8, 29.0],
-        transform=T(np.array([70, 0, 105.5]) + 13 * fwd) @ rot(27.0, [0, 1, 0]))
+    # REAL D456 (d456_ref.stl, mm, from the RealSense SLDPRT via STL). Mounts
+    # rear->plate (the 2x M3 @ ±47.2 are on the REAR face = STL z-26), lens
+    # (STL z0) projecting forward-down at 27deg. STL axes: X=length->head Y,
+    # Y=height->up, Z=depth (z-26 rear -> at CAM_M, z0 lens -> +x' fwd).
+    M2 = np.array([[0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1.0]])
+    cam = trimesh.load('d456_ref.stl')
+    cam.apply_transform(T([143, 0, 111.5]) @ rot(27.0, [0, 1, 0]) @ M2
+                        @ T([0, 0, 26]))
+    # REAL Unitree L2 (l2_ref.stl, mm, from the STEP). Base center (STEP
+    # 7.7,14.66,-6.7) -> seat (126.5,0,128); Rz-22 lands the Ø51/90° base holes
+    # on the crown's 45° (±18) pattern; body rises to z191.5. (check_fit keeps
+    # the 75x75 box as the conservative envelope.)
+    # L2 now on the L2 ADAPTER (l2_adapter.scad) -> base at z133 (was 128).
+    l2 = trimesh.load('l2_ref.stl')
+    l2.apply_transform(T([126.5, 0, 133]) @ rot(-22, [0, 0, 1])
+                       @ T([-7.7, -14.66, 6.7]))
     parts += [box(-59.5, 52.5, -45, 45, 6.0, 64.0),    # stack on plate, ctr -3.5
-              box(16, 91, -37.5, 37.5, 122.0, 187.0),  # L2 body (crown seat 122)
+              l2, trimesh.load('l2_adapter.stl'),        # real L2 + its adapter
               box(-77.5, 77.5, -23.4, 23.4, -35.9, -0.9),  # pack 46.8 caliper
-              cam]                                       # D456 (down-tilted face)
+              cam]                                       # real D456 (down-tilted)
     asm = trimesh.util.concatenate(parts)
     asm.export('chassis_assembly_preview.stl')
     print('chassis_assembly_preview.stl', asm.bounds.round(1).tolist())

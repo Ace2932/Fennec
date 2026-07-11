@@ -30,10 +30,11 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 
 | Part | Status | Notes |
 |---|---|---|
-| `riser_bay.scad` | designed, gated | one print, 126.7 × 110 × 42.9 (z 29.0..71.9). **Reworked 2026-07-07 for the case pivot**: dropped the 96.5×75.4 Jetson standoff grid + all hood pads/inserts; added the COMPACT mast interface (54/59.0, ±14), the case PORT-END cable slot (x −58..−46, y ±18 = also the case bottom-vent breather), 4 cradle deck ties (47.3/−59.0, ±50.35), and relocated the SMA bulkheads to the front strip (57, ±40). L2 cable drop 14×12 @ (53.5,0) |
+| `riser_bay.scad` | designed, gated | one print, 126.7 × 110 × 42.9 (z 29.0..71.9). **Reworked 2026-07-07 for the case pivot**: dropped the 96.5×75.4 Jetson standoff grid + all hood pads/inserts; added the case PORT-END cable slot (x −58..−46, y ±18 = also the case bottom-vent breather), 4 cradle deck ties (47.3/−59.0, ±50.35). **Head interface RETIRED 2026-07-07** — the L2-column deck base, L2 cable drop, front-wall camera register + USB grommet removed (head moved fwd onto `neck_bracket.scad`); **SMA bulkheads also removed** — WiFi MIMO antennas consolidated to the head ears (higher, clear of the CF chassis) |
 | `spacer.scad` | **RETIRED** | Jetson standoff washers — unused now the board is in the official case (kept in build_all for reference) |
 | `battery_pocket.scad` | designed, gated | rear-loading belly tray, 6× M3 sandwich mount through the floor (**part-5 plate must adopt the (±40/0, ±26.5) pattern**; drill the floor at first assembly), velcro fence at the rear opening |
-| `head.scad` | **designed, gated (2026-07-07)** | **integrated forward HEAD** — REPLACES `l2_mast.scad` + `d456_head.scad`. D456 as a **27° down-tilted face** forward of the chassis (back-face ctr 70,0,105.5; body x63.4..99.7 z80.8..118.4) + L2 as a **crown** on top (optical z~154, crown seat 122). Fixes the periscope's near-ground occlusion by pushing the camera past the front wall and tilting it down. Requires the FRONT hfe −50 cap (finding 0c). Reuses the deck L2-column base + the front-wall camera register + the 13×11 cable bore. L2 = 4 crown screws from below; head = 4 wall-row + 4 deck screws. Camera bolts on the bench. **Right-angle USB-C** (BOM). Print CROWN-DOWN + tree supports under the tilted face. `head_study.py` = the placement proof |
+| `head.scad` | **RE-ARCHITECTED + gated (2026-07-07)** | **forward HEAD on the front-shoulder "neck"** — moved OFF the riser front and FORWARD onto the front-shoulder top so it projects ahead like a fox (not a turret). Bolts to `neck_bracket.scad`, NOT the riser. Sensors shifted **DX+73 DZ+6** vs the old riser head (`forward_head_study.py` = the proof): D456 27° down-tilted face, back-face ctr **(143,0,111.5)**, body x136.4..172.7 z86.8..124.4 y±61.9; L2 crown center **x126.5**, optical z~160, seat 128. Camera bottom clears the front horn-plate top (+2.0) + the bracket base (+3.25); camera top +3.6 under the L2. **0 front-leg hits** across the full ROM. Mounts via a rear boss → 4× M3 into the bracket wall (tall couple). L2 = 4 crown screws from below; camera bolts on the bench. **Right-angle USB-C** (BOM). Print BOSS-DOWN. STYLE (fennec ears/skull) = WIP, default off |
+| `neck_bracket.scad` | **designed, gated (2026-07-07)** | **front-shoulder-deck adapter** for the fwd head (user call: separate bracket, keeps the shoulder gate-clean + print-2-identical, head stays removable). Base plate on the deck top (z79.55); **4 corner bolts drill THROUGH the deck at first assembly** (M3 + nyloc below, reached through the deck window + open aperture — NO shoulder-mesh change). Tall rear mount wall (x113..121, to z106) with 4× M3 heat-sets (rows z89/100) = the head-mount face; aft gusset + base-bolt couple react the forward-tipping moment. Cable slot over the deck window (L2 pigtail → C-box → trunk). Print base-down, PA6-CF |
 | ~~`l2_mast.scad`~~ **RETIRED** | → `head.scad` | standalone L2 mast; folded into the head crown. File kept (RETIRED header) for its reused bore/flange/bolt knowledge; not built, not gated |
 | ~~`d456_head.scad`~~ **RETIRED** | → `head.scad` | v3 periscope; tilted the D456 UP behind the chassis and the trunk front cut its near-ground view. File kept (RETIRED header) for its D456 2×M3@94.4 mount + USB-C routing knowledge; not built, not gated |
 | `../leg_v6/shoulder.scad` | **rev'd ×4** | + center notch (x ±26 above z 19.5) + 2× Ø3.4 riser holes (x ±40, z 29.35) + **battery-lead bottom notch** (x ±10 to z −26 = trunk z 12) + **flange floor FEET + deck gussets** (2026-07-06 joint-stiffening, user catch "barely connected": feet bolt the flange bottom to the trunk floor corners at (±59.5, ±42) — M3×14 csk from BELOW, +2 floor holes per end at first assembly, add to the floor_plate drill template; gussets flange→deck-ext at x ±40); leg_v6 + chassis gates re-run (new shoulder-vs-trunk case in check_fit) |
@@ -65,22 +66,26 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
   Rear fin + mast stay clear of the plug row. Board plane z 78.2
   (6.3 spacers, **M3×14** — ×16 grazes the stack envelope, ×12 only bites
   3.2mm).
-- **HEAD MOUNT (single interface, 2026-07-07)**: the integrated `head.scad`
-  (D456 face + L2 crown) bolts to the riser via TWO reused anchor patterns —
-  the geometry is UNCHANGED from the retired mast + periscope, the head just
-  reuses both, so the riser was NOT re-cut:
-  - **deck L2-column base**: 4× M3 at (54/59.0, ±14) in the front strip
-    (x51.3..63), + the L2 cable drop (14×12 at 53.5,0). Carries the L2's
-    vertical/moment load.
-  - **front-wall camera register**: 4× M3 row at y ∓21/∓7/±7/±21, z 67.4 (the
-    head stem drops through the shoulder center notch and bolts here, driver
-    UNDER the tilted face) + the USB-C grommet 10×6 at (14, 61.5).
+- **HEAD MOUNT — RE-ARCHITECTED 2026-07-07**: the head no longer bolts to the
+  riser. It moved FORWARD onto the front-shoulder top (the "neck") via the
+  separate `neck_bracket.scad`, so it projects ahead like a fox. The riser
+  front head features below (deck L2-column base, front-wall camera register,
+  USB grommet) are now **ORPHANED** — pending retire (a riser re-cut + re-gate).
+  - **neck bracket → shoulder deck**: base plate on the deck top (z79.55), 4
+    corner bolts drilled THROUGH the deck at first assembly (M3 + nyloc below).
+    No shoulder-mesh change → shoulder stays gate-clean + print-2-identical.
+  - **head → bracket**: a rear boss takes 4× M3 into the bracket's tall wall
+    (rows z89/100) — a tall couple vs the forward-tipping moment. Cables drop
+    the neck cable slot → deck window → shoulder C-box → trunk.
 
-  Head removal = 4 wall + 4 deck screws → lifts off with the L2 attached. The
-  D456 no longer clips the L2 forward cone (the periscope clipped ~3.5°; the
-  tilted face sits just OUTSIDE the −45° edge).
-- **SMA bulkheads**: 2× Ø6.5 at (57, ±40) — 80 apart (MIMO), front strip.
-  ⚠ verify the U.FL pigtail reach on the real board.
+  Head removal = the 4 boss→bracket bolts → lifts off with the L2 + camera. The
+  bracket stays bolted to the deck (drilled once), so the head is a modular
+  removable unit for fennec-styling iteration.
+- **SMA bulkheads**: REMOVED 2026-07-07 → the 2× WiFi MIMO antennas now live
+  in the **head ears** (Ø6.5 SMA bores, higher + clear of the CF chassis). ⚠
+  antennas are a PROVISION only — onboard Jetson WiFi works; test bench range
+  first, then order (2× SMA bulkhead + 2× U.FL→SMA pigtail + 2× whip, ~$25) and
+  verify the WiFi card exposes U.FL.
 - **Hood interface**: 4× M3 horizontal heat-sets in the side walls at
   (x −50/+35, z 67) — hood straddles the deck, screws from free air.
 - **Vents**: 6× 3 mm slots per side, z 52..66.
@@ -106,6 +111,36 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
   MRBF-30 / 5191 block inside (block mount = part-5, ⚠ dims unmeasured).
 
 ## Head (`head.scad`) — supersedes the L2 mast + D456 periscope
+
+> ⚠ **RE-ARCHITECTED 2026-07-07 — moved forward onto the front-shoulder neck.**
+> The section below describes the head's INTERNAL sensor-mount scheme (crown
+> plate + tilted face plate + bolt patterns), which is unchanged and still
+> current. What changed: the head now bolts to `neck_bracket.scad` on the
+> front-shoulder deck instead of the riser, and the whole thing shifted
+> **DX+73 DZ+6** forward/up (L2 crown x126.5, D456 back-face (143,0,111.5)).
+> See `forward_head_study.py` + the `neck_bracket.scad` table row above. The
+> "REAR LOBE reuses the mast / riser" wording below is HISTORICAL — the mount
+> is now the rear boss → bracket wall, but the crown/column geometry carried
+> over. CoM moved **+6.5 mm forward** → ~54 mm rearward on the belly battery
+> (510 g pack) nulls that delta. Absolute CoM ~+12 mm fwd — see the plan's
+> battery note; defer the pack move to a full mass model + the balance-
+> controller CoM target.
+>
+> **REAL D456 mesh (`d456_ref.stl`, from the RealSense SLDPRT, 2026-07-07):**
+> confirms the OBB gate envelope is CONSERVATIVE (real = 124×29×26, slightly
+> smaller than the 26×123.8×29 box — rounded corners/recessed lens → all head
+> clearances hold with margin). Mount VALIDATED: the 2× M3 (±47.2) are on the
+> REAR face (user-confirmed), so the rear-plate mount is correct, lens forward-
+> down free. The real mesh is in `preview_assembly` (the "eyes"); check_fit
+> keeps the OBB as the conservative envelope.
+>
+> **REAL Unitree L2 mesh (`l2_ref.stl`, from the STEP, 2026-07-07):** 74.9×75.0
+> ×63.5, round Ø75 base. **Caught a mount error** — the real base pattern is
+> **4 holes on a Ø51 BCD (R25.5), 90° apart** (M3), NOT the 22.5 mm square the
+> mast/head had assumed. Crown re-cut to the real pattern (holes at CTR±18,±18
+> = R25.5 at 45°; crown grown to x105..148, y±21). Optical center ~27 mm above
+> the base (was 32.5 — minor). Real L2 in the preview (the "crown"); check_fit
+> keeps the 75×75 box (conservative). ⚠ cable connector on one side (−X).
 
 - **ONE part carries BOTH front sensors.** REAR LOBE = the L2 tower (reuses the
   mast: deck flange bolts (54/59.0, ±14) M3×10 from above; column x51.6..64

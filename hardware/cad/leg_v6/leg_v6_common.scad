@@ -46,6 +46,20 @@ WHEEL_Z0  = -17.7;  WHEEL_Z1 = -15.6;    // bottom wheel faces
 WHEEL_OD  = 20.0;
 COL_PTS   = [[-8.3, 10.2], [-8.3, -10.2], [-32.8, 10.25], [-32.8, -10.25]];
 
+// ---- ANTI-ROTATION RIBS (2026-07-07, servo_pocket_analysis.py) ----------------
+// The joint torque is reacted about the output axis (Z). With the walls at the
+// full 0.45 slip fit, ALL of it rides the 4 M2 self-tap screws in the SERVO's
+// own plastic -> cyclic loosening/back-out over trot life (the real weakness,
+// not a static one; the femur has NO strap so it depends on this entirely).
+// FIX: crush ribs on the ±Y case flats reduce the rotational slop 0.45 -> 0.1
+// and take the torque as WALL BEARING (SF ~570 at 12V stall) so the screws see
+// only axial retention. Ribs stand PROUD 0.35 -> 0.1 nominal clearance = FREE
+// drop-in preserved (contact only under load); the thin tip crushes to take up
+// print tolerance. 2 x-stations near the case ends (max arm, bidirectional),
+// clear of the screw columns (-8.3/-32.8), the bay (z<-15.5) + wheel window.
+ANTIROT_X     = [-30, -12];   ANTIROT_Z = [-13, 13];
+ANTIROT_PROUD = 0.35;         ANTIROT_BASE = 1.4;
+
 // ---- fits / hardware ---------------------------------------------------------
 CLR_POCKET = 0.45;   // DROP-IN slip fit. NOT the 0.30 press calibration
                      // (parametric-servo-fit.md — that's for v5-style
@@ -83,8 +97,22 @@ YOKE_BOT_IN = FLOOR_BOT - 0.4;           // -22.6 bottom-arm plate top (0.4: PA6
 // Pocket NEGATIVE: subtract from a solid. Open top (+Z), bay-seat floor,
 // wheel window, 4x case-column screw holes (countersunk at FLOOR_BOT),
 // rear cable tunnel out the -X end wall.
+// Anti-rotation ribs: solid triangular ridges LEFT on the ±Y pocket walls by
+// subtracting them from the void (so the part material fills them). Base on the
+// wall (y = ±(CASE_HW+CLR_POCKET)), apex PROUD inward toward the case flat.
+module antirot_ribs() {
+    hw = CASE_HW + CLR_POCKET;                 // 12.85 = void wall plane
+    for (rx = ANTIROT_X, sy = [-1, 1])
+        translate([rx, 0, (ANTIROT_Z[0] + ANTIROT_Z[1]) / 2])
+            linear_extrude(ANTIROT_Z[1] - ANTIROT_Z[0], center = true)
+                polygon([[-ANTIROT_BASE / 2, sy * hw],
+                         [ ANTIROT_BASE / 2, sy * hw],
+                         [0, sy * (hw - ANTIROT_PROUD)]]);
+}
+
 module sts_pocket_neg(extra_top = 30) {
     c = CLR_POCKET;
+  difference() {
     union() {
         // case void, opened upward (clears the rear top cap too)
         translate([(CASE_X0 + CASE_X1)/2, 0,
@@ -111,6 +139,8 @@ module sts_pocket_neg(extra_top = 30) {
         translate([CASE_X0 - WALL - 4, -9.5, BAY_BOT - 0.4])
             cube([WALL + 8, 19, CASE_BOT - BAY_BOT + 2]);
     }
+    antirot_ribs();     // leave the ±Y anti-rotation ribs as part material
+  }
 }
 
 // Front-platform POSITIVE: raises the floor to seat the case's front bottom

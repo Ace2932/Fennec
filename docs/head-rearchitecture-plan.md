@@ -47,12 +47,28 @@ So the anatomically-right forward position is available.
   D456 lenses as eyes, add a nose/snout if the forward position allows.
 
 ## Start-here checklist next session
-- [ ] Confirm neck-bracket vs shoulder-variant (user)
-- [ ] Build the neck/head at x110..175 z82..170 on the front shoulder top
-- [ ] Move D456 + L2 onto it (keep the tilted-eye + crown mounts)
-- [ ] Re-gate (chassis check_fit: head-vs-front-leg, L2 ring, CoM); the
-      front-hfe −50 cap likely still applies — re-verify at the new x
-- [ ] CoM delta + battery-rebalance recommendation
-- [ ] Retire/rework the riser front head interface (now unused)
-- [ ] Fennec styling pass (broad ears + L2 skull + eye accent + maybe snout)
-- [ ] The current `head.scad` (riser-mounted) stays gate-clean until replaced
+- [x] Confirm neck-bracket vs shoulder-variant → **NECK BRACKET** (user, 07-07)
+- [x] Build the neck/head on the front shoulder top → `neck_bracket.scad` +
+      reworked `head.scad`; sensors shifted **DX+73 DZ+6** (`forward_head_study.py`)
+- [x] Move D456 + L2 onto it → D456 back-face (143,0,111.5) 27° down; L2 crown
+      x126.5, optical z~160. Tilted-eye + crown mounts kept.
+- [x] Re-gate → `check_fit.py` PASSES (exit 0). **0 front-leg hits** vs
+      head/bracket/camera across the full ROM sweep. The front-hfe −50 cap
+      still holds (now conservative — could relax; deferred to the leg-ROM lane).
+- [x] CoM delta → **+6.5 mm forward** (L2 230 g x53.5→126.5 dominates; head
+      struct MEASURED ~35 g) → ~54 mm rearward on the belly battery nulls THIS
+      DELTA (pack = 510 g CALIPERED, BOM "510 g rattle"; the study's old 300 g
+      was wrong). NB the ABSOLUTE CoM is ~+12 mm fwd — see the battery note
+      below; a full mass model is the right tool.
+- [x] Retire the riser front head interface (user: RETIRE NOW, keep SMA) —
+      removed the L2-column deck base + bores + L2 cable drop + front-wall
+      camera register + USB-C grommet from `riser_bay.scad`; SMA kept. Riser
+      re-gated (exit 0), watertight.
+- [x] Fennec styling — DONE + FoV-clean (`head_fov_check.py`): rear-shelf ears
+      + FACETED CHEEKS (crown → wide D456 eye-band = the fox face) + a BROW
+      visor; the tilted eye-face reads as a down-muzzle. All kept behind the
+      camera (x<136) + below the L2 seat (z<128) → neither sensor FoV touched.
+      ⚠ L2 skull SHROUD + pointed SNOUT are RULED OUT (not deferred): a shroud
+      blocks the L2 360 ring/down-cone; a snout enters the D456 ground view.
+- All parts gate-clean (chassis + leg_v6 exit 0), watertight. Previews +
+  renders regenerated. `forward_head_study.py` = the placement proof.

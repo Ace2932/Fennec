@@ -5,6 +5,10 @@
 // +x FRONT). Lowest-CoM pack, swap WITHOUT tools (design-outline service
 // table: battery = strap only, 0 screws).
 //
+// PRINT: PETG-CF, FLOOR-DOWN (tray bottom on the bed; opening + rim bosses up)
+//   — zero supports. 3 walls / 0.25 / 20% (print-batch §2). Heat-sets into the
+//   rim bosses from the OPEN (cavity) side, iron reaches from above.
+//
 // Shape: open-TOP tray hanging under the stock shell — the shell floor caps
 // the cavity. Pack slides in from the REAR opening; a velcro strap fences
 // the opening through two side-wall slots. Front wall + side walls guide,

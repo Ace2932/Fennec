@@ -7,6 +7,15 @@ toe_v2 seat. Leg-internal members (pockets, discs, yokes) were sized in
 this doc covers the **chassis-level joints** the connectivity audit and the
 user flagged.
 
+> **Servo-pocket retention (2026-07-07, user flag):** the one leg-internal item
+> this doc had skipped — now checked in `hardware/cad/leg_v6/servo_pocket_analysis.py`.
+> Statically fine (floor bearing SF 11–18 at stall; landing bypasses the pocket
+> via the joint discs). The real weakness was **retention, not strength**: the
+> joint torque rode 4× M2 self-tap in the servo's plastic (0.45 slip, no anti-
+> rotation) → cyclic loosening over trot life. FIXED — **anti-rotation crush
+> ribs** on the ±Y case flats (`sts_pocket_neg`, all 3 joints) move the torque
+> to wall bearing (**SF ~570** @ 12 V stall), leaving the screws axial-only.
+
 ## Load cases
 
 | Case | Value | Basis |
