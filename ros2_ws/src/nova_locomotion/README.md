@@ -23,16 +23,51 @@ cd ros2_ws/src/nova_locomotion && PYTHONPATH=. python -m pytest test/ -q
   span, and **every gait foot target over a full cycle is IK-reachable + within
   joint limits**.
 
-## ⚠️ Geometry is placeholder (TODO-CAD)
+## Modules (added 2026-07-06, clean-movement lane)
+- `choreo/stand.py` — min-jerk stand/sit sequencer: keyframes (lie/crouch/
+  stand, feet under hips) -> joint-space quintic blends, zero vel+acc at
+  ends; `stand_up(start_pose=...)` accepts the real current pose (post-
+  E-stop recovery never assumes a keyframe). 50 Hz output.
+- `KNEE_FORWARD` (leg_ik) — **X-CONFIG decided 2026-07-06**: rear knee
+  branch mirrored; `within_limits` flips the asymmetric hfe window for
+  mirrored legs. Gait planners: keep >=40 mm front<->rear foot exclusion.
+
+## Modules (added 2026-07-06, pre-hardware locomotion work package)
+Roadmap: `docs/roadmap-trot-balance.md`. All pure-math, no rclpy in tests.
+- `kinematics/body_pose.py` — body-pose IK (stage 1.2): BodyPose(rpy+dxyz)
+  + world foot anchors -> canonical hip-frame targets; `neutral_anchors()`
+  reproduces the trot/choreo stance. Owns the body->canonical y-mirror
+  (frame); solve_side still owns the joint mirror.
+- `gait/crawl.py` — statically-stable crawl (stage 2): duty 0.8, lateral-
+  sequence order FL->RL->FR->RR, at most one leg in swing; `body_shift()`
+  min-jerk CoM pre-shift, composes through body_pose.
+- `balance/raibert.py` — Raibert touchdown stepper + attitude PD deltas
+  (stage 4.3/4.4) as pure logic; max_step + reachable-disc clamps built in.
+- `gait/backlash.py` — half-backlash bias with reversal hysteresis (stage
+  3.3); default 0.5 deg table MEASURE-AT-STAGE-1.
+- `controller.py` — gait-node core (stage 1.1): mode machine (idle/
+  stand_up/sit/crawl/trot) -> solve_side -> bus-ID ordering (nova_ops
+  joint_map) -> backlash comp. `node.py` = the thin rclpy glue
+  (`ros2 run nova_locomotion gait_node`; radians end-to-end,
+  counts_per_rad/home_offset identity params WIRE-AT-CALIBRATION).
+- `tools/trot_metrics.py` — stage-3 tuning score (lower = better) +
+  CSV CLI: `python -m nova_locomotion.tools.trot_metrics run.csv`.
+
+## ⚠️ Geometry status (updated 2026-07-06)
+Link lengths + hip offset MEASURED (106.9/129.0/64.3). Joint limits =
+the CAD gate ROM (haa ±15 conservative until homing fills the inboard
+signs; hfe −86..+50 leg-local; kfe ±109). Masses still CAD estimates.
+
+## old note (superseded)
 `LegParams` (femur/tibia/hip_offset, joint ranges) and `TrotParams`
 (stand_height etc.) default to the same SpotMicro-class placeholders as
 `nova_description`. **The math is correct and tested; the numbers need CAD
 measurement** before driving real servos. Keep these in sync with the
 `nova_description` xacro link lengths (single source once measured).
 
-## Next (Phase-2 integration, not yet built)
-- `gait_node`: `cmd_vel`/gait params → `trot.foot_target` → `leg_ik` →
-  `/joint_commands`, mapping joint→bus-ID via
-  `nova_description/config/joint_id_map.yaml`. The tested pure logic above is
-  the core; the node is thin glue + the live `/joint_states` contract.
-- Body pose / COM-shift input (Phase-4 arm couples in here).
+## Next (hardware-blocked)
+- IMU firmware driver + `/imu` topic (stage 4.1), homing calibration
+  (fills counts_per_rad/home_offset + the HAA inboard signs), backlash
+  measurement (stage 1.3), rosbag->CSV export for trot_metrics.
+- MuJoCo scene from the URDF (stage 4.5 tuning lane) — skipped in this
+  pass, `mujoco` not installed in `.venv`.

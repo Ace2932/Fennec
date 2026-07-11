@@ -12,24 +12,51 @@ FK is the unambiguous reference; IK is the closed-form inverse and is validated
 by FK(IK(p)) == p round-trips in test_leg_kinematics.py — so a sign error in IK
 fails the tests rather than silently shipping bad kinematics.
 
-NOTE: a1/a2/d default to the nova_description placeholder lengths (TODO-CAD).
-The MATH is correct; the NUMBERS need CAD measurement before real gait use.
+All targets are in the CANONICAL (left-leg) hip frame; use solve_side()
+to get physical joint angles — it owns the left/right mirror (haa sign).
 """
 
 from __future__ import annotations
 import math
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass(frozen=True)
 class LegParams:
-    hip_offset: float = 0.045  # d  — HAA axis to HFE axis along leg +y  (TODO-CAD)
-    femur: float = 0.11  # a1 — HFE to KFE                          (TODO-CAD)
-    tibia: float = 0.13  # a2 — KFE to foot                         (TODO-CAD)
-    # joint limits (rad), conservative placeholders (TODO-CAD mechanical travel)
-    haa_range: float = 0.7
-    hfe_range: float = 1.5
-    kfe_range: float = 2.2
+    hip_offset: float = 0.0643  # d — HAA axis to FOOT plane along leg +y.
+    # v6 = stock stance: 33.8 (haa→femur mid) + 0 + 30.5 (toe tab outboard)
+    # = 64.3mm — straight vertical legs, semi-wide track. URDF splits it
+    # per joint; test_urdf_sync checks the SUM equals this. (Inboard
+    # variant d=3.3 shelved until a balance controller exists.)
+    femur: float = 0.1069  # a1 — HFE to KFE   MEASURED 2026-07-01 (STL bores, 106.9 mm)
+    tibia: float = 0.1290  # a2 — KFE to foot  MEASURED 2026-07-01 (STL foot-post ctr)
+    # joint limits (rad) = the CAD fit-gate ROM (2026-07-06, replaces the
+    # TODO-CAD placeholders; single source: nova.urdf.xacro + limits.py):
+    haa_range: float = 0.262  # ±15° conservative symmetric — the chassis
+    # gate's INBOARD cap (belly-pack contact from ~18°). The asymmetric
+    # 15-inboard/40-outboard range unlocks when HAA_INBOARD_SIGN is
+    # filled at homing calibration (nova_ops limits.py).
+    # LA-13 FIX 2026-07-11: hfe_min below is the REAR value (URDF hfe_ext,
+    # -86°). FRONT legs (FL/FR) used to be capped tighter by hfe_min_front
+    # (URDF hfe_ext_front) on the theory that a -86 front reach hits the
+    # D456 face / L2 crown. #47 (2026-07-11, MEASURED — hardware/cad/
+    # chassis/head_cap_sweep.py): a fine hfe sweep of the front leg vs the
+    # REAL head assembly found ZERO contact anywhere in the front leg's
+    # structurally-reachable hfe range (min clearance ~34mm) — the -50 cap
+    # was stale (set the same day the head moved forward onto the
+    # front-shoulder deck, never re-validated after that move). FRONT and
+    # REAR now share the same real governing constraint (leg self-collision,
+    # leg_v6/check_fit.py LA-19: clean to 92.5°, first contact 93°), so
+    # hfe_min_front == hfe_min today. Pass leg=<"FL"|"FR"|"RL"|"RR"> to
+    # within_limits() (and solve_side(), which CLAMPS on it — see below) to
+    # select the correct window; an omitted/unrecognized leg name defaults
+    # to this permissive rear value — see within_limits' docstring.
+    hfe_min: float = -1.501  # −86° away-trunk (gate), REAR legs (+ default)
+    hfe_min_front: float = -1.501  # −86° away-trunk (gate), FRONT legs — #47: not head-limited (measured); matches hfe_min
+    hfe_max: float = 0.873  # +50° toward-trunk fold cap (riser graze), all legs.
+    # ⚠ leg-local→canonical sign mapping VERIFY IN SIM (URDF note).
+    kfe_range: float = 1.9  # sweep-gate: mech stop ~118deg; see URDF note
 
 
 class Unreachable(ValueError):
@@ -90,10 +117,102 @@ def inverse_kinematics(foot, p: LegParams, knee_forward: bool = True):
     return (t1, t2, t3)
 
 
-def within_limits(theta, p: LegParams) -> bool:
+def solve_side(
+    side: str,
+    foot,
+    p: LegParams,
+    knee_forward: bool = True,
+    leg: Optional[str] = None,
+):
+    """IK for a physical leg. `side` = 'left' | 'right'.
+
+    THE ONE MIRRORING BOUNDARY. foot_target() and inverse_kinematics()
+    both work in the CANONICAL (left-leg) hip frame — +y is outboard for
+    every leg. Right legs are physical mirrors: same canonical target,
+    haa sign flipped on the way out. Do NOT mirror anywhere else
+    (researched failure: SpotMicro-class builds crash hips on silent
+    left/right reversals).
+
+    #47 RUNTIME SAFETY CLAMP: pass leg=<"FL"|"FR"|"RL"|"RR"> to engage it.
+    solve_side() is THE single choke point every commanded pose funnels
+    through — choreo (choreo/stand.py pose_for), the gait controller
+    (controller.gait_pose, covers trot AND crawl's body-pose-composed
+    targets), and any future raibert/body_pose caller that follows the
+    same pattern. When leg is a FRONT leg (FL/FR — always knee_forward=
+    True in the X-config, so the physical hfe output t2 needs no
+    side/knee-branch correction), the physical hfe is clamped to
+    [p.hfe_min_front, p.hfe_max]. This is a coarse backstop — it does
+    NOT re-solve kfe/haa for the clamped hfe, so a clamped pose is not
+    IK-consistent with the original foot target (the foot lands
+    somewhere else, not nowhere). That's intentional: crude-but-safe
+    beats kinematically-pure-but-unsafe. Real prevention is tuning gait/
+    pose params to stay inside the cap in the first place (see choreo/
+    stand.py, gait/trot.py, gait/crawl.py); this clamp only needs to
+    engage as a last resort, and should rarely if ever fire given #47's
+    measured cap (see LegParams.hfe_min_front).
+    """
+    t1, t2, t3 = inverse_kinematics(foot, p, knee_forward)
+    if side == "right":
+        t1 = -t1
+    elif side != "left":
+        raise ValueError(f"side must be 'left'|'right', got {side!r}")
+    if leg in FRONT_LEGS:
+        t2 = max(p.hfe_min_front, min(p.hfe_max, t2))
+    return (t1, t2, t3)
+
+
+LEG_SIDE = {"FL": "left", "FR": "right", "RL": "left", "RR": "right"}
+
+# Knee configuration — X-CONFIG (DECIDED 2026-07-06, docs/knee-config-
+# analysis.md): rear knees mirrored (dog layout). Pure software: this is
+# the IK elbow branch per leg; foot targets stay canonical. Rear crouch
+# margin 46° vs 10°, robot-level fore/aft symmetry. Gait planners must
+# keep a >=40 mm front<->rear foot exclusion (X worst-case convergence).
+KNEE_FORWARD = {"FL": True, "FR": True, "RL": False, "RR": False}
+
+# LA-13 introduced these as "legs whose away-trunk hfe reach is capped
+# tighter than the rear default" (chassis check_fit HEAD case — a -86
+# front reach was believed to hit the D456 face / L2 crown). #47
+# (2026-07-11, MEASURED): that belief was stale — see LegParams.hfe_min_
+# front and hardware/cad/chassis/head_cap_sweep.py — front and rear now
+# share the same value. FRONT_LEGS/REAR_LEGS stay as the SELECTOR
+# (solve_side's clamp + within_limits' bound choice both key off them),
+# matching LegParams.hfe_min_front and the URDF's hfe_ext_front property
+# (nova.urdf.xacro), so a future head-position change has one real split
+# to reintroduce instead of re-deriving this plumbing from scratch.
+FRONT_LEGS = frozenset({"FL", "FR"})
+REAR_LEGS = frozenset({"RL", "RR"})
+
+
+def within_limits(
+    theta, p: LegParams, knee_forward: bool = True, leg: Optional[str] = None
+) -> bool:
+    """Check CANONICAL-frame angles against the gate ROM.
+
+    The asymmetric hfe window (−86 away-trunk .. +50 toward-trunk) is
+    LEG-LOCAL: a mirrored-knee leg (X-config rear, knee_forward=False)
+    maps canonical pitch to leg-local NEGATED, so its canonical window
+    flips to [−hfe_max, −hfe_min]. Pass the leg's KNEE_FORWARD flag.
+
+    `leg` selects the away-trunk (hfe lower) bound: FRONT_LEGS ("FL"/
+    "FR") use p.hfe_min_front; an omitted/unrecognized leg name — same as
+    REAR_LEGS — falls back to p.hfe_min. This is a deliberate OPT-IN, not
+    fail-safe. #47 (2026-07-11, MEASURED): hfe_min_front == hfe_min today
+    (see LegParams.hfe_min_front) — the LA-13 audit that found trot.py/
+    crawl.py/raibert.py/body_pose.py commanding front hfe past the old
+    -50° cap turned out to be flagging a STALE cap value, not bad gait
+    tuning: hardware/cad/chassis/head_cap_sweep.py found every one of
+    those modules' worst-case front hfe excursions (trot ~-59°, crawl
+    ~-59°, body_pose weight-shift ~-66°) comfortably inside the true
+    -86° cap. solve_side()'s leg= clamp is the runtime backstop either
+    way (see its docstring) — this function is what gait-quality tests
+    assert against pre-clamp.
+    """
     t1, t2, t3 = theta
+    hfe_min = p.hfe_min_front if leg in FRONT_LEGS else p.hfe_min
+    lo, hi = (hfe_min, p.hfe_max) if knee_forward else (-p.hfe_max, -hfe_min)
     return (
         abs(t1) <= p.haa_range + 1e-9
-        and abs(t2) <= p.hfe_range + 1e-9
+        and lo - 1e-9 <= t2 <= hi + 1e-9
         and abs(t3) <= p.kfe_range + 1e-9
     )

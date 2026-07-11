@@ -19,12 +19,14 @@ This skill (CadQuery + preview loop) is for **utility parts**:
 - Anything single-body or single-assembly that doesn't need full
   kinematic constraints
 
-**Use the V5 OpenSCAD track (not this skill) for the leg links:**
+**Use the V6 OpenSCAD track (not this skill) for the leg links:**
 
-- Shoulder, coax, femur, tibia — canonical design at `hardware/cad/leg_v5/`.
-  Reuse the original NovaSM3 STL, carve an STS3215 cavity via boolean
-  `difference()`. **Do not re-derive leg geometry in CadQuery** — wrong tool,
-  and from-scratch attempts (V3.1, V4) were rejected (in `hardware/cad/archive/`).
+- Shoulder, coax, femur, tibia — canonical design at `hardware/cad/leg_v6/`.
+  Ground-up designed-for-assembly parts built around the real STS3215 mesh
+  (drop-in pockets, both-discs-bolted joints, real-mesh fit gate). **Do not
+  re-derive leg geometry in CadQuery** — wrong tool, and from-scratch
+  attempts (V3.1, V4) were rejected (in `hardware/cad/archive/`); the earlier
+  V5 shell-carve is superseded (kept at `hardware/cad/leg_v5/` for reference).
 
 **Use OnShape (not this skill) for the chassis + multi-body assemblies:**
 
@@ -45,7 +47,7 @@ import cadquery as cq
 1. Printer + Material Profile (Bambu P1S, PA6-CF / PETG-CF / TPU)
 2. NovaSM3 Calibration Constants
 3. STS3215 Servo Pocket with Back-Shaft U-Bracket
-4. LiPo Battery Pocket (4S 4000mAh + XT60)
+4. LiPo Battery Pocket (4S 6000mAh + XT60)
 5. Power Connector Cutouts (XT60, XT30)
 6. Panel Cutouts (E-stop, RJ-45, USB 3.1, Barrel Jack)
 7. Signal Connector Pockets (JST-XH 2.54)
@@ -238,6 +240,7 @@ STS3215 = {
     "body_w":        24.80,   # STEP-verified
     "body_h":        34.30,   # STEP-verified, between top/bottom horn-disc faces
     "bbox_total_z":  39.60,   # body + both horn discs (don't use for pocket — use body_h)
+                              # SUPERSEDED 2026-07-10 — real CALIPERED total is 39.1 (0.5 mm less; fixed in commit 52d387f)
     "horn_face_z":   18.70,   # top horn disc Z position from body center
     "horn_disc_od":  20.0,    # both top + bottom horn disc OD
     "horn_disc_t":   8.80,    # top horn disc thickness (dimensions.md §1)
@@ -277,9 +280,16 @@ def nova_sts3215_dual_mount(workplane, clearance_mat="PA6-CF"):
           .hole(STS3215["mount_screw_d"]))
 
     # Back-shaft U-bracket: bearing pocket (688ZZ) on opposite link
+    # **leg_v5 only — RETIRED for leg_v6** (servo integral wheel) — see
+    # nova_sts3215_back_bearing_seat() note below.
     # Caller is responsible for placing this on the mating bracket
     return wp
 
+# **leg_v5 only — RETIRED for leg_v6** (servo integral wheel). This bearing
+# press-fit geometry (688ZZ back-shaft seat) applied to v5-style external-
+# bearing joints; leg_v6 bolts the yoke bottom arm straight to the servo's
+# own integral free-spinning idler wheel — no external bearing, no sleeve
+# adapter, no press-fit pocket. Kept for reference / v5 provenance.
 def nova_sts3215_back_bearing_seat(workplane):
     """688ZZ bearing seat for the back-shaft side of the STS3215.
     Place on the opposing bracket so the rear pivot rotates on a real
@@ -294,7 +304,7 @@ def nova_sts3215_back_bearing_seat(workplane):
 
 ## 4. LiPo Battery Pocket
 
-Dual 4S 4000mAh packs. Project requires hot-swap capability.
+Dual 4S 6000mAh packs (Ovonic 120C). Hot-swap capable. NOTE: LIPO_4S_4000 dims below are the OLD 4000mAh box -- re-measure for the larger 6000mAh pack.
 
 ```python
 LIPO_4S_4000 = {

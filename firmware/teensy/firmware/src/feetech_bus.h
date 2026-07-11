@@ -164,6 +164,40 @@ class Bus {
     return write_byte(id, REG_TORQUE_ENABLE, val, timeout_us);
   }
 
+  // Torque limit, permille of stall (RAM 0x30 — resets on servo power-cycle,
+  // so rewrite on every fleet arm). Backdrive/trip protection: a jammed or
+  // shock-loaded joint saturates at this fraction instead of full stall
+  // through the gear train (Feetech's canonical failure).
+  Result set_torque_limit(uint8_t id, uint16_t permille, uint32_t timeout_us = 1500) {
+    if (permille > 1000) permille = 1000;
+    uint8_t data[2] = { (uint8_t)(permille & 0xFF), (uint8_t)(permille >> 8) };
+    uint8_t frame[MAX_FRAME_LEN];
+    uint8_t n = build_write(id, REG_TORQUE_LIMIT_L, data, 2, frame);
+    if (!transmit_blocking(frame, n)) return ERR_TX_BUSY;
+    uint8_t resp[MAX_RESPONSE_LEN];
+    uint8_t got = read_response(resp, 6, timeout_us);
+    if (got < 6) return ERR_TIMEOUT;
+    uint8_t resp_id, err, params[MAX_PARAM_BYTES], plen;
+    if (!parse_response(resp, got, &resp_id, &err, params, &plen)) return ERR_BAD_FRAME;
+    if (resp_id != id) return ERR_BAD_FRAME;
+    return err ? ERR_SERVO : OK;
+  }
+
+  // Feetech one-key MID CALIBRATION: writing 128 to REG_TORQUE_ENABLE sets
+  // the CURRENT position as 2048 (mid). Do at assembly with the joint held
+  // at its nominal pose, torque off — guarantees the mechanical ROM
+  // (max +/-126 deg = +/-1434 counts) never crosses the 4095<->0 encoder
+  // wrap, which otherwise makes present-position jump mid-motion.
+  Result calibrate_mid(uint8_t id, uint32_t timeout_us = 1500) {
+    return write_byte(id, REG_TORQUE_ENABLE, 128, timeout_us);
+  }
+
+  // Goal acceleration (RAM 0x29, 1 byte, units of 100 steps/s^2; 0 = max).
+  // Non-zero softens torque-on snap and gait accelerations.
+  Result set_goal_acc(uint8_t id, uint8_t acc, uint32_t timeout_us = 1500) {
+    return write_byte(id, REG_GOAL_ACC, acc, timeout_us);
+  }
+
   // Generic single-byte write — pings the EEPROM/RAM and waits for ACK.
   Result write_byte(uint8_t id, uint8_t reg, uint8_t val, uint32_t timeout_us = 1500) {
     uint8_t frame[MAX_FRAME_LEN];

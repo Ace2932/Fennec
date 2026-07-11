@@ -58,7 +58,7 @@ Three KiCad MCPs exist already:
 | Pololu KiCad library | D42V110 / D42V55 / D24V22 bucks, motor drivers | Required — clone separately |
 | Adafruit KiCad library | INA226, IMUs, sensors | Required — clone separately |
 | Sparkfun KiCad library | E-stop variants, breakouts | Useful |
-| Snapeda | Vendor parts (74HC125, LM393, MOSFETs) | Per-part download via web |
+| Snapeda | Vendor parts (SN74LVC125A, LM393, MOSFETs) | Per-part download via web |
 | UltraLibrarian / SamacSys | Same — vendor parts | Per-part download |
 
 ### 1.5 Manufacturing endpoints
@@ -91,7 +91,7 @@ Three KiCad MCPs exist already:
 │   ├── nova_pcb_v6_topology.md       # Nova-specific schematic topology + net naming
 │   ├── power_rail_layout.md          # PCB v6 power-plane stackup + bulk-cap injection
 │   ├── safety_chain_wiring.md        # E-stop + comparator + MOSFET schematic patterns
-│   ├── teensy_bus_routing.md         # 74HC125 + Serial2 + bus trace impedance
+│   ├── teensy_bus_routing.md         # SN74LVC125A + Serial1 + bus trace impedance
 │   └── pcbway_submit_checklist.md    # what to verify before clicking buy
 ├── templates/
 │   ├── nova_pcb_v6.kicad_project     # starter project w/ stack-up + DRC rules pre-set
@@ -115,7 +115,7 @@ description: "Use this skill when the user wants to design, modify, review, or m
 
 1. **Project bootstrap** — `kicad-cli` invocation that creates a new project from `templates/nova_pcb_v6.kicad_project`, layered onto Pololu/Adafruit library symlinks.
 2. **Schematic-first workflow** — capture power tree → control nets → bus distribution → safety chain. Reuse subschematics from `templates/`.
-3. **Layout rules** — 4-layer stackup (sig/GND/PWR/sig), star ground at FE-URT-1 connector, bulk-cap injection at the 4 quadrant points per `docs/power_rail_layout.md`.
+3. **Layout rules** — 4-layer stackup (sig/GND/PWR/sig), GND-plane reference (FE-URT-1; solid GND plane = single low-Z return), bulk-cap injection at the 4 quadrant points per `docs/power_rail_layout.md`.
 4. **DRC + ERC** — `erc_drc_runner.py` invocation, expected pass criteria, common failure patterns (silkscreen overlap, clearance violations on power planes).
 5. **Fab output** — `gerber_pack.py` + `bom_export.py` + PCBWay manifest. Pre-submit checklist from `docs/pcbway_submit_checklist.md`.
 6. **Nova-specific patterns** — link to the four Nova doc files; specifically call out: `JP_BUS_MASTER` solder bridge default to Pattern B, INA226 I²C address jumpers, comparator trip-point divider math.
@@ -134,15 +134,15 @@ These come straight from [`BOM.md`](../BOM.md) / [`docs/order-list.md`](./order-
 
 | Topic | What the skill knows | v6 spec § | Template file |
 |---|---|---|---|
-| Battery input + reverse-prot + Class T fuse | XT60 panel-mount in, MOSFET reverse-prot (no diode), Class T 30A fuse (20 kA AIC vs ANL's 6 kA), high-current switch | §1 | `templates/battery_input_subschematic/` |
+| Battery input + reverse-prot + MRBF fuse | XT60 panel-mount in, MOSFET reverse-prot (no diode), MRBF-30 fuse off-board (Blue Sea 5191, ~9 kA AIC @ 16.8 V; Class T superseded 2026-06-12, ANL's 6 kA rejected), high-current switch | §1 | `templates/battery_input_subschematic/` |
 | Power rails | 4S LiPo 12.8-16.8V → 5 buck rails (D42V110F7 / D42V110F12 / D24V22F12 / D42V55F12 + reserved arm-rail D42V55F7) | §2 | `templates/power_rails_subschematic/` |
-| Servo bus distribution | Single signal bus, 4 power injection points along leg trunk, 1000 µF bulk caps at each injection point, star ground at FE-URT-1, hip rail injects at chassis floor | §3 | `templates/bus_distribution_subschematic/` |
-| Bus master Pattern B / A bridge | Teensy UART → 74HC125 quad tri-state buffer (half-duplex driver) → bus pads. OE pins drive TX/RX direction. `JP_BUS_MASTER` solder bridge: B default, A fallback to FE-URT-1 direct | §4 | `templates/bus_master_subschematic/` |
-| Bus integrity footprints | Series R (22-100Ω 0603) at 74HC125 output, ferrite bead at each servo entry, star ground. Single-ended TTL — NOT RS-485, no 120 Ω term. Populate iteratively per measured error rate. | §5 | `templates/bus_integrity_subschematic/` |
+| Servo bus distribution | Single signal bus, 4 power injection points along leg trunk, 1000 µF bulk caps at each injection point, GND-plane reference (FE-URT-1), hip rail injects at chassis floor | §3 | `templates/bus_distribution_subschematic/` |
+| Bus master Pattern B / A bridge | Teensy UART → SN74LVC125A quad tri-state buffer (half-duplex driver) → bus pads. OE pins drive TX/RX direction. `JP_BUS_MASTER` solder bridge: B default, A fallback to FE-URT-1 direct | §4 | `templates/bus_master_subschematic/` |
+| Bus integrity footprints | Series R (22-100Ω 0603) at SN74LVC125A output, ferrite bead at each servo entry, GND-plane reference (GND plane = single low-Z return). Single-ended TTL — NOT RS-485, no 120 Ω term. Populate iteratively per measured error rate. | §5 | `templates/bus_integrity_subschematic/` |
 | Safety chain | 13.2V LVC alarm (charger), 13.0V graceful → LM393 comparator → Teensy GPIO → `/battery_low`, 12.4V MOSFET hard-cutoff, E-stop NC in series with leg+hip+L2 EN pins (Jetson stays live), INA226 ×3 (+ optional 4th) on I²C | §6 | `templates/safety_chain_subschematic/` |
-| Aux MCU + peripherals | Arduino Nano slot (PIR, ultrasonic, OLED, RGB, DFPlayer, MPU-6050), Teensy 4.1 footprint (INA226 reader + E-stop GPIO + 74HC125 OE) | §7 | `templates/aux_mcu_subschematic/` |
+| Aux MCU + peripherals | Arduino Nano slot (PIR, ultrasonic, OLED, RGB, DFPlayer, MPU-6050), Teensy 4.1 footprint (INA226 reader + E-stop GPIO + SN74LVC125A OE) | §7 | `templates/aux_mcu_subschematic/` |
 | Connector convention | JST-XH 2.54 low-current signals, XT30 servo power trunks, XT60 panel-mount battery, all keyed | §8 | global design rules |
-| Stackup + ground | 4-layer (top sig / GND / PWR / bottom sig), star ground at FE-URT-1, 2 oz copper, ENIG finish, PCBWay default | §"Design workflow" | `templates/nova_pcb_v6.kicad_project` |
+| Stackup + ground | 4-layer (top sig / GND / PWR / bottom sig), GND-plane reference (FE-URT-1), 2 oz copper, ENIG finish, PCBWay default | §"Design workflow" | `templates/nova_pcb_v6.kicad_project` |
 | Acceptance gate (firmware, informs PCB) | Loop p99 < 100 µs — PCB must not compromise bus integrity. Series R + ferrite footprints reserved per [[project-deferred]] #13. | firmware/teensy/README.md | docs/acceptance_gate_constraints.md |
 
 ---

@@ -16,8 +16,8 @@ Reference: BOM v3.2 §2, §3 · [`docs/power-budget.md`](../../docs/power-budget
 
 - XT60 panel-mount input (matches Ovonic packs)
 - **MOSFET-based reverse-polarity protection** (not a diode — too much Vdrop at 10-15A continuous)
-- **Class T 30A fuse — OFF-BOARD**, inline bolt-down block in the battery→PCB lead near the pack (not a PCB footprint; F1 removed from `nova_pcb_v6` 2026-06-04). Sized for hip-rail worst case ~20A + headroom. LiPo dead-short can produce 10-20 kA peaks; ANL/MIDI's ~6 kA interrupt rating is insufficient and can "fail to interrupt" (vapor reconducts), and no common 20 kA-AIC *cable-inline* holder exists — true Class T is always a bolt-down block. 20 kA AIC = ~6.7× margin; at-source placement also protects the battery→PCB cable itself. See [`docs/research/2026-05-17-notes.md`](../../docs/research/2026-05-17-notes.md) §9 for rationale.
-- Power switch (high-current, ≥30A rated)
+- **MRBF-30 terminal fuse — OFF-BOARD**, Blue Sea 5191 block at the pack in the battery→PCB lead (not a PCB footprint; F1 removed from `nova_pcb_v6` 2026-06-04). 30A time-delay, sized for hip-rail worst case ~20A + headroom. ANL/MIDI's ~6 kA interrupt rating can "fail to interrupt" a LiPo dead-short (vapor reconducts) → rejected. Class T (20 kA) was the interim spec, but this single 4S pack's real Isc ≈ 16.8 V ÷ 6–12 mΩ ≈ **1.5–3 kA**, vs MRBF's **~9 kA AIC @ 16.8 V = 3–4× margin** at ⅓ the size/weight → **MRBF chosen 2026-06-12**. At-source placement also protects the battery→PCB cable. See [`docs/research/2026-05-17-notes.md`](../../docs/research/2026-05-17-notes.md) §9 + [`docs/order-list.md`](../../docs/order-list.md) MRBF section.
+- Power switch (off-board Blue Sea Contura SPST, **~18A @ 16.8 V DC**; 20A@12V / 15A@24V) wiring to on-board SW1 block. Sized for ~14A sustained; the SW1 terminal block matches it (15–20A class). The 30A MRBF is catastrophic-short (kA) protection, **not** the switch-path thermal limit — so SW1 block + switch are intentionally rated below the fuse.
 - Mini digital voltmeter retained for at-a-glance pack state
 
 ### 2. Four active power rails + one reserved (v3.4 split)
@@ -40,21 +40,21 @@ Module footprints use Pololu's standard header pitch so cards can be swapped wit
 - Single signal bus (daisy-chained TTL) — no break
 - **4 power injection points** along the leg 7.5V trunk (one per leg pair)
 - **Bulk caps (1000 µF / 25V) at each injection point** — soaks impact transients near point of load
-- Star ground at FE-URT-1 connector
+- GND-plane reference (FE-URT-1; solid GND plane = single low-Z return)
 - Hip rail injects at chassis floor (4 hips clustered there)
 
 ### 4. Bus master — Pattern B default, Pattern A fallback
 
-**Pattern B is the v1 active path.** Teensy 4.1 hardware UART routed through **74HC125 quad tri-state buffer** as a half-duplex driver to the Feetech TTL bus pads. The 74HC125 must be populated on first build.
+**Pattern B is the v1 active path.** Teensy 4.1 hardware UART routed through **SN74LVC125A quad tri-state buffer** as a half-duplex driver to the Feetech TTL bus pads. The SN74LVC125A must be populated on first build.
 
-- Teensy UART TX → 74HC125 input gate
-- Teensy GPIO → 74HC125 OE pins (TX-enable for write, RX-enable for read; half-duplex direction control)
-- 74HC125 output → bus signal pad
+- Teensy UART TX → SN74LVC125A input gate
+- Teensy GPIO → SN74LVC125A OE pins (TX-enable for write, RX-enable for read; half-duplex direction control)
+- SN74LVC125A output → bus signal pad
 - FE-URT-1 USB→TTL input header retained for fallback
 
 Solder bridge `JP_BUS_MASTER` selects which path drives the bus pads:
 
-- **B (default — board ships configured this way):** Teensy UART → 74HC125 → bus
+- **B (default — board ships configured this way):** Teensy UART → SN74LVC125A → bus
 - **A (fallback):** FE-URT-1 → bus directly (used for ID setup, debug, post-mortem)
 
 Both paths terminate on the same bus pads; the bridge is the only state change. No chassis teardown to swap.
@@ -65,9 +65,9 @@ Linux jitter rationale: USB-CDC latency on Jetson is 1-10 ms typical, 50 ms+ und
 
 Feetech bus is **single-ended half-duplex TTL UART**, not RS-485. 120 Ω differential termination is the wrong tool here.
 
-- Series R footprints (22-100 Ω, 0603) at FE-URT-1 / 74HC125 output — slope rate-limiting
+- Series R footprints (22-100 Ω, 0603) at FE-URT-1 / SN74LVC125A output — slope rate-limiting
 - Ferrite bead footprints at each servo entry — common-mode noise rejection
-- Star ground at FE-URT-1 connector
+- GND-plane reference (FE-URT-1; solid GND plane = single low-Z return)
 
 Default v1 build: leave footprints unpopulated. Populate iteratively if bus error rate exceeds threshold during bring-up. If still poor, drop baud 1M → 500k → 250k.
 
@@ -99,9 +99,9 @@ Other safety:
 
 ## Mezzanine stack — cross-board coordinate contract
 
-The 2-board stack is **face-to-face vertical**, NOT an edge-mate. Logic board on TOP (component side DOWN), power board on BOTTOM (component side UP), joined by inter-board connector **J20** (2×6 IDC + ribbon) and **4 corner M3 standoffs** (20 mm). Stack ≈41 mm tall, fits the ~46.9 mm chassis trunk depth. All user I/O (both USB, OLED cable, LED cable, FE-URT bus) exits the **front (low-Y) edge**.
+The 2-board stack is **face-to-face vertical**, NOT an edge-mate. Logic board on TOP (component side UP — Teensy 4.1 + USB face the removable riser deck, so the deck lifts off for service without unstacking the boards), power board on BOTTOM (component side UP), joined by inter-board connector **J20** (2×6 IDC + ribbon) and **4 corner M3 standoffs** (20 mm). Stack ≈41 mm tall, fits the ~46.9 mm chassis trunk depth. All user I/O (both USB, OLED cable, LED cable, FE-URT bus) exits the **front (low-Y) edge**.
 
-**Both boards share ONE absolute KiCad coordinate frame.** Holes + J20 only mate if their XY match across boards. Logic board is mounted component-side-down by **flipping about the vertical centerline x=140** — so everything in the contract is symmetric about x=140 and survives that flip.
+**Both boards share ONE absolute KiCad coordinate frame.** Holes + J20 only mate if their XY match across boards. Logic board is mounted component-side-up by **flipping about the vertical centerline x=140** — so everything in the contract is symmetric about x=140 and survives that flip.
 
 ### Locked values (logic board `nova_pcb_v6_logic`, floorplan DONE)
 
@@ -135,7 +135,7 @@ The 2-board stack is **face-to-face vertical**, NOT an edge-mate. Logic board on
 
 1. Schematic in KiCad (or Eagle). Reference designators consistent with BOM v3.4.
 2. Footprint placement: keep servo connectors on chassis-facing edge, Jetson connectors on top edge.
-3. Power planes: separate 4-layer stackup (top sig, GND, PWR, bottom sig). Star ground at FE-URT-1.
+3. Power planes: separate 4-layer stackup (top sig, GND, PWR, bottom sig). GND-plane reference (FE-URT-1).
 4. DRC + ERC clean before Gerber export.
 5. PCBWay order: 5 boards (spares + iteration), 2 oz copper, ENIG finish, stencil for SMD.
 6. First-article: hand-populate one board, bench-test every rail before populating others.

@@ -178,7 +178,7 @@ Cost of splitting: +1 buck module (~$32 for D42V55F7), +1 wire harness, +chassis
 
 ## Total battery current at peak
 
-4S LiPo 4000mAh / 14.8V nominal.
+4S LiPo 6000mAh / 14.8V nominal (real packs: Ovonic 4S 6000mAh 120C ×2 per master-bom.md).
 
 **Sustained walk (v1 quadruped, v3.4 split rails):**
 - Leg rail: 8A @ 7.5V = 60W → 4.1A @ 14.8V
@@ -188,11 +188,11 @@ Cost of splitting: +1 buck module (~$32 for D42V55F7), +1 wire harness, +chassis
 - 5V aux: 1.5A @ 5V = 7.5W → 0.5A @ 14.8V
 - **Total: ~14A @ 14.8V** ≈ 205W sustained
 
-**Pack runtime at 14A:** 4000 mAh / 14000 mA = **~17 minutes sustained walking**.
+**Pack runtime at 14A:** 6000 mAh / 14000 mA = **~26 minutes sustained walking**.
 
 This is plausible for a dev session; longer runs need either pack swap (you have two) or stationary intervals.
 
-**Worst-case transient:** sustained + impact ≈ 25-30A briefly. **Class T 30A fuse** (slow-blow) handles without nuisance-tripping AND survives LiPo dead-short (20 kA AIC vs ANL's 6 kA). See [`research/2026-05-17-notes.md`](./research/2026-05-17-notes.md) §9.
+**Worst-case transient:** sustained + impact ≈ 25-30A briefly. **MRBF-30 fuse** (Blue Sea 5191 block, time-delay, OFF-board at the pack) rides the brief transient without nuisance-tripping AND interrupts a LiPo dead-short. This pack's real Isc ≈ 16.8 V ÷ 6–12 mΩ ≈ **1.5–3 kA** vs MRBF's **~9 kA AIC @ 16.8 V → 3–4× margin**. (Supersedes the earlier Class T spec — its 20 kA assumed a 10–20 kA large-bank short this single 4S pack can't reach; MRBF clears it at ⅓ the size/weight. ANL/MIDI/blade banned, 1–6 kA AIC, can fail-to-interrupt.) See [`order-list.md`](./order-list.md) MRBF section + [`research/2026-05-17-notes.md`](./research/2026-05-17-notes.md) §9.
 
 ---
 

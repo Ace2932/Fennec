@@ -7,6 +7,11 @@
 > but the OnShape `leg-vars` parametric workflow describes the rejected V4 doc.
 > Keep this for the clearance method + tolerance reasoning; ignore the OnShape
 > Variable-Studio mechanics unless building chassis parts in OnShape.
+>
+> **leg_v6 note (2026-07-05):** v6 pockets use `CLR_POCKET = 0.45` **drop-in**
+> (servo located by its case-column screws, walls only guide) — deliberately
+> looser than the 0.30 press calibration here, which applies to v5-style
+> carved press pockets and bearing seats only.
 
 How to design your own brackets in OnShape that **stay fit-correct** when STS3215 dims change (e.g., new servo batch arrives with ±0.1 mm tolerance shift). Built around the existing `leg-vars` Variable Studio in `NovaSM3-Leg-V4` doc.
 
@@ -21,7 +26,7 @@ Variable Studio `leg-vars` (element id `0dc53880d81b63d47a7402ff` in doc `dc7221
 | `sts_body_l` | 45.40 mm | STEP `STS3215_03a v1.step`, body long axis |
 | `sts_body_w` | 24.80 mm | STEP, body short axis |
 | `sts_body_h` | 34.30 mm | STEP, **between horn-disc faces** (NOT bbox z) |
-| `sts_bbox_z` | 39.60 mm | full bbox z including both horn discs |
+| `sts_bbox_z` | 39.60 mm | full bbox z including both horn discs — **SUPERSEDED 2026-07-10: real CALIPERED total is 39.1 mm** (0.5 mm less; fixed in commit 52d387f) |
 | `sts_spline_x` | 12.50 mm | spline X offset from body center (CRITICAL) |
 | `horn_disc_od` | 20.0 mm | top horn disc OD |
 | `horn_bcd` | 14.0 mm | horn screw bolt-circle dia |
@@ -202,6 +207,6 @@ That's the parametric workflow.
 
 - `dimensions.md` — canonical STS3215 STEP-verified dims (single source of truth — variables mirror these)
 - `patterns.md` — CadQuery macros for the same dims (for non-OnShape utility parts)
-- `leg_v5/README.md` — canonical leg design (V5 OpenSCAD); pulls `CLR_BODY` from this file
+- `leg_v6/README.md` — canonical leg design (V6 OpenSCAD designed-for-assembly); pulls `CLR_POCKET` drop-in clearance, superseding this file's `CLR_BODY` press-fit calibration for leg pockets
 - `archive/leg_v4/README.md` — rejected V4 OnShape build summary (hardcoded, pre-parametric)
 - Jarvis OnShape MCP skill at `~/.claude/plugins/cache/jarvis-onshape-mcp/jarvis-onshape-mcp/1.2.0/skills/onshape/SKILL.md` — full OnShape MCP protocol reference

@@ -2,14 +2,20 @@
 
 Per docs/notes-qol-features.md §3 the limits come from the URDF
 `<limit lower upper effort velocity>` tags. Until the URDF exists,
-this file provides hand-tuned conservative defaults that match the
-bus IDs in firmware/teensy/firmware/README.md:
+this file provides hand-tuned conservative defaults keyed to the canonical
+PER-LEG-SEQUENTIAL bus-ID map (nova_description/config/joint_id_map.yaml,
+decided 2026-06-27 — each leg = haa,hfe,kfe in ID order):
 
-  IDs 1..4   = hip abduction (30 kg STS3215)
-  IDs 5..8   = thigh flexion (19 kg)
-  IDs 9..12  = knee (19 kg)
-  IDs 13..18 = arm (Phase 4 reserved)
+  ID%3==1  (1,4,7,10)  = haa  hip abduction (coxa, 30 kg STS3215)
+  ID%3==2  (2,5,8,11)  = hfe  thigh flexion (femur, 19 kg)
+  ID%3==0  (3,6,9,12)  = kfe  knee (tibia, 19 kg)
+  IDs 13..18           = arm (Phase 4 reserved)
+
+WARNING: this was previously type-grouped (1-4 hip / 5-8 thigh / 9-12 knee),
+which applied the WRONG joint-type limit to most IDs under the per-leg map
+(e.g. ID2 got a ±45° hip limit but is actually a femur). Fixed 2026-06-27.
 """
+
 import math
 from dataclasses import dataclass
 from typing import Dict, Iterable, Optional
@@ -19,6 +25,7 @@ from typing import Dict, Iterable, Optional
 class JointLimit:
     """URDF-style joint limit. Angles in radians, velocity in rad/s,
     effort dimensionless (% of STS3215 stall, 0..1)."""
+
     lower: float
     upper: float
     velocity: float
@@ -40,32 +47,96 @@ class JointLimit:
 # Angles in radians. STS3215 supports ±180° physically but the leg
 # kinematics constrain a much smaller range; pick ranges that won't
 # crash linkages at first walk.
-def _hip_abduction() -> JointLimit:
-    # ±45 deg lateral splay around neutral
-    return JointLimit(
-        lower=math.radians(-45.0), upper=math.radians(45.0),
-        velocity=math.radians(180.0), effort=0.70)
+# Per-haa-ID INBOARD sign in the *servo command frame* (the frame
+# /joint_commands positions are expressed in): +1 = increasing command
+# swings that leg toward the belly, -1 = decreasing does. UNKNOWN until
+# homing calibration observes real motion — the config.py search_dirs
+# are placeholders and encode "safe stop direction", NOT inboard.
+# While a sign is None its haa gets the CONSERVATIVE SYMMETRIC ±15 deg
+# (the chassis gate's inboard cap: belly-pack contact from ~18 deg at
+# any hfe fold >= 30). Filling the sign unlocks the asymmetric
+# 15-inboard / 40-outboard gate ROM. Splay choreography needs >15
+# outboard, so fill these AT homing calibration (firmware-limits lane,
+# closed 2026-07-06; signs pending hardware).
+HAA_INBOARD_SIGN: Dict[int, Optional[int]] = {1: None, 4: None, 7: None, 10: None}
+
+_HAA_INBOARD_CAP = math.radians(15.0)  # chassis-gate inboard cap
+_HAA_OUTBOARD_CAP = math.radians(40.0)  # chassis-gate outboard cap
 
 
-def _thigh_flexion() -> JointLimit:
-    # -30 deg (forward) to +90 deg (rear-up). Mammalian quadruped range.
+def _hip_abduction(joint_id: int) -> JointLimit:
+    sign = HAA_INBOARD_SIGN.get(joint_id)
+    if sign is None:
+        # unknown direction -> both ways get the inboard cap
+        lower, upper = -_HAA_INBOARD_CAP, _HAA_INBOARD_CAP
+    elif sign > 0:
+        lower, upper = -_HAA_OUTBOARD_CAP, _HAA_INBOARD_CAP
+    else:
+        lower, upper = -_HAA_INBOARD_CAP, _HAA_OUTBOARD_CAP
     return JointLimit(
-        lower=math.radians(-30.0), upper=math.radians(90.0),
-        velocity=math.radians(220.0), effort=0.70)
+        lower=lower,
+        upper=upper,
+        velocity=math.radians(180.0),
+        effort=0.70,
+    )
+
+
+def _thigh_flexion(front: bool) -> JointLimit:
+    # URDF-derived (nova.urdf.xacro hfe_fold/hfe_ext/hfe_ext_front): fold
+    # (+, toward-trunk) caps at +50 deg for ALL four legs (hfe_fold=0.873
+    # rad — tibia flank grazes the riser skirt from ~+55).
+    # LA-12 FIX 2026-07-11: was a flat -30..+90 placeholder, ~40 deg beyond
+    # the true +50 fold cap on every leg and blind to the front/rear split.
+    #
+    # Away-trunk (-, forward protraction): LA-13 (2026-07-11) introduced a
+    # tighter -50 deg FRONT cap (hfe IDs 2=FL, 5=FR) on the theory that a
+    # -86 front reach hits the forward integrated head (D456 face / L2
+    # crown). #47 (2026-07-11, MEASURED — hardware/cad/chassis/
+    # head_cap_sweep.py): a FINE hfe sweep of the front leg vs the REAL
+    # head assembly (head.stl, l2_adapter.stl, head_ear.stl/_L.stl, plus
+    # convex hulls of the non-watertight l2_ref.stl/d456_ref.stl) found
+    # ZERO contact anywhere in the front leg's structurally-reachable hfe
+    # range (past leg_v6's own measured ~93deg self-collision mech stop),
+    # min clearance ~34mm at legal haa. The -50 cap was set the SAME DAY
+    # the head moved forward onto the front-shoulder deck and was never
+    # re-validated after that move — stale, not conservative-by-design.
+    # FRONT and REAR now share the same real governing constraint (leg
+    # self-collision, LA-19: clean to 92.5deg, first contact 93deg) —
+    # `front` is kept as a parameter (not collapsed away) so a future
+    # head-position change has one obvious place to reintroduce a split.
+    lower = -86.0 if front else -86.0
+    return JointLimit(
+        lower=math.radians(lower),
+        upper=math.radians(50.0),
+        velocity=math.radians(220.0),
+        effort=0.70,
+    )
 
 
 def _knee() -> JointLimit:
-    # 0 deg (straight) to 130 deg (folded). Never lock to 0.
+    # URDF-derived (nova.urdf.xacro kfe_range=1.9 rad = 108.86 deg ~= 109 deg,
+    # matching leg_ik.LegParams.kfe_range and the chassis/leg_v6 check_fit
+    # sweep gates, which test kfe software limit at +-109 and treat +-118 as
+    # the measured mechanical stop). LA-11 FIX 2026-07-11: was 130 deg, above
+    # the ~113-115 deg CAD plastic-contact sweep and the 109 sw ROM used
+    # everywhere else — would have crashed the knee into its hard stop.
+    # Never lock to 0 (lower margin unchanged).
     return JointLimit(
-        lower=math.radians(5.0), upper=math.radians(130.0),
-        velocity=math.radians(240.0), effort=0.70)
+        lower=math.radians(5.0),
+        upper=math.radians(109.0),
+        velocity=math.radians(240.0),
+        effort=0.70,
+    )
 
 
 def _arm_placeholder() -> JointLimit:
     # Phase 4 — wide-open default until arm install
     return JointLimit(
-        lower=math.radians(-150.0), upper=math.radians(150.0),
-        velocity=math.radians(180.0), effort=0.60)
+        lower=math.radians(-150.0),
+        upper=math.radians(150.0),
+        velocity=math.radians(180.0),
+        effort=0.60,
+    )
 
 
 class JointLimits:
@@ -88,12 +159,13 @@ def load_default_limits(include_arm: bool = False) -> JointLimits:
     """Return the v1 active leg limits (IDs 1..12). Pass include_arm=True
     to also populate IDs 13..18 with placeholders (Phase 4)."""
     table: Dict[int, JointLimit] = {}
-    for i in range(1, 5):     # 1..4 hip abduction
-        table[i] = _hip_abduction()
-    for i in range(5, 9):     # 5..8 thigh flexion
-        table[i] = _thigh_flexion()
-    for i in range(9, 13):    # 9..12 knee
-        table[i] = _knee()
+    # PER-LEG-SEQUENTIAL: each leg = (haa, hfe, kfe) in ID order (FL,FR,RL,RR).
+    for leg in range(4):
+        base = 1 + leg * 3
+        front = leg < 2  # leg 0=FL, 1=FR, 2=RL, 3=RR (joint_id_map.yaml)
+        table[base] = _hip_abduction(base)  # haa  (IDs 1,4,7,10)
+        table[base + 1] = _thigh_flexion(front)  # hfe  (IDs 2,5,8,11)
+        table[base + 2] = _knee()  # kfe  (IDs 3,6,9,12)
     if include_arm:
         for i in range(13, 19):
             table[i] = _arm_placeholder()

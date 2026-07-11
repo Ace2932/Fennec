@@ -68,7 +68,7 @@ Ordering is roughly highest-payoff-per-hour first within each group. All paths a
 /servo_err_timeout                  # 1 Hz
 /servo_err_bad_frame                # 1 Hz
 /servo_err_servo                    # 1 Hz
-/power_rails                        # 10 Hz Float32MultiArray (9 floats — leg/hip/jetson V/A/W)
+/power_rails                        # 10 Hz Float32MultiArray (9 floats leg/hip/jetson V/A/W; 12 with -D NOVA_INA226_L2 → +l2 at [9..11]. Indices 0-8 stable)
 /estop                              # edge — Bool, raw GPIO
 /battery_low                        # edge — Bool, raw GPIO
 /safety_state                       # edge — Int32, latched FSM (0=NORMAL 1=ESTOP 2=BATT_LOW 3=FAULT)
@@ -317,13 +317,13 @@ Use `jtop` (the `jetson-stats` Python package) rather than parsing `tegrastats` 
 **Option A — sum-of-rails proxy (cheapest, ships with current hardware):**
 
 - Approximate battery input current as `(leg_w + hip_w + jetson_w) / V_batt_assumed`, where `V_batt_assumed` is a static 14.8 V (nominal). Sources for the three rails: `/power_rails` `Float32MultiArray` indices 2 / 5 / 8 at 10 Hz.
-- Integrate to Ah consumed. Subtract from usable capacity (`4000 mAh × 0.9 = 3600 mAh` to LVC).
+- Integrate to Ah consumed. Subtract from usable capacity (`6000 mAh × 0.9 = 5400 mAh` to LVC).
 - **Accuracy caveats:** doesn't include buck losses (5-15% depending on load), doesn't include the 5V UBEC + L2 dedicated buck, doesn't react to actual pack voltage sag. Expect ±15-20% error on "minutes remaining." Good enough for "should I start this 10-min test on a 5-min-remaining estimate?" — not good enough for precise telemetry.
 - Reset point: bringup assumes 100% if user confirms a freshly-charged pack (no way to measure rest voltage). Add a `--soc=NN` flag to override on bringup.
 
 **Option B — add a 4th INA226 on the battery feed (clean fix, ~$5 + bench time):**
 
-- The firmware already has `NOVA_INA226_L2` as a 4th-rail opt-in build flag. Same pattern: define `NOVA_INA226_BATTERY`, hook one more chip onto the existing I²C bus (address 0x45 or 0x46), wire its shunt before the Class T fuse. PCB v6 has the bus footprint; a bench-wired add-on works for v1.
+- The firmware already has `NOVA_INA226_L2` as a 4th-rail opt-in build flag. Same pattern: define `NOVA_INA226_BATTERY`, hook one more chip onto the existing I²C bus (address 0x45 or 0x46), wire its shunt before the MRBF-30 fuse. PCB v6 has the bus footprint; a bench-wired add-on works for v1.
 - Once present: actual battery current + voltage. Coulomb counting becomes meaningful (±3-5% with a few cycles of cal). Reset point becomes "voltage at rest >16.6 V → 100%."
 - **Recommend B before investing in v2 below.** Without it, every refinement is layered on top of a ±20% proxy.
 

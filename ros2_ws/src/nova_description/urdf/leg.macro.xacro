@@ -21,7 +21,11 @@
       <child  link="${leg}_hip"/>
       <origin xyz="${mount_x} ${mount_y} ${mount_z}" rpy="0 0 0"/>
       <axis xyz="1 0 0"/>
-      <limit lower="${-haa_range}" upper="${haa_range}"
+      <!-- asymmetric gate ROM: inboard 15 / outboard 40 (chassis gate).
+           +roll swings feet toward +y: inboard for RIGHT (reflect -1),
+           outboard for LEFT (reflect +1). -->
+      <limit lower="${-haa_in if reflect == 1 else -haa_out}"
+             upper="${haa_out if reflect == 1 else haa_in}"
              effort="${eff_hip}" velocity="${vel_servo}"/>
     </joint>
     <link name="${leg}_hip">
@@ -41,7 +45,14 @@
       <child  link="${leg}_upper"/>
       <origin xyz="${hip_to_upper_x} ${reflect*hip_to_upper_y} ${hip_to_upper_z}" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
-      <limit lower="${-hfe_range}" upper="${hfe_range}"
+      <!-- gate ROM: toward-trunk +50 (both) .. away-trunk -86 (both — #47
+           MEASURED 2026-07-11: front head clearance is not the binding
+           constraint, leg self-collision is; see nova.urdf.xacro's
+           hfe_ext_front comment). Still keyed per-leg via hfe_ext_front so
+           a future head-position change only needs one property changed
+           (sign mapping ⚠ VERIFY IN SIM — see nova.urdf.xacro). -->
+      <limit lower="${-hfe_ext_front if leg[0] == 'F' else -hfe_ext}"
+             upper="${hfe_fold}"
              effort="${eff_leg}" velocity="${vel_servo}"/>
     </joint>
     <link name="${leg}_upper">
@@ -58,7 +69,7 @@
     <joint name="${leg}_kfe" type="revolute">
       <parent link="${leg}_upper"/>
       <child  link="${leg}_lower"/>
-      <origin xyz="${upper_to_lower_x} 0 ${upper_to_lower_z}" rpy="0 0 0"/>
+      <origin xyz="${upper_to_lower_x} ${reflect*upper_to_lower_y} ${upper_to_lower_z}" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
       <limit lower="${-kfe_range}" upper="${kfe_range}"
              effort="${eff_leg}" velocity="${vel_servo}"/>
@@ -77,7 +88,7 @@
     <joint name="${leg}_foot_joint" type="fixed">
       <parent link="${leg}_lower"/>
       <child  link="${leg}_foot"/>
-      <origin xyz="${lower_to_foot_x} 0 ${lower_to_foot_z}" rpy="0 0 0"/>
+      <origin xyz="${lower_to_foot_x} ${reflect*lower_to_foot_y} ${lower_to_foot_z}" rpy="0 0 0"/>
     </joint>
     <link name="${leg}_foot">
       <visual>

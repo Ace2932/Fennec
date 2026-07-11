@@ -6,46 +6,12 @@
 	(paper "A4")
 	(lib_symbols)
 	(sheet
-		(at 38.1 38.1)
-		(size 88.9 25.4)
-		(fields_autoplaced yes)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(fill
-			(color 0 0 0 0.0000)
-		)
-		(uuid "ef143087-bea8-42bd-8bca-c15c2f4ac5f7")
-		(property "Sheetname" "01 Battery Input + Reverse Protection"
-			(at 38.1 37.3884 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left bottom)
-			)
-		)
-		(property "Sheetfile" "01_battery.kicad_sch"
-			(at 38.1 64.0772 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b"
-					(page "2")
-				)
-			)
-		)
-	)
-	(sheet
 		(at 152.4 38.1)
 		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -82,46 +48,12 @@
 		)
 	)
 	(sheet
-		(at 38.1 76.2)
-		(size 88.9 25.4)
-		(fields_autoplaced yes)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(fill
-			(color 0 0 0 0.0000)
-		)
-		(uuid "8f3fe7b3-c0aa-43f7-a2b9-c8492e89dcc9")
-		(property "Sheetname" "03 Servo Bus (star injection)"
-			(at 38.1 75.4884 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left bottom)
-			)
-		)
-		(property "Sheetfile" "03_servo_bus.kicad_sch"
-			(at 38.1 102.1772 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b"
-					(page "4")
-				)
-			)
-		)
-	)
-	(sheet
 		(at 152.4 76.2)
 		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -158,8 +90,12 @@
 		)
 	)
 	(sheet
-		(at 38.1 114.30000000000001)
+		(at 38.1 114.3)
 		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -196,8 +132,96 @@
 		)
 	)
 	(sheet
-		(at 152.4 114.30000000000001)
+		(at 38.1 76.2)
 		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "8f3fe7b3-c0aa-43f7-a2b9-c8492e89dcc9")
+		(property "Sheetname" "03 Servo Bus (star injection)"
+			(at 38.1 75.4884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "03_servo_bus.kicad_sch"
+			(at 38.1 102.1772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 38.1 38.1)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "ef143087-bea8-42bd-8bca-c15c2f4ac5f7")
+		(property "Sheetname" "01 Battery Input + Reverse Protection"
+			(at 38.1 37.3884 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "01_battery.kicad_sch"
+			(at 38.1 64.0772 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 152.4 114.3)
+		(size 88.9 25.4)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -236,24 +260,6 @@
 	(sheet_instances
 		(path "/"
 			(page "1")
-		)
-		(path "/ef143087-bea8-42bd-8bca-c15c2f4ac5f7"
-			(page "2")
-		)
-		(path "/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-			(page "3")
-		)
-		(path "/8f3fe7b3-c0aa-43f7-a2b9-c8492e89dcc9"
-			(page "4")
-		)
-		(path "/38477265-f64f-4f2e-aefb-289b79c664e1"
-			(page "5")
-		)
-		(path "/6edc1b8a-dc4c-428d-8457-a29d39eb3953"
-			(page "6")
-		)
-		(path "/fa111b54-7a85-49af-8eb1-99842a09914c"
-			(page "7")
 		)
 	)
 	(embedded_fonts no)

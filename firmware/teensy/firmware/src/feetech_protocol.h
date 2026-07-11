@@ -43,6 +43,7 @@ enum Sts3215Reg : uint8_t {
   REG_TORQUE_ENABLE        = 0x28,   // RAM,    1 byte (0=off, 1=on)
   REG_GOAL_POSITION_L      = 0x2A,   // RAM,    2 bytes little-endian, 0..4095
   REG_GOAL_VELOCITY_L      = 0x2E,   // RAM,    2 bytes
+  REG_TORQUE_LIMIT_L       = 0x30,   // RAM,    2 bytes, 0..1000 (permille of stall)
   REG_GOAL_ACC             = 0x29,   // RAM,    1 byte
   REG_PRESENT_POSITION_L   = 0x38,   // RAM,    2 bytes (read)
   REG_PRESENT_VELOCITY_L   = 0x3A,   // RAM,    2 bytes (read, signed)

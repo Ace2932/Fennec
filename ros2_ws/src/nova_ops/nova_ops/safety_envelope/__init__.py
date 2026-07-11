@@ -9,11 +9,18 @@ Per docs/notes-qol-features.md §3, option (a) in-process wrapper:
 Mechanical stops + servo torque limits are the LAST line of defense;
 this envelope catches buggy commands BEFORE they hit the bus.
 """
+
 from .limits import JointLimit, JointLimits, load_default_limits
 from .wrapper import SafeJointCommandPublisher
 from .counters import EnvelopeCounters
+from .firmware_limits import JointHomeCalib, build_joint_limits_data
 
 __all__ = [
-    'JointLimit', 'JointLimits', 'load_default_limits',
-    'SafeJointCommandPublisher', 'EnvelopeCounters',
+    "JointLimit",
+    "JointLimits",
+    "load_default_limits",
+    "SafeJointCommandPublisher",
+    "EnvelopeCounters",
+    "JointHomeCalib",
+    "build_joint_limits_data",
 ]

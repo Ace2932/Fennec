@@ -1,26 +1,31 @@
 # Canonical Feetech bus-ID <-> URDF joint-name map for NovaSM3.
-# The firmware/ROS2 stack is ID-based (joint_ids 1-12); this file is the single
-# source of truth tying those IDs to the URDF joint names. The /joint_states
-# bridge + gait controller should consume this.
+# Single source of truth tying the firmware/ROS2 joint_ids (1-12) to the URDF
+# joint names. The /joint_states bridge + gait controller consume this.
 #
-# Physical labeling convention (docs/setup-servos.md): IDs 1-4 = hips,
-# 5-12 = femur/tibia. The per-leg assignment below is the PROPOSED canonical
-# map — verify against the physical servo labels during ID assignment.
+# CONVENTION (decided 2026-06-27): PER-LEG SEQUENTIAL. Walk the daisy chain leg
+# by leg; within each leg the 3 joints in mechanical order haa -> hfe -> kfe:
+#   leg1 FL = IDs 1-3, leg2 FR = 4-6, leg3 RL = 7-9, leg4 RR = 10-12.
+# Matches the physical chain order => least error-prone ID assignment.
+# Joint NAMES use the URDF convention haa/hfe/kfe (nova.urdf.xacro):
+#   haa = hip abduction (coxa), hfe = hip flexion (femur/thigh), kfe = knee (tibia).
+#
+# ⚠️ POWER NOTE: hips (haa) are now IDs 1,4,7,10 — NOT a contiguous 1-4 block.
+# The dual-voltage harness powers each servo by PHYSICAL position (12V to each
+# haa, 7.5V to each hfe/kfe), independent of ID. The old "IDs 1-4 = hips on 12V"
+# shorthand in wiring/setup-servos docs is SUPERSEDED by this map.
 #
 # IDs 13-18 reserved for the Phase-4 arm (not in this quadruped URDF).
 
 joint_id_map:
-  # hip ab/ad (HAA) — coax servos, 12V rail, IDs 1-4
   FL_haa: 1
-  FR_haa: 2
-  RL_haa: 3
-  RR_haa: 4
-  # hip flex (HFE) + knee (KFE) — femur/tibia servos, 7.5V rail, IDs 5-12
-  FL_hfe: 5
-  FL_kfe: 6
-  FR_hfe: 7
-  FR_kfe: 8
-  RL_hfe: 9
-  RL_kfe: 10
+  FL_hfe: 2
+  FL_kfe: 3
+  FR_haa: 4
+  FR_hfe: 5
+  FR_kfe: 6
+  RL_haa: 7
+  RL_hfe: 8
+  RL_kfe: 9
+  RR_haa: 10
   RR_hfe: 11
   RR_kfe: 12

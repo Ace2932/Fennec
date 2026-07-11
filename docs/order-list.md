@@ -53,7 +53,7 @@ Full multi-phase, both-board audit. Both boards are routed + DRC-clean (logic: 0
 - 🔴 **IDC box header 2×06 2.54 shrouded ×2** (J20 on *each* board) + **12-way ribbon** + 2 IDC receptacle ends (mezzanine link — currently have zero; pair required, two males can't mate)
 - 2.54 pin-header breakaway strip ×1 (Sullins PRPC040SAAN) — covers pwr J2/M1 + logic J10/J21/J9/JP1
 - 2.54 shorting jumpers ×3 (JP_BUS_MASTER, logic JP1)
-- 🔴 **SW1 15–20A screw block** (KF301-16A / Phoenix MKDS — kit block is 10A, SW1 carries ~15A) *(DigiKey or Amazon)*
+- ✅ **SW1 screw block → TB007-508-02BE — ORDERED ×10 (2026-06-22)** (DK 102-6203-ND, 16A UL / 18A IEC, 5.08mm, **14mm tall — fits 20mm gap**, fits TB132; replaces OOS MKDS). 1 for SW1 + spares; SW2 = existing kit block. Matches the ~18A Contura switch. Drill 1.2→1.5mm tweak queued for Q1 pass.
 
 **TVS (off-board, power rails incl. Phase-4 arm)**
 - SMBJ8.5A ×5 (2 leg + 1 arm Phase-4 + spares) · SMBJ13A ×5 (hip + L2 + spares) — cathode band to +, across injection XT30 pigtails
@@ -69,6 +69,83 @@ Both boards DRC-clean → no design churn pulling new parts; pending power edits
 
 ---
 
+## 🆕 2026-06-18 — cart audit (actual DigiKey cart vs the FINAL list above)
+
+Audited the in-progress DigiKey cart against §A. **Cart deviates — fix before checkout:**
+
+🔴 **Wrong part in cart:** had **SN74HC125D** (DK 296-1192-5-ND) — plain HC, **NOT 5V-tolerant**. Servo bus is 5V-TTL into a 3.3V-powered buffer → HC inputs over-driven. Replace with **SN74LVC125AD, DK 296-8453-5-ND** (74LVC, supply 1.65–3.6V, SOIC-14, 5V-tolerant inputs). Qty 5–10. *(Verified against datasheet 2026-06-18.)*
+
+🟢 **Prior DigiKey order ($25.85, ×10 each) CONFIRMED covers:** LM393DR · BSS138 · 470µF/25V (UPW1E471MPD) · 100nF (CC0603) · **BHR-12-VUA J20 box headers** · SRR1260-220M (L1) · PRPC040 strip · full power-board 0603 R-set (10k/100k/4.7k/22k/470k/1M + **11.3k & 12.1k 1% trips**) · JST B3B-XH-A.
+
+✅ **ORDERED 2026-06-22:** SMBJ8.5A/SMBJ13A TVS · Teensy/Nano sockets (PPTC241/151) · J20 ribbon (IDSD-06-D-09.00).
+
+⚠️ **Stock resolution (2026-06-22):**
+- **1kΩ + 22Ω 0603 — Yageo originals BACK IN STOCK** (311-1.00KHRCT-ND / 311-22.0HRCT-ND, immediate, ~$0.025 ea) → **use originals** (orig spec, cheaper). Vishay CRCW06031K00FKEAC (541-3949-1-ND) / CRCW060322R0FKEA (541-22.0HCT-ND) kept as **documented drop-in fallback** if Yageo lapses again.
+- **SW1 block — MKDS 277-1263 still OOS (17-wk)** → substitute **TB007-508-02BE — ✅ ORDERED ×10 (2026-06-22)** (102-6203-ND, $0.53 ea). 16A UL / **18A IEC**, 5.08mm, **body 14mm tall → clears 20mm mezzanine gap (edge-mounted, screw/wire in open air)**, fits TB132 — **needs SW1 drill 1.2→1.5mm tweak (Q1 board pass)**. Matches ~18A Contura switch; NOT a 30A swap (fuse is kA-short protection, switch caps path at ~18A). 1 for SW1 + 9 spares (can populate SW1 on multiple ×5 fab boards).
+
+✅ **ORDERED 2026-06-22 — logic-board parts (were in NEITHER prior order; DK# verified 2026-06-18):**
+| Part | DK # | Mfr P/N | Qty | Ref |
+|---|---|---|---|---|
+| SN74LVC125AD (SOIC-14) | 296-8453-5-ND | SN74LVC125AD | 5 | U7 (HC→LVC swap) |
+| 1kΩ 0603 1% | 311-1.00KHRCT-ND | RC0603FR-071KL | 10 | logic R2–R6 (OLED SPI) — back in stock; fallback 541-3949-1-ND |
+| 22Ω 0603 1% | 311-22.0HRCT-ND | RC0603FR-0722RL | 10 | logic R1 (bus series) — back in stock; fallback 541-22.0HCT-ND |
+| 600Ω@100MHz ferrite 0603 | 490-5258-1-ND | BLM18KG601SN1D | 10 | logic FB1 (bus integrity) |
+| 2.54 shorting jumper | S9001-ND | SPC02SYAN | 10 | JP_BUS_MASTER + JP1 |
+
+✅ **Confirmed NOT ordered (2026-06-22): SN74HC125D (296-1192-5-ND)** — wrong logic family; the LVC (296-8453-5-ND) is the correct part.
+
+🟠 **Q1 gate-harden parts — C_gs + D1 zener ✅ ORDERED 2026-06-22 (board edit still pending):**
+| Part | DK # | Mfr P/N | Qty | Ref |
+|---|---|---|---|---|
+| 10kΩ 0603 1% | 311-10.0KHRCT-ND | RC0603FR-0710KL | ✅ prior order | R17 (gate series / soft-start) |
+| **0.47µF 0603 X7R 25V** | **1276-2082-1-ND** ✅verified | CL10B474KA8NFNC (Samsung) | 10 ✅ordered | **C_gs (soft-start cap) — NEW.** "474"=470nF (NOT "470"=47pF) |
+| 18V zener **SOD-123F** | **4878-BZT52C18CT-ND** ✅verified | BZT52C18 (Diotec) | 10 ✅ordered | D1 (gate-source clamp, backstop). 500mW, Zzt 45Ω. **Use SOD-123F footprint** (larger than SOD-123). |
+| 100kΩ 0603 1% | 311-100KHRCT-ND | RC0603FR-07100KL | ✅ prior order | R_gs (gate bleed, optional) |
+
+**Q1 protection — ⚠️ MARGINAL, treat as backstop (2026-06-18, revised after deeper analysis):**
+Q1 (IRLB3034) gate = VBAT_PROTECTED, **drain = BATT_NEG (tab/pin2, battery−), source = GND (pin3)** →
+Vgs = gate−source ≈ full pack (≤16.8V), Vgs(max) = **20V** → only **3.2V headroom**. Hot-plug LC ring
+on VBAT (≈5470µF + lead L, no on-board TVS) can ring to ~22–33V → Vgs > 20V → gate-oxide kill.
+
+> **⚠️ Terminal correction (2026-06-27):** earlier text said "source = BATT_NEG" — WRONG. For IRLB3034
+> (G-D-S = pin 1/2/3) the board has **drain = BATT_NEG, source = GND** = the correct low-side reverse-prot
+> orientation (body diode anode=GND/source, cathode=BATT_NEG/drain → blocks a reversed pack). ✅ Board correct.
+> The gate-harden (C_gs/D1/R_gs) ties to **BATT_NEG = drain**, not the literal source — still works: BATT_NEG ≈ GND
+> (≤21mV steady, ≤0.7V during pre-turn-on body-diode conduction) and clamping gate-to-drain bounds Vgs
+> *conservatively* (Vgd ≥ Vgs → zener trips protecting Vgs ≤ Vz). "gate-source" below = gate-to-BATT_NEG in practice.
+
+**PRIMARY fix = gate soft-start on Q1 (prevents the ring at the source):** Q1 is already the pass
+element in the path. Add **C_gs (gate-source cap)** so the gate ramps slowly through R17 → Q1 turns
+on gradually → bulk caps charge gently → **no abrupt step, no LC ring, no overshoot.** Same R17 does
+double duty (soft-start + zener clamp current-limit).
+- **R17 = 10kΩ** (NOT 100Ω/1k). Bigger = tighter zener clamp AND slower ramp. Clamp = Vz + Iz·Zz
+  (Zz≈25Ω): 33V spike → Iz=(33−18)/10k=1.5mA → clamp ≈ **18.04V < 20V ✓**. Gate quiescent drop
+  negligible (gate leakage only). (100Ω→~21V fail; 1k→18.4V ok; 10k→18.04V best.)
+- **C_gs = 470nF.** τ = R17·C_gs = 10k·470n = **4.7ms**. LC ring period = 2π√(LC) ≈ 2π√(1µH·5470µF)
+  ≈ **0.5ms**. Charge ramp (~3–5×... effectively spreads inrush over ~5–15ms) **≫ 0.5ms → overdamped,
+  no ring.** C_gs (470nF) ≫ Ciss (~3nF) so it dominates the ramp.
+- **D1 18V zener = backstop** for any residual transient. Tight (Vz 16.8–19.1V, low corner = full
+  pack) but with soft-start preventing the ring it's rarely exercised.
+- **R_gs 100k (optional)** gate-source bleed → defined gate + discharges C_gs on disconnect (clean
+  turn-off). Q1 turn-off isn't safety-critical (reverse-prot; off when no battery) but good practice.
+- **⚠️ SOA CHECK (gating):** during soft-start Q1 is in linear region dissipating the charge energy
+  **½CV² = ½·5470µF·16.8² ≈ 0.77 J** over the ~5–15ms ramp. Must stay inside IRLB3034's SOA (check
+  the 10ms single-pulse line). If marginal → use a **precharge resistor** (energy in R, not the FET)
+  instead, or slow/speed the ramp. **This sets whether soft-start-on-Q1 is safe vs needs precharge.**
+- **Cleaner alt if SOA fails:** precharge resistor (bypassed after), or gate divider (Vgs→~12V) +
+  smaller zener, or a ±25V-Vgs FET.
+- **BENCH-VALIDATE** the real VBAT transient on the scope (Phase-5) before trusting any of it. Do NOT
+  fab assuming the gate is solved.
+
+✅ **Received since (Amazon):** M3×20 standoffs, MRBF-30 + Blue Sea 5191, 12AWG wire, ring lugs, solder wick, bench gear (PSU / logic analyzer / 1Ω loads).
+
+
+**Mounting-hole isolation:** the **7mm copper keepout** (all 4 holes, all layers) is the fix — with it, the owned **brass M3×20 ×50 (PATIKIL)** are safe on all 4 (no copper under flange/barrel). Nylon at H1 = optional extra, NOT required to order.
+
+**Verify owned before fab:** XT30 ≥18 mating pairs · real 6000mAh pack physical dims (re-measure → `dimensions.md §5` + LiPo pocket, currently flagged).
+
+---
+
 ## 1. Power conversion + charging
 
 ### ISDT 608AC LiPo charger — ~$60 ✅ ORDERED
@@ -76,7 +153,7 @@ Both boards DRC-clean → no design churn pulling new parts; pending power edits
 - On arrival: power up no-battery, verify storage-mode menu works, set LVC alarm to 3.3V/cell = 13.2V
 
 ### LiPo safe bag — ~$15 ✅ ORDERED
-- Fireproof fiberglass bag sized for 4S 4000mAh packs
+- Fireproof fiberglass bag sized for 4S 6000mAh packs (verify owned bag fits the larger pack)
 
 ### XT60 jumper (for 608AC battery input) — $0 ✅ SUPPLIED WITH OVONIC KIT
 - Confirmed in Ovonic 4S LiPo kit. Skip purchase.
@@ -124,15 +201,15 @@ Both boards DRC-clean → no design churn pulling new parts; pending power edits
 - 1× electrolytic cap: 470 µF, 25V
 - Bundle into the next DigiKey / Mouser order to save shipping
 
-### 🔴 Class T 30A fuse + block — ~$40 (CRITICAL GAP found 2026-06-12 state-matrix review)
+### 🔴 MRBF-30 fuse + 5191 block (was: Class T) — ~$40 (CRITICAL GAP found 2026-06-12 state-matrix review)
 Spec'd in PCB README §1 since the beginning, F1 deliberately moved OFF-BOARD 2026-06-04
 (LiPo dead-short = 10–20 kA; only Class T's 20 kA AIC interrupts it — see research notes
 2026-05-17 §9) — **but it never entered this order list.** Right now the battery lead is
 unfused: a chafed wire or dropped tool across VBAT is the one fire-class failure on the robot.
 - ✅ **CHOSEN 2026-06-12: MRBF instead of Class T** — Blue Sea **5191 Surface Mount** block
   ($24) + **Bussmann MRBF-30** fuse (~$10). Engineering note: the 2026-05-17 Class T rationale
-  assumed 10–20 kA short current (large-bank figure); this single 4S 4 Ah pack's real Isc =
-  16.8 V ÷ ~6–12 mΩ ≈ **1.5–3 kA**, vs MRBF's 10 kA AIC (≈9 kA at 16.8 V) → 3–4× margin, at
+  assumed 10–20 kA short current (large-bank figure); this 4S **6 Ah pack (Ovonic ×2, used one at a
+  time — NOT paralleled)** real Isc = 16.8 V ÷ ~4–10 mΩ ≈ **1.7–4 kA**, vs MRBF's 10 kA AIC (≈9 kA at 16.8 V) → 2–5× margin, at
   ⅓ the size/weight of a Class T block — better fit for the chassis. Class T (5007 + JJN-30)
   remains the upgrade path if the pack ever grows or parallels.
 - Install: 5191 screwed to chassis near the pack; battery XT60 pigtail → 10 AWG ring → stud →
@@ -166,8 +243,8 @@ only sink is the bulk caps (1 J into 5000 µF from 7.5 V ≈ 21 V rail — over 
 
 ## 3. Safety + bus-master parts (PCB v6 critical-path)
 
-### 74HC125 quad tri-state buffer (Pattern B half-duplex driver) — ~$1
-- **Primary:** DigiKey / Mouser (SOIC-14, e.g. SN74HC125N)
+### SN74LVC125A quad tri-state buffer (Pattern B half-duplex driver) — ~$1
+- **Primary:** DigiKey / Mouser (SOIC-14, e.g. SN74LVC125AD (NOT plain HC — not 5V-tolerant))
 - **Why:** v1 critical-path. Drives the Feetech bus from the Teensy 4.1 UART. `JP_BUS_MASTER` solder bridge defaults to Pattern B on PCB v6. Buy 5 (cheap, easy to fry, want spares for bring-up).
 
 ### E-stop button (panel-mount, latching, NC contact) — ~$10 ✅ ORDERED
@@ -215,7 +292,7 @@ only sink is the bulk caps (1 J into 5000 µF from 7.5 V ≈ 21 V rail — over 
 | J8 | JST **B3B-XH-A** 1×03 2.5 mm (servo bus TTL) | 1 | DigiKey **455-2247-ND** — [link](https://www.digikey.com/en/products/detail/jst-sales-america-inc/B3B-XH-A/1651046) |
 | J2 + M1 | PinHeader 1×03 + 1×02 2.54 (UBEC aux + voltmeter) | 1 strip | Sullins **`PRPC040SAAN-RC`** 40-pin breakaway, snap to length (covers both) |
 | J20 | IDC box header **2×06 2.54 shrouded vertical THT** (interboard) | 1 | Würth WR-BHD series — [filter](https://www.digikey.com/en/product-highlight/w/wurth-electronics/wr-bhd-series-box-headers-and-idc-connectors), pick 12-pos 2.54 |
-| SW1, SW2 | TB132 footprint = **5mm pitch, 1.2mm drill = standard KF301**. 1×02 PCB screw block | 2 | ✅ **ALREADY HAVE** — Tugermoola 72pc 5mm 2/3/4-pin kit (bought 2026-05-03) has KF301-style 2-pin blocks that drop in. Use 2. ⚠️ Kit rated **10A**; SW2 (mA) fine, **SW1 carries ~15A** → undersized, runs warm. 🔴 NOT OPTIONAL (2026-06-12 review): buy a **15–20 A rated 5 mm-pitch 2-pin block** for SW1 (same KF301/TB132 footprint — search "KF301 16A" or Phoenix MKDS 1.5/2). $3, bundle with next order. |
+| SW1, SW2 | TB132 footprint = **5mm pitch, 1.2mm drill = standard KF301**. 1×02 PCB screw block | 2 | ✅ **ALREADY HAVE** — Tugermoola 72pc 5mm 2/3/4-pin kit (bought 2026-05-03) has KF301-style 2-pin blocks that drop in. Use 2. ⚠️ Kit rated **10A**; SW2 (mA) fine, **SW1 carries ~15A** → undersized, runs warm. 🔴 NOT OPTIONAL (2026-06-12 review): buy a **15–20 A rated 5 mm-pitch 2-pin block** for SW1 (same KF301/TB132 footprint — search "KF301 16A" or Phoenix MKDS 1.5/2). $3, bundle with next order. ✅ **RESOLVED 2026-06-22: TB007-508-02BE** (Same Sky, DK 102-6203-ND, $0.53, 15.8k in stock — 16A UL / **18A IEC** matches the ~18A Contura switch). Datasheet recs Ø1.6 holes vs footprint's Ø1.2; pin ~1.0mm fits 1.2 but **bump SW1 drill 1.2→1.5mm** in the Q1 board pass for clean insertion. NOT a 30A/7.62mm swap — switch caps the path at ~18A, the 30A MRBF is kA-short protection only. |
 
 ### SW1 main power switch (off-board, wires to SW1's TB132)
 - ✅ **CHOSEN (2026-06-08): Blue Sea Systems Contura SPST, "Off-on" style** ($17.40, Prime). Carling VJB1 body.
@@ -337,7 +414,7 @@ Not included: PCB v6 (~$60), arm servo top-up (~$50).
 1. **Bundle by vendor** to minimize shipping (✅ ordered items removed):
    - **Amazon:** INA226 breakouts (if not on DigiKey)
    - **Pololu direct:** D42V55F12 + D42V110F7 + D42V110F12 + D24V22F12 (one shop, free shipping over $100 — $171 bundle qualifies easily)
-   - **DigiKey or Mouser:** LC filter parts (inductor + cap), 74HC125, comparator, MOSFETs, bulk caps — single electronics order
+   - **DigiKey or Mouser:** LC filter parts (inductor + cap), SN74LVC125A, comparator, MOSFETs, bulk caps — single electronics order
    - **Feetech / AliExpress:** servo top-up (separate, slow boat)
    - **PCBWay:** PCB v6 (after design freeze)
 

@@ -6,38 +6,41 @@ Canonical guide to the three-track CAD workflow.
 
 | Task class | Tool | Why |
 |------------|------|-----|
-| **Leg links** — shoulder, coax, femur, tibia | **OpenSCAD original-shell-carve (`hardware/cad/leg_v5/`)** | Keeps the original Chris Locke NovaSM3 outer shape; carves an STS3215 cavity inside via boolean `difference()`. Canonical leg design — beat the OnShape (V4) + CadQuery (V3.1) from-scratch brackets because original geometry mattered. See `leg_v5/README.md`. |
+| **Leg links** — shoulder, coax, femur, tibia | **OpenSCAD designed-for-assembly (`hardware/cad/leg_v6/`)** | Ground-up parts built around the real STS3215 mesh: drop-in pockets, both-discs-bolted joints, cable management, real-mesh fit gate + pose-sweep collision checks. Canonical leg design — supersedes the V5 shell-carve, which had no servo insertion path, no retention, and no serviceable joints. See `leg_v6/README.md`. |
 | **Utility parts** — cable clips, foot pads, panel cutouts, sensor brackets, calibration jigs, single-body adapters | **CadQuery + parametric-3d-printing skill** | Fast iteration; Python; clean STL preview loop; reusable macros in `hardware/cad/patterns.md` |
 | **Chassis + multi-body assemblies** — chassis trunk, sensor-mount-to-chassis interfaces, anything that imports reference STEPs (Jetson, L2, D456) | **OnShape via [Jarvis OnShape MCP](https://github.com/ReshefElisha/jarvis-onshape-mcp)** + FeatureScript | Real BREP, real mates, real interference checks. Claude drives via MCP; ~60 tools + FeatureScript escape hatch for custom features. |
 
-## Leg links — OpenSCAD original-shell-carve (V5, canonical)
+## Leg links — OpenSCAD designed-for-assembly (V6, canonical)
 
-The four leg links are NOT modeled from scratch. They reuse the original
-open-source NovaSM3 STLs (Chris Locke design, sized for ~20 mm hobby servos)
-and carve an STS3215-sized cavity inside via OpenSCAD boolean `difference()`.
-Outer shape, fillets, mount patterns, decorative geometry all preserved.
+The four leg links are ground-up parts designed around the real STS3215 mesh
+(not a carved stock shell). Every servo drops into an open-top pocket located
+by its own case-screw columns; both joint discs (horn + wheel) are bolted, not
+press-fit; cable channels, vents, and side-ID dots are built in.
 
-Sources + STLs live in `hardware/cad/leg_v5/`. Read `leg_v5/README.md` for the
-manifest (9 STLs: shoulder + coax_L/R + femur_shell_L/R + femur_cover_L/R +
-tibia_L/R) and `leg_v5/ITERATE.md` for the placement loop.
+Sources + STLs live in `hardware/cad/leg_v6/`. Read `leg_v6/README.md` for the
+part manifest (coax_L/R, femur_L/R + knee_arm, tibia_L/R, shoulder) and the
+connection/tolerance map.
 
 ```bash
-cd hardware/cad/leg_v5 && ./build_all.sh        # all 9 STLs, ~1 s each
+cd hardware/cad/leg_v6 && ./build_all.sh        # all STLs (R+L) + fit gate
 ```
 
-Cavity placement per part lives in a `CAVITY_CENTER` / `CAVITY_ROT` block at the
-top of each `.scad` (femur's is shared via `femur_params.scad` so shell + cover
-stay synced). STS3215 envelope + reusable cavity/bearing/wire modules are in
-`leg_v5_common.scad`; press-fit clearance comes from `parametric-servo-fit.md`.
+STS3215 envelope + reusable pocket/platform/horn-couple/wheel-boss modules are
+in `leg_v6_common.scad`; drop-in clearance (`CLR_POCKET = 0.45`) comes from
+`parametric-servo-fit.md`.
 
-**Why this beat OnShape (V4) and CadQuery (V3.1):** both built rectangular
-brackets from scratch and lost the original NovaSM3 styling — bigger, blockier,
-all-new mechanical architecture. V5 keeps the original look and only resizes the
-internal pocket. The rejected attempts are parked in `hardware/cad/archive/`.
+**Why this superseded V5 (shell-carve):** V5 reused the original Chris Locke
+NovaSM3 shells and carved an STS3215 cavity inside via boolean `difference()` —
+it kept the original styling but had no real servo insertion path, no
+retention, and no serviceable joints (they were blocks, not leg designs). V6
+starts from the real servo mesh and designs the insertion/retention/service
+path in from the start. V5 is kept at `hardware/cad/leg_v5/` for the
+shape-preserving carve technique and stock-STL provenance; V2-V4 are in
+`hardware/cad/archive/`.
 
-**Not watertight by design** — cavities just feed the TTL daisy-chain and let
-the servo move; no seal needed. First-article every shape (coax X-bbox is tight)
-before batching 4 legs.
+Every build runs `check_fit.py` (real servo mesh sampled against the part
+solid at each pocket pose) + pose-sweep collision checks before the STLs are
+considered gated.
 
 ## Jarvis OnShape MCP — Claude-driven OnShape
 
@@ -52,9 +55,11 @@ model can see the part it just built. License: MIT.
 We already wrestled with the leg V3.1 CadQuery design — body-shell
 booleans, 1mm-overlap fusion bugs, gap-carve through-bodies, manual
 mate transforms in `build_all.py`. That, plus a from-scratch OnShape
-V4 attempt, both lost the original NovaSM3 styling — so the **legs
-ended up on the V5 OpenSCAD original-shell-carve track** (above), not
-here. OnShape's role narrowed to the **chassis + multi-body level**.
+V4 attempt, both lost the original NovaSM3 styling — so the legs first
+landed on a V5 OpenSCAD shell-carve track, then moved to the **V6
+OpenSCAD designed-for-assembly track** (above) once V5's lack of a
+servo insertion path, retention, and serviceable joints became a
+blocker. OnShape's role narrowed to the **chassis + multi-body level**.
 
 For the chassis, Jarvis MCP is still the right tool: real parametric
 BREP, mate relationships, interference checks, multi-body assemblies,
@@ -163,7 +168,7 @@ static bodies so dims drive off real geometry:
 | Feetech STS3215 STEP (from GrabCAD / Feetech) | ✅ available at `~/codebases/NOVA/feetech_servo_models/feetech_sts3215-1.snapshot.6/feetech-sts3215/STS3215_03a v1.step` |
 | Leg V3.1 STEPs (shoulder, coax, femur, tibia, covers) | ✅ at `proj/hardware/cad/archive/leg_v3/*.step` |
 | PCB v6 STEP | 📋 KiCad away-week deliverable |
-| LiPo Ovonic 4S 4000 mAh | ⚠️ approximate box from `dimensions.md` §5 |
+| LiPo Ovonic 4S 6000 mAh 120C | ⚠️ approximate box from `dimensions.md` §5 |
 | 688ZZ bearing | ⚠️ trivial — 8 × 16 × 5 mm flat ring |
 | Pololu D42V110 / D24V22F12 / D42V55F12 | ⚠️ approximate boxes from `dimensions.md` §4 |
 | TP-Link LS105G PCB (case-removed) | ❌ caliper-measure after case removal |
@@ -187,8 +192,9 @@ custom-feature authoring without leaving OnShape.
 
 ## Boundary clarification (cuts down arguments later)
 
-**OpenSCAD V5 = leg links.** Shoulder, coax, femur, tibia. Reuse the
-original NovaSM3 STL, carve an STS3215 cavity inside. `hardware/cad/leg_v5/`.
+**OpenSCAD V6 = leg links.** Shoulder, coax, femur, tibia. Ground-up
+designed-for-assembly parts around the real STS3215 mesh.
+`hardware/cad/leg_v6/`.
 
 **CadQuery / parametric-3d-printing skill = utility parts.**
 Single body, single STL out, single load path. Cable clips, foot pads,
@@ -199,15 +205,14 @@ Multi-body, mates between parts, imports reference STEPs, needs
 interference checks, drives parametric variables for re-spinning
 based on real measured dims.
 
-When in doubt, ask: is it a leg link? → V5 OpenSCAD. One printed part
+When in doubt, ask: is it a leg link? → V6 OpenSCAD. One printed part
 with one orientation? → CadQuery. A multi-piece assembly where the mate
 matters / needs a reference STEP? → OnShape.
 
 ## See also
 
 - `hardware/cad/README.md` — high-level CAD workflow
-- `hardware/cad/leg_v5/README.md` — canonical leg design (manifest + status)
-- `hardware/cad/leg_v5/ITERATE.md` — leg cavity-placement loop
+- `hardware/cad/leg_v6/README.md` — canonical leg design (manifest + status)
 - `hardware/cad/archive/README.md` — superseded leg designs V2/V3/V4
 - `hardware/cad/dimensions.md` — canonical part dimensions (✅/⚠️/❌)
 - `hardware/cad/patterns.md` — CadQuery macros for project parts

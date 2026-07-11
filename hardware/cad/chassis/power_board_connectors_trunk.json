@@ -1,0 +1,114 @@
+[
+  {
+    "ref": "J1",
+    "value": "XT60_4S_IN",
+    "x": -52.75,
+    "y": -32.0,
+    "z_top": 42.62,
+    "face": "up"
+  },
+  {
+    "ref": "J12",
+    "value": "XT30_JET_12V",
+    "x": 47.5,
+    "y": 16.0,
+    "z_top": 39.62,
+    "face": "up"
+  },
+  {
+    "ref": "J13",
+    "value": "XT30_L2_12V",
+    "x": 47.5,
+    "y": 32.0,
+    "z_top": 39.62,
+    "face": "up"
+  },
+  {
+    "ref": "J14",
+    "value": "XT30_Arm7V5",
+    "x": 38.25,
+    "y": 11.75,
+    "z_top": 39.62,
+    "face": "up"
+  },
+  {
+    "ref": "J2",
+    "value": "UBEC_5V_AUX",
+    "x": -13.5,
+    "y": -40.0,
+    "z_top": 35.62,
+    "face": "up"
+  },
+  {
+    "ref": "J20",
+    "value": "IB_2x06",
+    "x": 7.5,
+    "y": 32.89,
+    "z_top": 36.62,
+    "face": "up"
+  },
+  {
+    "ref": "J3",
+    "value": "XT30_Inj",
+    "x": -53.5,
+    "y": -17.25,
+    "z_top": 39.62,
+    "face": "up"
+  },
+  {
+    "ref": "J4",
+    "value": "XT30_Inj",
+    "x": -53.5,
+    "y": 3.55,
+    "z_top": 39.62,
+    "face": "up"
+  },
+  {
+    "ref": "J5",
+    "value": "XT30_Inj",
+    "x": -49.05,
+    "y": 27.0,
+    "z_top": 39.62,
+    "face": "up"
+  },
+  {
+    "ref": "J6",
+    "value": "XT30_Inj",
+    "x": 47.5,
+    "y": -32.25,
+    "z_top": 39.62,
+    "face": "up"
+  },
+  {
+    "ref": "J7",
+    "value": "XT30_Inj",
+    "x": 49.0,
+    "y": -8.0,
+    "z_top": 39.62,
+    "face": "up"
+  },
+  {
+    "ref": "J8",
+    "value": "ServoBus_TTL",
+    "x": 47.5,
+    "y": 5.0,
+    "z_top": 35.62,
+    "face": "up"
+  },
+  {
+    "ref": "SW1",
+    "value": "Rocker_30A",
+    "x": -30.5,
+    "y": -39.0,
+    "z_top": 37.62,
+    "face": "up"
+  },
+  {
+    "ref": "SW2",
+    "value": "Estop_NC_latching",
+    "x": -3.5,
+    "y": -39.0,
+    "z_top": 37.62,
+    "face": "up"
+  }
+]

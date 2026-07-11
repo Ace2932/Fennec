@@ -1,0 +1,34 @@
+# nova-bringup.service — NOVA ROS2 stack under systemd with watchdog.
+# Install (Jetson):
+#   sudo cp deploy/nova-bringup.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now nova-bringup
+# Layers (see nova_ops/watchdog/__init__.py):
+#   Restart=on-failure        -> crash recovery
+#   WatchdogSec + watchdog_node (NotifyAccess=all) -> hang recovery
+#   RuntimeWatchdogSec (system.conf, docs/setup-jetson.md) -> kernel hang reboot
+[Unit]
+Description=NOVA quadruped ROS2 bringup (profile=walk)
+After=network.target jetson_clocks.service
+Wants=jetson_clocks.service
+
+[Service]
+Type=exec
+User=aiden
+# ros2 launch spawns the node tree; any child may feed the watchdog
+NotifyAccess=all
+WatchdogSec=15
+Restart=on-failure
+RestartSec=5
+# throttle restart storms: 4 tries / 2 min, then stay down (operator looks)
+StartLimitIntervalSec=120
+StartLimitBurst=4
+Environment=HOME=/home/aiden
+ExecStart=/bin/bash -lc 'source /opt/ros/humble/setup.bash && \
+  source /home/aiden/ros2_ws/install/local_setup.bash && \
+  exec ros2 launch nova_ops bringup.launch.py profile:=walk'
+# SIGINT gives ros2 launch a clean node teardown before SIGKILL
+KillSignal=SIGINT
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

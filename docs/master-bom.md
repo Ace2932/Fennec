@@ -1,8 +1,8 @@
 # NOVA — Master BOM (all phases)
 
-Single source for parts status across the whole build. Compiled 2026-06-13.
+Single source for parts status across the whole build. Compiled 2026-06-13 · statuses refreshed 2026-07-01 (post board order + Amazon receipt reconciliation).
 
-**Legend:** ✅ owned · 📦 first DigiKey order (received/placed) · 🛒 2nd DigiKey order (2026-06-13) · ⬜ still needed · 🚫 DNP / deferred-populate
+**Legend:** ✅ owned · 📦 first DigiKey order (received/placed) · 🛒 2nd DigiKey order (✅ placed 2026-06-22) · ⬜ still needed · 🚫 DNP / deferred-populate
 
 Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware bring-up (current) ·
 2 gait/walk · 3 SLAM/Nav · 4 VLA + arm.
@@ -15,12 +15,12 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | Arduino Nano ×3 | ✅ | 3-pack |
 | 128 GB microSD | ✅ | JetPack 6.2.x; NVMe deferred (NAND prices) |
 
-## Power board — `nova_pcb_v6_power_v2` (Gerbers cut; PCBWay fab ⬜ pending logic-board routing)
+## Power board — `nova_pcb_v6_power_v2` (✅ ORDERED ×5 — JLCPCB 2026-07-01, 4L/2oz/ENIG, one parcel with logic)
 | Part | Ref | Status |
 |---|---|---|
 | Pololu D42V110F7 / D42V110F12 / D24V22F12 / D42V55F12 | U1–U4 | ✅ |
 | Pololu D42V55F7 (arm rail) | U5 | 🚫 Phase 4 populate-and-go |
-| INA226 module 20A R002 ×4 | U9–U11 | ✅ off-board |
+| INA226 module 20A R002 ×4 | U9–U12 | ✅ off-board (4th = L2 rail @0x45, decided 2026-06-30; arm U12-label = Phase-4. **0 spares — buy 1**) |
 | 1000µF 25V (FymuSing) ×5 | C1–C5 | ✅ |
 | 470µF 25V UPW1E471MPD ×10 | C6/C8/C9 | 📦 |
 | 100nF CC0603 ×10 | C7 (+logic U7 decoupling) | 📦 |
@@ -33,7 +33,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | JST B3B-XH-A ×10 | J8 (+logic J11) | 📦 |
 | IDC BHR-12-VUA ×10 | J20 | 📦 |
 | PRPC040 header strip | J2/M1 (+logic J9/J10/JP1) | 📦 |
-| MKDS 1,5/2-5,08 16A ×3 | SW1 | 🛒 |
+| TB007-508-02BE ×10 (Same Sky, 16A UL/18A IEC) | SW1 | ✅ ordered 2026-06-22 (MKDS 1,5/2 went OOS 17wk → this sub; needs SW1 drill 1.2→1.5mm — done on board) |
 | KF301 kit block (SW2) | SW2 | ✅ |
 | MRBF-30 fuse ×2 + Blue Sea 5191 block | inline | ✅ ordered 2026-06-12 (verify 5191 = single-MRBF terminal variant) |
 | SMBJ8.5A ×10 (leg) + SMBJ13A ×10 (hip/L2) TVS | off-board | 🛒 |
@@ -41,7 +41,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | UBEC 5V/5A ×2 | — | ✅ |
 | E-stop (Mxuteuk) + Blue Sea Contura switch | SW1/SW2 wiring | ✅ |
 
-## Logic board — `nova_pcb_v6_logic` (ROUTED 2026-06-14, DRC 0 errors → PCBWay)
+## Logic board — `nova_pcb_v6_logic` (✅ ORDERED ×5 — JLCPCB 2026-07-01, 4L/1oz/HASL)
 | Part | Ref | Status |
 |---|---|---|
 | **SN74LVC125AD** SOIC-14 ×5 | U7 | 🛒 ⚠️ ORDER LVC NOT HC — 5V-tolerant inputs (servo bus is 5V-TTL; HC at 3.3V isn't 5V-tolerant → servo response over-drives input). Same SOIC-14 pinout, VCC 3.3V (max 3.6V). Sch value was stale "74LS125" (5V TTL, wrong for 3.3V). Changed 2026-06-14. |
@@ -92,12 +92,15 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 | Silicone wire 12 AWG (TUOFENG red/black 20ft) | battery / fuse / switch (~15-18 A) | ✅ ordered 2026-06-13 |
 | Silicone wire 18 AWG stranded | servo-rail injection (7.5-8 A) | ✅ owned (TUOFENG) — 18AWG OK at 8A |
 | Wire 22 AWG solid | I2C / EN / sense | ✅ owned (TUOFENG) — solid, solder don't crimp |
-| Ring terminals 12-10 AWG / 5/16" (M8) | MRBF fuse-block wiring | ⬜ Amazon (AIRIC 50pc; crimp w/ WGGE yellow station) |
+| Ring terminals 12-10 AWG / 5/16" (M8) | MRBF fuse-block wiring | ✅ received (AIRIC 50pc; crimp w/ WGGE yellow station) |
 | Heat-shrink assortment | every XT / TVS / fuse joint | ✅ owned (Ginsco 580pc) |
-| M3 standoffs ~20 mm | mezzanine board-to-board | ⬜ Amazon — Fgruh kit is screws NOT standoffs |
+| M3 standoffs ~20 mm | mezzanine board-to-board | ✅ received (PATIKIL brass M3×20 ×50; safe on all 4 holes — 7mm copper keepout) |
 | M3 screws/nuts/washers | board → chassis | ✅ owned (Fgruh 1220pc) |
+| M3 standoffs 20 mm | power board → floor plate (bucks + de-cased switch live underneath — chassis README §9) | ✅ use the M3×20 ×50 already received (line 97). Corrected 16→20mm 2026-07-09: the ordered Ø10×17 C1–C5 caps need the 20mm gap to clear the floor (check_fit case 11). |
+| Right-angle USB-C (USB 3.x) cable | D456 → Jetson (straight plug doesn't fit the periscope bracket gap) | 🛒 order |
+| Velcro strap ~300 mm | battery pocket rear-corner fence | 🛒 order (or cut from owned roll) |
 | JST-XH plug + crimps | board ↔ servo-bus pigtail | ✅ owned (PEBA crimp+connector kit) |
-| Servo-bus extension cables | leg runs > stock cable length | ⬜ verify (Feetech) |
+| Servo-bus extension cables | leg runs > stock cable length | ✅ ordered 2026-07-01 (Amazon/waveshare 5264-3PIN: 6× 300mm + 6× 900mm, ~$19, arr Jul 9-14). Plan: 900s = chassis run + 3 between-leg links; 300s + the 12 stock in-box servo cables = within-leg links + VCC-pull donors (see wiring README dual-voltage recipe). Top-up trigger: count in-box cables at servo verify — if <12 or pull-mods eat spares, add the mixed 3×300+3×900 pack |
 
 ## Soldering / tools — verify on shelf
 | Item | Status |
@@ -105,7 +108,7 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 | Pinecil V2 iron | ✅ |
 | Thin solder 0.6-0.8 mm | ⬜ verify |
 | Flux | ✅ owned (BEEYUIHF) |
-| Solder wick (2-3mm braid) | ⬜ Amazon — SMD bridge cleanup (sucker owned, but it's THT-only) |
+| Solder wick (2-3mm braid) | ✅ received (Lesnow) — SMD bridge cleanup (sucker owned, but it's THT-only) |
 | Solder sucker | ✅ owned — THT desolder |
 | Crimpers | ✅ WGGE WG-015 (12-10 insulated lugs) · iCrimp (23-10 ferrules) · PEBA (dupont/JST) |
 | USB micro-B cable | ✅ owned (USC) |
@@ -115,10 +118,21 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 Kungber 30V/10A supply · FNIRSI LCR-P1 tester · KeeYees logic analyzer · Chanzon 1Ω+4Ω
 power resistors · Etekcity 800 IR gun. Scope (Rigol DHO804) deferred to Phase-5 servo testing.
 
-## Remaining gaps (verified against Amazon order history 2026-06-13)
-Most prior unknowns RESOLVED as owned (Teensy w/pins, FE-URT-1, flux, heat-shrink, JST-XH+dupont
-kit, M3 screws, WS2812B, OLED, USB micro-B). Only these remain:
-1. **DigiKey cart** — submit (MKDS, TVS ×2, 74HC125, Teensy+Nano sockets, IDSD ribbon)
-2. **M3 ~20 mm standoffs** — Amazon (mezzanine; Fgruh kit is screws not standoffs) — LAST Amazon item
-3. **Leg servo count** — confirm 12 active in hand
-RESOLVED 2026-06-13: wick (Lesnow), rings (AIRIC), MRBF ×2 + 5191, 12AWG wire (TUOFENG), all bench gear ordered.
+## Remaining gaps — refreshed 2026-07-01 (post board order)
+Electronics DONE: both DigiKey orders placed + received (2026-06-22 closed the cart), Amazon batch
+received (standoffs, wick, rings, MRBF+5191, 12AWG, bench gear), **both PCBs ordered ×5 at JLCPCB
+2026-07-01** (~$203 all-in, one parcel, 3-4d build + 2-4d DDP ship).
+
+**🔴 Order now (blocks v1 bring-up, longest leads):**
+1. **Feetech servo daisy/extension cables** — never received; ~15-20 mixed 200/300mm (also the
+   VCC-pull donor stock). AliExpress slow boat → order immediately.
+2. **STS3215 19kg top-up** — count shelf first (~6 of 8 at last audit → buy 2 + 1 spare, ~$75);
+   also confirm 4× 30kg hips in hand (12 active total).
+3. **+1 INA226 20A R002 module** — 0 spares (arm U12 ate the 4th; 4th now = L2). Same GODIYMODULES
+   listing, ~$13.
+
+**🟡 Verify on shelf (buy only if missing):**
+- Thin solder 0.6-0.8mm · XT30 ≥18 genuine-AMASS mating pairs · Blue Sea 5191 = single-MRBF
+  terminal variant · re-measure 6000mAh pack dims (task → `dimensions.md §5`).
+
+**⚪ Phase-4 — do NOT order yet:** D42V55F7 arm buck · 5th INA226 (arm, 0x46) · 6× arm daisy cables.

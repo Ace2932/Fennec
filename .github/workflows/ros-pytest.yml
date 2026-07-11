@@ -29,12 +29,14 @@ jobs:
           python-version: '3.11'
 
       - name: Install pytest
-        run: pip install pytest
+        run: pip install pytest pyyaml   # pyyaml: nova_ops.joint_map loads the joint-ID map YAML
 
       - name: Run package unit tests
         run: |
           set -e
           cd ros2_ws/src
+          SRC=$(pwd)   # so cross-package imports (e.g. nova_locomotion's
+                       # test_controller -> nova_ops.joint_map) resolve
           fail=0
           # test_preflight imports rclpy (it's a ROS integration test that runs
           # on the Jetson) — skip it in this no-ROS runner. Other nova_ops suites
@@ -43,7 +45,7 @@ jobs:
           for pkg in nova_ops nova_calibration nova_locomotion; do
             if [ -d "$pkg/test" ]; then
               echo "::group::$pkg"
-              ( cd "$pkg" && PYTHONPATH=. python -m pytest test/ -q ${IGNORE[$pkg]} ) || fail=1
+              ( cd "$pkg" && PYTHONPATH="$SRC/nova_ops:$SRC/nova_calibration:$SRC/nova_locomotion:." python -m pytest test/ -q ${IGNORE[$pkg]} ) || fail=1
               echo "::endgroup::"
             fi
           done

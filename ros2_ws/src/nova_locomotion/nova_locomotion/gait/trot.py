@@ -24,8 +24,9 @@ PHASE_OFFSET = {"FL": 0.0, "RR": 0.0, "FR": 0.5, "RL": 0.5}
 class TrotParams:
     step_length: float = 0.06  # total fore-aft foot travel (m)
     step_height: float = 0.03  # swing apex lift (m)
-    stand_height: float = 0.18  # nominal hip-to-foot drop (m)  (TODO-CAD)
-    stand_y: float = 0.045  # lateral foot offset = hip_offset (m) (TODO-CAD)
+    stand_height: float = 0.18  # nominal hip-to-foot drop (m) — 76% of measured
+    # full reach (femur 106.9 + tibia 129.0 = 235.9 mm), knee bent ~81°. OK.
+    stand_y: float = 0.0643  # lateral foot offset = hip_offset (m), stock stance
     duty: float = 0.5  # fraction of cycle in stance (0.5 = trot)
 
 
@@ -34,7 +35,12 @@ def _wrap01(p: float) -> float:
 
 
 def foot_target(phase: float, leg: str, p: TrotParams):
-    """Foot (x, y, z) in the leg's hip frame at gait `phase` in [0,1)."""
+    """Foot (x, y, z) in the leg's CANONICAL (left) hip frame, phase [0,1).
+
+    +y is outboard for EVERY leg (right legs included). Convert to
+    physical joint angles ONLY via leg_ik.solve_side(LEG_SIDE[leg], ...),
+    which owns the left/right mirror. Never negate y here.
+    """
     if leg not in PHASE_OFFSET:
         raise KeyError(f"unknown leg {leg!r}")
     lp = _wrap01(phase + PHASE_OFFSET[leg])

@@ -2,7 +2,7 @@
 
 **Last updated:** May 16, 2026
 **Supersedes:** BOM v3.3
-**Status:** v1 scope narrowed to **quadruped only** (12 servos active). Arm (6 STS3215) demoted to Phase 4 future work; bus IDs 13-18 + arm-rail buck footprint reserved on PCB redesign. Power rails redesigned around Pololu modules after XL4016 capacity audit. v3.4 split L2 LiDAR off the hip rail onto a dedicated D24V22F12 buck — combined hip+L2 load was margin-thin at the F12's 9A typ @ 42V Vin (derates further at 14.8V). Full safety scope: LVC alarm + E-stop + INA226 per-rail telemetry + MOSFET hard-cutoff. **Bus master: Pattern B is v1 default** — Teensy 4.1 UART → 74HC125 half-duplex driver → bus. Pattern A (FE-URT-1 → bus) kept as bench/debug fallback via solder bridge.
+**Status:** v1 scope narrowed to **quadruped only** (12 servos active). Arm (6 STS3215) demoted to Phase 4 future work; bus IDs 13-18 + arm-rail buck footprint reserved on PCB redesign. Power rails redesigned around Pololu modules after XL4016 capacity audit. v3.4 split L2 LiDAR off the hip rail onto a dedicated D24V22F12 buck — combined hip+L2 load was margin-thin at the F12's 9A typ @ 42V Vin (derates further at 14.8V). Full safety scope: LVC alarm + E-stop + INA226 per-rail telemetry + MOSFET hard-cutoff. **Bus master: Pattern B is v1 default** — Teensy 4.1 UART → SN74LVC125A half-duplex driver → bus. Pattern A (FE-URT-1 → bus) kept as bench/debug fallback via solder bridge.
 
 ---
 
@@ -29,21 +29,21 @@
 |------|-------|--------|
 | Teensy 4.1 (with pins) | $50 | ✅ Owned |
 | Arduino Nano (ELEGOO 3-pack, CH340) | $15 | ✅ Ordered |
-| ~~NovaSM3 PCB v5.2b~~ → **NovaSM3 PCB v6 — 2-board mezzanine** (power + logic, 4-layer each) | $60 (est.) | 🆕 Design + order from PCBWay — **two stacked PCBs**: power board (`nova_pcb_v6_power`: battery / rails / servo-bus / safety) + logic board (`nova_pcb_v6_logic`: Teensy / 74HC125 / Nano), joined by the inter-board connector below. Both 4-layer, ~112×90 max. See [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md). |
+| ~~NovaSM3 PCB v5.2b~~ → **NovaSM3 PCB v6 — 2-board mezzanine** (power + logic, 4-layer each) | $60 (est.) | 🆕 Design + order from PCBWay — **two stacked PCBs**: power board (`nova_pcb_v6_power`: battery / rails / servo-bus / safety) + logic board (`nova_pcb_v6_logic`: Teensy / SN74LVC125A / Nano), joined by the inter-board connector below. Both 4-layer, ~112×90 max. See [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md). |
 | **Inter-board connector (mezzanine J20)** — 2× 2×6 shrouded box header (2.54 mm THT) + 12-way IDC ribbon | $4 | 🆕 Order — joins power↔logic across the ~20 mm stack gap. Box-header pair + ribbon, **NOT plain pin headers** (two males can't mate; a 0.1″ header can't span the gap). Carries 7 nets: V5_AUX, +3V3, BUS_SERVO, I2C_SDA/SCL, BATT_LOW, GND. |
 | FE-URT-1 USB→TTL Feetech interface | $20 | ✅ Ordered |
-| **74HC125 quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — **populated on PCB; v1 default active**. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
+| **SN74LVC125A quad tri-state buffer** (Pattern B half-duplex driver) | $1 | 🆕 Order — **must be LVC (5V-tolerant), NOT plain 74HC125**. Populated on PCB; v1 default active. Drives the Feetech bus from Teensy 4.1 UART. Solder bridge `JP_BUS_MASTER` defaults to B; flip to A only for bench bring-up or debug fallback via FE-URT-1. Buy 5 (cheap, easy to fry). |
 | **E-stop button (Mxuteuk HB2-ES544, 22mm latching, 2× NC)** | $10 | ✅ Ordered |
 | **INA226 current/voltage monitor × 3** | $9 | 🆕 Order — one per active rail (leg 7.5V, hip 12V, Jetson 12V). **All 3 as identical 2 mΩ breakout modules** (THT headers; module onboard shunt — no bare VSSOP-10 chip / external 2512 shunt). Must be a 2 mΩ board; 0.1 Ω "meter" modules saturate >0.8 A. Optional 4th on L2 12V rail if telemetry budget allows. I²C to Teensy. |
 | **Comparator + MOSFET parts for hard-cutoff at 12.4V + graceful-shutdown at 13.0V** | $13 | 🆕 Order — two comparator stages. 13.0V: drives Teensy GPIO → Jetson clean shutdown. 12.4V: autonomous battery-feed cutoff if Jetson didn't shut down. ~$3 extra for the second comparator + divider. |
 
 **Feetech bus architecture: Pattern B is v1 default.**
-- **Pattern B (v1 active):** Teensy 4.1 hardware UART → 74HC125 half-duplex driver → 12-servo TTL bus. Bare-metal real-time. Jetson sends joint targets via micro-ROS over USB; Teensy translates to bus writes at 200-500 Hz. Survives Jetson restarts, kernel preemption, CUDA stalls, journald flushes — none of which affect bus servicing. Solder bridge `JP_BUS_MASTER` defaults to B.
+- **Pattern B (v1 active):** Teensy 4.1 hardware UART → SN74LVC125A half-duplex driver → 12-servo TTL bus. Bare-metal real-time. Jetson sends joint targets via micro-ROS over USB; Teensy translates to bus writes at 200-500 Hz. Survives Jetson restarts, kernel preemption, CUDA stalls, journald flushes — none of which affect bus servicing. Solder bridge `JP_BUS_MASTER` defaults to B.
 - **Pattern A (bench / debug fallback):** FE-URT-1 → USB → Jetson directly drives the bus. Flip `JP_BUS_MASTER` to A for: initial servo ID assignment from a workstation (before Teensy firmware is ready), debug if Teensy firmware misbehaves, or post-mortem inspection of bus traffic. Not the runtime path.
 
 Why B as default (revised from v3.2): Linux is not a real-time OS. USB-CDC latency on Jetson is 1-10 ms typical, 50 ms+ under load (CUDA kernel preemption, kworker spikes). What Pattern B actually buys: **bus servicing is isolated from Linux jitter** — the Teensy guarantees its UART transactions complete on time so individual servo writes/reads don't time out and the bus doesn't error-out from late ACKs. The gait controller still runs on Jetson and publishes targets at 100 Hz, so Jetson's command rate is still Linux-bounded; but the Teensy oversamples at 200-500 Hz against the *last received* target, holding it through Jetson stalls. A 100 ms Linux freeze becomes "robot pauses mid-step" not "bus dies and robot falls." Defaulting to A would force a measure-then-migrate decision in Phase 1; defaulting to B skips that for one $1 IC + Phase 1 firmware work.
 
-Cost of Pattern B as default: 74HC125 must be populated (~$1, already in §2 above) + Teensy firmware becomes a Phase 1 critical-path deliverable (was a Phase 2+ stub).
+Cost of Pattern B as default: SN74LVC125A must be populated (~$1, already in §2 above) + Teensy firmware becomes a Phase 1 critical-path deliverable (was a Phase 2+ stub).
 
 ---
 
@@ -55,7 +55,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 
 | Item | Price | Status |
 |------|-------|--------|
-| 4S LiPo 14.8V 4000mAh (×2) | $130 | ✅ Owned |
+| 4S LiPo 14.8V 6000mAh 120C (×2, Ovonic) | $130 | ✅ Owned |
 | XT60 plug + high-current switch | $15 | ✅ Ordered |
 | Lighted rocker switch 12V | $5 | ✅ Ordered |
 | Mini digital voltmeter | $10 | ✅ Ordered |
@@ -75,7 +75,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 
 | Item | Price | Status |
 |------|-------|--------|
-| **ISDT 608AC charger** | **$60** | ✅ Ordered. AC mode caps ~55W ≈ 75 min for 4S 4000mAh pack. Includes charge / discharge / **storage** modes. |
+| **ISDT 608AC charger** | **$60** | ✅ Ordered. AC mode caps ~55W ≈ 110 min for 4S 6000mAh pack. Includes charge / discharge / **storage** modes. |
 | **LiPo safe bag** | **$15** | ✅ Ordered. |
 | ~~XT60 jumper~~ | $0 | ✅ Supplied with Ovonic 4S kit (confirmed) |
 | ~~XT60 charging lead~~ | $0 | ✅ Supplied with Ovonic 4S kit (confirmed, XT60 ↔ JST-XH 5-pin balance) |
@@ -104,7 +104,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 - MOSFET hard-cutoff: **3.1V/cell = 12.4V** pack (autonomous backstop, comparator-driven, breaks main battery feed). Drops everything including Jetson — but Jetson should have already shut down cleanly per the 13.0V line above.
 - Panel-mount E-stop: NC contact in series with the **servo-rail + L2-rail enable lines** — kills D42V110F7 + D42V110F12 + D24V22F12 outputs (LiDAR stops spinning); Jetson rail stays live for debug + telemetry post-mortem
 - INA226 per active rail (3-4×): I²C → Teensy → ROS 2 diagnostics topic. Leg, hip, Jetson rails mandatory; L2 buck optional 4th if telemetry budget allows.
-- **Class T 30A fuse on battery feed — mounted OFF-board** (inline bolt-down block in the battery→PCB lead near the pack, not on the PCB; F1 removed from `nova_pcb_v6` 2026-06-04). Sized for hip-rail peak ~20A + headroom. ANL was originally specced but its 6 kA interrupt rating is insufficient for LiPo dead-short (10-20 kA peaks possible); true Class T is always a bolt-down block (no 20 kA cable-inline holder exists). Class T provides 20 kA interrupt = 6.7× margin, and at-source placement protects the battery cable too. ~$12-18 vs ANL ~$5-8. See [`docs/research/2026-05-17-notes.md`](../docs/research/2026-05-17-notes.md) §9.
+- **MRBF-30 terminal fuse on battery feed — mounted OFF-board** (Blue Sea 5191 block at the pack, not on the PCB; F1 removed from `nova_pcb_v6` 2026-06-04). 30A time-delay, sized for hip-rail peak ~20A + headroom. ANL was originally specced but its 6 kA interrupt rating can fail-to-interrupt a LiPo dead-short → rejected. Class T (20 kA) was the interim choice, but this single 4S pack's real Isc ≈ 16.8 V ÷ 6–12 mΩ ≈ **1.5–3 kA**, vs MRBF's **~9 kA AIC @ 16.8 V = 3–4× margin** at ⅓ the size/weight → **MRBF chosen 2026-06-12**. At-source placement also protects the battery→PCB cable. ~$24 block + ~$10 fuse. Install: battery XT60 pigtail → 10 AWG ring → 5191 stud → MRBF-30 → output ring → J1 lead. See [`docs/order-list.md`](docs/order-list.md) MRBF section + [`docs/research/2026-05-17-notes.md`](docs/research/2026-05-17-notes.md) §9.
 
 ---
 
@@ -158,11 +158,18 @@ Switch can be pulled out of its case to save ~60% volume inside the chassis if n
 | Item | Price | Status |
 |------|-------|--------|
 | M3/M4/M5/M6 stainless hex screw kit | $35 | ✅ Ordered |
-| 8x16x5mm ball bearings × 8 | $15 | ✅ Ordered |
+| 8x16x5mm ball bearings × 8 | $15 | ✅ Ordered — **SPARE — leg_v6 uses the servo's integral idler wheel, not external 688ZZ (vestigial from leg_v5); repurpose or ignore** |
 | Standoffs, zip ties, heat shrink (assorted) | $30 | ✅ Ordered |
 | **Mezzanine standoffs — 4× M3 × 20 mm M-F brass + 8× M3 screws** | $6 | 🆕 Order — set the power↔logic board gap (clears 16 mm bulk caps + ~15 mm Pololu bucks with margin). Total stack ≈ 41 mm < 46.9 mm trunk. Specific length, separate from the assorted standoffs above. |
 | **Threadlocker (Loctite 243 blue)** | **$8** | 🆕 Order |
 | **Electrical tape + Kapton tape** | **$10** | 🆕 Order |
+| **NYLON M3×10 screws (PA66, ~25 pk)** | **$6** | 🆕 Order — **breakaway fuses** (backlog #2): 4× L2-mast flange (deck inserts) + 4× D456 bracket row. Break ~350 N each → mount pops at ~10 N·m in a faceplant instead of the sensor/riser dying; both stay cable-tethered. HAND-TIGHT only (nylon strips), no threadlocker. Spares = the rest of the pack |
+| **M3 flat washers (DIN 125, ~50 pk)** | **$4** | 🆕 Order — under EVERY head that bears on the stock trunk shell (8× shoulder-flange bolts, 4× foot bolts from below, battery-sandwich heads): spreads load into unknown-material print (load-analysis §6) |
+| **M3×14 countersunk + M3 nyloc ×4** | **$3** | 🆕 Order — shoulder rev4 flange floor feet: csk head flush under the floor, nyloc + washer on the pad (drill Ø3.2 + csk the 4 floor holes at first assembly, floor_plate template) |
+| **ICM-42688-P breakout (SPI/I²C)** | **$12** | 🆕 Order — **dedicated gait IMU near CoM** (backlog #14): D456/L2 IMUs are mast-mounted (high, vibey, breakaway-fused, USB/Ethernet latency) — wrong tool for the 1 kHz balance loop. Rides the existing INA226 I²C bus (0x68, 4 wires) on the mezzanine at x −3.5 ≈ CoM; permanent footprint → v7 respin |
+| **Spiral cable wrap Ø6, 2 m → 3 m** | **$6** (+$1 for the extra metre) | 🆕 Order — covers the free service loops between cable clips (backlog #18, `leg_v6/cable_clip.scad`); hip + knee loops ×4 legs. **2026-07-10: qty bumped to also cover the Jetson −Y `CASE_SLOT` bundle** (DC barrel + RJ45 + USB-C, port-to-bay run, backlog #41) — same spool, no separate line needed. |
+| **EVA foam 3 mm adhesive sheet + felt/kapton tape** | **$8** | 🆕 Order — battery tray floor pad (preloads the 0.8 mm slide-in slack against the shell floor, kills the 510 g rattle) + chafe strips on the shoulder-flange bottom edges over the pack (0.25 gap, integration audit #29) |
+| **100 Ω 5 W resistor (precharge)** | **$2** | 🆕 Order — bridge the main switch (backlog #19): spares the switch contacts from cap-inrush arcing on every battery connect |
 
 ---
 
@@ -216,6 +223,9 @@ a mobile robot. Audio is novelty. Kept: status display + LEDs only.
 | 18AWG silicone wire | $18 | ✅ Ordered |
 | 22AWG hookup wire | $15 | ✅ Ordered |
 | JST / Dupont connector kit | $30 | ✅ Ordered — verify crimper included |
+| **M8 ring terminals, 10 AWG (×4+)** | **$5** | 🆕 Order — 5191 fuse-block stud CALIPERED **M8** (7.8 mm), 2026-07-07. Battery-in + output-out lugs on the 10 AWG feed (battery XT60 pigtail → M8 ring → 5191 stud → MRBF-30 → M8 ring → J1). Get 10 AWG barrel, M8 hole |
+| **Right-angle plug adapters (−Y Jetson ports, backlog #41)** | **$8-12** | 🆕 Order — **3 ports cabled** (confirmed 2026-07-10): 1× DC barrel right-angle **5.5×2.5mm** (V12_JET power in), 1× RJ45 (ethernet) right-angle (L2 LiDAR data), 1× USB-C right-angle (D456). USB-A **dropped — not cabled** on the −Y flank. Turns each cable DOWN at the port instead of sideways off the −Y flank, so it drops straight through the riser's existing −Y `CASE_SLOT` — no cowl needed (`jetson_cowl.scad` retired in place, see `hardware/cad/chassis/jetson_cowl.scad`). Bundle sleeved in spiral wrap (§6, qty-bumped) + strain-relieved by `case_slot_grommet` below. |
+| **case_slot_grommet (TPU, print ×1)** | $0 (filament only) | 🆕 Print — TPU 95A edge liner for the riser −Y `CASE_SLOT`'s cable-bearing edge (backlog #41 follow-up, replaces the retired `jetson_cowl.scad`'s protection role). `hardware/cad/chassis/case_slot_grommet.scad`, ~0.7 g. **✅ UNBLOCKED 2026-07-10 (`0f8fdb1`)**: the riser CASE_SLOT r=4 blowout is fixed + the slot widened to 9mm; the liner clips the new edge (light interference + bottom leg, zip-tie tab = primary retention). Gate clean. Print with the other TPU parts. |
 
 ---
 
@@ -281,7 +291,7 @@ Post-Jetson-flash install list (Phase 1):
 
 3. **Servo bring-up**
    - **ID assignment via Pattern A path** (FE-URT-1 → single servo on bench): can be done pre-PCB (Week 1-2 while waiting for PCB v6) by wiring FE-URT-1 directly to servo, or post-PCB by flipping `JP_BUS_MASTER` to A. Assign IDs **1-12 for v1** (4 hips, 8 femur/tibia), label each. IDs 13-18 reserved for future arm. Use Feetech FD (Windows) or SCServo SDK Python.
-   - **Flip `JP_BUS_MASTER` to Pattern B** (v1 default). Teensy firmware running: micro-ROS + half-duplex driver via 74HC125.
+   - **Flip `JP_BUS_MASTER` to Pattern B** (v1 default). Teensy firmware running: micro-ROS + half-duplex driver via SN74LVC125A.
    - Single-servo test via Teensy: subscribe to `/joint_commands`, publish `/joint_states`. Verify with `ros2 topic echo` from Jetson.
    - Full 12-servo daisy chain: continuity check unpowered, then ping-all powered via Teensy.
    - **Verify Phase 1 acceptance gate.** Two mandatory criteria + one sanity check:
@@ -320,7 +330,7 @@ Post-Jetson-flash install list (Phase 1):
 | LiPo safe bag | $15 | ✅ Ordered |
 | ~~XT60 jumper + charging lead~~ | $0 | ✅ Supplied with Ovonic kit |
 | E-stop (Mxuteuk HB2-ES544) | $10 | ✅ Ordered |
-| **74HC125 + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 |
+| **SN74LVC125A + INA226 ×3 + 2× comparator + MOSFETs + bulk caps** | **$33** | 🆕 |
 | **Subtotal — committed** | **~$333** | $103 on order, $230 still to order |
 
 Savings since v3.4: −$13 (XT60 leads via Ovonic kit), −$15 (Magigoo → Bambu liquid glue), −$30 (**XL4016 ×2 returned for refund 2026-05-18** — no longer sunk), −$10 (DP adapter dropped 2026-05-21, headless SSH). Total dropped $375 → $333 committed + $30 recovered.

@@ -17,26 +17,45 @@ real-world batch variation listed where known.
 
 ---
 
+## 0. Robot envelope (informational)
+
+**LA-27 (2026-07-11):** no total-height/silhouette budget exists anywhere in
+`docs/design-outline.md` or this file — recording one data point here so a
+future crate/doorway constraint has a number to check against. Tallest
+modeled point on the robot: the ear/antenna mast tip (`chassis/head_ear.scad`
+/ `head_ear_L.scad`, antenna boss top) at **z 213** (chassis/trunk frame,
+above the L2 body top at z 196.6). No known constraint conflicts with this
+today — informational only.
+
+---
+
 ## 1. Actuators
 
 ### Feetech STS3215 servo (12V 30 kg + 7.4V 19 kg share same body)
-**Source:** STEP file at `~/codebases/NOVA/feetech_servo_models/feetech_sts3215-1.snapshot.6/feetech-sts3215/STS3215_03a v1.step`
+**AUTHORITY (rev 3 2026-07-10): the spline-frame table in
+`leg_v6/leg_v6_common.scad`** (mesh base = `feetech_servo_models/converted_stl/servo.stl`,
+`STS3215_03a v1` incl. horn+wheel bodies). Spline-relative, shaft = +Z, case
+extends −X. **rev 3: the disc FACES (= the yoke seat planes) were reconciled to
+the CALIPERED disc-to-disc = 35.5 mm — HORN top 17.2→17.75, WHEEL −17.7→−17.75,
+split symmetric about the shaft (commit 52d387f). The old 17.2/−17.7 (34.9 gap)
+was 0.6 mm too narrow.**
 
 | Dim | Value | Status |
 |---|---|---|
-| Body length (long X axis) | 45.40 | ✅ |
-| Body width (Y) | 24.80 | ✅ |
-| Body height (Z, shaft direction, between horn-disc faces) | 34.30 | ✅ (STEP 2026-05-24, top horn Z=+18.7 − bottom horn Z=−15.6 = 34.3) |
-| Total bbox Z (body + both horn discs) | 39.60 | ✅ (STEP 2026-05-24, Z range −19.4 to +20.2) |
-| Spline X offset from body center | **+12.50** | ✅ (CRITICAL — coaxial with bottom shaft) |
-| Spline OD | 6.0 | ✅ |
-| Top horn boss OD × thickness | 8.0 × ~1.0 | ✅ |
-| Top horn disc OD × thickness | 20.0 × 8.8 | ✅ |
-| Bottom horn disc / reaction OD × thickness | 20.0 × 2.1 | ✅ |
-| Bottom reaction shaft OD | 6.0 | ✅ |
-| Horn screw pattern | 4× M2.5 on 13.86 mm BCD, ±45° from cardinal | ✅ (STEP 2026-05-24, holes r=1.25 mm = M2.5 clearance, NOT M3) |
-| Body mount screws | 4× M2.5, **9.9 × 9.9 mm square** centered on spline axis (x=12.5, y=0); holes at (x,y) = {7.55, 17.45}×{±4.95}; present on BOTH shaft-normal faces | ✅ (STEP 2026-06-07, 18× r=1.25 circles extracted; see note 9) |
-| Batch tolerance on body dims | ±0.10 | ✅ (manufacturer spec) |
+| Case box | x −35.2..+10.2 · y ±12.4 · z −15.5..+14.7 | ✅ mesh 2026-07-02 |
+| Rear top cap ridge | to z 17.4 (x −34.8..−28.5, y ±7) | ✅ mesh |
+| Output HORN disc | Ø20 × ~3.05, z 14.7..**17.75** (+boss to 20.2) | ✅ mesh + CALIPER 2026-07-10 |
+| Bottom WHEEL disc | Ø20 × ~2.15, z **−17.75**..−15.6 — **standard-fitted** | ✅ mesh + CALIPER 2026-07-10 |
+| Disc screw pattern (BOTH discs) | 4× M2.5 on Ø14 BCD ±45° + center (horn ctr M3, wheel ctr M2.5) | ✅ mesh |
+| Connector bay | rear-bottom to z −19.4 over x<−5.3, **FULL width ±12.35**; 2× 3-pin sockets mid-body facing rear | ✅ mesh (fit-gate catch) |
+| **REAL case mounting** | the 4 case-screw columns (Ø2 self-tap, heads at the bay): (−8.3, ±10.2) & (−32.8, ±10.25) — use longer M2 through the printed floor | ✅ mesh |
+| Spline offset from body center | +12.50 along the long axis | ✅ |
+| Batch tolerance | ±0.10 | ✅ manufacturer |
+
+> ⚠️ **Corrected 2026-07-02:** the earlier "body mount screws 9.9×9.9 square on
+> both faces" row was a MISREAD of the STEP — those r1.25 circles are the
+> horn/wheel **disc** holes (BCD14 at ±45° ≡ ±4.95 square). Screws driven there
+> thread into nothing. Cost one full pocket redesign; see leg_v6 README rev 2.
 
 ---
 
@@ -49,7 +68,8 @@ real-world batch variation listed where known.
 |---|---|---|
 | Carrier board L × W | 100.0 × 79.4 | ✅ |
 | Mount-hole pattern (rectangular) | 96.5 × 75.4, 4× M3 | ✅ |
-| SOM heatsink height above carrier (top of fan) | ~21.5 | ⚠️ REVIEW — caliper-measure (depends on heatsink rev) |
+| SOM heatsink height above carrier (top of fan) | **34.9** | ✅ CALIPER 2026-07-07 (top of fan above the board; was ~21.5 guess — +13.4). ⚠ heatsink top = 78.2 board plane + 34.9 = **113.1** would POKE the L2 mast plate. **RESOLVED 2026-07-07:** the bespoke tray+hood is retired; the board+heatsink now live in the official case on the deck (case row below), the L2 mast base was compacted into the front strip, and its plate lifted to z113.4. See chassis README "Jetson enclosure decision" + `chassis/place_case.py` |
+| Official Jetson case (OfficialPrintProfile) | **110.3 × 93.9 × 38.2** enclosure; **PORTS on the 93.9-wide END face** (normal along the 110.3 long axis), heatsink block on the OPPOSITE end; hex vents all sides, board mounts inside on its own bosses; bottom vented (mount via 4 solid corners) | ✅ CALIPER 2026-07-07 (mesh said 110.5×95.2×38.5 — use these calipered numbers). Adopted, replaces the bespoke hood |
 | Carrier PCB thickness | 1.6 (standard) | ⚠️ REVIEW |
 | Power barrel jack | 5.5 × 2.5 mm | ✅ |
 | USB-A 3.1 ports | 4× on long edge | ✅ |
@@ -62,9 +82,10 @@ real-world batch variation listed where known.
 
 | Dim | Value | Status |
 |---|---|---|
-| Body L × W × H | 124.0 × 26.0 × 29.0 | ✅ |
-| Mount pattern | 2× M3 tripod-style at body center (90 mm apart) | ⚠️ REVIEW — verify which mount face used (top vs bottom) |
-| Mount alt pattern | 4× M3 on rear panel corners | ⚠️ REVIEW |
+| Body L × W × H | **123.8 × 26.0 × 29.0** | ✅ CALIPER 2026-07-07 (facing forward) |
+| **Mount pattern (back face)** | **2× M3, 94.4 apart** center-to-center, on the back-face centerline (±47.2 along length, width-centered) | ✅ CALIPER 2026-07-07 — the design's guessed 4×-corner (±54) pattern is WRONG, it's these 2 |
+| **Chassis mount** | `chassis/head.scad` — camera seats on a **27° DOWN-tilted** front face (back-face ctr at trunk 70,0,105.5), forward of the chassis so near-ground is in frame (replaces the retired periscope). Right-angle USB-C (BOM) | ✅ 2026-07-07 (head_study.py: 0 leg-sweep hits at front hfe −50) |
+| ~~Mount alt pattern 4×~~ | retired — real back mount is the 2× above | ✅ |
 | IR projector center offset | 14.0 from body centerline | ⚠️ REVIEW |
 | USB 3.1 cable connector | Type-C on rear | ✅ |
 | Cable thickness with shield | ~6.0 (USB-A end) | ⚠️ REVIEW |
@@ -76,11 +97,13 @@ real-world batch variation listed where known.
 |---|---|---|
 | Body W × D × H | 75.0 × 75.0 × 65.0 | ✅ |
 | Weight | 230 g | ✅ |
-| Bottom mount holes | **4× M3 on 22.5 mm square pattern** | ✅ (CORRECTS earlier 50 mm placeholder in patterns.md §8) |
+| Bottom mount holes | **4× M3 on a Ø51 bolt circle** (holes at the 4 diagonals, R25.5·cos45 = ±18 → a 36 mm axis-aligned square), depth 6 | ✅ **CONFIRMED from the manual drawing** (2024.10 v1.1 p10, "L2 Mechanical Dimensions": Ø51 BCD, "4× M3 ▽6"). Matches the model exactly (`l2_adapter.scad`/`head.scad` L2_BCD=18). Supersedes the earlier "22.5 mm square" (wrong — 22.5° is the SLOT clocking angle, not a square) and the "50 mm" placeholder. |
+| Positioning slots | **4× slots, 3.5 mm wide, on Ø60**, clocked 22.5° off the M3 holes | ✅ manual p10 — anti-rotation datum (optional; `l2_adapter` uses the 4× M3 only, no slot pins) |
 | Mount hole thread depth | 6.0 | ✅ |
-| Power barrel | 5.5 × 2.1 mm | ⚠️ REVIEW (manual mentions both 5.5×2.1 and 5.5×2.5 in places) |
+| Power barrel | **3.5 × 1.35 mm** | ✅ CALIPER 2026-07-07 — the OEM connector that SHIPPED with the L2 measures 3.4 OD (3.5×1.35 class); supersedes the manual's ambiguous 5.5×2.1/2.5. The purchased 3.5×1.35 bare-wire pigtail matches → wires to the 12V L2 rail. Mast bore unaffected (molded housing ~Ø8 passes; RJ45 11.7×8 is the binding constraint) |
 | Ethernet | RJ-45 (standard) | ✅ |
 | FoV | 360° × 90° | ✅ |
+| **Chassis mount** | `chassis/head.scad` CROWN via `l2_adapter.scad` — 4× M3 on 36 mm square (±18), bolted from BELOW the crown plate; optical center at trunk z~154 (crown seat top 122). Replaces the retired standalone `l2_mast.scad`. 360° ring clear (nearest structure 36 mm below); rear-down cone blind only below −83° (Jetson case) | ✅ 2026-07-07 (head_study.py) |
 | Self-heat / cold-boot delay | ~30-60 s below 30 °C ambient | ✅ |
 
 ---
@@ -109,7 +132,7 @@ real-world batch variation listed where known.
 | Mount hole pattern | 15.24 × 6.35 (approximate; see datasheet) | ⚠️ REVIEW |
 | PCB thickness | 1.6 | ✅ |
 
-### 74HC125 quad tri-state buffer (Pattern B half-duplex driver)
+### SN74LVC125A quad tri-state buffer (Pattern B half-duplex driver)
 **Source:** TI/Nexperia datasheet
 
 | Dim | Value | Status |
@@ -179,18 +202,29 @@ real-world batch variation listed where known.
 
 ## 5. Battery + safety
 
-### 4S LiPo Ovonic 4000 mAh
+### 4S LiPo Ovonic 6000 mAh 120C
 **Source:** Ovonic product page
 
 | Dim | Value | Status |
 |---|---|---|
-| Pack L × W × H | 110.0 × 35.0 × 30.0 | ⚠️ REVIEW — varies ±5 mm by lot |
-| Weight | ~410 g | ⚠️ REVIEW |
+| Pack L × W × H | **155.0 × 46.8 × 35.0** | ✅ CALIPER 2026-07-07 (width +0.8 vs the 46 listing; L/H matched). battery_pocket CLR tightened 0.8→0.6/side → cavity re-cut, chassis gate re-run clean |
+| Weight | 510 g | ✅ listing (1.12 lb) |
+| Balance lead | JST-XHR-5P (4S) | ✅ listing |
 | Power lead | XT60 (Ovonic kit includes XT60 jumper + balance lead) | ✅ |
 | Balance lead | JST-XH 5-pin (4 cells + 1 GND) | ✅ |
 
 ### ISDT 608AC LiPo charger
 Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
+
+### Blue Sea 5191 MRBF terminal block (battery-lead fuse holder)
+
+| Dim | Value | Status |
+|---|---|---|
+| Body L × W × H | **61.6 × 20.0 × 46.5** | ✅ CALIPER 2026-07-07. **MOUNT = ASSEMBLY-TIME EXTERNAL** (2026-07-07): no clean captive spot exists — belly = leg-crouch space, rear-center = shoulder flange, trunk = mezzanine stack (all gate-verified). Bracket/zip-tie to the rear-shoulder exterior or trunk rear at assembly, near the battery-lead entry |
+| Terminal / fuse tab width | 16.0 (within the 20 width) | ✅ CALIPER 2026-07-07 |
+| Terminal STUD Ø | **7.8** (→ **M8**) | ✅ CALIPER 2026-07-07 — battery + output ring terminals = M8 lugs |
+| Terminal hole Ø | 10.1 | ✅ CALIPER 2026-07-07 — clearance/boot hole around the M8 stud |
+| Base mount hole Ø | **11.1** | ✅ CALIPER 2026-07-07 — the L-bracket foot hole that bolts to the floor plate (big → takes up to ~M10, or a printed post + M6 with a washer; floor_plate gets this hole + a 61.6×20 pocket) |
 
 ### Mxuteuk HB2-ES544 panel-mount E-stop
 **Source:** Mxuteuk product page
@@ -203,7 +237,9 @@ Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 | Contacts | 2× NC | ✅ |
 | Twist-to-release | yes | ✅ |
 
-### Class T 30 A fuse holder
+### Class T 30 A fuse holder — ⚠️ SUPERSEDED 2026-06-12 (fuse is now MRBF-30)
+> Fuse changed to **MRBF-30 in a Blue Sea 5191 terminal block** (off-board, bolts to chassis at the pack — no printed holder needed). The Class-T-holder dims below are obsolete; kept only if a Class T is ever re-adopted (e.g. paralleled packs). Same applies to the `patterns.md` Class-T-holder generator.
+
 **Source:** Bussmann Class T standard
 **Mounting: OFF-BOARD (2026-06-04)** — inline bolt-down block in the battery→PCB XT60 lead near the pack; **not a PCB footprint** (F1 removed from `nova_pcb_v6`). At-source placement protects the battery cable too. Dimensions below are for chassis/lead mounting, not a board cutout.
 
@@ -237,7 +273,60 @@ Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 
 ## 6. Mechanical hardware
 
+### Leg kinematics — axis-to-axis link lengths (B2 pass, 2026-07-01)
+**Source:** original NovaSM3 STLs (leg_v5 preserves stock pivots) via trimesh
+slice-circle bore detection (1 mm slice steps, circle fit σ<0.15 mm). Feeds
+`nova.urdf.xacro` + `leg_ik.LegParams` (guarded by `test_urdf_sync`).
+
+| Dim | Value | Status |
+|---|---|---|
+| Femur length (hfe→kfe axis) | **106.9** | ✅ hfe = STS horn axis (49.5, z10) in LeftFemur local (cavity spline, user-confirmed overlay); kfe = knee bore (−56.71, z22.02) + M2.5-square pattern ctr (−56.72, z22.05). In-plane components Δx 106.21 / Δz 12.02 — 12 mm kink absorbed into hfe zero-cal |
+| Tibia length (kfe→foot post ctr) | **129.0** | ✅ kfe = STS spline (62.5, 0) in RightTibia local (confirmed placement); foot = Ø7 post at (−66.5, 3.3), full-height cylinder z 0–19.3 |
+| Tibia toe-tip extreme (kfe→tip) | 138.0 | ✅ vertex (−75.46, 0.47); foot cap radius ≈ 9 over post ctr |
+| Max leg reach (femur+tibia) | 235.9 | ✅ derived |
+| Hip lateral offset chain (haa→foot plane, IK "d") | **64.3** = 24.6 (haa→hfe) + 9.2 (hfe→kfe) + 30.5 (tibia S-curve) | ✅ MEASURED 2026-07-02 from the official **Assembly_NOVA_SM3 Fusion/A360 share** (novaspotmicro.com embeds it) via viewer instance-tree world transforms — the 25t servo-horn instances mark every joint axis. Front-right leg: haa horn (−31.6, −185.4, −98.6) axis∥Y · hfe horn (−56.2, −155.4, −108.1) axis∥X · kfe horn (−65.4, −79.8, −182.3) · foot ctr (−95.9, −149.5, −285.9) |
+| hfe drop below haa | 9.5 | ✅ same source |
+| Hip grid: haa fore-aft × lateral spacing | **282.4 × 78.1** (half: 141.2 / 39.05) | ✅ same source; front/rear + left/right symmetric about (7.45, −14.2) |
+| Assembly cross-check of femur length | 105.9 (vs 106.9 bore-metric) | ✅ bbox-center precision ±0.7 — bore metric kept |
+| Joint ranges haa/hfe/kfe | 0.7 / 1.5 / 2.2 rad | ⚠️ REVIEW — conservative placeholders, verify vs collision in sim/first-article |
+| hfe sw ROM (chassis gate) | fold **+50°** (both) · protraction **−50° FRONT / −86° REAR** | ✅ 2026-07-07 — FRONT protraction capped −50 so the forward head (head.scad, x70..100 z80..120) clears the front-leg sweep; rear keep −86. Wired: URDF `hfe_ext_front`/`hfe_ext` + `check_fit.py` HEAD case. Gait uses −30..−50, still a strong stride |
+
+### SM3_Foot shoe (stock TREAD CRESCENT on the toe_v2 seat)
+**Source:** mesh survey 2026-07-06 **v3** (`SM3_Foot.stl`, polar slice
+sweep — scripted, supersedes v2's eyeballed radii; v2's "pad setback"
+story remains RETRACTED). Shoe local frame: crescent center (0, +7),
+band axis = z. Angles below = azimuth about the crescent center.
+
+| Dim | Value | Status |
+|---|---|---|
+| Shoe envelope | 37 × 20 × 20 | ✅ mesh |
+| Form | tread crescent in the SWING plane; THREE mating features: inner face, edge lips, 2 key tabs; post hole stays exposed | ✅ mesh + photo |
+| Crescent center (shoe local x,y) | (0, +7.0) → mounts ON the Ø7 post (129, 0) | ✅ mesh |
+| Inner face (core band) | **r 12.53** (min 12.529, p50 12.60), spans z ±7.3 | ✅ mesh v3 |
+| Retention lips | **r 10.35–10.42**, both band edges (z ±7.3..±10), az 209–330 only (band bottom); snap over the seat-disc faces | ✅ mesh v3 |
+| Key tabs (2, L-hooks) | mid-band only, z ±2.4 (4.8 tall); tips reach **r 6.88**; centers at band-ctr ±80.4° (shoe az 189.4 / 350.2); material spans 34.6° / 31° | ✅ mesh v3 |
+| Tread outer radius | ≈ 16.0–16.8 (ribbed) | ✅ mesh |
+| Band angular span | 208° (az 166→14, ctr 270; opening faces the blade neck) | ✅ mesh v3 |
+| Band width | 20 = toe tab thickness 20.1 (flush) | ✅ |
+
+> **toe_v2 seat (tibia.scad)**: core disc r 12.35 × 14.2 (0.18 / 0.2-side
+> clearance, rim-chamfered 1.0 for snap-over) + full-width boss r 10.15
+> under the lips + two sector key pockets (floor r 6.6, half-angle 19°,
+> 6.0 tall, symmetrized about band center so L-mirror fits the same shoe).
+> **Gate: `leg_v6/check_shoe.py`** (sampled shoe mesh vs tibia solid: zero
+> penetration + seat-gap median < 0.4; in build_all.sh).
+>
+> Contact stays plumb under the post (the IK foot point) for any forward
+> lean to ~80°: the tread is a constant-radius band about the post, by
+> construction. Reprint in TPU 95A keeps the same interface.
+>
+> Mount (v6 tibia local): `T(129, 0, −30.5) · rotZ(54°) · T(0, −7, 0)` —
+> **θ = 54 EXACTLY** now (band ctr 270 + 54 = −36 = stance-plumb; the key
+> pockets fix it; residual rotational slop ±~2°).
+
 ### 688ZZ ball bearing
+**RETIRED 2026-07-10 — leg_v6 uses the servo's integral idler wheel, not external bearings (vestigial from leg_v5)**
+
 **Source:** standard deep-groove ball bearing
 
 | Dim | Value | Status |
@@ -248,6 +337,8 @@ Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 | Bore press-fit clearance (PA6-CF) | +0.05 mm OD pocket | ✅ |
 
 ### 6 → 8 mm shaft sleeve adapter
+**RETIRED 2026-07-10 — leg_v6 uses the servo's integral idler wheel, not external bearings (vestigial from leg_v5)**
+
 **Source:** STS3215 bottom shaft is 6 mm; 688ZZ ID is 8 mm. Need 6 mm ID × 8 mm OD × ~5 mm long sleeve.
 
 | Dim | Value | Status |
@@ -274,6 +365,28 @@ Standard ISO 4762 / DIN 912. Heads:
 | M3 × 8 | 5.5 | 3.0 | M3 |
 | M3 × 12 | 5.5 | 3.0 | M3 |
 | M3 × 16 | 5.5 | 3.0 | M3 |
+
+### DIN 965 countersunk (CSK) M3
+**Source:** ISO 7046 / DIN 965 standard
+
+| Dim | Value | Status |
+|---|---|---|
+| Head OD | 6.0 | ✅ |
+| Included angle | 90° | ✅ |
+| Head height | ~1.65 | ✅ |
+| Thread | M3 | ✅ |
+
+### DIN 985 nyloc (nylon-insert lock nut) M3
+**Source:** ISO 10511 / DIN 985 standard
+
+| Dim | Value | Status |
+|---|---|---|
+| Height | ~4.0 | ✅ |
+| Thread | M3 | ✅ |
+
+> **vs plain DIN 934 hex nut (~2.4 mm height):** nyloc is **1.6 mm taller** —
+> that extra height can bind in tight pockets (neck_bracket / shoulder-foot
+> joints). Verify clearance before specifying nyloc in a shallow nut pocket.
 
 ### Loctite 243 (medium-strength blue threadlocker)
 Standard consumable. No mechanical dim. ✅
@@ -511,15 +624,46 @@ mounts. Dims kept here only for future re-introduction reference.
 
 ---
 
+## 11. Stock trunk shell — SM3_Frame_ChassisTrunk
+
+**Source:** mesh survey 2026-07-06 (`chassis/measure_trunk.py` on
+`original_body_files/SM3_Frame_ChassisTrunk.stl`). Frame: floor bottom z=0,
++x = FRONT (the printed "F" arrow), y lateral. **The old "~118×100×40
+interior" assumption was WRONG — the trunk is an open frame, not a tub.**
+The ends are open above the floor (closed at assembly by the v6 shoulder
+flanges); nothing exists above z 29.0 except the four corner wedges.
+
+| Dim | Value | Status |
+|---|---|---|
+| Outer envelope | 127.0 × 110.0 × 46.91 | ✅ mesh |
+| Floor slab top | z 3.9 (large rear + corner cutouts below) | ✅ mesh |
+| Side walls | 6.0 thick; inner faces y ±48.93; **top z 29.0** | ✅ mesh |
+| Side-wall notch | x 18.2..31.2 down to z 12.5, BOTH walls | ✅ mesh |
+| Interior clear width | 97.86 (mezzanine 90 fits, 3.9/side) | ✅ mesh |
+| Corner wedges | 4× leaning slabs (~35°, ~5.7 thick), wall top → plateau | ✅ mesh |
+| Wedge plateau tabs | z 46.91, x ±(53.3..63.5), y ±(29.9..36.0) | ✅ mesh |
+| Wedge windows | ~9.4 × 6.4 under each tab @ ctr (y ±34.5, z 43.5) — stock cover hooks, unused | ✅ mesh |
+| Shoulder bolt bores | Ø3.16 along x at (y ±51.75, z 5.0 & 24.0), 6.5 deep, both ends | ✅ mesh (matches shoulder.scad) |
+| Floor holes (stock mounts) | 3× Ø4 @ (−37.9/−32.9/−27.9, +43.8) · 2× Ø4 @ (−9.1, +28/+33) | ✅ mesh |
+
+> ⚠ **Stack-corner conflict:** the 112-long mezzanine's corners intersect the
+> leaning slabs at |x| 53.3..56 over the slabs' FULL height (z 29..46.9).
+> Disposition: hand-trim the four slab inner ends back to |x| ≥ 56.5 when
+> the fabbed boards arrive (slabs only ever supported the stock covers; the
+> riser seats on the wall tops + plateau tabs). `chassis/check_fit.py`
+> enforces the zone.
+
+---
+
 ## CRITICAL CORRECTIONS
 
 These differ from values currently in `patterns.md` or `nova_sm3_patterns.md`:
 
-1. **L2 LiDAR mount BCD = 22.5 mm**, NOT 50 mm. The earlier 50 mm in `patterns.md` §8 was a placeholder. Update `L2_LIDAR['bolt_circle_d']` from 50.0 → 22.5.
+1. **L2 LiDAR mount = 36 mm square** (±18; ≡ Ø51 bolt-circle at 45°), per the L2 3D model / `l2_adapter.scad`. NOT 22.5 mm, NOT the older 50 mm placeholder. ⚠ physical-measure pending (user to confirm). Update `L2_LIDAR['bolt_circle_d']` to the Ø51-at-45° form.
 2. **STS3215 horn-disc OD = 20 mm**, NOT 25 mm as written in some older notes. STEP file is authoritative.
 3. **STS3215 spline X offset = +12.5 mm** from body center. CRITICAL: every cavity in leg V3.1 reflects this. Old OpenSCAD `coxa.scad` had it at 0 (bug).
 4. **STS3215 horn screws are M2.5, NOT M3.** STEP shows holes at r=1.25 mm (∅2.5 = M2.5 clearance). Older notes / `patterns.md` calling them M3 are wrong. BCD measured at 13.86 mm (call it 14 mm).
-5. **STS3215 body Z (between horn faces) = 34.3 mm**, not 36.8. Older 36.8 figure conflated body height with bbox-including-horn-discs. Bbox total Z = 39.6 (39.6 - 34.3 = 5.3 mm of horn-disc stack on top + bottom). Use 34.3 for bracket pocket depth.
+5. **SUPERSEDED 2026-07-10 — see caliper reconciliation below.** ~~STS3215 body Z (between horn faces) = 34.3 mm~~, not 36.8. Older 36.8 figure conflated body height with bbox-including-horn-discs. ~~Bbox total Z = 39.6~~ (39.6 - 34.3 = 5.3 mm of horn-disc stack on top + bottom). ~~Use 34.3 for bracket pocket depth.~~ **The 34.3 / 34.9 / 36.8 figures are all superseded — the CALIPERED disc-to-disc (the yoke seating faces) = 35.5 mm** (real bbox total Z = 39.1 mm; fixed in commit 52d387f). Use **35.5** going forward.
 6. **patterns.md §3 mount_x_pitch=49 / mount_y_pitch=10 IS WRONG** — body is only 45.4 mm long, so 49 mm pitch is impossible. ✅ **RESOLVED (2026-06-07, see note 9):** STEP inspected — real pattern is a **9.9 × 9.9 mm square** of 4× M2.5, centered on the spline axis. Update `patterns.md` mount macro to this; do NOT use the old 49×10 numbers.
 7. **Pololu buck board sizes in §4 were pre-drawing estimates — all three corrected** from the Pololu dimension drawings (reg19a / reg34a / reg34c): D42V110 = **31.8 × 43.2** (was 25.4×25.4, badly wrong), D24V22 = **17.8 × 17.8** (was 20.3×17.8; also has 2× ⌀2.18 mounts, not "none"), D42V55 = **25.4 × 25.4** (was 22.9×17.8). Chassis buck-carrier pockets must use the corrected sizes. Connector L→R pin orders now recorded per buck — **verify against the physical module before PCB fab** (a wrong order is a coordinate swap in `nova_v6.pretty`).
 8. **Class-T fuse is OFF-board + all 3 INA226 are modules (2026-06-04).** F1 fuse block dropped from the PCB (now an inline block in the battery lead); leg/hip INA226 (U9/U10) changed from bare VSSOP-10 + external 2 mΩ 2512 shunt to the same `INA226_Module_Breakout` U11 uses, and shunts R13/R14 were deleted. Board now carries **zero fine-pitch (VSSOP-10) parts**. Schematic done + ERC-clean; `.kicad_pcb` needs **Update PCB from Schematic (F8)** to realize it.
@@ -535,7 +679,7 @@ When designing a new CAD part:
 2. **If ⚠️ REVIEW, caliper-measure the actual part before committing.**
 3. **If ❌ MISSING, you must measure — no fallback.**
 4. **Add the verification to this file** when you measure — bump ⚠️ to ✅ and cite source (e.g., "caliper 2026-05-24 on Ovonic pack A").
-5. **Cross-reference** with `patterns.md` macros, `leg_v5/leg_v5_common.scad` (canonical leg dims), and `archive/leg_v3/leg_common.py` constants. If they disagree, this file wins.
+5. **Cross-reference** with `patterns.md` macros, `leg_v6/leg_v6_common.scad` (canonical leg dims), and `archive/leg_v3/leg_common.py` constants. If they disagree, this file wins.
 
 ---
 

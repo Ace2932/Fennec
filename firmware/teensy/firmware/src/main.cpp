@@ -173,6 +173,53 @@ volatile uint32_t servo_err_bad_frame = 0;
 volatile uint32_t servo_err_servo     = 0;
 volatile uint32_t servo_read_err_count = 0;
 
+// ---------------- Stall / overload guard ----------------
+// A jammed/overloaded joint drives full stall current at its unreachable goal
+// indefinitely — fries the servo + can brown the hip rail (4× hip stall ≈ 20A
+// > buck). Detect sustained high load OR overtemp per joint and LIMP the whole
+// fleet (torque off) — same end state as the hardware E-stop. Operator clears
+// via /safety_clear once the jam is fixed. Thresholds are build-flag tunable.
+#ifndef NOVA_STALL_LOAD_RAW
+#define NOVA_STALL_LOAD_RAW 900     // of 1000 = 90% of stall torque
+// Fleet dynamics written on EVERY arm (RAM regs reset on servo power-cycle):
+// torque limit 600 permille — gait stance needs ~45% of the 19kg servos, so
+// 60% keeps 1.3x headroom while a trip/jam saturates at 60% instead of full
+// stall through the gears (leg_v6 movement review, 2026-07-03). Goal acc 50
+// (x100 steps/s^2) softens torque-on snap and commanded steps.
+#define NOVA_TORQUE_LIMIT_RAW 600
+#define NOVA_GOAL_ACC 50
+#endif
+#ifndef NOVA_OVERTEMP_C
+#define NOVA_OVERTEMP_C 70          // °C — act before the servo's own ~80°C cutoff
+#endif
+#ifndef NOVA_STALL_PERSIST
+#define NOVA_STALL_PERSIST 5        // consecutive bad reads (~300 ms @ ~60 ms/joint poll)
+#endif
+uint8_t  servo_stall_count[NOVA_JOINT_COUNT] = {0};
+volatile uint16_t servo_stall_mask = 0;     // bit i set = joint i has tripped
+
+// STS3215 present-load is sign-magnitude: low 10 bits = magnitude (0..1000),
+// bit 10 = direction. Take the magnitude regardless of direction.
+static inline uint16_t load_magnitude(int16_t raw) {
+  return (uint16_t)raw & 0x03FF;
+}
+
+// Write TORQUE_ENABLE to every PRESENT servo. Blocking (~0.4 ms/servo) — only
+// called at boot, on stall-fault entry, and on fault clear; never the hot path.
+void set_fleet_torque(bool on) {
+  for (uint8_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    if (servo_present_mask & (uint16_t)(1u << i)) {
+      uint8_t id = SERVO_ID_BASE + i;
+      if (on) {
+        // dynamics BEFORE enable so the first held pose is already limited
+        servo_bus.set_torque_limit(id, NOVA_TORQUE_LIMIT_RAW);
+        servo_bus.set_goal_acc(id, NOVA_GOAL_ACC);
+      }
+      servo_bus.torque_enable(id, on);
+    }
+  }
+}
+
 void poll_one_servo() {
   uint8_t id = SERVO_ID_BASE + servo_rr_idx;
   // 8-byte sweep: REG_PRESENT_POSITION_L (0x38) through
@@ -194,6 +241,25 @@ void poll_one_servo() {
     servo_voltage_raw [servo_rr_idx] = buf[6];
     servo_temp_c      [servo_rr_idx] = buf[7];
     servo_present_mask |= (uint16_t)(1u << servo_rr_idx);
+
+    // Stall / overtemp guard: sustained high load OR overtemp on this joint
+    // trips a fleet LIMP (torque off) once — stops the stall current before it
+    // fries the servo or browns the hip rail. Latched; operator clears.
+    uint16_t load_mag = load_magnitude(servo_load_raw[servo_rr_idx]);
+    bool joint_bad = (load_mag >= NOVA_STALL_LOAD_RAW) ||
+                     (servo_temp_c[servo_rr_idx] >= NOVA_OVERTEMP_C);
+    if (joint_bad) {
+      if (servo_stall_count[servo_rr_idx] < 0xFF) servo_stall_count[servo_rr_idx]++;
+    } else {
+      servo_stall_count[servo_rr_idx] = 0;
+    }
+    uint16_t stall_bit = (uint16_t)(1u << servo_rr_idx);
+    if (servo_stall_count[servo_rr_idx] >= NOVA_STALL_PERSIST &&
+        !(servo_stall_mask & stall_bit)) {
+      servo_stall_mask |= stall_bit;
+      safety_fsm.trip_overload();
+      set_fleet_torque(false);   // LIMP now — first trip cuts torque fleet-wide
+    }
   } else {
     servo_read_err_count++;
     switch (rc) {
@@ -212,16 +278,22 @@ void poll_one_servo() {
 // commands. Decimation keeps bus utilization sane and matches typical gait
 // command rate. Gated on safety_fsm.motion_enabled() — never writes while
 // E-stop or battery-low are latched.
-constexpr uint8_t CMD_BROADCAST_DECIMATE = 5;   // 200 Hz / 5 = 40 Hz
+constexpr uint8_t CMD_BROADCAST_DECIMATE = 2;   // 200 Hz / 2 = 100 Hz
+// (backlog #21 bus-schedule rework, 2026-07-06: was 5 = 40 Hz. Gait wants
+// >= 100 Hz command; the slew constant below scales with the period.)
 uint8_t cmd_decimate_count = 0;
 
-// Slew limit — max raw-units change per broadcast (= per 25 ms at 40 Hz).
-// STS3215 full travel 0..4095 = 360°. At 50 raw units / 25 ms = 4.4°/25ms
-// ≈ 176°/s, well under the servo's mechanical capability but slow enough
-// that a step-jump command (e.g. host crash → restart at a far pose) ramps
-// in instead of slamming. Tune in `NOVA_SLEW_MAX_DELTA` build flag.
+// Slew limit — max raw-units change per broadcast (= per 10 ms at 100 Hz).
+// STS3215 full travel 0..4095 = 360°. At 20 raw units / 10 ms ≈ 176°/s —
+// same RATE as the old 50/25ms, re-expressed for the 100 Hz broadcast:
+// slow enough that a step-jump command (host crash → restart at a far
+// pose) ramps in instead of slamming. Tune in `NOVA_SLEW_MAX_DELTA`.
 #ifndef NOVA_SLEW_MAX_DELTA
-#define NOVA_SLEW_MAX_DELTA 50
+#define NOVA_SLEW_MAX_DELTA 20
+#endif
+// Feedback polls per 5 ms tick (per-joint rate = 200*N/12 Hz): 3 -> 50 Hz
+#ifndef NOVA_POLLS_PER_TICK
+#define NOVA_POLLS_PER_TICK 3
 #endif
 
 // Per-joint last-commanded raw goal, used to compute the slew-limited
@@ -229,6 +301,28 @@ uint8_t cmd_decimate_count = 0;
 // after boot, ramp is bypassed (first write = current latched target).
 constexpr uint16_t SLEW_UNINIT = 0xFFFF;
 uint16_t last_cmd_goal[NOVA_JOINT_COUNT];
+
+// ---------------- Per-joint position limit table ----------------
+// Defense-in-depth (firmware-limits lane 2026-07-06): the Jetson-side
+// safety envelope (nova_ops wrapper.py) clamps to the URDF/gate ROM, but
+// it is a single point of failure — a bypassed wrapper or rogue publisher
+// could command any raw 0..4095. The host publishes per-joint raw limits
+// on `joint_limits` (Float32MultiArray, 24 floats = min,max per joint in
+// bus-ID order) after homing calibration maps URDF radians -> raw counts
+// (nova_ops safety_envelope/firmware_limits.py). Until that message
+// arrives the table is wide open (0..4095) — homing itself must move
+// joints outside walk ROM. RAM-only: host re-publishes on reconnect
+// (agent re-subscribe implies a fresh session).
+uint16_t joint_limit_min[NOVA_JOINT_COUNT];
+uint16_t joint_limit_max[NOVA_JOINT_COUNT];
+volatile uint32_t joint_limits_rx_count = 0;
+
+inline void joint_limits_init_all() {
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    joint_limit_min[i] = 0;
+    joint_limit_max[i] = 4095;
+  }
+}
 
 inline void slew_init_all() {
   for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) last_cmd_goal[i] = SLEW_UNINIT;
@@ -249,13 +343,37 @@ void broadcast_servo_commands() {
   for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
     ids[i] = SERVO_ID_BASE + i;
     double v = latched_cmd_position[i];
-    if (v < 0.0)    v = 0.0;
-    if (v > 4095.0) v = 4095.0;
+    // NaN guard: (uint16_t)NaN is UB and NaN bypasses both range checks below
+    // (NaN<0 and NaN>4095 are both false). Floor to 0 like a negative; slew
+    // limiter still bounds the resulting step. Host should never publish NaN.
+    if (isnan(v) || v < 0.0) v = 0.0;
+    else if (v > 4095.0)     v = 4095.0;
     uint16_t target = (uint16_t)v;
+    // per-joint ROM clamp (host-published table; wide open until then)
+    if (target < joint_limit_min[i]) target = joint_limit_min[i];
+    if (target > joint_limit_max[i]) target = joint_limit_max[i];
 
     uint16_t out;
     if (last_cmd_goal[i] == SLEW_UNINIT) {
-      out = target;                 // first write — accept as-is
+      // ANTI-SNAP (clean-movement lane 2026-07-06, closes the boot-settle
+      // ramp intent of PR #17): on the FIRST broadcast after boot or a
+      // fault clear, seed the slew from the servo's PRESENT position
+      // (polled at 50 Hz) instead of accepting the target verbatim —
+      // verbatim meant the servo jumped from wherever it physically was
+      // to the target at its own max speed (goal-acc-limited only): the
+      // boot lurch, and the lurch after every E-stop clear. Seeded, the
+      // same slew rate (176 deg/s) ramps it in. Servos that never
+      // answered a poll (present bit clear) keep verbatim behavior —
+      // nothing real moves on an absent servo.
+      if (servo_present_mask & (uint16_t)(1u << i)) {
+        int32_t seeded = (int32_t)servo_position_raw[i];
+        int32_t delta = (int32_t)target - seeded;
+        if (delta >  (int32_t)NOVA_SLEW_MAX_DELTA) delta =  (int32_t)NOVA_SLEW_MAX_DELTA;
+        if (delta < -(int32_t)NOVA_SLEW_MAX_DELTA) delta = -(int32_t)NOVA_SLEW_MAX_DELTA;
+        out = (uint16_t)(seeded + delta);
+      } else {
+        out = target;               // absent servo — verbatim is harmless
+      }
     } else {
       int32_t delta = (int32_t)target - (int32_t)last_cmd_goal[i];
       if (delta >  (int32_t)NOVA_SLEW_MAX_DELTA) delta =  (int32_t)NOVA_SLEW_MAX_DELTA;
@@ -363,6 +481,7 @@ rcl_publisher_t servo_voltage_pub;
 rcl_publisher_t servo_temperature_pub;
 rcl_subscription_t joint_cmd_sub;
 rcl_subscription_t safety_clear_sub;
+rcl_subscription_t joint_limits_sub;
 
 std_msgs__msg__Int32 heartbeat_msg;
 std_msgs__msg__Int32 loop_max_msg;
@@ -394,6 +513,9 @@ std_msgs__msg__Bool  battery_low_msg;
 std_msgs__msg__Bool  command_stale_msg;
 sensor_msgs__msg__JointState joint_states_msg;
 sensor_msgs__msg__JointState joint_cmd_msg;
+// joint_limits sub: 24 floats = (min,max) raw per joint, bus-ID order
+std_msgs__msg__Float32MultiArray joint_limits_msg;
+float joint_limits_rx_buf[2 * NOVA_JOINT_COUNT];
 
 // Backing storage for JointState arrays (pub + sub). Names + frame_id stay
 // empty for now — see header note.
@@ -420,6 +542,27 @@ void joint_cmd_callback(const void* msgin) {
   last_joint_cmd_us = micros();   // staleness-failsafe freshness stamp
 }
 
+// `joint_limits` callback — per-joint raw ROM table from the host (see the
+// table block above broadcast_servo_commands). Whole-message validation:
+// exactly 2*N floats, every pair sane (0 <= min < max <= 4095) — else the
+// entire update is REJECTED (no partial tables: a half-applied table could
+// pin one leg's joints while its neighbors run the old ROM).
+void joint_limits_callback(const void* msgin) {
+  const std_msgs__msg__Float32MultiArray* m =
+      (const std_msgs__msg__Float32MultiArray*)msgin;
+  if (m->data.size != 2 * NOVA_JOINT_COUNT) return;
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    float lo = m->data.data[2 * i], hi = m->data.data[2 * i + 1];
+    if (isnan(lo) || isnan(hi) || lo < 0.0f || hi > 4095.0f || lo >= hi)
+      return;
+  }
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    joint_limit_min[i] = (uint16_t)m->data.data[2 * i];
+    joint_limit_max[i] = (uint16_t)m->data.data[2 * i + 1];
+  }
+  joint_limits_rx_count++;
+}
+
 // /safety_clear sub callback — Bool; data=true requests a latch clear.
 // Body defined after the FSM globals (below the #endif).
 void safety_clear_callback(const void* msgin);
@@ -435,10 +578,15 @@ inline void joint_state_bind(sensor_msgs__msg__JointState* m,
 }
 #endif
 
-// Power-rails snapshot buffer — 9 floats (V, A, W per rail × leg/hip/jetson).
+// Power-rails snapshot buffer — V, A, W per rail. leg/hip/jetson = 9 floats;
+// +3 (l2_v, l2_a, l2_w) when NOVA_INA226_L2 is enabled → 12 floats total.
 // Filled every POWER_RAILS_PERIOD_MS from INA226 Rail samples regardless of
 // micro-ROS build; the Float32MultiArray publish itself is ifdef'd.
+#ifdef NOVA_INA226_L2
+constexpr size_t POWER_RAILS_FIELDS = 12;
+#else
 constexpr size_t POWER_RAILS_FIELDS = 9;
+#endif
 float power_rails_data[POWER_RAILS_FIELDS];
 
 // Per-joint voltage + temperature buffers — see servo_voltage_msg /
@@ -492,6 +640,8 @@ void setup() {
   // broadcast after boot accepts the latched goal verbatim (no false ramp
   // from a previous boot's residual value).
   slew_init_all();
+  // Position-limit table boots wide open; the host narrows it after homing.
+  joint_limits_init_all();
 
   // Boot servo ping sweep — one-shot inventory of the bus. Populates
   // servo_present_mask before the tick loop starts so the first
@@ -536,6 +686,12 @@ void setup() {
       safety_fsm.update(estop_boot, batt_low_boot);
     }
   }
+
+  // Arm servo torque on every present servo (decision 2026-06-27: FW ALWAYS
+  // writes TORQUE_ENABLE rather than trusting each servo's EEPROM default — a
+  // torque-off EEPROM would silently ignore every goal). Skip if booting into a
+  // latched fault; the loop re-arms on clear.
+  if (safety_fsm.motion_enabled()) set_fleet_torque(true);
 
 #ifdef NOVA_USE_MICRO_ROS
   set_microros_serial_transports(Serial);
@@ -707,6 +863,18 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState),
       "joint_commands"));
+  RCCHECK(rclc_subscription_init_default(
+      &joint_limits_sub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+      "joint_limits"));
+  joint_limits_msg.data.data     = joint_limits_rx_buf;
+  joint_limits_msg.data.size     = 0;
+  joint_limits_msg.data.capacity = 2 * NOVA_JOINT_COUNT;
+  joint_limits_msg.layout.dim.data     = NULL;
+  joint_limits_msg.layout.dim.size     = 0;
+  joint_limits_msg.layout.dim.capacity = 0;
+  joint_limits_msg.layout.data_offset  = 0;
 
   joint_state_bind(&joint_states_msg, js_position, js_velocity, js_effort);
   joint_state_bind(&joint_cmd_msg,    cmd_position, cmd_velocity, cmd_effort);
@@ -715,14 +883,17 @@ void setup() {
     latched_cmd_position[i] = 0.0;
   }
 
-  // Executor sized for 2 subs: joint_commands + safety_clear.
-  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
+  // Executor sized for 3 subs: joint_commands + safety_clear + joint_limits.
+  RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
   RCCHECK(rclc_executor_add_subscription(
       &executor, &joint_cmd_sub, &joint_cmd_msg,
       &joint_cmd_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(
       &executor, &safety_clear_sub, &safety_clear_msg,
       &safety_clear_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(
+      &executor, &joint_limits_sub, &joint_limits_msg,
+      &joint_limits_callback, ON_NEW_DATA));
 
   heartbeat_msg.data = 0;
   estop_msg.data = false;
@@ -799,7 +970,14 @@ void loop() {
       }
     }
 
-    poll_one_servo();
+    // Feedback poll: N servos per tick (backlog #21 — was 1/tick = 17 Hz
+    // per joint, the gait/contact-detection ceiling). 3/tick at 200 Hz =
+    // 50 Hz per joint; bus cost ~3 x 370 us = 1.1 ms of the 5 ms tick,
+    // plus the 100 Hz sync-write (~0.5 ms every 2nd tick). Watch the
+    // exec-time p99 histogram after flashing; 4/tick (66 Hz) fits if
+    // needed. SYNC_READ (one frame, all 12) would reach ~200 Hz — probe
+    // whether the servos' firmware supports instruction 0x82 at bring-up.
+    for (uint8_t pk = 0; pk < NOVA_POLLS_PER_TICK; pk++) poll_one_servo();
     broadcast_servo_commands();
 
     // Telemetry sample
@@ -815,11 +993,23 @@ void loop() {
       safety_clear_request = false;
     }
     nova::SafetyState curr_safety = safety_fsm.state();
+    // LIMP on any latch (E-stop / battery-low; the stall path already cut
+    // torque itself before tripping): holding the last pose with torque
+    // enabled fights the operator and cooks servos against whatever caused
+    // the stop. The robot is EXPECTED to collapse on E-stop — catch it or
+    // let it sit down. (system-audit item "E-stop limp", closed 2026-07-06)
+    if (curr_safety != nova::SAFETY_NORMAL && prev_safety == nova::SAFETY_NORMAL) {
+      set_fleet_torque(false);
+    }
     // On any transition back to NORMAL (clear succeeded), reset the slew
     // history so the next broadcast accepts the current target verbatim
     // rather than ramping from the stale pre-fault goal.
     if (curr_safety == nova::SAFETY_NORMAL && prev_safety != nova::SAFETY_NORMAL) {
       slew_init_all();
+      // Fault cleared → re-arm torque + reset the stall guard so it re-protects.
+      set_fleet_torque(true);
+      servo_stall_mask = 0;
+      for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) servo_stall_count[i] = 0;
     }
 
 #ifdef NOVA_USE_MICRO_ROS
@@ -937,8 +1127,7 @@ void loop() {
     power_rails_ms = 0;
     // Pull the latest per-rail samples into the Float32MultiArray buffer.
     // Order: leg_v leg_a leg_w hip_v hip_a hip_w jetson_v jetson_a jetson_w
-    // (4th L2 rail intentionally omitted from this msg even when
-    // NOVA_INA226_L2 is defined — host-side consumers expect 9-float layout).
+    // (+ l2_v l2_a l2_w at [9..11] when NOVA_INA226_L2 → 12-float layout).
     const nova::RailSample& s_leg    = rail_leg.sample();
     const nova::RailSample& s_hip    = rail_hip.sample();
     const nova::RailSample& s_jetson = rail_jetson.sample();
@@ -951,6 +1140,12 @@ void loop() {
     power_rails_data[6] = s_jetson.bus_voltage_v;
     power_rails_data[7] = s_jetson.current_a;
     power_rails_data[8] = s_jetson.power_w;
+#ifdef NOVA_INA226_L2
+    const nova::RailSample& s_l2 = rail_l2.sample();
+    power_rails_data[9]  = s_l2.bus_voltage_v;
+    power_rails_data[10] = s_l2.current_a;
+    power_rails_data[11] = s_l2.power_w;
+#endif
 #ifdef NOVA_USE_MICRO_ROS
     RCSOFTCHECK(rcl_publish(&power_rails_pub, &power_rails_msg, NULL));
 #endif

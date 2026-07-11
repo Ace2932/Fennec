@@ -5,145 +5,6 @@
 	(uuid "e0590104-16c4-4bf0-bfc4-6edcc31b0f24")
 	(paper "A4")
 	(lib_symbols
-		(symbol "Device:C"
-				(pin_numbers
-					(hide yes)
-				)
-				(pin_names
-					(offset 0.254)
-				)
-				(exclude_from_sim no)
-				(in_bom yes)
-				(on_board yes)
-				(property "Reference" "C"
-					(at 0.635 2.54 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(justify left)
-					)
-				)
-				(property "Value" "C"
-					(at 0.635 -2.54 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(justify left)
-					)
-				)
-				(property "Footprint" ""
-					(at 0.9652 -3.81 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "Datasheet" "~"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "Description" "Unpolarized capacitor"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "ki_keywords" "cap capacitor"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "ki_fp_filters" "C_*"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(symbol "C_0_1"
-					(polyline
-						(pts
-							(xy -2.032 0.762) (xy 2.032 0.762)
-						)
-						(stroke
-							(width 0.508)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(polyline
-						(pts
-							(xy -2.032 -0.762) (xy 2.032 -0.762)
-						)
-						(stroke
-							(width 0.508)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-				)
-				(symbol "C_1_1"
-					(pin passive line
-						(at 0 3.81 270)
-						(length 2.794)
-						(name "~"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-					(pin passive line
-						(at 0 -3.81 90)
-						(length 2.794)
-						(name "~"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "2"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-				)
-				(embedded_fonts no)
-			)
 		(symbol "Comparator:LM2903"
 			(pin_names
 				(offset 0.127)
@@ -412,6 +273,145 @@
 						)
 					)
 					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Device:C"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0.254)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "C"
+				(at 0.635 2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Value" "C"
+				(at 0.635 -2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Footprint" ""
+				(at 0.9652 -3.81 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Unpolarized capacitor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "cap capacitor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "C_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "C_0_1"
+				(polyline
+					(pts
+						(xy -2.032 0.762) (xy 2.032 0.762)
+					)
+					(stroke
+						(width 0.508)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.032 -0.762) (xy 2.032 -0.762)
+					)
+					(stroke
+						(width 0.508)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "C_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 2.794)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 2.794)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1334,16 +1334,110 @@
 		)
 	)
 	(no_connect
+		(at 111.76 157.48)
+		(uuid "053f03c5-d171-4bdc-a468-2d3526508efa")
+	)
+	(no_connect
+		(at 91.44 157.48)
+		(uuid "0b735e47-b66c-4053-8b76-e95a92f6d4d0")
+	)
+	(no_connect
+		(at 40.64 167.64)
+		(uuid "0b819f50-3f98-4950-a460-d8efd95bb2ee")
+	)
+	(no_connect
 		(at 111.76 172.72)
 		(uuid "11cbf2d3-7ed5-415d-8da7-cf67a5cb4186")
+	)
+	(no_connect
+		(at 234.95 92.71)
+		(uuid "1bc69e92-0727-4a08-9daa-0e0f301e0498")
 	)
 	(no_connect
 		(at 60.96 172.72)
 		(uuid "1bcc898b-2305-4b21-90e9-f2d5c5c695ae")
 	)
 	(no_connect
+		(at 234.95 90.17)
+		(uuid "1d0ff341-980f-4dd7-a74e-eb5bcd7116a0")
+	)
+	(no_connect
+		(at 214.63 100.33)
+		(uuid "25df5830-45ec-41df-ab40-17f13dd31872")
+	)
+	(no_connect
+		(at 214.63 90.17)
+		(uuid "3dab53f5-934a-440c-995b-72a58acf9b38")
+	)
+	(no_connect
+		(at 60.96 160.02)
+		(uuid "4a2d27bb-58b5-4695-954e-658de9a4128c")
+	)
+	(no_connect
+		(at 142.24 167.64)
+		(uuid "4b6da6f0-3cdc-4522-9e61-489ca393a63b")
+	)
+	(no_connect
+		(at 234.95 105.41)
+		(uuid "509e3886-e3a5-4201-a652-e0eb8b7f319a")
+	)
+	(no_connect
+		(at 162.56 157.48)
+		(uuid "676ad1a2-ef4a-4e22-a02f-3537f8ffd050")
+	)
+	(no_connect
+		(at 60.96 157.48)
+		(uuid "67d87bc1-f6bd-469f-984d-ea52b03f906b")
+	)
+	(no_connect
 		(at 162.56 172.72)
 		(uuid "716baed1-0cb9-4751-aa4e-af1d3aa946a1")
+	)
+	(no_connect
+		(at 91.44 167.64)
+		(uuid "89bb6f9f-caa2-4877-b1ef-b465d1699596")
+	)
+	(no_connect
+		(at 214.63 102.87)
+		(uuid "9eaf43d7-9891-4758-961f-9a05bd583928")
+	)
+	(no_connect
+		(at 142.24 170.18)
+		(uuid "a2c8b9c3-30bb-44f1-b3dc-b0a2760877d4")
+	)
+	(no_connect
+		(at 40.64 157.48)
+		(uuid "bb21ca8c-fe82-4468-9c29-ba7a5a063cdc")
+	)
+	(no_connect
+		(at 40.64 170.18)
+		(uuid "bf9b962a-009a-4c35-a08c-32467ed5021d")
+	)
+	(no_connect
+		(at 162.56 160.02)
+		(uuid "c88e0b5c-ae43-4eb3-85cf-e1cc18f69757")
+	)
+	(no_connect
+		(at 111.76 160.02)
+		(uuid "dd4550df-88f1-4755-870d-9c503905f279")
+	)
+	(no_connect
+		(at 142.24 157.48)
+		(uuid "e6480116-de5c-497f-b876-6cba3c2485de")
+	)
+	(no_connect
+		(at 91.44 170.18)
+		(uuid "f4a9f013-0006-4246-b262-2a510521cf9d")
+	)
+	(wire
+		(pts
+			(xy 127 135.89) (xy 127 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "03ff3e40-61ad-4784-869c-a16850229695")
 	)
 	(wire
 		(pts
@@ -1357,7 +1451,7 @@
 	)
 	(wire
 		(pts
-			(xy 190.5 156.21) (xy 190.5 161.29)
+			(xy 193.04 156.21) (xy 193.04 161.29)
 		)
 		(stroke
 			(width 0)
@@ -1437,6 +1531,16 @@
 	)
 	(wire
 		(pts
+			(xy 139.7 109.22) (xy 139.7 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "376c18f5-a2a6-49f9-89b5-a2edc12b1eb4")
+	)
+	(wire
+		(pts
 			(xy 50.8 177.8) (xy 50.8 182.88)
 		)
 		(stroke
@@ -1477,7 +1581,7 @@
 	)
 	(wire
 		(pts
-			(xy 203.2 148.59) (xy 203.2 143.51)
+			(xy 203.2 148.59) (xy 203.2 137.16)
 		)
 		(stroke
 			(width 0)
@@ -1527,13 +1631,43 @@
 	)
 	(wire
 		(pts
-			(xy 114.3 109.22) (xy 114.3 105.41)
+			(xy 114.3 109.22) (xy 114.3 104.14)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "6671fde9-01c0-4c56-8dce-70e6511d7322")
+	)
+	(wire
+		(pts
+			(xy 86.36 143.51) (xy 86.36 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6b758954-2284-4a47-baa2-2ea2a09d0de5")
+	)
+	(wire
+		(pts
+			(xy 66.04 135.89) (xy 66.04 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "75876817-5ad6-4d75-a675-a4270e781a56")
+	)
+	(wire
+		(pts
+			(xy 106.68 114.3) (xy 101.6 114.3)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7b561603-a980-4960-87d6-ff7e9724cc06")
 	)
 	(wire
 		(pts
@@ -1577,6 +1711,16 @@
 	)
 	(wire
 		(pts
+			(xy 66.04 143.51) (xy 66.04 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "92d171bc-d5e3-4023-a279-059c72d5ed16")
+	)
+	(wire
+		(pts
 			(xy 63.5 34.29) (xy 63.5 29.21)
 		)
 		(stroke
@@ -1604,6 +1748,36 @@
 			(type default)
 		)
 		(uuid "99b5555f-a71d-46b9-81c2-fb246e2a874b")
+	)
+	(wire
+		(pts
+			(xy 139.7 119.38) (xy 139.7 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9c1e04ec-403e-4cca-8153-4b02f5031013")
+	)
+	(wire
+		(pts
+			(xy 132.08 114.3) (xy 127 114.3)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9c943c78-b0c8-4ca0-b7a0-d91c593872e7")
+	)
+	(wire
+		(pts
+			(xy 86.36 135.89) (xy 86.36 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a862fdab-59c1-43cc-8b8c-09c742927553")
 	)
 	(wire
 		(pts
@@ -1677,6 +1851,16 @@
 	)
 	(wire
 		(pts
+			(xy 36.83 135.89) (xy 36.83 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c376af0b-0ff4-4c9c-be99-6ec3574c992f")
+	)
+	(wire
+		(pts
 			(xy 88.9 57.15) (xy 88.9 62.23)
 		)
 		(stroke
@@ -1697,7 +1881,17 @@
 	)
 	(wire
 		(pts
-			(xy 190.5 148.59) (xy 190.5 143.51)
+			(xy 127 143.51) (xy 127 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d6ad4546-e4ab-4636-94e8-0f4087b931e2")
+	)
+	(wire
+		(pts
+			(xy 193.04 148.59) (xy 193.04 137.16)
 		)
 		(stroke
 			(width 0)
@@ -1747,6 +1941,26 @@
 	)
 	(wire
 		(pts
+			(xy 106.68 135.89) (xy 106.68 133.35)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e6400d03-e44e-458d-af42-6d009ef33573")
+	)
+	(wire
+		(pts
+			(xy 36.83 143.51) (xy 36.83 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ed8324b8-bf8e-44b9-b5f7-5a759496cde9")
+	)
+	(wire
+		(pts
 			(xy 152.4 21.59) (xy 152.4 16.51)
 		)
 		(stroke
@@ -1764,6 +1978,16 @@
 			(type default)
 		)
 		(uuid "f53d1e8d-23f6-428a-a0ce-56dbb6d3b937")
+	)
+	(wire
+		(pts
+			(xy 106.68 143.51) (xy 106.68 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f71973c2-809c-4fd2-ac4a-2dbee46712f4")
 	)
 	(wire
 		(pts
@@ -1805,6 +2029,16 @@
 		)
 		(uuid "0c4d3104-3ace-4299-82f2-217d59e80c7d")
 	)
+	(label "HARDCUT"
+		(at 66.04 133.35 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "2e4c3d60-93b1-4530-b956-81a3815b12ec")
+	)
 	(label "VSENSE"
 		(at 114.3 46.99 180)
 		(effects
@@ -1814,6 +2048,16 @@
 			(justify right bottom)
 		)
 		(uuid "3488e032-c79a-4d76-a43f-2d59937b63bc")
+	)
+	(label "VREF_G"
+		(at 86.36 146.05 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "3bc3c1fc-1992-43c7-8cbe-47ac3e42c5dc")
 	)
 	(label "VSENSE"
 		(at 114.3 78.74 180)
@@ -1835,6 +2079,16 @@
 		)
 		(uuid "51ab6e31-2668-43e3-bede-8e9af720f3ce")
 	)
+	(label "VSENSE"
+		(at 106.68 133.35 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "54f49574-c1d8-4c88-b5ad-fae1b2146711")
+	)
 	(label "HARDCUT"
 		(at 139.7 76.2 0)
 		(effects
@@ -1854,6 +2108,16 @@
 			(justify left bottom)
 		)
 		(uuid "a1ad724d-44d2-4c54-831c-6eaf5c6a270c")
+	)
+	(label "VREF_H"
+		(at 66.04 146.05 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "ba3e5671-c3f4-423d-aebe-33f5e5f27f1e")
 	)
 	(label "HARDCUT"
 		(at 78.74 114.3 180)
@@ -1895,6 +2159,26 @@
 		)
 		(uuid "db16bf9c-d990-40ed-8ec8-f116c2ee1103")
 	)
+	(label "HARDCUT"
+		(at 127 114.3 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "e00c2b0d-560c-4f30-9006-f51ff4f1535d")
+	)
+	(label "HARDCUT"
+		(at 127 133.35 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "e219e844-d620-4941-a3aa-837c5eb50ff5")
+	)
 	(label "VREF_G"
 		(at 63.5 46.99 0)
 		(effects
@@ -1915,18 +2199,38 @@
 		)
 		(uuid "e85dc193-1882-48f1-beb9-6e037b0c2f5f")
 	)
-	(global_label "V5_AUX"
+	(global_label "I2C_SDA"
 		(shape bidirectional)
-		(at 63.5 29.21 90)
+		(at 234.95 97.79 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify left)
 		)
+		(uuid "055cf84a-d914-4949-898d-0918ea7c9fcf")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 234.95 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "V5_AUX"
+		(shape bidirectional)
+		(at 63.5 29.21 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
 		(uuid "13a99736-cc62-4e38-8be0-ab3201a9b614")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 63.5 29.21 0)
+			(at 63.5 29.21 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1937,16 +2241,16 @@
 	)
 	(global_label "I2C_SDA"
 		(shape bidirectional)
-		(at 190.5 161.29 90)
+		(at 193.04 161.29 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "15149d10-1d30-45a1-afff-c9b9d5da7e8e")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 190.5 161.29 0)
+			(at 193.04 161.29 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1967,6 +2271,26 @@
 		(uuid "15f8c8c3-7f05-49a0-8bce-53dfc700cf73")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 167.64 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "I2C_SCL"
+		(shape bidirectional)
+		(at 234.95 100.33 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "2c11798a-811c-449b-a9fe-27464cf3e45c")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 234.95 100.33 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2017,16 +2341,36 @@
 	)
 	(global_label "EN_BUCKS"
 		(shape bidirectional)
-		(at 91.44 104.14 90)
+		(at 91.44 104.14 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "4726d632-daee-4147-bedb-9793e0e169e9")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 91.44 104.14 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "+3V3"
+		(shape bidirectional)
+		(at 224.79 85.09 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify left)
 		)
-		(uuid "4726d632-daee-4147-bedb-9793e0e169e9")
+		(uuid "4a2584b8-c4e0-4fe7-977f-7992aec409c4")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 91.44 104.14 0)
+			(at 224.79 85.09 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2097,16 +2441,36 @@
 	)
 	(global_label "+3V3"
 		(shape bidirectional)
-		(at 190.5 143.51 90)
+		(at 193.04 137.16 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "74c978f6-bc23-4e7b-931c-1a70c7797919")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 193.04 137.16 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "V5_AUX"
+		(shape bidirectional)
+		(at 36.83 146.05 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify left)
 		)
-		(uuid "74c978f6-bc23-4e7b-931c-1a70c7797919")
+		(uuid "757952f8-8b4d-4b4b-9e30-c210a1cd2ed4")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 190.5 143.51 0)
+			(at 36.83 146.05 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2117,7 +2481,7 @@
 	)
 	(global_label "+3V3"
 		(shape bidirectional)
-		(at 203.2 143.51 90)
+		(at 203.2 137.16 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2126,7 +2490,7 @@
 		)
 		(uuid "7586c78b-719a-4afb-ab4e-8b17aaf16f4d")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 203.2 143.51 0)
+			(at 203.2 137.16 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2157,16 +2521,16 @@
 	)
 	(global_label "V5_AUX"
 		(shape bidirectional)
-		(at 88.9 29.21 90)
+		(at 88.9 29.21 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "7e05a435-c4ae-49e8-9d40-4cdbd5e3194a")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 88.9 29.21 0)
+			(at 88.9 29.21 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2197,7 +2561,7 @@
 	)
 	(global_label "I2C_SCL"
 		(shape bidirectional)
-		(at 203.2 161.29 90)
+		(at 203.2 161.29 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2206,7 +2570,7 @@
 		)
 		(uuid "97f0fdc7-8b7c-4085-bf5f-532c74df3b0d")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 203.2 161.29 0)
+			(at 203.2 161.29 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2237,16 +2601,36 @@
 	)
 	(global_label "GND"
 		(shape bidirectional)
-		(at 40.64 114.3 0)
+		(at 40.64 114.3 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "a78434b7-7163-439f-97e7-2fede541143c")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 40.64 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "BATT_LOW"
+		(shape bidirectional)
+		(at 86.36 133.35 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify left)
 		)
-		(uuid "a78434b7-7163-439f-97e7-2fede541143c")
+		(uuid "a9c6d2ec-3c90-4191-9578-155e934f91d3")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 40.64 114.3 0)
+			(at 86.36 133.35 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2295,6 +2679,26 @@
 			)
 		)
 	)
+	(global_label "EN_JET"
+		(shape bidirectional)
+		(at 139.7 104.14 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "d6f8e519-9d29-4f62-bc68-8575cacf4f49")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 139.7 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "+3V3"
 		(shape bidirectional)
 		(at 152.4 147.32 90)
@@ -2307,6 +2711,26 @@
 		(uuid "db20deea-e499-465a-901b-21fcfaa035dc")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 152.4 147.32 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "EN_SW"
+		(shape bidirectional)
+		(at 36.83 133.35 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "dcc87f05-cb63-414a-8d09-7e9d418ac606")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 36.83 133.35 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2337,16 +2761,36 @@
 	)
 	(global_label "VBAT_PROTECTED"
 		(shape bidirectional)
-		(at 38.1 29.21 90)
+		(at 38.1 29.21 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "e2ad0cc8-f0b5-4092-b492-5dc334dd4d6a")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 38.1 29.21 0)
+			(at 38.1 29.21 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "EN_SW"
+		(shape bidirectional)
+		(at 101.6 114.3 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "ee01192b-5964-4b16-ae77-7d956a56a086")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 101.6 114.3 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2357,7 +2801,7 @@
 	)
 	(global_label "+3V3"
 		(shape bidirectional)
-		(at 50.8 147.32 90)
+		(at 50.8 147.32 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2366,7 +2810,7 @@
 		)
 		(uuid "fb487c37-bf83-48d7-aedc-db4ffcda1430")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 50.8 147.32 0)
+			(at 50.8 147.32 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2397,16 +2841,16 @@
 	)
 	(global_label "EN_BUCKS"
 		(shape bidirectional)
-		(at 114.3 105.41 90)
+		(at 114.3 104.14 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "fe082409-031d-4ad5-aa1a-c1b4a0de1d2b")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 114.3 105.41 0)
+			(at 114.3 104.14 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2466,7 +2910,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2474,7 +2919,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "RC0603FR-0710KL" (at 0 0 0)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2482,7 +2928,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "311-10.0KHRCT-ND" (at 0 0 0)
+		(property "DigiKey" "311-10.0KHRCT-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2490,7 +2937,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2515,23 +2963,23 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 190.5 152.4 0)
+		(at 66.04 139.7 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(uuid "17585512-25cd-4926-ad6f-c86e13b0a2cb")
-		(property "Reference" "R11"
-			(at 190.5 146.05 0)
+		(uuid "0d3e299b-a4e8-4ba7-82d3-6cc06af53a0f")
+		(property "Reference" "R14"
+			(at 71.12 138.43 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Value" "4.7k"
-			(at 190.5 158.75 0)
+		(property "Value" "470k"
+			(at 71.12 140.97 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2539,7 +2987,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 190.5 152.4 0)
+			(at 66.04 139.7 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2548,7 +2996,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 190.5 152.4 0)
+			(at 66.04 139.7 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2557,22 +3005,15 @@
 			)
 		)
 		(property "Description" ""
-			(at 190.5 152.4 0)
+			(at 66.04 139.7 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "RC0603FR-074K7L" (at 0 0 0)
+		(property "Manufacturer" "Vishay Dale"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2580,7 +3021,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "311-4.70KHRCT-ND" (at 0 0 0)
+		(property "MPN" "CRCW0603470KFKEA"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2588,7 +3030,221 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+		(property "DigiKey" "541-470KHCT-ND"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "ec6f2f49-8405-448e-97bc-259e77f07cf1")
+		)
+		(pin "2"
+			(uuid "a202132a-df54-4e27-ae54-b8349a80978e")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "R14")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 86.36 139.7 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "118cb5b9-c5cd-4c80-b497-aa40b23c612d")
+		(property "Reference" "R15"
+			(at 91.44 138.43 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "1M"
+			(at 91.44 140.97 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 86.36 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 86.36 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "RC0603FR-071ML"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "311-1.00MHRCT-ND"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "ef4e295d-4957-43b4-ba74-e9fc0a4a01d7")
+		)
+		(pin "2"
+			(uuid "b0080d49-a5c9-4b41-87da-a2b1c7dbca7e")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "R15")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 193.04 152.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "17585512-25cd-4926-ad6f-c86e13b0a2cb")
+		(property "Reference" "R11"
+			(at 193.04 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "4.7k"
+			(at 193.04 158.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 193.04 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 193.04 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 193.04 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Yageo"
+			(at 2.54 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "RC0603FR-074K7L"
+			(at 2.54 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "311-4.70KHRCT-ND"
+			(at 2.54 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 2.54 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2606,6 +3262,111 @@
 			(project "nova_pcb_v6_power_v2"
 				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
 					(reference "R11")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Transistor_FET:Q_NMOS_GSD")
+		(at 111.76 114.3 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "24b3659e-1e48-4647-add1-a77bab3ed8be")
+		(property "Reference" "Q3"
+			(at 111.76 107.95 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "BSS138_estop"
+			(at 111.76 120.65 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
+			(at 111.76 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 111.76 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 111.76 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "onsemi"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "BSS138"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "BSS138CT-ND"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "03 SMD SOT-23"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "1484ec8d-a233-4785-8b9c-f7df99ad075d")
+		)
+		(pin "3"
+			(uuid "2102ddaa-4c17-41ad-af41-07e57bc6186f")
+		)
+		(pin "2"
+			(uuid "768739f2-32ff-4bbe-bab5-8f8f8ac57e24")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "Q3")
 					(unit 1)
 				)
 			)
@@ -2662,7 +3423,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "onsemi" (at 0 0 0)
+		(property "Manufacturer" "onsemi"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2670,7 +3432,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "BSS138" (at 0 0 0)
+		(property "MPN" "BSS138"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2678,7 +3441,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "BSS138CT-ND" (at 0 0 0)
+		(property "DigiKey" "BSS138CT-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2686,7 +3450,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "03 SMD SOT-23" (at 0 0 0)
+		(property "AssemblyOrder" "03 SMD SOT-23"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2778,6 +3543,71 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 224.79 110.49 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "5bd06c04-e840-4ff0-9dfb-2e6b272c2a26")
+		(property "Reference" "#PWR616"
+			(at 231.14 110.49 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 218.44 110.49 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 224.79 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 224.79 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 224.79 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "a36fc1a7-1988-4aa8-8924-17f181f7920b")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "#PWR616")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Sensor_Energy:INA226")
 		(at 101.6 165.1 0)
 		(unit 1)
@@ -2795,7 +3625,7 @@
 			)
 		)
 		(property "Value" "INA226"
-			(at 101.6 171.45 0)
+			(at 101.6 162.56 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2828,7 +3658,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "GODIYMODULES (Amazon, off-board, addr 0x41)" (at 0 0 0)
+		(property "Manufacturer" "GODIYMODULES (Amazon, off-board, addr 0x41)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2836,7 +3667,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "INA226-20A-R002-MODULE" (at 0 0 0)
+		(property "MPN" "INA226-20A-R002-MODULE"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2844,7 +3676,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "06 INA header (4-pin)" (at 0 0 0)
+		(property "AssemblyOrder" "06 INA header (4-pin)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2942,7 +3775,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2950,7 +3784,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "RC0603FR-0710KL" (at 0 0 0)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2958,7 +3793,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "311-10.0KHRCT-ND" (at 0 0 0)
+		(property "DigiKey" "311-10.0KHRCT-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2966,7 +3802,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3040,7 +3877,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3048,7 +3886,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "RC0603FR-0710KL" (at 0 0 0)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3056,7 +3895,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "311-10.0KHRCT-ND" (at 0 0 0)
+		(property "DigiKey" "311-10.0KHRCT-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3064,7 +3904,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3203,7 +4044,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Texas Instruments" (at 0 0 0)
+		(property "Manufacturer" "Texas Instruments"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3211,7 +4053,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "LM393DR" (at 0 0 0)
+		(property "MPN" "LM393DR"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3219,7 +4062,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "296-1015-1-ND" (at 0 0 0)
+		(property "DigiKey" "296-1015-1-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3227,7 +4071,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "04 SMD SOIC-8" (at 0 0 0)
+		(property "AssemblyOrder" "04 SMD SOIC-8"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3264,6 +4109,108 @@
 				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
 					(reference "U8")
 					(unit 3)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 36.83 139.7 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "7d021a25-1510-4fe1-87b0-136e080234c3")
+		(property "Reference" "R13"
+			(at 41.91 138.43 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "10k"
+			(at 41.91 140.97 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 36.83 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 36.83 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 36.83 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Yageo"
+			(at -8.89 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "RC0603FR-0710KL"
+			(at -8.89 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "311-10.0KHRCT-ND"
+			(at -8.89 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at -8.89 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "3ef8721f-0a3c-4490-8468-e743ae4aeee8")
+		)
+		(pin "2"
+			(uuid "91134715-934f-447d-998f-207125b21c4c")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "R13")
+					(unit 1)
 				)
 			)
 		)
@@ -3334,6 +4281,176 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 106.68 146.05 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "8b8c8b4d-f2dd-4303-a34f-5d33d8419b21")
+		(property "Reference" "#PWR0613"
+			(at 109.22 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 109.22 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 106.68 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 106.68 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 106.68 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "538cb38f-87a1-447b-b7af-1712d3d408f7")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "#PWR0613")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Transistor_FET:Q_NMOS_GSD")
+		(at 137.16 114.3 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "95a5c2c3-762c-40a5-b12b-c5a0dacc50a2")
+		(property "Reference" "Q4"
+			(at 137.16 107.95 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "BSS138_jetcut"
+			(at 137.16 120.65 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
+			(at 137.16 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 137.16 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 137.16 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "onsemi"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "BSS138"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "BSS138CT-ND"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "03 SMD SOT-23"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "fef830cb-46d3-486e-8d8b-63c66a1a950c")
+		)
+		(pin "3"
+			(uuid "fdbf8f46-5eaf-4988-be9a-883167a99405")
+		)
+		(pin "2"
+			(uuid "33b7cd27-4e41-45f3-8f20-466495695f14")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "Q4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 38.1 53.34 0)
 		(unit 1)
@@ -3384,7 +4501,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3392,7 +4510,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "RC0603FR-0722KL" (at 0 0 0)
+		(property "MPN" "RC0603FR-0722KL"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3400,7 +4519,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "311-22.0KHRCT-ND" (at 0 0 0)
+		(property "DigiKey" "311-22.0KHRCT-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3408,7 +4528,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3482,7 +4603,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Texas Instruments" (at 0 0 0)
+		(property "Manufacturer" "Texas Instruments"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3490,7 +4612,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "LM393DR" (at 0 0 0)
+		(property "MPN" "LM393DR"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3498,7 +4621,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "296-1015-1-ND" (at 0 0 0)
+		(property "DigiKey" "296-1015-1-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3506,7 +4630,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "04 SMD SOIC-8" (at 0 0 0)
+		(property "AssemblyOrder" "04 SMD SOIC-8"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3565,7 +4690,7 @@
 			)
 		)
 		(property "Value" "INA226"
-			(at 152.4 171.45 0)
+			(at 152.146 163.068 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3598,7 +4723,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "GODIYMODULES (Amazon, off-board, addr 0x44)" (at 0 0 0)
+		(property "Manufacturer" "GODIYMODULES (Amazon, off-board, addr 0x44)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3606,7 +4732,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "INA226-20A-R002-MODULE" (at 0 0 0)
+		(property "MPN" "INA226-20A-R002-MODULE"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3614,7 +4741,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "06 INA header (4-pin)" (at 0 0 0)
+		(property "AssemblyOrder" "06 INA header (4-pin)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3712,7 +4840,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3720,7 +4849,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "RC0603FR-074K7L" (at 0 0 0)
+		(property "MPN" "RC0603FR-074K7L"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3728,7 +4858,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "311-4.70KHRCT-ND" (at 0 0 0)
+		(property "DigiKey" "311-4.70KHRCT-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3736,7 +4867,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4005,7 +5137,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4013,7 +5146,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "RC0603FR-0712K1L" (at 0 0 0)
+		(property "MPN" "RC0603FR-0712K1L"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4021,7 +5155,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "311-12.1KHRCT-ND" (at 0 0 0)
+		(property "DigiKey" "311-12.1KHRCT-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4029,7 +5164,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4103,7 +5239,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4111,7 +5248,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "RC0603FR-0711K3L" (at 0 0 0)
+		(property "MPN" "RC0603FR-0711K3L"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4119,7 +5257,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "311-11.3KHRCT-ND" (at 0 0 0)
+		(property "DigiKey" "311-11.3KHRCT-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4127,7 +5266,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4145,6 +5285,225 @@
 			(project "nova_pcb_v6_power_v2"
 				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
 					(reference "R4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Sensor_Energy:INA226")
+		(at 224.79 97.79 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp yes)
+		(uuid "c1cdb69b-3a9d-40b8-a0b7-cca00676f5f9")
+		(property "Reference" "U12"
+			(at 224.79 91.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "INA226"
+			(at 224.79 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "nova_v6:INA226_Module_Breakout"
+			(at 224.79 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 224.79 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Arm rail current monitor (Phase-4 reserve, DNP)"
+			(at 224.79 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "GODIYMODULES (Amazon, off-board, addr 0x45 - DNP Phase-4 arm)"
+			(at 59.69 -102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "INA226-20A-R002-MODULE"
+			(at 59.69 -102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "06 INA header (4-pin) - Phase-4 DNP"
+			(at 59.69 -102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "fd8cc7ef-956b-4b72-9e35-c53804885946")
+		)
+		(pin "2"
+			(uuid "651a3785-d740-4c13-be16-7f8ab81e3f34")
+		)
+		(pin "3"
+			(uuid "4a60667a-6f3d-4453-ac0d-e1bbac3ae9c5")
+		)
+		(pin "4"
+			(uuid "8481684f-3c4c-4f08-bb5b-97b5925679e2")
+		)
+		(pin "5"
+			(uuid "439192f6-5fb8-4b33-9ea4-6869eeb77a44")
+		)
+		(pin "6"
+			(uuid "7c74f757-d69d-4506-9e19-1dceaf9ac27f")
+		)
+		(pin "7"
+			(uuid "e7a9e480-c11f-4e7e-b04c-7f9947c2c894")
+		)
+		(pin "8"
+			(uuid "971a8753-ed99-43f1-b4d1-dbd8a1daa4a6")
+		)
+		(pin "9"
+			(uuid "bba167b3-c7c5-4ca2-935c-ad0b855e22e3")
+		)
+		(pin "10"
+			(uuid "cd1a7765-351d-425d-b1d1-377bc729ef6b")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "U12")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 127 139.7 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "c35521c8-da8a-46db-b2fd-9a88f241e2c4")
+		(property "Reference" "R16"
+			(at 131.572 138.176 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "100k"
+			(at 131.572 140.462 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 127 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 127 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 127 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "RC0603FR-07100KL"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "311-100KHRCT-ND"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "376d323d-b78b-4db0-824b-5e7d95d37d7e")
+		)
+		(pin "2"
+			(uuid "bd1bced3-4429-411b-9e55-5b12d5defbb3")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "R16")
 					(unit 1)
 				)
 			)
@@ -4201,7 +5560,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4209,7 +5569,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "RC0603FR-0710KL" (at 0 0 0)
+		(property "MPN" "RC0603FR-0710KL"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4217,7 +5578,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "311-10.0KHRCT-ND" (at 0 0 0)
+		(property "DigiKey" "311-10.0KHRCT-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4225,7 +5587,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4364,7 +5727,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Texas Instruments" (at 0 0 0)
+		(property "Manufacturer" "Texas Instruments"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4372,7 +5736,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "LM393DR" (at 0 0 0)
+		(property "MPN" "LM393DR"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4380,7 +5745,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "296-1015-1-ND" (at 0 0 0)
+		(property "DigiKey" "296-1015-1-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4388,7 +5754,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "04 SMD SOIC-8" (at 0 0 0)
+		(property "AssemblyOrder" "04 SMD SOIC-8"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4480,7 +5847,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4488,7 +5856,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "RC0603FR-07100KL" (at 0 0 0)
+		(property "MPN" "RC0603FR-07100KL"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4496,7 +5865,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "311-100KHRCT-ND" (at 0 0 0)
+		(property "DigiKey" "311-100KHRCT-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4504,7 +5874,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
+		(property "AssemblyOrder" "01 SMD 0603 R"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4528,6 +5899,238 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 127 146.05 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "db32e720-060d-4e1c-abf0-b8ef40bda468")
+		(property "Reference" "#PWR0615"
+			(at 127 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 127 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 127 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 127 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 127 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "ffacd48e-cdf5-4ffd-813f-56d074cea577")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "#PWR0615")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 106.68 139.7 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "dce2fb74-5fa5-4d01-ae7b-1c1b5f5c6df1")
+		(property "Reference" "C7"
+			(at 111.76 138.43 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "100nF"
+			(at 111.76 140.97 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+			(at 106.68 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 106.68 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 106.68 139.7 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Yageo"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "CC0603KRX7R9BB104"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "311-1344-1-ND"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "02 SMD 0603 C"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "af54c220-ae29-4f79-b768-06f3729c67d9")
+		)
+		(pin "2"
+			(uuid "0f57052f-19a6-40c6-a855-4560ce4b3136")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "C7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 139.7 124.46 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "df4323ca-734c-4e9a-bdd2-ca2ecda3f14a")
+		(property "Reference" "#PWR0614"
+			(at 139.7 118.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 139.7 130.81 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 139.7 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 139.7 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 139.7 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "aaf2c0d9-8c01-4510-b3ee-6c7cf687c151")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
+					(reference "#PWR0614")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Sensor_Energy:INA226")
 		(at 50.8 165.1 0)
 		(unit 1)
@@ -4545,7 +6148,7 @@
 			)
 		)
 		(property "Value" "INA226"
-			(at 50.8 171.45 0)
+			(at 50.546 162.814 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4578,7 +6181,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "GODIYMODULES (Amazon, off-board, addr 0x40)" (at 0 0 0)
+		(property "Manufacturer" "GODIYMODULES (Amazon, off-board, addr 0x40)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4586,7 +6190,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "INA226-20A-R002-MODULE" (at 0 0 0)
+		(property "MPN" "INA226-20A-R002-MODULE"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4594,7 +6199,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "06 INA header (4-pin)" (at 0 0 0)
+		(property "AssemblyOrder" "06 INA header (4-pin)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4822,7 +6428,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Generic (Tugermoola kit; wires to Mxuteuk HB2-ES544)" (at 0 0 0)
+		(property "Manufacturer" "Generic (Tugermoola kit; wires to Mxuteuk HB2-ES544)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4830,7 +6437,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "KF301-5.0-2P" (at 0 0 0)
+		(property "MPN" "KF301-5.0-2P"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4838,7 +6446,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "10 THT screw block" (at 0 0 0)
+		(property "AssemblyOrder" "10 THT screw block"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4861,1474 +6470,10 @@
 			)
 		)
 	)
-	(symbol
-		(lib_id "Device:R")
-		(at 45.72 139.7 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "7d021a25-1510-4fe1-87b0-136e080234c3")
-		(property "Reference" "R13"
-			(at 50.8 138.43 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "10k"
-			(at 50.8 140.97 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 45.72 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 45.72 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 45.72 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "RC0603FR-0710KL" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "DigiKey" "311-10.0KHRCT-ND" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "3ef8721f-0a3c-4490-8468-e743ae4aeee8")
-		)
-		(pin "2"
-			(uuid "91134715-934f-447d-998f-207125b21c4c")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "R13")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 45.72 135.89) (xy 45.72 133.35)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c376af0b-0ff4-4c9c-be99-6ec3574c992f")
-	)
-	(wire
-		(pts
-			(xy 45.72 143.51) (xy 45.72 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ed8324b8-bf8e-44b9-b5f7-5a759496cde9")
-	)
-	(global_label "EN_SW"
-		(shape bidirectional)
-		(at 45.72 133.35 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "dcc87f05-cb63-414a-8d09-7e9d418ac606")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 45.72 133.35 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "V5_AUX"
-		(shape bidirectional)
-		(at 45.72 146.05 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "757952f8-8b4d-4b4b-9e30-c210a1cd2ed4")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 45.72 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 66.04 139.7 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "0d3e299b-a4e8-4ba7-82d3-6cc06af53a0f")
-		(property "Reference" "R14"
-			(at 71.12 138.43 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "470k"
-			(at 71.12 140.97 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 66.04 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 66.04 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 66.04 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" "Vishay Dale" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "CRCW0603470KFKEA" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "DigiKey" "541-470KHCT-ND" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "ec6f2f49-8405-448e-97bc-259e77f07cf1")
-		)
-		(pin "2"
-			(uuid "a202132a-df54-4e27-ae54-b8349a80978e")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "R14")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 66.04 135.89) (xy 66.04 133.35)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "75876817-5ad6-4d75-a675-a4270e781a56")
-	)
-	(wire
-		(pts
-			(xy 66.04 143.51) (xy 66.04 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "92d171bc-d5e3-4023-a279-059c72d5ed16")
-	)
-	(label "HARDCUT"
-		(at 66.04 133.35 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "2e4c3d60-93b1-4530-b956-81a3815b12ec")
-	)
-	(label "VREF_H"
-		(at 66.04 146.05 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "ba3e5671-c3f4-423d-aebe-33f5e5f27f1e")
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 86.36 139.7 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "118cb5b9-c5cd-4c80-b497-aa40b23c612d")
-		(property "Reference" "R15"
-			(at 91.44 138.43 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "1M"
-			(at 91.44 140.97 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 86.36 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 86.36 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 86.36 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "RC0603FR-071ML" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "DigiKey" "311-1.00MHRCT-ND" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "ef4e295d-4957-43b4-ba74-e9fc0a4a01d7")
-		)
-		(pin "2"
-			(uuid "b0080d49-a5c9-4b41-87da-a2b1c7dbca7e")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "R15")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 86.36 135.89) (xy 86.36 133.35)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "a862fdab-59c1-43cc-8b8c-09c742927553")
-	)
-	(wire
-		(pts
-			(xy 86.36 143.51) (xy 86.36 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6b758954-2284-4a47-baa2-2ea2a09d0de5")
-	)
-	(global_label "BATT_LOW"
-		(shape bidirectional)
-		(at 86.36 133.35 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "a9c6d2ec-3c90-4191-9578-155e934f91d3")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 86.36 133.35 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(label "VREF_G"
-		(at 86.36 146.05 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "3bc3c1fc-1992-43c7-8cbe-47ac3e42c5dc")
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 106.68 139.7 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "dce2fb74-5fa5-4d01-ae7b-1c1b5f5c6df1")
-		(property "Reference" "C7"
-			(at 111.76 138.43 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "100nF"
-			(at 111.76 140.97 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 106.68 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 106.68 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 106.68 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "CC0603KRX7R9BB104" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "DigiKey" "311-1344-1-ND" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "02 SMD 0603 C" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "af54c220-ae29-4f79-b768-06f3729c67d9")
-		)
-		(pin "2"
-			(uuid "0f57052f-19a6-40c6-a855-4560ce4b3136")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "C7")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 106.68 135.89) (xy 106.68 133.35)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e6400d03-e44e-458d-af42-6d009ef33573")
-	)
-	(label "VSENSE"
-		(at 106.68 133.35 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "54f49574-c1d8-4c88-b5ad-fae1b2146711")
-	)
-	(wire
-		(pts
-			(xy 106.68 143.51) (xy 106.68 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f71973c2-809c-4fd2-ac4a-2dbee46712f4")
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 106.68 146.05 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "8b8c8b4d-f2dd-4303-a34f-5d33d8419b21")
-		(property "Reference" "#PWR0613"
-			(at 109.22 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 109.22 148.59 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 106.68 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 106.68 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 106.68 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "538cb38f-87a1-447b-b7af-1712d3d408f7")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "#PWR0613")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Sensor_Energy:INA226")
-		(at 165.1 200.66 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp yes)
-		(uuid "c1cdb69b-3a9d-40b8-a0b7-cca00676f5f9")
-		(property "Reference" "U12"
-			(at 165.1 194.31 0)
-			(effects (font (size 1.27 1.27)))
-		)
-		(property "Value" "INA226"
-			(at 165.1 207.01 0)
-			(effects (font (size 1.27 1.27)))
-		)
-		(property "Footprint" "nova_v6:INA226_Module_Breakout"
-			(at 165.1 200.66 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Datasheet" "~"
-			(at 165.1 200.66 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Description" "Arm rail current monitor (Phase-4 reserve, DNP)"
-			(at 165.1 200.66 0)
-			(effects (font (size 1.27 1.27)))
-		)
-		(property "Manufacturer" "GODIYMODULES (Amazon, off-board, addr 0x45 - DNP Phase-4 arm)" (at 0 0 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "MPN" "INA226-20A-R002-MODULE" (at 0 0 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "AssemblyOrder" "06 INA header (4-pin) - Phase-4 DNP" (at 0 0 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(pin "1"
-			(uuid "fd8cc7ef-956b-4b72-9e35-c53804885946")
-		)
-		(pin "2"
-			(uuid "651a3785-d740-4c13-be16-7f8ab81e3f34")
-		)
-		(pin "3"
-			(uuid "4a60667a-6f3d-4453-ac0d-e1bbac3ae9c5")
-		)
-		(pin "4"
-			(uuid "8481684f-3c4c-4f08-bb5b-97b5925679e2")
-		)
-		(pin "5"
-			(uuid "439192f6-5fb8-4b33-9ea4-6869eeb77a44")
-		)
-		(pin "6"
-			(uuid "7c74f757-d69d-4506-9e19-1dceaf9ac27f")
-		)
-		(pin "7"
-			(uuid "e7a9e480-c11f-4e7e-b04c-7f9947c2c894")
-		)
-		(pin "8"
-			(uuid "971a8753-ed99-43f1-b4d1-dbd8a1daa4a6")
-		)
-		(pin "9"
-			(uuid "bba167b3-c7c5-4ca2-935c-ad0b855e22e3")
-		)
-		(pin "10"
-			(uuid "cd1a7765-351d-425d-b1d1-377bc729ef6b")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "U12")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(global_label "I2C_SDA"
-		(shape bidirectional)
-		(at 175.26 200.66 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "055cf84a-d914-4949-898d-0918ea7c9fcf")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 175.26 200.66 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "I2C_SCL"
-		(shape bidirectional)
-		(at 175.26 203.2 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "2c11798a-811c-449b-a9fe-27464cf3e45c")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 175.26 203.2 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "+3V3"
-		(shape bidirectional)
-		(at 165.1 187.96 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "4a2584b8-c4e0-4fe7-977f-7992aec409c4")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 165.1 187.96 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 165.1 213.35999999999999 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "5bd06c04-e840-4ff0-9dfb-2e6b272c2a26")
-		(property "Reference" "#PWR616"
-			(at 171.45 213.35999999999999 270)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Value" "GND"
-			(at 158.75 213.35999999999999 270)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Footprint" ""
-			(at 165.1 213.35999999999999 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Datasheet" "~"
-			(at 165.1 213.35999999999999 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Description" ""
-			(at 165.1 213.35999999999999 0)
-			(effects (font (size 1.27 1.27)))
-		)
-		(pin "1"
-			(uuid "a36fc1a7-1988-4aa8-8924-17f181f7920b")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "#PWR616")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(no_connect
-		(at 154.94 193.04)
-		(uuid "3dab53f5-934a-440c-995b-72a58acf9b38")
-	)
-	(no_connect
-		(at 154.94 203.2)
-		(uuid "25df5830-45ec-41df-ab40-17f13dd31872")
-	)
-	(no_connect
-		(at 154.94 205.74)
-		(uuid "9eaf43d7-9891-4758-961f-9a05bd583928")
-	)
-	(no_connect
-		(at 175.26 193.04)
-		(uuid "1d0ff341-980f-4dd7-a74e-eb5bcd7116a0")
-	)
-	(no_connect
-		(at 175.26 195.58)
-		(uuid "1bc69e92-0727-4a08-9daa-0e0f301e0498")
-	)
-	(no_connect
-		(at 175.26 208.28)
-		(uuid "509e3886-e3a5-4201-a652-e0eb8b7f319a")
-	)
 	(sheet_instances
 		(path "/"
 			(page "1")
 		)
 	)
 	(embedded_fonts no)
-
-	(symbol
-		(lib_id "Transistor_FET:Q_NMOS_GSD")
-		(at 111.76 114.3 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "24b3659e-1e48-4647-add1-a77bab3ed8be")
-		(property "Reference" "Q3"
-			(at 111.76 107.95 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "BSS138_estop"
-			(at 111.76 120.65 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
-			(at 111.76 114.3 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 111.76 114.3 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 111.76 114.3 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" "onsemi" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "BSS138" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "DigiKey" "BSS138CT-ND" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "03 SMD SOT-23" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "1484ec8d-a233-4785-8b9c-f7df99ad075d")
-		)
-		(pin "3"
-			(uuid "2102ddaa-4c17-41ad-af41-07e57bc6186f")
-		)
-		(pin "2"
-			(uuid "768739f2-32ff-4bbe-bab5-8f8f8ac57e24")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "Q3")
-					(unit 1)
-				)
-			)
-		)
-	)
-
-	(wire
-		(pts
-			(xy 106.68 114.3) (xy 101.6 114.3)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "7b561603-a980-4960-87d6-ff7e9724cc06")
-	)
-
-	(global_label "EN_SW"
-		(shape bidirectional)
-		(at 101.6 114.3 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right)
-		)
-		(uuid "ee01192b-5964-4b16-ae77-7d956a56a086")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 101.6 114.3 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-
-	(symbol
-		(lib_id "Transistor_FET:Q_NMOS_GSD")
-		(at 137.16 114.3 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "95a5c2c3-762c-40a5-b12b-c5a0dacc50a2")
-		(property "Reference" "Q4"
-			(at 137.16 107.95 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "BSS138_jetcut"
-			(at 137.16 120.65 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
-			(at 137.16 114.3 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 137.16 114.3 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 137.16 114.3 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" "onsemi" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "BSS138" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "DigiKey" "BSS138CT-ND" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "03 SMD SOT-23" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "fef830cb-46d3-486e-8d8b-63c66a1a950c")
-		)
-		(pin "3"
-			(uuid "fdbf8f46-5eaf-4988-be9a-883167a99405")
-		)
-		(pin "2"
-			(uuid "33b7cd27-4e41-45f3-8f20-466495695f14")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "Q4")
-					(unit 1)
-				)
-			)
-		)
-	)
-
-	(wire
-		(pts
-			(xy 132.08 114.3) (xy 127 114.3)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9c943c78-b0c8-4ca0-b7a0-d91c593872e7")
-	)
-
-	(label "HARDCUT"
-		(at 127 114.3 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "e00c2b0d-560c-4f30-9006-f51ff4f1535d")
-	)
-
-	(wire
-		(pts
-			(xy 139.7 109.22) (xy 139.7 104.14)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "376c18f5-a2a6-49f9-89b5-a2edc12b1eb4")
-	)
-
-	(global_label "EN_JET"
-		(shape bidirectional)
-		(at 139.7 104.14 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "d6f8e519-9d29-4f62-bc68-8575cacf4f49")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 139.7 104.14 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-
-	(wire
-		(pts
-			(xy 139.7 119.38) (xy 139.7 124.46)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "9c1e04ec-403e-4cca-8153-4b02f5031013")
-	)
-
-	(symbol
-		(lib_id "power:GND")
-		(at 139.7 124.46 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "df4323ca-734c-4e9a-bdd2-ca2ecda3f14a")
-		(property "Reference" "#PWR0614"
-			(at 139.7 118.11 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 139.7 130.81 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 139.7 124.46 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 139.7 124.46 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 139.7 124.46 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "aaf2c0d9-8c01-4510-b3ee-6c7cf687c151")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "#PWR0614")
-					(unit 1)
-				)
-			)
-		)
-	)
-
-	(symbol
-		(lib_id "Device:R")
-		(at 127 139.7 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "c35521c8-da8a-46db-b2fd-9a88f241e2c4")
-		(property "Reference" "R16"
-			(at 50.8 138.43 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "100k"
-			(at 50.8 140.97 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
-			(at 127 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 127 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 127 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" "Yageo" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "RC0603FR-07100KL" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "DigiKey" "311-100KHRCT-ND" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "01 SMD 0603 R" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "376d323d-b78b-4db0-824b-5e7d95d37d7e")
-		)
-		(pin "2"
-			(uuid "bd1bced3-4429-411b-9e55-5b12d5defbb3")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "R16")
-					(unit 1)
-				)
-			)
-		)
-	)
-
-	(wire
-		(pts
-			(xy 127 135.89) (xy 127 133.35)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "03ff3e40-61ad-4784-869c-a16850229695")
-	)
-
-	(label "HARDCUT"
-		(at 127 133.35 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "e219e844-d620-4941-a3aa-837c5eb50ff5")
-	)
-
-	(wire
-		(pts
-			(xy 127 143.51) (xy 127 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "d6ad4546-e4ab-4636-94e8-0f4087b931e2")
-	)
-
-	(symbol
-		(lib_id "power:GND")
-		(at 127 146.05 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "db32e720-060d-4e1c-abf0-b8ef40bda468")
-		(property "Reference" "#PWR0615"
-			(at 127 139.7 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 127 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 127 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 127 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 127 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "ffacd48e-cdf5-4ffd-813f-56d074cea577")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/38477265-f64f-4f2e-aefb-289b79c664e1"
-					(reference "#PWR0615")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(no_connect
-		(at 60.96 157.48)
-		(uuid "67d87bc1-f6bd-469f-984d-ea52b03f906b")
-	)
-	(no_connect
-		(at 60.96 160.02)
-		(uuid "4a2d27bb-58b5-4695-954e-658de9a4128c")
-	)
-	(no_connect
-		(at 111.76 157.48)
-		(uuid "053f03c5-d171-4bdc-a468-2d3526508efa")
-	)
-	(no_connect
-		(at 111.76 160.02)
-		(uuid "dd4550df-88f1-4755-870d-9c503905f279")
-	)
-	(no_connect
-		(at 162.56 157.48)
-		(uuid "676ad1a2-ef4a-4e22-a02f-3537f8ffd050")
-	)
-	(no_connect
-		(at 162.56 160.02)
-		(uuid "c88e0b5c-ae43-4eb3-85cf-e1cc18f69757")
-	)
-	(no_connect
-		(at 40.64 157.48)
-		(uuid "bb21ca8c-fe82-4468-9c29-ba7a5a063cdc")
-	)
-	(no_connect
-		(at 40.64 167.64)
-		(uuid "0b819f50-3f98-4950-a460-d8efd95bb2ee")
-	)
-	(no_connect
-		(at 40.64 170.18)
-		(uuid "bf9b962a-009a-4c35-a08c-32467ed5021d")
-	)
-	(no_connect
-		(at 91.44 157.48)
-		(uuid "0b735e47-b66c-4053-8b76-e95a92f6d4d0")
-	)
-	(no_connect
-		(at 91.44 167.64)
-		(uuid "89bb6f9f-caa2-4877-b1ef-b465d1699596")
-	)
-	(no_connect
-		(at 91.44 170.18)
-		(uuid "f4a9f013-0006-4246-b262-2a510521cf9d")
-	)
-	(no_connect
-		(at 142.24 157.48)
-		(uuid "e6480116-de5c-497f-b876-6cba3c2485de")
-	)
-	(no_connect
-		(at 142.24 167.64)
-		(uuid "4b6da6f0-3cdc-4522-9e61-489ca393a63b")
-	)
-	(no_connect
-		(at 142.24 170.18)
-		(uuid "a2c8b9c3-30bb-44f1-b3dc-b0a2760877d4")
-	)
 )

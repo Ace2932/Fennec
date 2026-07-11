@@ -5,6 +5,148 @@
 	(uuid "4a32e0df-a1d4-4c84-8e1a-de1f04ee06a9")
 	(paper "A4")
 	(lib_symbols
+		(symbol "Connector_Generic:Conn_01x02"
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "J"
+				(at 0 2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "Conn_01x02"
+				(at 0 -5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "connector"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Connector*:*_1x??_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "Conn_01x02_1_1"
+				(rectangle
+					(start -1.27 1.27)
+					(end 1.27 -3.81)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+				(rectangle
+					(start -1.27 0.127)
+					(end 0 -0.127)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -1.27 -2.413)
+					(end 0 -2.667)
+					(stroke
+						(width 0.1524)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin passive line
+					(at -5.08 0 0)
+					(length 3.81)
+					(name "Pin_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at -5.08 -2.54 0)
+					(length 3.81)
+					(name "Pin_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Connector_Generic:Conn_01x03"
 			(pin_names
 				(offset 1.016)
@@ -376,6 +518,307 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Device:C"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0.254)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "C"
+				(at 0.635 2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Value" "C"
+				(at 0.635 -2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Footprint" ""
+				(at 0.9652 -3.81 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Unpolarized capacitor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "cap capacitor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "C_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "C_0_1"
+				(polyline
+					(pts
+						(xy -2.032 0.762) (xy 2.032 0.762)
+					)
+					(stroke
+						(width 0.508)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.032 -0.762) (xy 2.032 -0.762)
+					)
+					(stroke
+						(width 0.508)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "C_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 2.794)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 2.794)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Device:L"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "L"
+				(at -1.27 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "L"
+				(at 1.905 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Inductor"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "inductor choke coil reactor magnetic"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Choke_* *Coil* Inductor_* L_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "L_0_1"
+				(arc
+					(start 0 2.54)
+					(mid 0.6323 1.905)
+					(end 0 1.27)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 1.27)
+					(mid 0.6323 0.635)
+					(end 0 0)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 0)
+					(mid 0.6323 -0.635)
+					(end 0 -1.27)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -1.27)
+					(mid 0.6323 -1.905)
+					(end 0 -2.54)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "L_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "power:GND"
 			(power)
 			(pin_numbers
@@ -578,449 +1021,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Connector_Generic:Conn_01x02"
-				(pin_names
-					(offset 1.016)
-					(hide yes)
-				)
-				(exclude_from_sim no)
-				(in_bom yes)
-				(on_board yes)
-				(property "Reference" "J"
-					(at 0 2.54 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Value" "Conn_01x02"
-					(at 0 -5.08 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Footprint" ""
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "Datasheet" "~"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "Description" "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "ki_keywords" "connector"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "ki_fp_filters" "Connector*:*_1x??_*"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(symbol "Conn_01x02_1_1"
-					(rectangle
-						(start -1.27 1.27)
-						(end 1.27 -3.81)
-						(stroke
-							(width 0.254)
-							(type default)
-						)
-						(fill
-							(type background)
-						)
-					)
-					(rectangle
-						(start -1.27 0.127)
-						(end 0 -0.127)
-						(stroke
-							(width 0.1524)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(rectangle
-						(start -1.27 -2.413)
-						(end 0 -2.667)
-						(stroke
-							(width 0.1524)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(pin passive line
-						(at -5.08 0 0)
-						(length 3.81)
-						(name "Pin_1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-					(pin passive line
-						(at -5.08 -2.54 0)
-						(length 3.81)
-						(name "Pin_2"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "2"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-				)
-				(embedded_fonts no)
-			)
-		(symbol "Device:L"
-				(pin_numbers
-					(hide yes)
-				)
-				(pin_names
-					(offset 1.016)
-					(hide yes)
-				)
-				(exclude_from_sim no)
-				(in_bom yes)
-				(on_board yes)
-				(property "Reference" "L"
-					(at -1.27 0 90)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Value" "L"
-					(at 1.905 0 90)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-					)
-				)
-				(property "Footprint" ""
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "Datasheet" "~"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "Description" "Inductor"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "ki_keywords" "inductor choke coil reactor magnetic"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "ki_fp_filters" "Choke_* *Coil* Inductor_* L_*"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(symbol "L_0_1"
-					(arc
-						(start 0 2.54)
-						(mid 0.6323 1.905)
-						(end 0 1.27)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(arc
-						(start 0 1.27)
-						(mid 0.6323 0.635)
-						(end 0 0)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(arc
-						(start 0 0)
-						(mid 0.6323 -0.635)
-						(end 0 -1.27)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(arc
-						(start 0 -1.27)
-						(mid 0.6323 -1.905)
-						(end 0 -2.54)
-						(stroke
-							(width 0)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-				)
-				(symbol "L_1_1"
-					(pin passive line
-						(at 0 3.81 270)
-						(length 1.27)
-						(name "1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-					(pin passive line
-						(at 0 -3.81 90)
-						(length 1.27)
-						(name "2"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "2"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-				)
-				(embedded_fonts no)
-			)
-		(symbol "Device:C"
-				(pin_numbers
-					(hide yes)
-				)
-				(pin_names
-					(offset 0.254)
-				)
-				(exclude_from_sim no)
-				(in_bom yes)
-				(on_board yes)
-				(property "Reference" "C"
-					(at 0.635 2.54 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(justify left)
-					)
-				)
-				(property "Value" "C"
-					(at 0.635 -2.54 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(justify left)
-					)
-				)
-				(property "Footprint" ""
-					(at 0.9652 -3.81 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "Datasheet" "~"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "Description" "Unpolarized capacitor"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "ki_keywords" "cap capacitor"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(property "ki_fp_filters" "C_*"
-					(at 0 0 0)
-					(effects
-						(font
-							(size 1.27 1.27)
-						)
-						(hide yes)
-					)
-				)
-				(symbol "C_0_1"
-					(polyline
-						(pts
-							(xy -2.032 0.762) (xy 2.032 0.762)
-						)
-						(stroke
-							(width 0.508)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-					(polyline
-						(pts
-							(xy -2.032 -0.762) (xy 2.032 -0.762)
-						)
-						(stroke
-							(width 0.508)
-							(type default)
-						)
-						(fill
-							(type none)
-						)
-					)
-				)
-				(symbol "C_1_1"
-					(pin passive line
-						(at 0 3.81 270)
-						(length 2.794)
-						(name "~"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "1"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-					(pin passive line
-						(at 0 -3.81 90)
-						(length 2.794)
-						(name "~"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-						(number "2"
-							(effects
-								(font
-									(size 1.27 1.27)
-								)
-							)
-						)
-					)
-				)
-				(embedded_fonts no)
-			)
 	)
 	(wire
 		(pts
@@ -1034,6 +1034,46 @@
 	)
 	(wire
 		(pts
+			(xy 44.45 148.59) (xy 44.45 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0c8c73e3-c78c-482d-b3db-8d3dcbe2fabd")
+	)
+	(wire
+		(pts
+			(xy 57.15 156.21) (xy 57.15 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0e22751e-862f-4f12-9faf-2e10ce023a66")
+	)
+	(wire
+		(pts
+			(xy 44.45 156.21) (xy 44.45 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "193aadfd-803b-4179-83ae-ee675d457edf")
+	)
+	(wire
+		(pts
+			(xy 107.95 148.59) (xy 107.95 143.51)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1d9dae8f-05d2-4967-bee5-38867d85e311")
+	)
+	(wire
+		(pts
 			(xy 160.02 110.49) (xy 157.48 110.49)
 		)
 		(stroke
@@ -1041,6 +1081,16 @@
 			(type default)
 		)
 		(uuid "225910bd-1630-48fc-a297-233a84329089")
+	)
+	(wire
+		(pts
+			(xy 88.9 148.59) (xy 88.9 143.51)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3a70cb75-28ce-4293-ad70-8d7567e53a67")
 	)
 	(wire
 		(pts
@@ -1114,6 +1164,16 @@
 	)
 	(wire
 		(pts
+			(xy 119.38 85.09) (xy 124.46 85.09)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "787cedf2-94cd-4b63-bc89-f078085dc49d")
+	)
+	(wire
+		(pts
 			(xy 160.02 128.27) (xy 154.94 128.27)
 		)
 		(stroke
@@ -1131,6 +1191,36 @@
 			(type default)
 		)
 		(uuid "7e29922b-1eab-4d02-a7e8-2350432fe74c")
+	)
+	(wire
+		(pts
+			(xy 119.38 87.63) (xy 124.46 87.63)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8beca216-e4dc-4b4b-b47a-a4538f85f042")
+	)
+	(wire
+		(pts
+			(xy 107.95 156.21) (xy 107.95 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8d875f41-1596-4306-bf79-b73a6392d938")
+	)
+	(wire
+		(pts
+			(xy 57.15 148.59) (xy 57.15 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "91f33481-2412-4fd5-bbfa-260bacbd5d50")
 	)
 	(wire
 		(pts
@@ -1174,7 +1264,17 @@
 	)
 	(wire
 		(pts
-			(xy 160.02 148.59) (xy 172.72 148.59)
+			(xy 119.38 107.95) (xy 124.46 107.95)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c6b91fc6-da99-438b-a161-cab68bd966da")
+	)
+	(wire
+		(pts
+			(xy 160.02 148.59) (xy 146.05 148.59)
 		)
 		(stroke
 			(width 0)
@@ -1201,6 +1301,26 @@
 			(type default)
 		)
 		(uuid "e7dff5f0-23fb-4032-bc74-b356c35335e8")
+	)
+	(wire
+		(pts
+			(xy 119.38 105.41) (xy 124.46 105.41)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e7ffef4d-2f60-471a-bdff-e4955131710a")
+	)
+	(wire
+		(pts
+			(xy 88.9 156.21) (xy 88.9 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ed835c71-e80f-47cd-a339-0e8776e44d31")
 	)
 	(wire
 		(pts
@@ -1234,7 +1354,7 @@
 	)
 	(wire
 		(pts
-			(xy 160.02 143.51) (xy 168.91 143.51)
+			(xy 160.02 143.51) (xy 151.13 143.51)
 		)
 		(stroke
 			(width 0)
@@ -1282,6 +1402,26 @@
 			)
 		)
 	)
+	(global_label "VBAT_PROTECTED"
+		(shape bidirectional)
+		(at 57.15 146.05 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "0cd6325f-fdc7-448e-a132-1acd25718e03")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 57.15 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "EN_JET"
 		(shape bidirectional)
 		(at 168.91 107.95 0)
@@ -1294,6 +1434,26 @@
 		(uuid "115f9e53-81d9-4380-a9ec-23023979c4d8")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 168.91 107.95 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "V12_L2_RAW"
+		(shape bidirectional)
+		(at 88.9 143.51 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "19c04f4a-5350-4bc1-b05f-7827430993a6")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 88.9 143.51 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1442,18 +1602,78 @@
 			)
 		)
 	)
-	(global_label "V5_AUX"
+	(global_label "V12_L2"
 		(shape bidirectional)
-		(at 172.72 148.59 0)
+		(at 119.38 87.63 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "5239534c-1753-4962-a86d-b9d541cd20cb")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 119.38 87.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "V7V5_ARM"
+		(shape bidirectional)
+		(at 190.5 129.54 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "5416d534-5c57-4242-bdd1-b2f0d571ddcd")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 190.5 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "V12_L2"
+		(shape bidirectional)
+		(at 107.95 143.51 90)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify left)
 		)
+		(uuid "5f2df5e4-37e1-49ac-9ae2-922c1ade1fc0")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 107.95 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "V5_AUX"
+		(shape bidirectional)
+		(at 146.05 148.59 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
 		(uuid "648a21f7-461c-4821-8666-fe3ce7840626")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 172.72 148.59 0)
+			(at 146.05 148.59 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1464,16 +1684,16 @@
 	)
 	(global_label "VBAT_PROTECTED"
 		(shape bidirectional)
-		(at 168.91 143.51 0)
+		(at 151.13 143.51 180)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "6d35049e-82dd-49ba-9a72-ef4c00b17c7e")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 168.91 143.51 0)
+			(at 151.13 143.51 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1642,6 +1862,26 @@
 			)
 		)
 	)
+	(global_label "VBAT_PROTECTED"
+		(shape bidirectional)
+		(at 44.45 146.05 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "bc5dae51-1d7a-4403-bcef-04480a0e08cf")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 44.45 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "EN_BUCKS"
 		(shape bidirectional)
 		(at 168.91 46.99 0)
@@ -1662,6 +1902,26 @@
 			)
 		)
 	)
+	(global_label "V12_L2"
+		(shape bidirectional)
+		(at 88.9 161.29 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "d17134c8-e029-4fc1-833b-3733b9e91119")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 88.9 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "EN_BUCKS"
 		(shape bidirectional)
 		(at 154.94 128.27 0)
@@ -1674,6 +1934,26 @@
 		(uuid "daeb542a-8297-4fbc-b1e7-f897383dc05b")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 154.94 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "V12_JET"
+		(shape bidirectional)
+		(at 119.38 107.95 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "e197a432-bdd2-42b5-9d50-955d4b9ec38f")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 119.38 107.95 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1748,6 +2028,173 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:L")
+		(at 88.9 152.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "13df7ec6-3e2b-4507-b386-16f00deb670c")
+		(property "Reference" "L1"
+			(at 88.9 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "22uH"
+			(at 88.9 158.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Inductor_SMD:L_12x12mm_H8mm"
+			(at 88.9 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 88.9 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 88.9 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Bourns"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "SRR1260-220M"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "SRR1260-220MCT-ND"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "05 SMD inductor (big pads, max iron heat)"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "0817574e-3667-4da3-a29c-bf7b4b7dd2eb")
+		)
+		(pin "2"
+			(uuid "e19becbc-964e-4df8-b85d-3fd99e8f32dc")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "L1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 44.45 161.29 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "14a576b1-7c5f-422e-8843-72e47e95b9c6")
+		(property "Reference" "#PWR0216"
+			(at 44.45 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 44.45 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 44.45 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 44.45 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 44.45 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3628d19c-07a6-4342-b251-d834faa69d2c")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "#PWR0216")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Connector_Generic:Conn_01x04")
 		(at 165.1 105.41 0)
 		(unit 1)
@@ -1798,7 +2245,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Pololu (#5577, off-board module)" (at 0 0 0)
+		(property "Manufacturer" "Pololu (#5577, off-board module)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1806,7 +2254,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "D42V55F12" (at 0 0 0)
+		(property "MPN" "D42V55F12"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1814,7 +2263,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "11 THT XT30 (buck landing)" (at 0 0 0)
+		(property "AssemblyOrder" "11 THT XT30 (buck landing)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1838,6 +2288,108 @@
 			(project "nova_pcb_v6_power_v2"
 				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
 					(reference "U4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 107.95 152.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "295791ef-4f94-48c9-a775-3c3059e616ac")
+		(property "Reference" "C6"
+			(at 107.95 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "470uF_25V"
+			(at 107.95 158.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D10.0mm_P5.00mm"
+			(at 107.95 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 107.95 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 107.95 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Nichicon"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "UPW1E471MPD"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "493-1826-ND"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "14 THT 470uF"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "d57e8281-3b8a-4622-ac1d-b07fc4e3572d")
+		)
+		(pin "2"
+			(uuid "2832bbc5-d376-4e32-a55c-b23c3bf06d5d")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "C6")
 					(unit 1)
 				)
 			)
@@ -1894,7 +2446,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Sullins (snap to 1x03)" (at 0 0 0)
+		(property "Manufacturer" "Sullins (snap to 1x03)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1902,7 +2455,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "PRPC040SAAN-RC" (at 0 0 0)
+		(property "MPN" "PRPC040SAAN-RC"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1910,7 +2464,8 @@
 				(hide yes)
 			)
 		)
-		(property "DigiKey" "S1011EC-40-ND" (at 0 0 0)
+		(property "DigiKey" "S1011EC-40-ND"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1918,7 +2473,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "07 THT pin header" (at 0 0 0)
+		(property "AssemblyOrder" "07 THT pin header"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -1939,6 +2495,303 @@
 			(project "nova_pcb_v6_power_v2"
 				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
 					(reference "J2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 44.45 152.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "394980e4-d460-495b-9890-7b5272e68661")
+		(property "Reference" "C8"
+			(at 44.45 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "470uF_25V"
+			(at 44.45 158.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D10.0mm_P5.00mm"
+			(at 44.45 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 44.45 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 44.45 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Nichicon"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "UPW1E471MPD"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "493-1826-ND"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "14 THT 470uF"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "07aa5f10-392d-439b-ac7b-8cbeb56f18fa")
+		)
+		(pin "2"
+			(uuid "936e22f3-fd0c-4977-9587-26302d17bfb4")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "C8")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 57.15 152.4 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "3bf78f29-1068-4417-b2ba-348c24ec4f14")
+		(property "Reference" "C9"
+			(at 57.15 146.05 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "470uF_25V"
+			(at 57.15 158.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_THT:CP_Radial_D10.0mm_P5.00mm"
+			(at 57.15 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 57.15 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 57.15 152.4 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "Nichicon"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "UPW1E471MPD"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DigiKey" "493-1826-ND"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "14 THT 470uF"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "6556efeb-7313-42bc-932e-e3188bebe570")
+		)
+		(pin "2"
+			(uuid "9add80f9-c01e-48de-a6c2-e776afbd4816")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "C9")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector_Generic:Conn_01x02")
+		(at 195.58 127 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "3f75873f-a617-47c8-8311-f5db48657713")
+		(property "Reference" "J14"
+			(at 195.58 120.65 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "XT30_Arm7V5"
+			(at 195.58 133.35 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical"
+			(at 195.58 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 195.58 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 195.58 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "AMASS"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "XT30U-M"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "11 THT XT30"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "5dbcf617-4be9-4b80-a97f-1429ef97a547")
+		)
+		(pin "2"
+			(uuid "f7078458-2dbc-43e5-a936-fd3c4291f29e")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "J14")
 					(unit 1)
 				)
 			)
@@ -2011,7 +2864,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 154.94 146.05 0)
+		(at 154.94 146.05 270)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2019,7 +2872,7 @@
 		(dnp no)
 		(uuid "54f531a7-a351-4952-aedf-713e143f0545")
 		(property "Reference" "#PWR26"
-			(at 161.29 146.05 270)
+			(at 154.94 152.4 270)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2028,7 +2881,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 148.59 146.05 270)
+			(at 154.94 139.7 270)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2125,7 +2978,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Pololu (#5674, off-board module)" (at 0 0 0)
+		(property "Manufacturer" "Pololu (#5674, off-board module)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2133,7 +2987,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "D42V110F7" (at 0 0 0)
+		(property "MPN" "D42V110F7"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2141,7 +2996,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "11 THT XT30 (buck landing)" (at 0 0 0)
+		(property "AssemblyOrder" "11 THT XT30 (buck landing)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2221,7 +3077,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Pololu (Phase 4 reserve, DNP)" (at 0 0 0)
+		(property "Manufacturer" "Pololu (Phase 4 reserve, DNP)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2229,7 +3086,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "D42V55F7" (at 0 0 0)
+		(property "MPN" "D42V55F7"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2237,7 +3095,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "11 THT XT30 (buck landing, DNP option)" (at 0 0 0)
+		(property "AssemblyOrder" "11 THT XT30 (buck landing, DNP option)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2382,7 +3241,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Pololu (#5677, off-board module)" (at 0 0 0)
+		(property "Manufacturer" "Pololu (#5677, off-board module)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2390,7 +3250,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "D42V110F12" (at 0 0 0)
+		(property "MPN" "D42V110F12"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2398,7 +3259,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "11 THT XT30 (buck landing)" (at 0 0 0)
+		(property "AssemblyOrder" "11 THT XT30 (buck landing)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2422,6 +3284,229 @@
 			(project "nova_pcb_v6_power_v2"
 				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
 					(reference "U2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 119.38 85.09 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "7ab92886-4c73-4e07-aa4b-7a619bdc1b0c")
+		(property "Reference" "#PWR28"
+			(at 113.03 85.09 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 125.73 85.09 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 119.38 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 119.38 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 119.38 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "90079dcc-0d50-4515-93c1-818b1859cb30")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "#PWR28")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector_Generic:Conn_01x02")
+		(at 129.54 85.09 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "7d158a64-7b5a-4625-9ab1-2700c287c30f")
+		(property "Reference" "J13"
+			(at 129.54 78.74 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "XT30_L2_12V"
+			(at 129.54 91.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical"
+			(at 129.54 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "AMASS"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "XT30U-M"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "AssemblyOrder" "11 THT XT30"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "7e42fe8a-b080-4e22-8554-f3f2e50507aa")
+		)
+		(pin "2"
+			(uuid "a1cbdd75-bc28-4296-a945-bc90fa48b7a7")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "J13")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 57.15 161.29 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "954af777-8ba8-4534-9165-1465e1050858")
+		(property "Reference" "#PWR0217"
+			(at 57.15 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 57.15 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 57.15 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 57.15 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 57.15 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "6fd29e48-88d1-4293-9fa9-0649ff285554")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "#PWR0217")
 					(unit 1)
 				)
 			)
@@ -2608,7 +3693,8 @@
 				)
 			)
 		)
-		(property "Manufacturer" "Pololu (#2855, off-board module)" (at 0 0 0)
+		(property "Manufacturer" "Pololu (#2855, off-board module)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2616,7 +3702,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "D24V22F12" (at 0 0 0)
+		(property "MPN" "D24V22F12"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2624,7 +3711,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "11 THT XT30 (buck landing)" (at 0 0 0)
+		(property "AssemblyOrder" "11 THT XT30 (buck landing)"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2713,6 +3801,71 @@
 			(project "nova_pcb_v6_power_v2"
 				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
 					(reference "#PWR21")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 107.95 161.29 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "d77205e4-dd4b-46b9-941b-270ac3c0d483")
+		(property "Reference" "#PWR29"
+			(at 107.95 154.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 107.95 167.64 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 107.95 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 107.95 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 107.95 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "bb461393-7767-41c7-9012-7426b7f186ab")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "#PWR29")
 					(unit 1)
 				)
 			)
@@ -2915,6 +4068,71 @@
 	)
 	(symbol
 		(lib_id "power:GND")
+		(at 119.38 105.41 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "e94574df-7b18-4a88-abec-696a684537d9")
+		(property "Reference" "#PWR27"
+			(at 113.03 105.41 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 125.73 105.41 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 119.38 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 119.38 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 119.38 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3b7569c1-8f3b-4335-80dc-06635cdc0293")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "#PWR27")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
 		(at 154.94 44.45 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -2979,6 +4197,71 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 190.5 127 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "f9a33160-4ee9-4e50-bffa-c622bfdbae95")
+		(property "Reference" "#PWR218"
+			(at 184.15 127 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 196.85 127 270)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 190.5 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 190.5 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 190.5 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "1a8a9e9d-f6b8-47fd-b515-a405f0c9a177")
+		)
+		(instances
+			(project "nova_pcb_v6_power_v2"
+				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
+					(reference "#PWR218")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Connector_Generic:Conn_01x02")
 		(at 129.54 105.41 0)
 		(unit 1)
@@ -2996,7 +4279,7 @@
 			)
 		)
 		(property "Value" "XT30_JET_12V"
-			(at 129.54 111.75999999999999 0)
+			(at 129.54 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3021,7 +4304,16 @@
 				(hide yes)
 			)
 		)
-		(property "Manufacturer" "AMASS" (at 0 0 0)
+		(property "Description" ""
+			(at 129.54 105.41 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Manufacturer" "AMASS"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3029,7 +4321,8 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "XT30U-M" (at 0 0 0)
+		(property "MPN" "XT30U-M"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3037,7 +4330,8 @@
 				(hide yes)
 			)
 		)
-		(property "AssemblyOrder" "11 THT XT30" (at 0 0 0)
+		(property "AssemblyOrder" "11 THT XT30"
+			(at 0 0 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3060,1182 +4354,10 @@
 			)
 		)
 	)
-	(wire
-		(pts
-			(xy 124.46 105.41) (xy 119.38 105.41)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "22ab770f-5eef-4e12-9ca6-3943ea43e692")
-	)
-	(global_label "V12_JET"
-		(shape bidirectional)
-		(at 119.38 105.41 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "e197a432-bdd2-42b5-9d50-955d4b9ec38f")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 119.38 105.41 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 124.46 107.95) (xy 119.38 107.95)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "98c50474-0ad3-44c1-a71d-25eb5190e92e")
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 119.38 107.95 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "e94574df-7b18-4a88-abec-696a684537d9")
-		(property "Reference" "#PWR27"
-			(at 119.38 101.60000000000001 270)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 119.38 114.3 270)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 119.38 107.95 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 119.38 107.95 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "3b7569c1-8f3b-4335-80dc-06635cdc0293")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "#PWR27")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector_Generic:Conn_01x02")
-		(at 129.54 85.09 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "7d158a64-7b5a-4625-9ab1-2700c287c30f")
-		(property "Reference" "J13"
-			(at 129.54 78.74000000000001 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "XT30_L2_12V"
-			(at 129.54 91.44 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical"
-			(at 129.54 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 129.54 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Manufacturer" "AMASS" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "XT30U-M" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "11 THT XT30" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "7e42fe8a-b080-4e22-8554-f3f2e50507aa")
-		)
-		(pin "2"
-			(uuid "a1cbdd75-bc28-4296-a945-bc90fa48b7a7")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "J13")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 124.46 85.09) (xy 119.38 85.09)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c92d7bfc-6793-45cc-9f4b-9489f27a665c")
-	)
-	(global_label "V12_L2"
-		(shape bidirectional)
-		(at 119.38 85.09 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "5239534c-1753-4962-a86d-b9d541cd20cb")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 119.38 85.09 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 124.46 87.63) (xy 119.38 87.63)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "91bc2f30-babf-4e11-aae6-962f2aff78f9")
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 119.38 87.63 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "7ab92886-4c73-4e07-aa4b-7a619bdc1b0c")
-		(property "Reference" "#PWR28"
-			(at 119.38 81.28 270)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 119.38 93.97999999999999 270)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 119.38 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 119.38 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "90079dcc-0d50-4515-93c1-818b1859cb30")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "#PWR28")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:L")
-		(at 88.9 152.4 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "13df7ec6-3e2b-4507-b386-16f00deb670c")
-		(property "Reference" "L1"
-			(at 88.9 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "22uH"
-			(at 88.9 158.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Inductor_SMD:L_12x12mm_H8mm"
-			(at 88.9 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 88.9 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Manufacturer" "Bourns" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "SRR1260-220M" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "DigiKey" "SRR1260-220MCT-ND" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "05 SMD inductor (big pads, max iron heat)" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "0817574e-3667-4da3-a29c-bf7b4b7dd2eb")
-		)
-		(pin "2"
-			(uuid "e19becbc-964e-4df8-b85d-3fd99e8f32dc")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "L1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 88.9 148.59) (xy 88.9 143.51)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "3a70cb75-28ce-4293-ad70-8d7567e53a67")
-	)
-	(global_label "V12_L2_RAW"
-		(shape bidirectional)
-		(at 88.9 143.51 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "19c04f4a-5350-4bc1-b05f-7827430993a6")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 88.9 143.51 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 88.9 156.21) (xy 88.9 161.29)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ed835c71-e80f-47cd-a339-0e8776e44d31")
-	)
-	(global_label "V12_L2"
-		(shape bidirectional)
-		(at 88.9 161.29 270)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "d17134c8-e029-4fc1-833b-3733b9e91119")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 88.9 161.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 107.95 152.4 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "295791ef-4f94-48c9-a775-3c3059e616ac")
-		(property "Reference" "C6"
-			(at 107.95 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "470uF_25V"
-			(at 107.95 158.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:CP_Radial_D10.0mm_P5.00mm"
-			(at 107.95 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 107.95 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Manufacturer" "Nichicon" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "UPW1E471MPD" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "DigiKey" "493-1826-ND" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "14 THT 470uF" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "d57e8281-3b8a-4622-ac1d-b07fc4e3572d")
-		)
-		(pin "2"
-			(uuid "2832bbc5-d376-4e32-a55c-b23c3bf06d5d")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "C6")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 107.95 148.59) (xy 107.95 143.51)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1d9dae8f-05d2-4967-bee5-38867d85e311")
-	)
-	(global_label "V12_L2"
-		(shape bidirectional)
-		(at 107.95 143.51 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "5f2df5e4-37e1-49ac-9ae2-922c1ade1fc0")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 107.95 143.51 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(wire
-		(pts
-			(xy 107.95 156.21) (xy 107.95 161.29)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "8d875f41-1596-4306-bf79-b73a6392d938")
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 107.95 161.29 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "d77205e4-dd4b-46b9-941b-270ac3c0d483")
-		(property "Reference" "#PWR29"
-			(at 107.95 154.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 107.95 167.64 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 107.95 161.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 107.95 161.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "bb461393-7767-41c7-9012-7426b7f186ab")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "#PWR29")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Connector_Generic:Conn_01x02")
-		(at 195.58 127 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "3f75873f-a617-47c8-8311-f5db48657713")
-		(property "Reference" "J14"
-			(at 195.58 120.65 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "XT30_Arm7V5"
-			(at 195.58 133.35 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical"
-			(at 195.58 127 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 195.58 127 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 195.58 127 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Manufacturer" "AMASS" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "XT30U-M" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "11 THT XT30" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "5dbcf617-4be9-4b80-a97f-1429ef97a547")
-		)
-		(pin "2"
-			(uuid "f7078458-2dbc-43e5-a936-fd3c4291f29e")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "J14")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(global_label "V7V5_ARM"
-		(shape bidirectional)
-		(at 190.5 127 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "5416d534-5c57-4242-bdd1-b2f0d571ddcd")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 190.5 127 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 190.5 129.54 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "f9a33160-4ee9-4e50-bffa-c622bfdbae95")
-		(property "Reference" "#PWR218"
-			(at 196.85 129.54 270)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 184.15 129.54 270)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 190.5 129.54 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 190.5 129.54 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 190.5 129.54 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "1a8a9e9d-f6b8-47fd-b515-a405f0c9a177")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "#PWR218")
-					(unit 1)
-				)
-			)
-		)
-	)
 	(sheet_instances
 		(path "/"
 			(page "1")
 		)
 	)
 	(embedded_fonts no)
-
-	(symbol
-		(lib_id "Device:C")
-		(at 44.45 152.4 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "394980e4-d460-495b-9890-7b5272e68661")
-		(property "Reference" "C8"
-			(at 44.45 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "470uF_25V"
-			(at 44.45 158.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:CP_Radial_D10.0mm_P5.00mm"
-			(at 44.45 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 44.45 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Manufacturer" "Nichicon" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "UPW1E471MPD" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "DigiKey" "493-1826-ND" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "14 THT 470uF" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "07aa5f10-392d-439b-ac7b-8cbeb56f18fa")
-		)
-		(pin "2"
-			(uuid "936e22f3-fd0c-4977-9587-26302d17bfb4")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "C8")
-					(unit 1)
-				)
-			)
-		)
-	)
-
-	(wire
-		(pts
-			(xy 44.45 148.59) (xy 44.45 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "0c8c73e3-c78c-482d-b3db-8d3dcbe2fabd")
-	)
-
-	(global_label "VBAT_PROTECTED"
-		(shape bidirectional)
-		(at 44.45 146.05 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "bc5dae51-1d7a-4403-bcef-04480a0e08cf")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 44.45 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-
-	(wire
-		(pts
-			(xy 44.45 156.21) (xy 44.45 161.29)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "193aadfd-803b-4179-83ae-ee675d457edf")
-	)
-
-	(symbol
-		(lib_id "power:GND")
-		(at 44.45 161.29 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "14a576b1-7c5f-422e-8843-72e47e95b9c6")
-		(property "Reference" "#PWR0216"
-			(at 44.45 154.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 44.45 167.64 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 44.45 161.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 44.45 161.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "3628d19c-07a6-4342-b251-d834faa69d2c")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "#PWR0216")
-					(unit 1)
-				)
-			)
-		)
-	)
-
-	(symbol
-		(lib_id "Device:C")
-		(at 57.15 152.4 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "3bf78f29-1068-4417-b2ba-348c24ec4f14")
-		(property "Reference" "C9"
-			(at 57.15 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "470uF_25V"
-			(at 57.15 158.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Capacitor_THT:CP_Radial_D10.0mm_P5.00mm"
-			(at 57.15 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 57.15 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Manufacturer" "Nichicon" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "UPW1E471MPD" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "DigiKey" "493-1826-ND" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "AssemblyOrder" "14 THT 470uF" (at 0 0 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "6556efeb-7313-42bc-932e-e3188bebe570")
-		)
-		(pin "2"
-			(uuid "9add80f9-c01e-48de-a6c2-e776afbd4816")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "C9")
-					(unit 1)
-				)
-			)
-		)
-	)
-
-	(wire
-		(pts
-			(xy 57.15 148.59) (xy 57.15 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "91f33481-2412-4fd5-bbfa-260bacbd5d50")
-	)
-
-	(global_label "VBAT_PROTECTED"
-		(shape bidirectional)
-		(at 57.15 146.05 90)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "0cd6325f-fdc7-448e-a132-1acd25718e03")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 57.15 146.05 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-	)
-
-	(wire
-		(pts
-			(xy 57.15 156.21) (xy 57.15 161.29)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "0e22751e-862f-4f12-9faf-2e10ce023a66")
-	)
-
-	(symbol
-		(lib_id "power:GND")
-		(at 57.15 161.29 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "954af777-8ba8-4534-9165-1465e1050858")
-		(property "Reference" "#PWR0217"
-			(at 57.15 154.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 57.15 167.64 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 57.15 161.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 57.15 161.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "6fd29e48-88d1-4293-9fa9-0649ff285554")
-		)
-		(instances
-			(project "nova_pcb_v6_power_v2"
-				(path "/f535083b-f621-4317-a378-cf746e7f972b/27a07a1d-f9e1-432b-b0b9-19fa0d701a09"
-					(reference "#PWR0217")
-					(unit 1)
-				)
-			)
-		)
-	)
 )

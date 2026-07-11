@@ -20,9 +20,8 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            # TODO(phase2): gait_node — subscribe gait params / cmd_vel, run
-            # trot.foot_target -> leg_ik.inverse_kinematics -> /joint_commands
-            # via config/joint_id_map.yaml. Pure logic below is already tested.
+            # thin glue; all logic in controller.py (pure, tested rclpy-free)
+            "gait_node = nova_locomotion.node:main",
         ],
     },
 )

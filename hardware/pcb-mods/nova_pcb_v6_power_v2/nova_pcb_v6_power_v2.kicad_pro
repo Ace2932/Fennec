@@ -37,9 +37,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 2.7,
-          "height": 3.8,
-          "width": 3.8
+          "drill": 3.2,
+          "height": 3.2,
+          "width": 3.2
         },
         "silk_line_width": 0.1,
         "silk_text_italic": false,
@@ -703,6 +703,35 @@
     "subpart_first_id": 65,
     "subpart_id_separator": 0
   },
-  "sheets": [],
+  "sheets": [
+    [
+      "f535083b-f621-4317-a378-cf746e7f972b",
+      "Root"
+    ],
+    [
+      "ef143087-bea8-42bd-8bca-c15c2f4ac5f7",
+      "01 Battery Input + Reverse Protection"
+    ],
+    [
+      "27a07a1d-f9e1-432b-b0b9-19fa0d701a09",
+      "02 Power Rails (Pololu bucks)"
+    ],
+    [
+      "8f3fe7b3-c0aa-43f7-a2b9-c8492e89dcc9",
+      "03 Servo Bus (star injection)"
+    ],
+    [
+      "38477265-f64f-4f2e-aefb-289b79c664e1",
+      "06 Safety Chain"
+    ],
+    [
+      "6edc1b8a-dc4c-428d-8457-a29d39eb3953",
+      "08 Connectors + Mechanical"
+    ],
+    [
+      "fa111b54-7a85-49af-8eb1-99842a09914c",
+      "09 Inter-Board Connector"
+    ]
+  ],
   "text_variables": {}
 }
