@@ -14,31 +14,37 @@
 // Cables: plug before drop-in; tunnel exits the knee-side end wall at bay
 // level, wires run along the blade.
 //
-// Print: flat on the -Z face. NOTE (LA-6, 2026-07-11, issue #24): the
-// underside is now planarized/ramped down to the fork's floor (SUB_FLOOR
-// -26.6) for x >= SUB_X0 -- see the SUB_X0/X1/X2 block below. This closes
-// MOST of the old float, but NOT all of it: check_fit's own hip-pitch
-// sweep (--sweep, r13-disc-interface excluded) shows COAX's outboard yoke
-// arm (coax.scad arm_plate(ARM_OUT_X0,ARM_OUT_X1), ARM_HALF_YZ=16 disc)
-// sitting a constant 0.40mm below the femur's CURRENT floor across the
-// ENTIRE +-93deg hfe sweep (rotation-invariant -- it's centered on the hfe
-// axis) for femur-local x roughly -16..+20 (r<=~16-20 of the axis). That
-// volume is real, occupied assembly space, not open air -- verified by
-// direct probe against coax_R.stl AND by reading coax.scad's own
-// ARM_OUT_X0 = FEMUR_MID - YOKE_BOT_IN definition (coax's bottom arm is
-// deliberately built to seat right there). It CANNOT be deepened without
-// fouling the coax joint at every hip angle, so x < SUB_X0 (=24, chosen
-// with an 8mm/8mm margin: coax silhouette to ~20, then a real M2
-// case-column screw at x32.8 pushed the ramp out further -- see below)
-// stays at the ORIGINAL SLAB_Z0 -22.2, unchanged, and still floats above
-// the new deeper bed contact -> still wants support, but over a ~40mm
-// hip-cap span (x -16..24) instead of the old ~56mm. A same-strategy
+// Print: flat on the -Z face. NOTE (LA-6, 2026-07-11, issue #24, extended
+// 2026-07-11 per issue #24/LA-6 continuation): the underside is planarized/
+// ramped down to the fork's floor (SUB_FLOOR -26.6) for x >= SUB_X0 -- see
+// the SUB_X0/X1/X2 block below. This closes MOST of the old float, but NOT
+// all of it: check_fit's own hip-pitch sweep (--sweep, r13-disc-interface
+// excluded) shows COAX's yoke arms (coax.scad arm_plate(), both the inboard
+// AND outboard arm share the same ARM_HALF_YZ=16 disc radius) sit a
+// CONSTANT clearance = (femur-local x - 16.0) below the femur's underside,
+// across the ENTIRE hfe sw ROM (rotation-invariant -- the disc is centered
+// on the hfe axis, so distance depends only on radial position, not angle).
+// RECONCILED (2026-07-11, rigorous probe: full-depth SUB_FLOOR candidate
+// plane, femur-local x -5..45 x full slab width x hfe -86..+86 in 0.25deg /
+// 0.5mm steps, r13 disc-interface excluded, vs the real coax_R.stl mesh):
+// the true nearest coax edge is x=16.0 EXACTLY (clearance = x-16.0 to
+// <0.001mm across every resolution tested) -- this IS the ARM_HALF_YZ=16
+// disc radius, confirmed both by direct probe and by reading coax.scad's
+// own constant. The prior x~19-20 / "4.8mm margin at x=24" claim in this
+// file was WRONG (stale/coarser measurement) -- the real margin at the old
+// SUB_X0=24 was 8.0mm, not 4.8mm, meaning ~7mm of the ramp was left on the
+// table. SUB_X0 is now 17 (0.5mm design floor -> max-inboard would be 16.5;
+// 17 keeps a clean 1.0mm true clearance, 2x the target and 2x LA-19's
+// existing 0.4mm precedent, for a moving joint). x < SUB_X0 (=17) stays at
+// the ORIGINAL SLAB_Z0 -22.2, unchanged, and still floats above the new
+// deeper bed contact -> still wants support, but over a ~33mm hip-cap span
+// (x -16.05..17) instead of the prior ~40mm (x -16.05..24). A same-strategy
 // reorientation (print on a +-Y side face instead of fork-down) was
 // evaluated and REJECTED: mesh overhang analysis on the unmodified STL
 // shows it nearly DOUBLES the sub-45deg down-facing area (5949mm^2 vs
 // 3881mm^2) because the open-top servo pocket becomes a horizontal bore.
 // Do not read this file as claiming a fully support-free underside --
-// budget support for the remaining ~40mm hip-cap span at print time.
+// budget support for the remaining ~33mm hip-cap span at print time.
 
 include <leg_v6_common.scad>
 
@@ -55,26 +61,39 @@ TIP_R     = SLAB_W/2;
 // the knee-fork/yoke-shelf bottom exactly, so the ramp lands flush/coplanar
 // with the existing fork hull where they overlap.
 SUB_FLOOR = YOKE_BOT_IN - ARM_THK;              // -26.6 (== fork bottom)
-// SUB_X0: ramp start. MEASURED (hfe +-100deg sweep vs coax_R.stl, r13
-// disc-interface excluded, matches check_fit.py's own methodology) --
-// coax's outboard yoke arm blocks x < ~20 (worst-case full-width margin
-// +0.45mm at x=18, -0.91mm/clear at x=20) at EVERY hfe angle. x=24 gives
-// ~4.8mm margin there. Also must clear the real M2 case-column screw at
-// x=32.8 (leg_v6_common.scad COL_PTS, femur-frame after the 180 rotate) --
-// handled by a local screw-hole extension below rather than pushing the
-// ramp out to 36+ and giving up another 12mm of planarization.
-SUB_X0    = 24;
-SUB_X1    = 28;    // ramp end/full depth: rise 4.4 over run 4 = 47.7deg
+// SUB_X0: ramp start. RECONCILED 2026-07-11 (issue #24/LA-6 continuation):
+// full-depth SUB_FLOOR candidate plane vs coax_R.stl, femur-local x -5..45,
+// full slab width (9 y-bands refined to 65), hfe -86..+86deg in steps down
+// to 0.25deg -- true nearest coax edge is x=16.0 EXACTLY (the ARM_HALF_YZ=16
+// yoke-arm disc, coax.scad; clearance = x-16.0 to <0.001mm at every tested
+// resolution, confirming it's rotation-invariant/exact, not sampling noise).
+// The prior comment here (x~20, 4.8mm margin at x=24) was WRONG -- real
+// margin at the old SUB_X0=24 was 8.0mm. Max-inboard for the >=0.5mm design
+// floor (matches LA-19's precedent, don't run tighter) would be x=16.5;
+// SUB_X0=17 keeps a clean 1.0mm true worst-case clearance (2x margin) on a
+// moving joint. Also must clear the real M2 case-column screw at x=32.8
+// (leg_v6_common.scad COL_PTS, femur-frame after the 180 rotate) -- still
+// handled by the local screw-hole extension below (col_screw_ext_neg),
+// unaffected since 32.8 is still well past the new SUB_X1.
+SUB_X0    = 17;
+SUB_X1    = 21;    // ramp end/full depth: rise 4.4 over run 4 = 47.7deg
                    // from horizontal -- a self-supporting overhang needs
                    // >=45deg from horizontal (STEEP, not shallow -- a
                    // shallow ramp is closer to the flat-ceiling worst case,
                    // not safer; first draft had this backwards at run=8/
-                   // 28.8deg and was corrected). Re-verified vs coax_R.stl
-                   // across the whole ramp footprint (all y, full +-100deg
-                   // hfe sweep): worst-case clearance -4.85mm (clear) at
-                   // the shallow end (x24), improving to -8.79mm by x28.
-SUB_X2    = 60;    // flat continuation to here -- inside the fork hull's
-                   // own footprint (starts ~x55.95), clean manifold overlap.
+                   // 28.8deg and was corrected). run stays 4 (SUB_X1 =
+                   // SUB_X0+4) so the 47.7deg angle is unchanged by the
+                   // SUB_X0 move. Coax clearance at the shallow end (x17,
+                   // the tightest point) is 1.0mm true (see SUB_X0 note);
+                   // clearance only grows moving outboard from there.
+SUB_X2    = 73;    // flat continuation to here. The fork hull is a rounded cap
+                   // (cylinders r=TIP_R=16.05 centered at FORK_X0=72), so it
+                   // only reaches FULL width (y +-SLAB_W/2) at x72 -- at x60 it
+                   // covers only y+-10.7. Ending the full-width fill at 60 left
+                   // TRIANGULAR floating gaps at the outer y-edges x60..72
+                   // (the "doesn't merge cleanly into the tibia-servo fork"
+                   // notch). Extend to 73 (1mm into the full-width fork) so the
+                   // fill overlaps the fork at full width -> clean merge.
 
 // Added-material wedge: flush with the EXISTING slab bottom (SLAB_Z0) at
 // SUB_X0 (zero added thickness there), linearly ramping down to SUB_FLOOR
@@ -92,11 +111,12 @@ module underside_fill() {
 }
 
 // LA-6: the x=32.8 M2 case-column screw (leg_v6_common.scad COL_PTS,
-// femur-frame) sits just past SUB_X1, i.e. now under a full SUB_FLOOR-deep
-// floor instead of the original SLAB_Z0 -- its shared-module bore
-// (FLOOR_BOT-1 .. FLOOR_BOT+7.1) and countersink (cut at FLOOR_BOT-EPS)
-// no longer reach the true (deeper) exterior. Local extension only --
-// does NOT touch leg_v6_common.scad, so tibia/coax are unaffected.
+// femur-frame) sits past SUB_X1 (11.8mm clear of it, 2026-07-11 SUB_X0/X1
+// move to 17/21), i.e. now under a full SUB_FLOOR-deep floor instead of the
+// original SLAB_Z0 -- its shared-module bore (FLOOR_BOT-1 .. FLOOR_BOT+7.1)
+// and countersink (cut at FLOOR_BOT-EPS) no longer reach the true (deeper)
+// exterior. Local extension only -- does NOT touch leg_v6_common.scad, so
+// tibia/coax are unaffected.
 module col_screw_ext_neg() {
     for (sy = [-1, 1]) {
         translate([32.8, sy*10.25, SUB_FLOOR - EPS])
@@ -135,7 +155,7 @@ module femur_v6() {
             // integral overhanging arm is gone) and the tibia drops in from
             // above. This does NOT mean the whole part is bridge/support-
             // free -- see the file-header PRINT note (LA-6): the underside
-            // is now ramped/planar for x >= SUB_X0 (24), but the x < SUB_X0
+            // is now ramped/planar for x >= SUB_X0 (17), but the x < SUB_X0
             // hip cap still floats above the new deeper bed contact (coax
             // clearance blocks lowering it -- see SUB_X0's own comment).
             hull() {
