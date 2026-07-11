@@ -212,7 +212,12 @@ Triggered by the servo yoke-fix session: the user asked "will the servo actually
 
 ## Leg CAD fault audit (2026-07-11) — 7-lane measured fault-hunt, NOTHING FIXED YET
 
-Parallel trimesh-probed audit (femur / tibia+knee+toe / shoulder / leg-cable / kinematics-ROM / print-readiness / chassis lanes). Measured, not eyeballed. Emphasis on the LEG (prints first). LA-1★ and LA-5★ each re-verified by a 2nd independent probe; LA-2‡ flagged by two independent lanes. One GitHub issue filed per LA row.
+Parallel trimesh-probed audit (femur / tibia+knee+toe / shoulder / leg-cable / kinematics-ROM / print-readiness / chassis lanes). Measured, not eyeballed. Emphasis on the LEG (prints first). LA-1★ and LA-5★ each re-verified by a 2nd independent probe; LA-2‡ flagged by two independent lanes. One GitHub issue filed per LA row (`Ace2932/LE_NOVA` #19-#46).
+
+**STATUS — worked through same day (2026-07-11), commits `d62026b` / `c2ef85c` / `3827ad8` / `a859e82`; both gates exit 0:**
+- ✅ **FIXED + gated:** LA-1, LA-2, LA-3, LA-4, LA-5, LA-7†, LA-8, LA-9, LA-10, LA-11, LA-12, LA-16, LA-18, LA-19, LA-20, LA-21, LA-22, LA-24, LA-27, LA-28. († LA-7: floor 0.7→1.55mm but horn screw-head margin now 0.15mm → first-article horn-seating check.)
+- 📝 **NOTE / by-design / first-article (no or minimal geometry change):** LA-15 (real HAA clearance is 0.335mm, not 0.000 — that was gate resolution; leave C-box until HAA_INBOARD_SIGN is pinned at homing), LA-23 + LA-25 + LA-26 (first-article print checks noted in-file).
+- ⬜ **OPEN — needs a user decision or hardware:** LA-6 (#24: accept support material — done as doc — vs invest in a printable taper), LA-13 (#31: per-leg cap fixed, but exposed that trot/crawl/raibert/deep-crouch already command front legs past the −50° head cap → new issue **#47**), LA-14 (#32: cable service-loop now WARN-gated by LA-20, but the fix — spec free-loop length / relocate the femur-x84 anchor — is undone), LA-17 (#35: all 4 OLED holes compromised + window 1.7mm too narrow → needs the real SSD1331 board calipered).
 
 ### 🔴 Print-blockers — fix before the first leg print
 | # | Item | Detail (measured) | Fix |
