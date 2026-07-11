@@ -29,19 +29,35 @@
             +roll about the +x axis; LEFT = -roll — per-side via reflect
             in leg.macro.
        hfe: toward-trunk fold +50 sw (tibia flank grazes the riser skirt
-            from ~+55), BOTH ends. Away-trunk (forward protraction) is now
-            LEG-DEPENDENT (head clearance, 2026-07-07): FRONT legs cap at
-            -50 (the forward HEAD occupies x70..100 z80..120; front legs
-            reaching -86 forward hit the D456 face / L2 crown — chassis
-            check_fit HEAD case), REAR legs keep -86. Front -50 is still a
-            strong stride (gait uses -30..-50; kfe-109 chord still reaches).
+            from ~+55), BOTH ends. Away-trunk (forward protraction):
+            #47 (2026-07-11, MEASURED — hardware/cad/chassis/
+            head_cap_sweep.py): a FINE hfe sweep of the FRONT leg
+            (femur_R+knee_arm+tibia_R+knee_bumper+shoe) vs the REAL head
+            assembly (head.stl, l2_adapter.stl, head_ear.stl/_L.stl, plus
+            convex hulls of the non-watertight l2_ref.stl/d456_ref.stl)
+            found ZERO contact anywhere in the front leg's structurally-
+            reachable hfe range (-35..-95, i.e. past leg_v6's own measured
+            ~93deg self-collision mech stop) at any kfe/haa combo —
+            min clearance ~34mm at today's legal haa (<=15deg), ~20mm even
+            at the not-yet-unlocked 40deg outboard cap. The -50 value here
+            (set 2026-07-07, the SAME day the head moved forward onto the
+            front-shoulder deck — chassis/check_fit.py HEAD geometry
+            comments) was never re-validated after that move: it was
+            STALE, not conservative-by-design. FRONT and REAR now share
+            the SAME real governing constraint instead — leg_v6/
+            check_fit.py's own hip-pitch self-collision sweep (LA-19:
+            clean to 92.5deg, first contact 93deg) — so hfe_ext_front ==
+            hfe_ext (86deg sw, the same 7deg margin already used
+            everywhere else in this file). Kept as a separate property
+            (not deleted/merged into hfe_ext) so a future head-position
+            change has one obvious knob to retighten.
             ⚠ SIGN MAPPING gate->URDF assumed +hfe = toward-trunk, same for
             all four legs (knees translated, one convention) — VERIFY IN SIM. -->
   <xacro:property name="haa_in"   value="0.262"/>  <!-- 15 deg inboard -->
   <xacro:property name="haa_out"  value="0.698"/>  <!-- 40 deg outboard -->
   <xacro:property name="hfe_fold" value="0.873"/>  <!-- +50 toward trunk (both) -->
   <xacro:property name="hfe_ext"       value="1.501"/>  <!-- -86 away, REAR legs -->
-  <xacro:property name="hfe_ext_front" value="0.873"/>  <!-- -50 away, FRONT legs (head cap) -->
+  <xacro:property name="hfe_ext_front" value="1.501"/>  <!-- -86 away, FRONT legs — #47: head clearance is NOT the binding constraint (measured), leg self-collision (LA-19, 93deg) is; matches hfe_ext -->
   <xacro:property name="kfe_range" value="1.9"/>   <!-- sweep-gate: mech stop ~118 deg (tibia flank vs fork throat); 109 sw = margin. Deep-sit = v7 offset-plane option -->
 
   <!-- ===================== link offsets (m) ===================== -->

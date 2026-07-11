@@ -83,7 +83,10 @@ def gait_pose(mode: str, phase: float, p: ControllerParams) -> Pose:
     trot: generator targets straight through solve_side. crawl: targets
     composed with the CoM pre-shift through body-pose IK (the stage-2
     coupling), then solve_side. All mirroring stays in solve_side /
-    body_pose — never here."""
+    body_pose — never here. Passing leg= to solve_side here also engages
+    its #47 front-hfe safety clamp for BOTH modes — this is the funnel
+    every gait-generated pose passes through (choreo/stand.py's pose_for
+    is the other, for stand/sit)."""
     if mode == "trot":
         feet = trot_gait.all_feet(phase, p.trot)
     elif mode == "crawl":
@@ -94,7 +97,9 @@ def gait_pose(mode: str, phase: float, p: ControllerParams) -> Pose:
     else:
         raise ValueError(f"gait_pose: not a gait mode: {mode!r}")
     return {
-        leg: solve_side(LEG_SIDE[leg], feet[leg], p.body.leg, KNEE_FORWARD[leg])
+        leg: solve_side(
+            LEG_SIDE[leg], feet[leg], p.body.leg, KNEE_FORWARD[leg], leg=leg
+        )
         for leg in LEGS
     }
 

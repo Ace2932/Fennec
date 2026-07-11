@@ -82,17 +82,29 @@ def _hip_abduction(joint_id: int) -> JointLimit:
 
 
 def _thigh_flexion(front: bool) -> JointLimit:
-    # URDF-derived (nova.urdf.xacro hfe_fold/hfe_ext/hfe_ext_front, chassis
-    # check_fit HEAD case, 2026-07-07): fold (+, toward-trunk) caps at +50 deg
-    # for ALL four legs (hfe_fold=0.873 rad — tibia flank grazes the riser
-    # skirt from ~+55). Away-trunk (-, forward protraction) is LEG-DEPENDENT:
-    # FRONT legs (hfe IDs 2 = FL, 5 = FR) cap at -50 deg (hfe_ext_front=0.873
-    # rad) because the forward integrated head (head.scad: D456 face + L2
-    # crown, x70..100 z80..120) occupies the space a -86 front reach would
-    # sweep; REAR legs (IDs 8, 11) keep -86 deg (hfe_ext=1.501 rad).
+    # URDF-derived (nova.urdf.xacro hfe_fold/hfe_ext/hfe_ext_front): fold
+    # (+, toward-trunk) caps at +50 deg for ALL four legs (hfe_fold=0.873
+    # rad — tibia flank grazes the riser skirt from ~+55).
     # LA-12 FIX 2026-07-11: was a flat -30..+90 placeholder, ~40 deg beyond
     # the true +50 fold cap on every leg and blind to the front/rear split.
-    lower = -50.0 if front else -86.0
+    #
+    # Away-trunk (-, forward protraction): LA-13 (2026-07-11) introduced a
+    # tighter -50 deg FRONT cap (hfe IDs 2=FL, 5=FR) on the theory that a
+    # -86 front reach hits the forward integrated head (D456 face / L2
+    # crown). #47 (2026-07-11, MEASURED — hardware/cad/chassis/
+    # head_cap_sweep.py): a FINE hfe sweep of the front leg vs the REAL
+    # head assembly (head.stl, l2_adapter.stl, head_ear.stl/_L.stl, plus
+    # convex hulls of the non-watertight l2_ref.stl/d456_ref.stl) found
+    # ZERO contact anywhere in the front leg's structurally-reachable hfe
+    # range (past leg_v6's own measured ~93deg self-collision mech stop),
+    # min clearance ~34mm at legal haa. The -50 cap was set the SAME DAY
+    # the head moved forward onto the front-shoulder deck and was never
+    # re-validated after that move — stale, not conservative-by-design.
+    # FRONT and REAR now share the same real governing constraint (leg
+    # self-collision, LA-19: clean to 92.5deg, first contact 93deg) —
+    # `front` is kept as a parameter (not collapsed away) so a future
+    # head-position change has one obvious place to reintroduce a split.
+    lower = -86.0 if front else -86.0
     return JointLimit(
         lower=math.radians(lower),
         upper=math.radians(50.0),

@@ -70,22 +70,31 @@ def test_within_limits():
 
 
 def test_within_limits_front_rear_hfe_split():
-    """LA-13: FRONT legs (FL/FR) cap away-trunk hfe reach at -50 deg (head
-    clearance, chassis check_fit HEAD case); REAR legs (RL/RR) keep -86
-    deg. -70 deg is inside the old (buggy) single symmetric window but
-    must now fail for a front leg and still pass for a rear leg."""
-    hfe_70_away = math.radians(-70.0)
-    theta = (0.0, hfe_70_away, 0.0)
+    """LA-13 introduced within_limits' leg= selector (FRONT_LEGS use
+    p.hfe_min_front, REAR_LEGS/unknown use p.hfe_min). #47 (2026-07-11,
+    MEASURED — hardware/cad/chassis/head_cap_sweep.py): the front cap's
+    -50deg value was stale (no head/L2/D456 contact found anywhere in the
+    front leg's structurally-reachable hfe range), so hfe_min_front ==
+    hfe_min today and there's no longer an angle that's legal for one and
+    illegal for the other. Test the SELECTOR MECHANISM itself (front picks
+    hfe_min_front, rear picks hfe_min) parametrically off the live values
+    instead of a hardcoded angle, so this keeps working if a future head
+    redesign reintroduces a real split."""
+    eps = math.radians(0.01)
+    just_inside_front = (0.0, P.hfe_min_front + eps, 0.0)
+    just_outside_front = (0.0, P.hfe_min_front - eps, 0.0)
     for leg in ("FL", "FR"):
-        assert not within_limits(theta, P, leg=leg), leg
+        assert within_limits(just_inside_front, P, leg=leg), leg
+        assert not within_limits(just_outside_front, P, leg=leg), leg
+    just_inside_rear = (0.0, P.hfe_min + eps, 0.0)
+    just_outside_rear = (0.0, P.hfe_min - eps, 0.0)
     for leg in ("RL", "RR"):
-        assert within_limits(theta, P, leg=leg), leg
+        assert within_limits(just_inside_rear, P, leg=leg), leg
+        assert not within_limits(just_outside_rear, P, leg=leg), leg
     # an unrecognized/omitted leg name defaults to the permissive REAR
     # window (opt-in, not fail-safe — see within_limits' docstring)
-    assert within_limits(theta, P)
-    assert within_limits(theta, P, leg="unknown")
-    # -50 deg exactly is still in-bounds for a front leg (boundary check)
-    assert within_limits((0.0, math.radians(-50.0), 0.0), P, leg="FL")
+    assert within_limits(just_inside_rear, P)
+    assert within_limits(just_inside_rear, P, leg="unknown")
 
 
 def test_workspace_reach_matches_links():
@@ -117,3 +126,40 @@ def test_solve_side_rejects_unknown():
 
     with pytest.raises(ValueError):
         solve_side("starboard", (0, 0.07, -0.17), LegParams())
+
+
+def test_solve_side_clamps_front_hfe_to_cap():
+    """#47 RUNTIME SAFETY CLAMP: solve_side(..., leg="FL"/"FR") must clamp
+    the physical hfe to hfe_min_front regardless of how far the requested
+    foot target would otherwise push it — the backstop for any gait
+    source that hasn't been (or can't be) fully retuned. Construct a foot
+    target whose unclamped IK solution sits well past the cap (-90°, vs
+    the -86° cap) via FK(theta) so the target is guaranteed reachable."""
+    from nova_locomotion.kinematics.leg_ik import solve_side
+
+    p = LegParams()
+    theta = (0.0, math.radians(-90.0), math.radians(30.0))
+    foot = forward_kinematics(theta, p)
+
+    unclamped = solve_side("left", foot, p, knee_forward=True)
+    assert math.degrees(unclamped[1]) == pytest.approx(-90.0)
+
+    clamped = solve_side("left", foot, p, knee_forward=True, leg="FL")
+    assert clamped[1] == pytest.approx(p.hfe_min_front)
+    # haa/kfe pass through untouched — only hfe is clamped
+    assert clamped[0] == pytest.approx(unclamped[0])
+    assert clamped[2] == pytest.approx(unclamped[2])
+
+    # REAR legs are NOT clamped by solve_side (issue #47 is front-only;
+    # rear hfe has never had a chassis-side complaint) — same for "right".
+    rear = solve_side("left", foot, p, knee_forward=True, leg="RL")
+    assert rear[1] == pytest.approx(-math.radians(90.0))
+    right_clamped = solve_side("right", foot, p, knee_forward=True, leg="FR")
+    assert right_clamped[1] == pytest.approx(p.hfe_min_front)
+    assert right_clamped[0] == pytest.approx(-unclamped[0])
+
+    # a target already inside the cap is untouched (no spurious clamping)
+    theta_ok = (0.1, math.radians(-40.0), math.radians(20.0))
+    foot_ok = forward_kinematics(theta_ok, p)
+    out_ok = solve_side("left", foot_ok, p, knee_forward=True, leg="FL")
+    assert out_ok == pytest.approx(solve_side("left", foot_ok, p, knee_forward=True))

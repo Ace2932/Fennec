@@ -81,12 +81,12 @@ def test_stance_feet_at_stand_height():
 # ---- reachability (X-config) ----------------------------------------------
 
 
-# NOT passing leg= to within_limits below (LA-13, 2026-07-11): some crawl
-# phases/CoM shifts push FL/FR hfe past the -50° front head-clearance cap
-# (see leg_ik.within_limits' docstring) — CrawlParams/BodyPoseParams were
-# tuned against the old symmetric +-86 window and need a real retune
-# before this suite can enforce the front split too. Flagged, not
-# silently fixed.
+# #47 (2026-07-11, MEASURED): the front hfe cap is no longer -50° (stale
+# — see leg_ik.LegParams.hfe_min_front) but -86°, matching REAR. Passing
+# leg= below now enforces the real per-leg split; CrawlParams/
+# BodyPoseParams' worst-case front excursion (~-59°, hardware/cad/chassis/
+# head_cap_sweep.py cross-check) is comfortably inside it — no retune
+# needed, this was flagging a stale cap value, not bad gait tuning.
 
 
 def test_targets_ik_reachable_within_x_config_limits():
@@ -94,10 +94,9 @@ def test_targets_ik_reachable_within_x_config_limits():
         ph = i / 100.0
         for leg, foot in all_feet(ph, C).items():
             theta = solve_side(LEG_SIDE[leg], foot, BP.leg, KNEE_FORWARD[leg])
-            assert within_limits(_canon(leg, theta), BP.leg, KNEE_FORWARD[leg]), (
-                ph,
-                leg,
-            )
+            assert within_limits(
+                _canon(leg, theta), BP.leg, KNEE_FORWARD[leg], leg=leg
+            ), (ph, leg)
 
 
 def test_targets_reachable_with_com_shift_applied():
@@ -113,10 +112,9 @@ def test_targets_reachable_with_com_shift_applied():
         shifted = foot_targets(BodyPose(dx=dx, dy=dy), anchors, BP)
         for leg in LEGS:
             theta = solve_side(LEG_SIDE[leg], shifted[leg], BP.leg, KNEE_FORWARD[leg])
-            assert within_limits(_canon(leg, theta), BP.leg, KNEE_FORWARD[leg]), (
-                ph,
-                leg,
-            )
+            assert within_limits(
+                _canon(leg, theta), BP.leg, KNEE_FORWARD[leg], leg=leg
+            ), (ph, leg)
 
 
 # ---- CoM shift -------------------------------------------------------------

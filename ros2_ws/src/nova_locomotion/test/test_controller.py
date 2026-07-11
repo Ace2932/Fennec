@@ -98,11 +98,12 @@ def test_choreo_timing_indexed_by_elapsed_time():
 
 
 def test_gait_modes_produce_rom_valid_poses_over_a_cycle():
-    # NOT passing leg= to within_limits below (LA-13, 2026-07-11): trot/
-    # crawl targets push FL/FR hfe a few degrees past the -50deg front
-    # head-clearance cap at some phases (see leg_ik.within_limits'
-    # docstring and test_trot.py/test_crawl.py) — flagged, not silently
-    # fixed; needs a stand-height/stride retune.
+    # #47 (2026-07-11, MEASURED): the front hfe cap is no longer -50° (stale
+    # — see leg_ik.LegParams.hfe_min_front) but -86°, matching REAR (see
+    # test_trot.py/test_crawl.py for the per-gait cross-check). Passing
+    # leg= now enforces the real per-leg split through the actual
+    # controller.gait_pose() -> solve_side() funnel (the #47 clamp's choke
+    # point) — no retune needed.
     for mode, freq in (("trot", P.trot_freq), ("crawl", P.crawl_freq)):
         c = GaitController(P)
         c.set_mode(mode, now=0.0)
@@ -110,7 +111,7 @@ def test_gait_modes_produce_rom_valid_poses_over_a_cycle():
             pose = c.update(i / 60.0 / freq)  # one full stride
             for leg in LEGS:
                 assert within_limits(
-                    _canon(leg, pose[leg]), P.body.leg, KNEE_FORWARD[leg]
+                    _canon(leg, pose[leg]), P.body.leg, KNEE_FORWARD[leg], leg=leg
                 ), (mode, i, leg)
 
 

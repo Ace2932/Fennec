@@ -138,23 +138,20 @@ MODERATE = (
 
 
 def test_moderate_poses_solvable_within_x_config_rom():
-    # NOT passing leg= to within_limits below (LA-13, 2026-07-11): the
-    # +-10deg pitch/roll weight-shift cases here push FL/FR hfe WELL past
-    # the -50deg front head-clearance cap (up to ~-66deg, see
-    # leg_ik.within_limits' docstring) — the raibert/body_pose weight-shift
-    # authority was tuned against the old symmetric +-86 window. Fixing
-    # this for real means bounding that authority (a control-tuning change,
-    # not a constant swap), which needs its own pass. Flagged, not
-    # silently fixed.
+    # #47 (2026-07-11, MEASURED): the front hfe cap is no longer -50° (stale
+    # — see leg_ik.LegParams.hfe_min_front) but -86°, matching REAR. The
+    # +-10deg pitch/roll weight-shift cases here push FL/FR hfe to ~-66deg
+    # at worst (hardware/cad/chassis/head_cap_sweep.py cross-check) —
+    # comfortably inside -86deg. Passing leg= now enforces the real
+    # per-leg split; no weight-shift-authority retune needed, this was
+    # flagging a stale cap value, not excessive authority.
     for pose in MODERATE:
         targets = foot_targets(pose, A, P)
         for leg in LEGS:
             theta = solve_side(LEG_SIDE[leg], targets[leg], P.leg, KNEE_FORWARD[leg])
-            assert within_limits(_canon(leg, theta), P.leg, KNEE_FORWARD[leg]), (
-                pose,
-                leg,
-                theta,
-            )
+            assert within_limits(
+                _canon(leg, theta), P.leg, KNEE_FORWARD[leg], leg=leg
+            ), (pose, leg, theta)
 
 
 # ---- round-trips ---------------------------------------------------------
