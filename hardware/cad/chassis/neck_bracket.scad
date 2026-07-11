@@ -25,11 +25,14 @@
 //   So the head-mount face lives REARWARD of the camera, under the L2 crown.
 //
 // MOUNT SCHEME (mirrors the retired riser wall-row, proven):
-//   - BASE PLATE flat on the deck (z79.55..83.55); bolts DOWN through the deck
-//     at 4 corners = drill O3.4 at first assembly, M3 + washer + NYLOC on the
-//     underside (reached through the deck window + open trunk-end aperture,
-//     BEFORE the riser goes on) — the accepted flange-foot / battery-sandwich
-//     practice. NO shoulder-mesh change -> shoulder stays gate-clean.
+//   - BASE PLATE flat on the deck (z79.55..83.55); 4x M3x8 SHCS drive DOWN
+//     through the base clearance holes into M3x3.8 brass heat-sets PRESSED
+//     into the shoulder deck (printed pilots, leg_v6/shoulder.scad
+//     neck_heatset module) — NO drilling at assembly, NO nuts. FRONT pair
+//     sits at trunk x117 (shoulder-local sy -24.2), moved off the shoulder's
+//     rear-wall rib onto the flat deck; REAR pair unchanged at x146 (sy 4.8).
+//     Minimal shoulder-mesh addition (4 blind pockets on the deck top only)
+//     -> both shoulders (front/rear, same print) stay gate-clean.
 //   - REAR VERTICAL FACE at x121 rising z83.55..106, 4x M3 HEAT-SETS (from its
 //     rear face); the head's rear boss bolts FROM BEHIND into them (M3x14).
 //     Tall bolt rectangle (z89 & z100, y+-11) resists the fwd-tipping moment.
@@ -48,15 +51,26 @@ DECK_TOP = 79.55;
 // ---- base plate on the deck (center spine, clears window + horn flanges) ----
 BASE = [107, 150, -22, 22];       // x0 x1 y0 y1 (CR-5: widened +-21 -> +-22)
 BASE_T = 4;                        // z79.55..83.55
-// deck-through bolts: drill-at-assembly M3, nyloc below. Clear of the window
-// (y16) + horn flange (solid from y23). Fore-aft span 36 (moment couple).
-// CR-5 fix 2026-07-09: BASE widened +-21->+-22 and the front pair centered
-// in the 7mm corridor (y19->19.5). This gives the front bolt symmetric
+// deck-through bolts: M3x8 SHCS driven from the bracket top through the base
+// M3_CLEAR holes into M3x3.8 brass heat-sets pressed into the shoulder deck
+// (leg_v6/shoulder.scad neck_heatset pockets) — NO drilling at assembly, NO
+// nuts. Clear of the window (y16) + horn flange (solid from y23).
+// CR-5 fix 2026-07-09: BASE widened +-21->+-22 and the (then-x146) pair
+// centered in the 7mm corridor (y19->19.5). This gives that bolt symmetric
 // ~1.8mm margins to window/flange (was 1.3/2.3), lifts its own-plate-edge
-// margin 0.3->0.8mm, AND fixes a latent bug: the REAR pair (y20) previously
+// margin 0.3->0.8mm, AND fixes a latent bug: the OTHER pair (y20) previously
 // broke out of the +-21 plate edge by 0.7mm (now +0.3mm clear). Span check
-// (x-only, 146-110>=30) unaffected.
-BOLT_XY = [[110, 20], [110, -20], [146, 19.5], [146, -19.5]];
+// (x-only, was 146-110>=30) unaffected by that fix.
+// NO-DRILL fix 2026-07-10: the x110 pair sat over the shoulder's 22.5mm-tall
+// thin rear-wall rib — no flat landing, no heat-set spot possible — and was
+// still drill-at-assembly, both violations of the project's hard no-drill
+// rule. Moved x110->x117 (shoulder-local sy -31.2->-24.2, 7mm more central)
+// onto the flat 6.5mm deck, off the rib, and converted to a real M3x3.8
+// heat-set like the other pair. New span 146-117 = 29mm (was 36mm): the rear
+// VERTICAL-FACE head heat-sets at x121 carry the primary head-cantilever
+// moment; these 4 base bolts are secondary hold-down, so 29 vs 30 is
+// negligible.
+BOLT_XY = [[117, 20], [117, -20], [146, 19.5], [146, -19.5]];
 
 // ---- rear vertical mount face (the head bolts to this) ----------------------
 WALL_X0 = 113; WALL_X1 = 121;     // 8mm face (front x121): holds M3 heat-sets
@@ -93,7 +107,8 @@ module neck_bracket() {
                 translate([WALL_X0, sy * WALL_Y - (sy > 0 ? 0 : 4), DECK_TOP])
                     cube([WALL_X1 - WALL_X0 + 10, 4, 12]);
         }
-        // ---- deck-through bolt holes (drill-at-assembly clearance) ----
+        // ---- deck-through bolt holes (M3 clearance; land in the shoulder's
+        // modeled M3x3.8 heat-sets below — no drilling) ----
         for (b = BOLT_XY)
             translate([b[0], b[1], DECK_TOP - EPS])
                 cylinder(d = M3_CLEAR, h = BASE_T + 2 * EPS);

@@ -6,15 +6,16 @@
 // the mezzanine seat (the riser's headroom math budgeted exactly this).
 //
 // Three jobs:
-//   1. BATTERY SANDWICH: 6x M3x8 countersunk here (was M3x12 — AUD-1
-//      top-flange-mount fix, 2026-07-10: battery_pocket.scad's full-height
-//      boss columns are gone, replaced by local pads thickening the rim
-//      flange, so the load path shortened from a 39mm column to a ~6mm
-//      pad; a shorter screw follows), through the (drilled) floor, into
-//      the pocket's flange-pad nut traps at (x +/-40/0, y +/-26.5) — XY
-//      UNCHANGED by the AUD-1 fix, only the pocket-side mount depth and
-//      screw length moved. The plate spreads the 510g pack's load across
-//      the floor slab.
+//   1. BATTERY SANDWICH: 6x M3x10 countersunk here (was M3x12 pre-AUD-1,
+//      then M3x8 under the AUD-1 nut-trap scheme; AUD-11 fix, 2026-07-10:
+//      the nut trap cut a 0.0mm wall breach into the LiPo cavity — see
+//      battery_pocket.scad — replaced by a vertical M3x3.8 heat-set at
+//      (x +/-40/0, y +/-27.5), +1.0 outboard of the old y=26.5 for a
+//      sealed >=1.5mm wall; screw grew to M3x10 for the insert's reach),
+//      through the (printed-in) floor, into the pocket's flange-pad
+//      heat-set inserts. XY moved +1.0 in y with this fix (was unchanged
+//      by AUD-1 alone). The plate spreads the 510g pack's load across the
+//      floor slab.
 //   2. MEZZANINE SEAT: 4x O2.5 pilots at (-41/+33, +/-33) — the power_v2
 //      board's MEASURED mount pattern (74 x 66, from the fab .kicad_pcb;
 //      hole XY unchanged by the standoff-height fix below — do not touch).
@@ -67,7 +68,12 @@ X0 = -62; X1 = 45;              // rear 1.5 off the open end; front clear of
 HW = 48;                        // halfwidth (walls inner +/-48.93)
 // rear corner clips: the trunk's corner POSTS flare to (x -55.3..-63.3,
 // y +/-35.2..48.8) at floor level — gate catch 2026-07-06
-BAT_X = [-40, 0, 40];  BAT_Y = 26.5;
+BAT_X = [-40, 0, 40];  BAT_Y = 27.5;  // AUD-11 fix, 2026-07-10 (was 26.5):
+                    // follows battery_pocket.scad's BOSS_Y move, which
+                    // sealed a 0.0mm nut-trap wall breach into the LiPo
+                    // cavity to >=1.5mm by moving the bolt/heat-set axis
+                    // outboard. This csk/clearance is the same axis, just
+                    // above the floor -- must track it 1:1.
 STACK_CTR = -3.5;   // rear board edge -59.5: 0.5 off the corner posts
                     // (x -60..-63.3); front corners 52.5 clear the front
                     // slabs (53.3) by 0.8 -> rear-only trim + CoM -3.5

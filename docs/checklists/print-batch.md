@@ -74,10 +74,21 @@ SECOND — anneal moves dims and every fit gate assumed as-modeled.
 Every insert site depth-probed in the built STLs:
 - shoulder deck plate bores: now Ø3 VENTED through (0.25 floor was
   melt-through) — set with a backing finger below, melt exits the vent
+- shoulder neck_bracket bolt pilots (NO-DRILL fix 2026-07-10, 4x M3x3.8,
+  `neck_heatset` in `shoulder.scad`): 2.3mm floor (probe-verified all 4) —
+  BLIND, no vent needed at this depth, press straight down from the deck top
 - shoulder D456 pads + lower flange bosses: 0.75 floor — press to flush,
   STOP (slight bulge on the inner face is cosmetic-only if you push)
 - femur shelf / flange uppers: 13+ deep, no care needed
 - riser: all sites through-vented by design
+- **battery_pocket mount pads (AUD-11 fix, 2026-07-10, was a side-loaded nut
+  trap — REMOVED, see improvement-backlog.md): +6× M3×3.8 heat-sets**, one
+  per pad at (x −40/0/+40, y ±27.5), Ø4.0×4.2mm BLIND, mouth-up — press
+  straight down from the pad TOP face (RIM_Z). 1.8mm floor to PAD_Z0
+  (probe-verified all 6, ring test) — BLIND, no vent, press to flush and
+  STOP (do not force past the mouth chamfer). Press during BATTERY
+  SUB-ASSEMBLY, before the pack + trunk mate (the pad top is only
+  accessible from outside the tray before it's under the shell).
 - iron + M3 tip, inserts from the DOCUMENTED face (several press from
   inner faces — a bench press can't reach; see part headers)
 
@@ -95,9 +106,13 @@ Every insert site depth-probed in the built STLs:
       - BENCH-b: **D456 → head face plate** — 2× M3 from behind the tilted plate
         (the cheeks are pocketed at ±47.2 for driver room). Rear screws are
         unreachable once the head is on the robot — do this on the bench.
-      - (1) **neck_bracket → deck** — 4 bolts drilled at first assembly, nyloc
-        from below (front pair (146,±19) open from above; rear pair (110,±20)
-        tight vs the side webs — use a nut driver/socket, not a big handle).
+      - (1) **neck_bracket → deck** — **NO-DRILL fix 2026-07-10**: 4× M3×8
+        SHCS driven straight down from the bracket top through the base
+        clearance holes into M3×3.8 heat-sets PRESSED into the shoulder deck
+        (`leg_v6/shoulder.scad` `neck_heatset` pockets) — no drilling, no
+        nyloc, no under-deck access needed. Front pair now at (117,±20)
+        (moved off the shoulder's rear-wall rib onto the flat deck); rear
+        pair unchanged at (146,±19.5).
       - (2) **head → bracket** — 4× M3 driven from the REAR (behind the bracket
         wall, x<113, open above the deck) into the boss heat-sets. The aft-gusset
         driver notches clear the ball-key. (Old front-drive was blocked by the
@@ -139,7 +154,8 @@ Every insert site depth-probed in the built STLs:
 ## 5. Wave 2 — batch (after wave 1 passes)
 
 - [ ] Left mirrors + 3 more leg sets + 2nd shoulder + plates + 3 more straps
-- [ ] Chassis set: riser_bay, floor_plate, battery_pocket, jetson_case_mount
+- [ ] Chassis set: **`trunk` (DERIVED, 2026-07-10 — replaces the stock shell;
+      see `trunk_build.py`)**, riser_bay, floor_plate, battery_pocket, jetson_case_mount
       + `jetson_clamp` ×4 (removable case hold-downs), neck_bracket (final),
       head (final — AFTER the fennec styling pass + bench-verified mounts, else
       it re-prints), control_pod (rear-top E-stop + OLED) + its 4 riser heat-sets
@@ -160,8 +176,13 @@ Every insert site depth-probed in the built STLs:
 
 ## 6. Assembly-adjacent (same bench era)
 
-- [ ] Drill floor: battery 6-hole pattern + shoulder-feet 4 holes
-      (floor_plate = template), csk from below for the feet bolts
+- [x] ~~Drill floor: battery 6-hole pattern + shoulder-feet 4 holes~~ —
+      **ELIMINATED 2026-07-10**: both patterns are now MODELED clearance
+      bores in the printed `trunk` part (`trunk.scad`/`trunk_build.py`,
+      `check_fit.py` case 13 gates hole↔bolt-axis alignment). Print the
+      DERIVED trunk, not the stock STL, and there is nothing left to drill
+      here — floor_plate's own csk pattern for the feet bolts is unchanged
+      (that's a hole in floor_plate itself, not the trunk).
 - [ ] Cable dressing per leg_v6 README (clips at both loop ends, ≥40 mm
       loops, spiral wrap, tug-test all anchors + 24 connector ends)
 - [ ] Skid rails: key + CA/VHB under the tray
@@ -173,6 +194,12 @@ Every insert site depth-probed in the built STLs:
 - [ ] Washers under every stock-shell-side head (#3)
 - [ ] EVA foam pad on the battery tray floor + felt/kapton on the
       shoulder-flange bottom edges over the pack (#29)
+- [ ] **Battery pocket → floor: 6× M3×10 CSK** driven from ABOVE, through
+      `floor_plate`'s csk + the printed-in trunk floor bore, into the pad's
+      M3×3.8 heat-set (AUD-11 fix, 2026-07-10 — the nut-trap step from the
+      AUD-1 mount is GONE: no nut to feed in from the pad's outboard face,
+      no side access needed). First-article: pull-test one mount before
+      trusting the pattern (matches Static test C's self-tap discipline).
 - [ ] TPU grommet inserts into the 4 flange grommets before cable pull (#30)
 - [ ] Riser shake test (0.45 lateral tab slack) after hold-down screws
 - [ ] **E-stop pod mounted + wired BEFORE first bus power** — ✅ HOME RESOLVED

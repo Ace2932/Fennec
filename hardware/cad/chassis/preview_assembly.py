@@ -79,7 +79,7 @@ def foot_preview():
 
 def main():
     foot_preview()
-    parts = [trimesh.load(f'{NOVA}/original_body_files/SM3_Frame_ChassisTrunk.stl'),
+    parts = [trimesh.load('trunk.stl'),   # DERIVED trunk: stock geom + 10 modeled fastener bores
              trimesh.load('riser_bay.stl'),
              trimesh.load('battery_pocket.stl'),
              trimesh.load('head.stl'),        # fwd head (D456 face + L2 crown)

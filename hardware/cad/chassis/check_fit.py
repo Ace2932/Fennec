@@ -55,6 +55,13 @@ point inside the designed part = the part cuts its counterpart. Cases:
      top-side and bottom-side parts) — Q1 is XY-closest to the
      (-40.5,-33) post (~1.55mm across-flats / ~1.16mm across-corners,
      both clear) plus a volumetric backstop vs the full board mesh.
+ 13. DERIVED TRUNK (trunk.scad / trunk_build.py) hole alignment: samples
+     each mating fastener's own axis (battery mount x6 — battery_pocket.scad
+     BOSS_X/BOSS_Y; shoulder-foot CSK x4 — leg_v6/shoulder.scad
+     FOOT_BOLT_X/Y; shoulder-flange end-wall x8 — ALREADY-STOCK holes,
+     regression guard only) and asserts trunk.stl (the printed, holed part)
+     is OPEN, not solid, all along it — the actual proof the modeled bores
+     land where the bolts go, not just that a hole exists somewhere.
  12. CR-7 (was #39): the newest chassis parts, never gated before now —
      jetson_clamp_bar (+y/-y mirror), l2_adapter, control_pod, oled_mount.
      (jetson_cowl was gated here too until #41 retired it 2026-07-10 —
@@ -78,6 +85,7 @@ from power_board_model import (power_board_mesh, logic_board_mesh, FLOOR_TOP_Z,
                                 STANDOFF_FLOOR_MM, LOGIC_BOARD_Z0, STACK_TOP_Z,
                                 BOARD_BOTTOM_Z)
 import power_board_model as pbm
+from trunk_build import BATT_BOSS_X, BATT_BOSS_Y, FOOT_XY
 
 NOVA = '/Users/afox/codebases/NOVA'
 TRUNK = f'{NOVA}/original_body_files/SM3_Frame_ChassisTrunk.stl'
@@ -1048,6 +1056,55 @@ def main():
           f'the rest is the exposed cable channel + bay air, by design). '
           f'grip% is an inverted proxy — retention = the zip-tie tab. FYI only.')
 
+    # ---- 13. DERIVED TRUNK (trunk.scad/trunk_build.py) hole alignment -----------
+    # trunk.stl replaces the stock mesh with 10 modeled clearance/CSK bores
+    # (battery mount x6, shoulder-foot CSK x4) so nothing is drilled at
+    # assembly; the shoulder-flange end-wall bores (x8) are ALREADY stock
+    # (measured — see trunk.scad header + measure_trunk.py + README.md "What
+    # the trunk ACTUALLY is") and are checked here too, purely as a
+    # regression guard (a stock-mesh swap or a shoulder.scad rev could move
+    # TRUNK_HOLE_X/Z without anyone noticing). This is the REAL value of this
+    # case: proof the modeled bores sit exactly on each mating part's own
+    # bolt axis, not just that "a hole" exists somewhere nearby.
+    print('-- case 13: derived trunk (trunk.stl) hole alignment --')
+    trunk_holes = trimesh.load('trunk.stl')
+
+    def axis_open(mesh, pts, label):
+        inside = mesh.contains(pts)
+        n = int(inside.sum())
+        tag = 'OK  ' if n == 0 else 'FAIL'
+        print(f'{tag}  {label}: {n}/{len(pts)} axis pts land in solid')
+        return n > 0
+
+    # SET 1 — battery mount, 6x M3 (battery_pocket.scad BOSS_X/BOSS_Y),
+    # vertical bore through the 3.9mm floor.
+    for bx in BATT_BOSS_X:
+        for sy in (1, -1):
+            pts = np.array([[bx, sy * BATT_BOSS_Y, z]
+                            for z in np.linspace(0.3, 3.6, 6)])
+            bad |= axis_open(trunk_holes, pts,
+                              f'battery bolt axis bx={bx:+d} sy={sy:+d}')
+
+    # SET 2 — shoulder-foot CSK, 4x M3x14 (leg_v6/shoulder.scad
+    # FOOT_BOLT_X/Y, transformed via the front/rear S2T placements),
+    # vertical bore through the same floor slab.
+    for (wx, wy) in FOOT_XY:
+        pts = np.array([[wx, wy, z] for z in np.linspace(0.3, 3.6, 6)])
+        bad |= axis_open(trunk_holes, pts,
+                          f'shoulder-foot bolt axis x={wx:+.1f} y={wy:+.1f}')
+
+    # SET 3 — shoulder-flange end-wall clearance, 8x M3 (leg_v6/shoulder.scad
+    # TRUNK_HOLE_X/Z) — ALREADY STOCK, regression guard only. Bore axis runs
+    # fore-aft (world x) through the end wall/boss near the trunk edge.
+    for x_span in (np.linspace(57.5, 63.0, 6), np.linspace(-63.0, -57.5, 6)):
+        end = 'F' if x_span[0] > 0 else 'R'
+        for sx in (1, -1):
+            for hz in (5.0, 24.0):
+                pts = np.array([[x, sx * 51.75, hz] for x in x_span])
+                bad |= axis_open(trunk_holes, pts,
+                                  f'shoulder-flange bolt axis end={end} '
+                                  f'y={sx * 51.75:+.2f} z={hz:.1f}')
+
     # ---- 5. static fixture asserts ----------------------------------------------
     case_top = 110.1     # official case top (deck 71.9 + 38.2 calipered)
     checks = [
@@ -1066,8 +1123,15 @@ def main():
          172.7 <= 175.0),
         ('L2 body bottom (128) far clears the case top (110.1)',
          128.0 - case_top >= 4.0),
-        ('neck-bracket deck-through bolts span (36 fore-aft) >= 30',
-         146 - 110 >= 30),   # front bolt x=146 (was literal 148; matched the "36" label after fix)
+        ('neck-bracket deck-through bolts span (29 fore-aft) >= 25',
+         146 - 117 >= 25),   # NO-DRILL fix 2026-07-10: front pair moved
+                             # x110->x117 (off the shoulder's 22.5mm rear-wall
+                             # rib, onto the flat deck) shrank the span
+                             # 36->29 and threshold 30->25. Acceptable: the
+                             # rear VERTICAL-FACE head heat-sets at x121 carry
+                             # the primary head-cantilever moment; these 4
+                             # base bolts are secondary hold-down (see
+                             # neck_bracket.scad:64-72).
     ]
     for label, ok in checks:
         print(('OK    ' if ok else 'FAIL  ') + label)

@@ -19,12 +19,13 @@ part is <6mm. All insert walls now pass.
 | Connection | Screw (std) | Hole / insert | Engage | Wall | Status |
 |---|---|---|---|---|---|
 | **head → neck bracket** ×4 | **NYLON M3×12** SHCS (#42 breakaway) | rear c'bore Ø6.5×3 + wall clear Ø3.4; **M3×5.7 insert** in the head boss (HM_Y=10, centered bore↔edge) | 5.7 | 1.7–2.2 | ✅ (nylon = shear fuse; tune preload at bench) |
-| **neck bracket → deck** ×4 | M3×16 SHCS + **M3 nyloc** | drill-at-assembly Ø3.4 through base+deck, nut below | nut | n/a | ✅ (rear pair driver-tight — socket) |
+| **neck bracket → deck** ×4 | M3×8 SHCS | base clear Ø3.4; **M3×3.8 SHORT insert** pressed into the shoulder deck (`leg_v6/shoulder.scad` `neck_heatset` pockets — printed pilots, no drilling, no nuts) | 3.8 | 2.3 floor | ✅ (NO-DRILL fix 2026-07-10: was drill-at-assembly Ø3.4 + nyloc below. Front pair relocated trunk x110→x117 off the shoulder's 22.5mm rear-wall rib onto the flat deck; probe-verified 2.3mm floor under all 4 pilots) |
 | **L2 → l2_adapter** ×4 | M3×10 **CSK** (90° flat) | adapter CSK Ø6.2→3.4; into the **Unitree L2 base M3 threads** | ~5 | n/a | ✅ ⚠ confirm L2 base is M3-threaded at bench |
 | **l2_adapter → crown** ×2 | M3×8 SHCS (from below) | crown clear Ø3.4; **M3×3.8 SHORT insert** in the 5mm adapter (L2 sits on top, can't boss up) | 3.8 | ≥1.5 | ✅ (relocated 114,±9 clear of the L2 CSK) |
 | **ears → head pad** ×4 (2/ear) | M3×10 SHCS | ear-foot clear Ø3.4; **M3×5.7 insert** in the pad (pad rear extended x71 for wall) | 5.7 | 1.7 | ✅ |
 | **riser → shoulder flange** ×4 | M3×12 SHCS | flange clear; **M3×5.7 insert** in the riser end-wall pad (pressed inner) | 5.7 | ok | ✅ (pre-audited 2026-07-06; CR-8 #1 stack-verified 2026-07-10 — reconciled shoulder.scad/design-outline.md off M3×10) |
-| **shoulder flange feet → trunk floor** ×4 | **M3×14 CSK** + **M3 nyloc** + washer | drill-at-assembly Ø3.2 + csk through the 3.9mm stock floor slab; up through the 4mm FOOT pad; nyloc+washer on top (reached through the open trunk-end aperture before the riser goes on) | nut | n/a | ✅ (CR-8 #2, stack-verified 2026-07-10: 3.9 floor + 0.1 gap + 4.0 pad + 0.5 washer = 8.5mm before the nut; M3×12 leaves only ~3.5mm for the nyloc — no margin; M3×16 leaves ~7.5mm — 3-4mm of bare proud thread. M3×14 leaves ~5.5mm = full nyloc engagement + ~1.5mm proud. Sourced explicitly, `BOM.md`:168) |
+| **shoulder flange feet → trunk floor** ×4 | **M3×14 CSK** + **M3 nyloc** + washer | Ø3.4 clear + 90° csk **modeled in `trunk.scad`/`trunk_build.py`** (2026-07-10, printed in — no drilling) through the 3.9mm stock floor slab; up through the 4mm FOOT pad; nyloc+washer on top (reached through the open trunk-end aperture before the riser goes on) | nut | n/a | ✅ (CR-8 #2, stack-verified 2026-07-10: 3.9 floor + 0.1 gap + 4.0 pad + 0.5 washer = 8.5mm before the nut; M3×12 leaves only ~3.5mm for the nyloc — no margin; M3×16 leaves ~7.5mm — 3-4mm of bare proud thread. M3×14 leaves ~5.5mm = full nyloc engagement + ~1.5mm proud. Sourced explicitly, `BOM.md`:168) |
+| **battery pocket → floor (top-flange)** ×6 | **M3×10 CSK** (from above) | `floor_plate.scad` Ø3.4 clear + 90° csk (top z5.9) + stock trunk floor Ø3.4 (printed in, `trunk_build.py`); into a **M3×3.8 SHORT insert**, vertical, mouth-up, in the `battery_pocket.scad` rim-flange pad at (x −40/0/+40, y ±27.5) | 3.8 | ≥1.5 | ✅ (AUD-11 fix 2026-07-10 — supersedes the AUD-1 side-loaded M3 nut trap, which cut a **0.0mm wall breach into the LiPo cavity** at all 6 mounts, the confirmed defect this closes. Bolt/insert axis BOSS_Y 26.5→27.5 seals a ring-verified 1.5mm wall; pad OUTER edge pinned at y=30.75, unchanged, so leg-sweep clearance is identical to the AUD-1 build — check_fit.py exits 0, no leg-sweep regressions) |
 | **control_pod → riser** ×4 | **M2×8** SHCS | pod column clear Ø2.3; **M2×4 insert** in the riser pocket-pad (pad y widened ±14) | 4.0 | ≥1.0 | ✅ (light mount; pinched pad → M2) |
 | **cradle → deck (tie)** ×4 | **M2×8** SHCS (from below) | riser deck clear Ø2.3; **M2×4 insert** in the upright base | 4.0 | 1.4 | ✅ (6mm post → M2; huge margin) |
 | **clamp bar → upright** ×4 (2/bar) | **M2×8** SHCS | bar clear Ø2.3; **M2×4 insert** in the upright top; bar underside bears the case corner columns (z102.8) | 4.0 | 1.4 | ✅ (#44: 2 bars replaced the 4 clamps) |
@@ -42,9 +43,9 @@ right-angle plug adapters (`BOM.md`). No cowl bolts/inserts to source.
 
 ## Purchase summary (chassis/head/electronics)
 - **M3 SHCS**: ×4 **NYLON** M3×12 (head→bracket, breakaway), ×4 M3×12 (riser→flange), ×4 M3×16 (bracket→deck), ×2 M3×8 (adapter→crown), ×4 M3×10 (ears)
-- **M3 CSK**: ×4 M3×10 (L2→adapter), ×4 M3×14 (shoulder flange feet → trunk floor, CR-8 #2)
+- **M3 CSK**: ×4 M3×10 (L2→adapter), ×4 M3×14 (shoulder flange feet → trunk floor, CR-8 #2), ×6 M3×10 (battery pocket → floor, AUD-11 heat-set fix — was ×6 M3×8 + M3 hex nut under AUD-1)
 - **M3 nyloc**: ×4 (bracket→deck), ×4 (shoulder flange feet, w/ washer)
 - **M2 SHCS**: ×4 M2×8 (pod), ×4 M2×8 (deck-tie), ×4 M2×8 (clamp bar), ×2 M2×8 (OLED bracket foot), ×4 M2×6 (SSD1331)
 - **M2 nut**: ×4 (SSD1331)
-- **Ruthex inserts**: M3×5.7 ×16 (head 4, ears 4, riser flange 4, + spares), M3×3.8 ×2 (adapter), M2×4 ×14 (pod 4, deck-tie 4, clamp bar 4, OLED-bracket-in-pod-deck 2)
+- **Ruthex inserts**: M3×5.7 ×16 (head 4, ears 4, riser flange 4, + spares), M3×3.8 ×8 (adapter 2, battery pocket 6 — AUD-11 fix), M2×4 ×14 (pod 4, deck-tie 4, clamp bar 4, OLED-bracket-in-pod-deck 2)
 - **E-stop**: HB2-ES544 (Ø22, owned)

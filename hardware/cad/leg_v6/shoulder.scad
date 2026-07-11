@@ -46,13 +46,13 @@ WALL_Z0   = -25;
 PLATE_BX  = [27, 51];
 PLATE_BY  = [6.2, 15.2];
 
-// ---- neck_bracket bolt-landing pilot dimples (backlog #36, cosmetic-clarity
-// only) -----------------------------------------------------------------
-// chassis/neck_bracket.scad has 4 drill-at-assembly M3+nyloc BOLT_XY bolts
-// (trunk frame) that land on the FRONT shoulder's deck top with no mating
-// feature modeled here -- functionally fine (solid deck), but the assembled
-// preview shows them as orphaned dead-end holes. These are BLIND pilot
-// dimples, NOT through-holes -- the joint is still drilled at assembly.
+// ---- neck_bracket base-bolt heat-set pilots (backlog #36 + NO-DRILL fix,
+// 2026-07-10) --------------------------------------------------------------
+// chassis/neck_bracket.scad has 4 M3x8 BOLT_XY bolts (trunk frame) that land
+// on the FRONT shoulder's deck top. These are REAL modeled M3x3.8 heat-set
+// pockets (not cosmetic dimples, not drill-at-assembly) -- the bracket base
+// clearance holes pass through into these pilots, brass inserts pressed in,
+// no drilling and no nuts anywhere in the joint.
 // Transform: FRONT shoulder placement (preview_assembly.py / chassis/
 // check_fit.py) is S2T = [[0,1,0,HIP_FA],[1,0,0,0],[0,0,1,HIP_Z],[0,0,0,1]]
 // (end=+1), i.e. world = M @ shoulder-local. Inverting: shoulder-local
@@ -60,25 +60,30 @@ PLATE_BY  = [6.2, 15.2];
 // DECK_TOP (neck_bracket.scad, 79.55) - 38.05 = 41.5 = DECK_Z1 exactly,
 // confirming the deck top surfaces coincide under this transform.
 // neck_bracket BOLT_XY -> shoulder-local (all at DECK_Z1):
-//   (110, 20)   -> (20, -31.2)   (110, -20)  -> (-20, -31.2)
+//   (117, 20)   -> (20, -24.2)   (117, -20)  -> (-20, -24.2)
 //   (146, 19.5) -> (19.5, 4.8)   (146, -19.5)-> (-19.5, 4.8)
-// All 4 clear the lightening window (|sx|<=16, |sy| -14..12) and the
-// horn-plate heat-set grid (sx=+-27/+-51, sy=6.2/15.2); (20,-31.2) sits in
-// the deck+rear-wall overlap band (REAR_W0..REAR_W1 = -32.1..-28.1), the
-// thickest part of the deck.
-NECK_DIMPLE_D      = 2.5;    // pilot dimple dia (drill-start guide)
-NECK_DIMPLE_DEPTH  = 1.5;    // blind depth from the deck top (deck is 6.5 thick)
-NECK_DIMPLE_CHAMF  = 0.3;    // mouth chamfer depth
-NECK_DIMPLE_D_TOP  = 3.2;    // chamfer mouth dia
-NECK_DIMPLE_XY = [[20, -31.2], [-20, -31.2], [19.5, 4.8], [-19.5, 4.8]];
+// Front pair moved sy -31.2->-24.2 (trunk x110->x117, 7mm more central) to
+// get OFF the 22.5mm-tall thin rear-wall rib (REAR_W0..REAR_W1 =
+// -32.1..-28.1, no flat landing / no heat-set spot there) and ONTO the flat
+// 6.5 thick deck, matching neck_bracket.scad's x110->x117 fix. All 4 clear
+// the lightening window (|sx|<=16, |sy| -14..12) and the horn-plate heat-set
+// grid (sx=+-27/+-51, sy=6.2/15.2).
+NECK_HS_D      = 4.0;    // M3 brass heat-set bore dia (matches HEATSET_D pattern)
+NECK_HS_DEPTH  = 4.2;    // blind pocket depth from the deck top (DECK_Z1);
+                          // deck is 6.5 thick -> 2.3mm floor remains. Fits
+                          // the M3x3.8 SHORT insert (fastener-schedule.md)
+                          // + ~0.4mm seat.
+NECK_HS_CHAMF  = 0.3;    // mouth chamfer depth, insert start
+NECK_HS_D_TOP  = 4.6;    // chamfer mouth dia
+NECK_HS_XY = [[20, -24.2], [-20, -24.2], [19.5, 4.8], [-19.5, 4.8]];
 
-module neck_dimple(x, y) {
-    translate([x, y, DECK_Z1 - NECK_DIMPLE_DEPTH])
-        cylinder(d = NECK_DIMPLE_D,
-                 h = NECK_DIMPLE_DEPTH - NECK_DIMPLE_CHAMF + EPS);
-    translate([x, y, DECK_Z1 - NECK_DIMPLE_CHAMF])
-        cylinder(d1 = NECK_DIMPLE_D, d2 = NECK_DIMPLE_D_TOP,
-                 h = NECK_DIMPLE_CHAMF + EPS);
+module neck_heatset(x, y) {
+    translate([x, y, DECK_Z1 - NECK_HS_DEPTH])
+        cylinder(d = NECK_HS_D,
+                 h = NECK_HS_DEPTH - NECK_HS_CHAMF + EPS);
+    translate([x, y, DECK_Z1 - NECK_HS_CHAMF])
+        cylinder(d1 = NECK_HS_D, d2 = NECK_HS_D_TOP,
+                 h = NECK_HS_CHAMF + EPS);
 }
 
 // ---- flange floor FEET + deck gussets (2026-07-06, joint-stiffening) --------
@@ -88,10 +93,13 @@ module neck_dimple(x, y) {
 // solid corner bands (mesh-mapped: bolts at trunk (|x| 59.5, y +/-42)
 // land solid on ALL four corners; the rear -y pad tip overhangs the
 // rear floor opening by ~2 — 85% bearing, fine). M3x14 CSK from BELOW
-// the floor (drill O3.2 + csk at first assembly — same accepted
-// practice as the battery-sandwich holes; head flush, belly pack
-// clears), nyloc + washer on top of the pad, reached through the open
-// end aperture BEFORE the riser goes on. Gussets triangulate the
+// the floor — modeled clearance hole + 90° CSK in trunk.scad /
+// trunk_build.py (DERIVED TRUNK, 2026-07-10): printed in, NO drilling
+// at assembly (was: drill Ø3.2 + csk at first assembly, same practice
+// as the old battery-sandwich holes — both now printed-in). Head
+// flush, belly pack clears; nyloc + washer on top of the pad, reached
+// through the open end aperture BEFORE the riser goes on. Retention =
+// the nyloc on THIS part's pad, never the trunk. Gussets triangulate the
 // flange to the deck-extension underside at x +/-40 (clear of the
 // O12 grommets, which end at x 38).
 FOOT_X0   = 38;    FOOT_X1 = 46;   // wall inner face 48.93 -> 2.9 gap
@@ -186,12 +194,13 @@ module shoulder_v6() {
                     cylinder(d = WHEEL_CTR_D, h = WHEEL_CTR_DEEP + EPS);
         }
 
-        // neck_bracket bolt-landing pilot dimples (backlog #36) — FRONT end
-        // only in trunk frame, but this is the SAME part both ends, so the
-        // rear-mounted copy gets them too (harmless: no rear neck_bracket,
-        // and they're on the deck top, clear of everything else there).
-        for (xy = NECK_DIMPLE_XY)
-            neck_dimple(xy[0], xy[1]);
+        // neck_bracket base-bolt M3x3.8 heat-set pilots (backlog #36,
+        // NO-DRILL fix) — FRONT end only in trunk frame, but this is the
+        // SAME part both ends, so the rear-mounted copy gets them too
+        // (harmless: no rear neck_bracket, and they're on the deck top,
+        // clear of everything else there).
+        for (xy = NECK_HS_XY)
+            neck_heatset(xy[0], xy[1]);
 
         // plate heat-set bores, down into the deck (4 per side), plus a
         // Ø3 VENT through the remaining floor (insert-audit 2026-07-06:
