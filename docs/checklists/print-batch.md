@@ -145,6 +145,13 @@ Every insert site depth-probed in the built STLs:
       few seconds) — they're crush ribs**; M3 through the Ø3.1 dowel pair, M2
       through columns, insert purchase at Ø4.0, countersink flush, fork-arm
       seat flatness
+- [ ] **#54 assembly ORDER (hard rule): drive each servo's 4 case screws
+      BEFORE the parent joint's Ø19 boss fills the same floor window.** Servos
+      install first (femur/tibia/coax pockets), joints bolt after — the near
+      case-column pair sits r13.15 from the joint axis, only ~2.4–3.65mm to the
+      boss edge, so a screwdriver body swinging next to the seated 19mm boss is
+      tight. First-article: confirm the driver actually reaches the near case
+      screws with the parent boss in place (else strictly follow servos-first).
 - [ ] **LA-25 first-article: grommet_insert press-test.** BARREL_OD 12.2 into
       the nominal Ø12 flange hole is only 0.2mm interference (likely inside
       FDM/TPU noise) and the axial slit makes it a split ring — press one
