@@ -161,6 +161,12 @@ Every insert site depth-probed in the built STLs:
       M3 in the 2 diagonal "dowel" flange holes before committing — FDM
       often prints small holes 0.1–0.3mm undersize; bump to 3.2–3.3 in
       `shoulder_plate.scad` (`PLATE_BX`/`PLATE_BY` dowel cut) if tight.
+- [ ] **LA-23 first-article: horn counterbore floor.** `knee_arm` +
+      `shoulder_plate` horn-coupling floors are EXACTLY 1.5mm (`ARM_THK` 4.0 −
+      `HORN_CTR_DEEP` 2.5) — the gate minimum, zero slack. Non-load-bearing
+      clearance pocket (clears the horn's proud retention screw), but after
+      printing probe the floor (~1.5mm, no witness/pinhole from a thin Z-print).
+      `ARM_THK` is shared, so it can't be locally deepened without a wider change.
 - [ ] knee_bumper: clips over the tibia knee-block, wraps the bottom, stays put
 - [ ] head→bracket: 4× M3 boss bolts land; bracket base bolts drill the deck
 - [ ] Shoe: snap onto the toe_v2 seat (tabs into pockets, lips over the
