@@ -8,9 +8,10 @@ printed part's solid. ANY servo point inside the part = the part cuts the
 servo. Run after every geometry change:  ../../../.venv/bin/python check_fit.py
 
 Flags: --sweep (kfe/hfe pose sweeps + insertion + shoulder + through-hole +
-cable, all of the below), --insertion (#53 femur-insertion sweep alone),
---shoulder (haa roll sweep alone), --through (LA-21 through-hole probe
-alone), --cable (LA-20 cable-loop span sweep alone).
+cable + fastener, all of the below), --insertion (#53 femur-insertion sweep
+alone), --shoulder (haa roll sweep alone), --through (LA-21 through-hole
+probe alone), --cable (LA-20 cable-loop span sweep alone), --fastener (#67
+coax_hfe cap mount-hardware gate alone).
 
 Exit 0 = clean, 1 = interference (clusters printed).
 """
@@ -460,6 +461,194 @@ def insertion_checks(servo, pts0):
     return bad
 
 
+# #67 fix (2026-07-12): mount-hardware gate for the coax_hfe cap's fastener.
+# A prior attempt against this same joint (rejected, never merged) added a
+# FASTENER_GROUPS mechanism with genuinely axis-general MERGE/dot checks but
+# a reachability check hardcoded to a Z-axis captured-nut model -- when that
+# attempt's own redesign moved the fastener to a different axis, it shipped
+# `holes=[]` to silence the check by omission instead of generalizing it,
+# and (separately, the actual rejection reason) ended up threading directly
+# into the coax's own PA6-CF with no insert at all -- a self-tap, which is
+# never allowed here regardless of the gate.
+#
+# THIS design (coax.scad's coax_hfe_ear_channel()/coax_hfe_fastener_neg()):
+# a real M3 heat-set (HEATSET_D/HEATSET_L) embedded axis +Y in the
+# INTEGRAL stub/bridge (coax_R.stl / coax_L.stl), reached through a
+# clearance hole + SHCS head counterbore in the removable CAP
+# (coax_hfe_plate.stl / _L.stl). The two parts are different meshes, so the
+# check below verifies BOTH sides explicitly and axis-generally (no
+# hardcoded Z assumption): the stub's heat-set channel is open to a TRUE
+# exterior point (well outside the part's own bounding box, not just an
+# internal cavity) along `axis`, the heat-set bore itself has real solid
+# material backing its blind end, and the cap's own clearance span is open
+# along the same axis/position.
+NUT_M3_AC     = 6.35    # kept for MERGE spacing on any future captured-nut
+                         # group; unused by the heat-set group below (its own
+                         # bore_d/head_d drive the merge/clearance checks)
+MIN_DOT_DEPTH = 0.5      # a side-marker dimple must cut at least this deep
+
+# leg_v6_common.scad constants (OpenSCAD-side; mirrored here byte-for-byte --
+# `include` doesn't reach across into this Python gate)
+M3_CLEAR  = 3.4    # general M3 clearance
+HEATSET_D = 4.0    # Ruthex M3 insert bore
+HEATSET_L = 6.2    # bore depth: 5.7 insert + 0.5 seat
+
+# (cap_part, stub_part, hole (x,y,z) = where the cap's clearance ends and
+# the stub's heat-set begins (coax.scad's EAR_Y0), axis = unit direction
+# FROM the heat-set's blind end TOWARD the open exterior face, bore_d =
+# bolt shank clearance, head_d = SHCS head counterbore dia, heatset_d/_l =
+# real insert bore dia/length, dot_off = (f1,f2) reference-point offsets
+# used to probe "nearby flat face" depth -- this cap's own mid-band wall is
+# only 1.4mm wide (x) x 6.8mm tall (z), far smaller than the OLD full-disc
+# plate's, so the offsets are sized to that wall (not the old 4mm default,
+# which would sample points off the part entirely), dots = marker-dot
+# probes (dx,dy,dz,nx,ny,nz))
+# RIGHT cap gets 1 marker dot (LA-2 convention); LEFT gets 2 (the base dot,
+# mirrored, plus its own 2nd disambiguation dot -- see coax_hfe_plate_L.
+# scad's header).
+FASTENER_GROUPS = [
+    dict(cap_part='coax_hfe_plate.stl', stub_part='coax_R.stl',
+         holes=[(15.9, 24.0, 10.4)], axis=(0, 1, 0),
+         bore_d=M3_CLEAR, head_d=5.5, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
+         dot_off=(0, 1.4),
+         dots=[(14.1, 7.15, -8.0, 0, -1, 0)]),
+    dict(cap_part='coax_hfe_plate_L.stl', stub_part='coax_L.stl',
+         dot_off=(0, 1.4),
+         holes=[(-15.9, 24.0, 10.4)], axis=(0, 1, 0),
+         bore_d=M3_CLEAR, head_d=5.5, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
+         dots=[(-14.1, 7.15, -8.0, 0, -1, 0), (-14.1, 7.15, -11.0, 0, -1, 0)]),
+]
+
+
+def fastener_checks():
+    print('-- #67 mount-hardware gate (heat-set reachability / merge / dot depth) --')
+    bad = False
+    for g in FASTENER_GROUPS:
+        cap = trimesh.load(g['cap_part'])
+        stub = trimesh.load(g['stub_part'])
+        axis = np.asarray(g['axis'], float)
+        H = g['holes']
+
+        # MERGE: adjacent holes must clear the larger of the bore/head/
+        # heatset diameter, else their bores/counterbores overlap into a slot.
+        need = max(g['bore_d'], g['head_d'], g['heatset_d'])
+        merged = [(H[i], H[j], np.linalg.norm(np.subtract(H[i], H[j])))
+                  for i in range(len(H)) for j in range(i + 1, len(H))
+                  if np.linalg.norm(np.subtract(H[i], H[j])) < need - 1e-6]
+        if merged:
+            bad = True
+            for a, b, d in merged:
+                print(f'MERGE {g["cap_part"]}: holes {a} & {b} {d:.1f}mm apart '
+                      f'< {need:.1f}mm -> they merge into a slot')
+        else:
+            print(f'OK    {g["cap_part"]}: {len(H)} mount hole(s) all >= {need:.1f}mm apart')
+
+        for hx, hy, hz in H:
+            base = np.array([hx, hy, hz], float)
+            # (a) stub-side EXTERIOR reachability: from the heat-set's own
+            # mouth (the hole point), scan OUTWARD (+axis) through the whole
+            # bridge/stub and PAST its own exterior face by a real margin --
+            # against the STUB ALONE (cap may be off during installation).
+            # A margin well past the part's own bbox extent along axis
+            # proves TRUE exterior air, not just an internal void.
+            far = float(np.abs(stub.bounds).max()) + 20.0
+            blocked_out = _axis_scan(stub, base, axis, 0, far, r=g['bore_d'] / 2)
+            if blocked_out:
+                bad = True
+                print(f'SEAL  {g["stub_part"]}: heat-set @ {tuple(base)} blocked '
+                      f'along +axis at t={blocked_out[0]:.1f} -- no path to a true '
+                      f'exterior face, insert/driver cannot reach it')
+            else:
+                print(f'OK    {g["stub_part"]}: heat-set @ {tuple(base)} open to a '
+                      f'true exterior face along +axis (scanned 0..{far:.0f}mm)')
+
+            # (b) stub-side BLIND-bore proof: the insert channel itself
+            # (0..heatset_l, going -axis, into the stub) must be OPEN (a
+            # real bore exists), and just past its far end must be BLOCKED
+            # (real solid material backs it -- genuinely blind, not an
+            # accidental through-hole into some other cavity).
+            blocked_bore = _axis_scan(stub, base, -axis, 0, g['heatset_l'] - 0.1,
+                                       r=g['heatset_d'] / 2 - 0.1)
+            if blocked_bore:
+                bad = True
+                print(f'BLOCK {g["stub_part"]}: heat-set bore @ {tuple(base)} not '
+                      f'open its own {g["heatset_l"]:.1f}mm length (blocked at '
+                      f't={blocked_bore[0]:.1f})')
+            blocked_backing = _axis_scan(stub, base, -axis,
+                                          g['heatset_l'] + 0.3, g['heatset_l'] + 3.0, r=0.3)
+            if not blocked_backing:
+                bad = True
+                print(f'HOLLOW {g["stub_part"]}: heat-set bore @ {tuple(base)} has NO '
+                      f'solid backing past its own {g["heatset_l"]:.1f}mm depth -- not '
+                      f'genuinely blind (punches into another void)')
+            else:
+                print(f'OK    {g["stub_part"]}: heat-set bore is a real blind pocket '
+                      f'({g["heatset_l"]:.1f}mm deep, solid backing confirmed)')
+
+            # (c) cap-side clearance: the SAME axis/position must be open
+            # through the cap alone (its own bolt-shank clearance hole),
+            # across the head-counterbore + shank span.
+            blocked_cap = _axis_scan(cap, base, axis, -3.0, 5.0, r=g['bore_d'] / 2 - 0.1)
+            if blocked_cap:
+                bad = True
+                print(f'BLIND {g["cap_part"]}: clearance hole @ {tuple(base)} blocked '
+                      f'in the cap at t={blocked_cap[0]:.1f} -- bolt cannot pass')
+            else:
+                print(f'OK    {g["cap_part"]}: clearance hole open through the cap')
+
+        # DOT: marker dimple must recess into solid vs the surrounding face.
+        # Uses `.contains()` scans (like _axis_scan), not ray casting -- a
+        # fixed-direction ray against this geometry's many axis-aligned
+        # faces hits trimesh's known tangency issue (silent ray misses),
+        # the same reasoning _axis_scan's own docstring already documents.
+        o1, o2 = g.get('dot_off', (4.0, 4.0))
+        for (dx, dy, dz, nx, ny, nz) in g['dots']:
+            n = np.asarray([nx, ny, nz], float); n /= np.linalg.norm(n)
+            ctr = np.array([dx, dy, dz], float)
+            f1 = np.cross(n, [0, 0, 1.0])
+            f1 = f1 / np.linalg.norm(f1) if np.linalg.norm(f1) > 1e-6 else np.array([0, 1.0, 0])
+            f2 = np.cross(n, f1)
+            at_dot = _surface_depth(cap, ctr, n)
+            # o1/o2 == 0 means "this wall is too narrow along that axis for
+            # any undisturbed reference point" (e.g. the #67 cap's mid-band
+            # wall is only 1.4mm wide in X, narrower than the dot's own
+            # 1.5mm radius) -- skip that axis rather than sample a point
+            # that's still inside the dimple itself (which would silently
+            # UNDERSTATE the measured depth, not a safe default).
+            offs = ([o1 * f1, -o1 * f1] if o1 > 0 else []) + \
+                   ([o2 * f2, -o2 * f2] if o2 > 0 else [])
+            refs = [d for off in offs
+                    for d in [_surface_depth(cap, ctr + off, n)] if d is not None]
+            if at_dot is None or not refs:
+                bad = True
+                print(f'?     {g["cap_part"]}: marker dot @ ({dx},{dy},{dz}) surface not '
+                      f'found -- cannot verify, treating as a failure')
+                continue
+            depth = at_dot - float(np.median(refs))
+            if depth < MIN_DOT_DEPTH:
+                bad = True
+                print(f'DOT   {g["cap_part"]}: marker dot only {depth:.2f}mm deep '
+                      f'(< {MIN_DOT_DEPTH}mm) -- invisible on the print')
+            else:
+                print(f'OK    {g["cap_part"]}: marker dot {depth:.2f}mm deep')
+    return bad
+
+
+def _surface_depth(mesh, ctr, n, reach=8.0, n_steps=320):
+    """`n` = the face's OUTWARD normal. Starting from a point clearly OUTSIDE
+    the part (ctr + reach*n) and walking INWARD (-n) back past ctr, return
+    the distance traveled before first entering solid -- i.e. how far
+    inward the real surface sits from `ctr`. A deeper dimple at `ctr`
+    (material removed) reads a LARGER distance than a flat reference point
+    on the same nominal face. Returns None if no entrance is found."""
+    ts = np.linspace(0, 2 * reach, n_steps)
+    pts = (ctr + reach * n)[None, :] - ts[:, None] * n[None, :]
+    inside = mesh.contains(pts)
+    if not inside.any():
+        return None
+    return float(ts[np.argmax(inside)])   # first True index
+
+
 def main():
     servo = servo_mesh()
     pts0 = sample_points(servo)
@@ -492,6 +681,8 @@ def main():
         bad = through_hole_checks() or bad
     if '--cable' in sys.argv or do_sweep:
         bad = cable_checks() or bad
+    if '--fastener' in sys.argv or do_sweep:
+        bad = fastener_checks() or bad
     sys.exit(1 if bad else 0)
 
 
