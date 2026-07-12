@@ -30,10 +30,20 @@ TIP_R = 15.85;
 
 difference() {
     // plate: shelf rectangle blended to the knee disc
-    hull() {
-        translate([0, -TIP_R, 0]) cube([80 - X0, 2*TIP_R, ARM_THK]);
-        translate([KNEE_X, 0, 0]) cylinder(r = TIP_R, h = ARM_THK);
-    }
+    // squared-end corners ROUNDED R8 (#50, 2026-07-11): fillet the cube end's
+    // 2 sharp corners at (0, ±TIP_R) via offset(r)+offset(-delta) on the 2D
+    // profile (rounds convex corners, leaves straight edges + the knee disc
+    // unchanged). Mount bolts (6/16, ±8) sit >=6.8mm clear of the corners so
+    // nothing is clipped; the corners are outside the bolt pattern
+    // (non-structural overhang) + not a mating face -> free outline change,
+    // ARM_THK / horn floor / holes all untouched.
+    ROUND_R = 8;
+    linear_extrude(ARM_THK)
+        offset(r = ROUND_R) offset(delta = -ROUND_R)
+            hull() {
+                translate([0, -TIP_R]) square([80 - X0, 2*TIP_R]);
+                translate([KNEE_X, 0]) circle(r = TIP_R);
+            }
     // 4x M3 + head counterbores (femur-frame 65/75, ±8). The DIAGONAL pair
     // is close-fit Ø3.1 — the screws register the plate (clearance holes
     // alone let the knee axis wander under cyclic shear).
