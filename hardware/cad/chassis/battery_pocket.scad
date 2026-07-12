@@ -71,7 +71,9 @@ CAV_Z0 = RIM_Z - (PACK[2] + CLR); // -36.0 cavity floor
 BOT_Z  = CAV_Z0 - WALL;           // -39.2 tray bottom
 FRONT_X1 = CAV_X + WALL;          // 81.5 front wall outer
 
-BOSS_X = [-40, 0, 40];
+BOSS_X = [-35, 0, 40];   // #68 fix 2026-07-12: -x col -40->-35 (== floor_plate
+                          // BAT_X + trunk_build BATT_BOSS_X) -- clears the
+                          // -40.5 mezzanine standoff foot the -40 csk overlapped
 BOSS_Y = 27.5;            // AUD-11 fix (heat-set, 2026-07-10): was 26.5, which
                           // put the bolt/pilot axis flush on the cavity wall
                           // (CAV_Y=24 + WALL=3.2 = 27.2 outer face) -- the

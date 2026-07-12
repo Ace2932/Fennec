@@ -30,7 +30,7 @@ OUT = 'trunk.stl'
 # flush on the cavity wall's outer face -- a 0.0mm breach into the LiPo
 # bay. Moved +1.0 outboard to seal a >=1.5mm wall for the new heat-set
 # mount; this bore must keep tracking BOSS_Y 1:1.
-BATT_BOSS_X = [-40, 0, 40]
+BATT_BOSS_X = [-35, 0, 40]   # #68 fix 2026-07-12: -x col -40->-35 (== floor_plate BAT_X + battery_pocket BOSS_X)
 BATT_BOSS_Y = 27.5
 BATT_CLEAR_D = 3.4
 BATT_BORE_Z0 = -2
