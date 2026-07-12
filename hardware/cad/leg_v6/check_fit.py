@@ -227,6 +227,22 @@ def shoulder_checks(servo, pts0):
         status = 'OK ' if n == 0 else 'HIT'
         if n and abs(ang) <= 40: bad = True   # beyond 40 = documenting stops
         print(f'   {status} haa {ang:+4d}deg: {n} pts')
+    # HAA horn SEATING (2026-07-11, user catch: "does the plate reach the coax
+    # horn or float short?"): the sweep above only checks ABSENCE of
+    # interpenetration, never that shoulder_plate positively SEATS on the servo
+    # horn. Measure it at ang=0: the plate's horn-coupling region must CONTACT
+    # the horn disc (small press), not sit with a gap. horn = servo pts at the
+    # output-horn z-band (HORN_Z0..Z1 14.7..17.75) within the Ø20 disc, mapped
+    # servo->coax->shoulder frame.
+    horn0 = pts0[(pts0[:, 2] > 14.0) & (pts0[:, 2] < 18.0)
+                 & (np.hypot(pts0[:, 0], pts0[:, 1]) <= 10.5)]
+    horn_sh = trimesh.transform_points(
+        trimesh.transform_points(horn0, coax_pose()), base)
+    seat = float(trimesh.proximity.closest_point(pl, horn_sh)[1].min())
+    ok = seat <= 0.5
+    print(f"   {'OK ' if ok else 'GAP'} haa horn seat: plate<->horn min "
+          f"{seat:.2f}mm (want <=0.5 = seated, not floating short)")
+    if not ok: bad = True
     return bad
 
 
@@ -319,6 +335,17 @@ def through_hole_checks():
         bad |= check('coax_R.stl', f'zip sx={sx:+d}', [0, 17, -36], [1, 0, 0], t_lo, t_hi)
         # coax_L = X-mirror of coax_R (coax_L.scad: mirror([1,0,0]))
         bad |= check('coax_L.stl', f'zip sx={sx:+d}', [0, 17, -36], [1, 0, 0], -t_hi, -t_lo)
+    # HAA rear-arm wheel-bolt holes (2026-07-11, user catch: "the rear shoulder
+    # holes don't look cut"): 4/station on the Ø14 BCD about each haa axis
+    # (sx*HIP_X=39.05, z=0), drilled along +Y through the rear wall (-26.6..
+    # -22.6) + wheel boss to the wheel face (-17.75). Confirmed present, but
+    # never gated -> lock them in.
+    for sx in (1, -1):
+        for a in (45, 135, 225, 315):
+            hx = sx*39.05 + 7.0*np.cos(np.radians(a))
+            hz = 7.0*np.sin(np.radians(a))
+            bad |= check('shoulder.stl', f'haa-wheel sx={sx:+d} a={a:3d}',
+                         [hx, 0, hz], [0, 1, 0], -26.6, -17.75)
     return bad
 
 
