@@ -7,9 +7,10 @@ part's pocket pose and samples the servo (surface + volume points) against the
 printed part's solid. ANY servo point inside the part = the part cuts the
 servo. Run after every geometry change:  ../../../.venv/bin/python check_fit.py
 
-Flags: --sweep (kfe/hfe pose sweeps + shoulder + through-hole + cable, all
-of the below), --shoulder (haa roll sweep alone), --through (LA-21
-through-hole probe alone), --cable (LA-20 cable-loop span sweep alone).
+Flags: --sweep (kfe/hfe pose sweeps + insertion + shoulder + through-hole +
+cable, all of the below), --insertion (#53 femur-insertion sweep alone),
+--shoulder (haa roll sweep alone), --through (LA-21 through-hole probe
+alone), --cable (LA-20 cable-loop span sweep alone).
 
 Exit 0 = clean, 1 = interference (clusters printed).
 """
@@ -146,14 +147,19 @@ def sweep_checks(servo, pts0):
         if n == 0 and abs(ang) <= 109:
             _clearance_warn(femur, p, f'kfe {ang:+4d}deg vs femur')
             _clearance_warn(arm, p, f'kfe {ang:+4d}deg vs knee_arm')
-    coax = trimesh.load('coax_R.stl')
+    # #53 fix (2026-07-11): coax's inboard HFE arm is now a separate bolt-on
+    # (coax_hfe_plate.scad) -- union it into the "coax" solid used for the
+    # SEATED hip-pitch sweep (both parts are defined in the same coax world
+    # frame at identity, no transform needed to combine them).
+    coax = trimesh.util.concatenate([trimesh.load('coax_R.stl'),
+                                      trimesh.load('coax_hfe_plate.stl')])
     fem_asm = np.vstack([trimesh.sample.sample_surface(femur, 5000, seed=0)[0],
                          trimesh.sample.sample_surface(arm, 1500, seed=0)[0],
                          trimesh.transform_points(pts0, rot_z180())])
     M = (trimesh.transformations.translation_matrix([33.8, 11.6, -9.5])
          @ rot_z180()
          @ trimesh.transformations.rotation_matrix(np.pi/2, [0, 1, 0]))
-    print('-- hip pitch sweep (femur assembly vs coax)')
+    print('-- hip pitch sweep (femur assembly vs coax+coax_hfe_plate)')
     # LA-19a: extended past the sw limit (86) to ±90/95/100 to pin the mech
     # stop, same pattern as the kfe sweep's 109/118. Measured (2026-07-11,
     # 0.5deg-resolution bisection): clean through ±92.5deg, first contact at
@@ -182,7 +188,9 @@ def shoulder_checks(servo, pts0):
     bad = False
     sh = trimesh.load('shoulder.stl')
     pl = trimesh.load('shoulder_plate.stl')
-    coax = trimesh.load('coax_R.stl')
+    # #53 fix (2026-07-11): coax's inboard HFE arm is now coax_hfe_plate.scad
+    coax = trimesh.util.concatenate([trimesh.load('coax_R.stl'),
+                                      trimesh.load('coax_hfe_plate.stl')])
     femur = trimesh.load('femur_R.stl')
     tibia = trimesh.load('tibia_R.stl')
     arm = trimesh.load('knee_arm.stl')
@@ -219,6 +227,22 @@ def shoulder_checks(servo, pts0):
         status = 'OK ' if n == 0 else 'HIT'
         if n and abs(ang) <= 40: bad = True   # beyond 40 = documenting stops
         print(f'   {status} haa {ang:+4d}deg: {n} pts')
+    # HAA horn SEATING (2026-07-11, user catch: "does the plate reach the coax
+    # horn or float short?"): the sweep above only checks ABSENCE of
+    # interpenetration, never that shoulder_plate positively SEATS on the servo
+    # horn. Measure it at ang=0: the plate's horn-coupling region must CONTACT
+    # the horn disc (small press), not sit with a gap. horn = servo pts at the
+    # output-horn z-band (HORN_Z0..Z1 14.7..17.75) within the Ø20 disc, mapped
+    # servo->coax->shoulder frame.
+    horn0 = pts0[(pts0[:, 2] > 14.0) & (pts0[:, 2] < 18.0)
+                 & (np.hypot(pts0[:, 0], pts0[:, 1]) <= 10.5)]
+    horn_sh = trimesh.transform_points(
+        trimesh.transform_points(horn0, coax_pose()), base)
+    seat = float(trimesh.proximity.closest_point(pl, horn_sh)[1].min())
+    ok = seat <= 0.5
+    print(f"   {'OK ' if ok else 'GAP'} haa horn seat: plate<->horn min "
+          f"{seat:.2f}mm (want <=0.5 = seated, not floating short)")
+    if not ok: bad = True
     return bad
 
 
@@ -311,6 +335,17 @@ def through_hole_checks():
         bad |= check('coax_R.stl', f'zip sx={sx:+d}', [0, 17, -36], [1, 0, 0], t_lo, t_hi)
         # coax_L = X-mirror of coax_R (coax_L.scad: mirror([1,0,0]))
         bad |= check('coax_L.stl', f'zip sx={sx:+d}', [0, 17, -36], [1, 0, 0], -t_hi, -t_lo)
+    # HAA rear-arm wheel-bolt holes (2026-07-11, user catch: "the rear shoulder
+    # holes don't look cut"): 4/station on the Ø14 BCD about each haa axis
+    # (sx*HIP_X=39.05, z=0), drilled along +Y through the rear wall (-26.6..
+    # -22.6) + wheel boss to the wheel face (-17.75). Confirmed present, but
+    # never gated -> lock them in.
+    for sx in (1, -1):
+        for a in (45, 135, 225, 315):
+            hx = sx*39.05 + 7.0*np.cos(np.radians(a))
+            hz = 7.0*np.sin(np.radians(a))
+            bad |= check('shoulder.stl', f'haa-wheel sx={sx:+d} a={a:3d}',
+                         [hx, 0, hz], [0, 1, 0], -26.6, -17.75)
     return bad
 
 
@@ -381,6 +416,50 @@ def cable_checks():
     return False   # WARN-only by design (see docstring) -- never fails the gate
 
 
+def insertion_checks(servo, pts0):
+    """#53 fix (2026-07-11): the coax's femur yoke used to be a rigid closed
+    U (integral inboard arm + bridge + integral outboard arm) -- the femur+
+    HFE-servo assembly had NO insertion path (this exact sweep, run against
+    the pre-fix geometry, was blocked essentially across the whole travel).
+    With the inboard arm now a separate bolt-on (coax_hfe_plate.scad),
+    verify the assembly can be removed/inserted with the plate OFF: place
+    it at its seated pose, sweep it AWAY along the real insertion axis, and
+    assert clean (no mid-travel block) all the way out.
+
+    Insertion axis (found by testing all 6 +-X/Y/Z directions on the fixed
+    geometry, see coax.scad's own header): +Y (rearward), NOT axial +-X --
+    both X directions stay solid-blocked even with the arm gone (the HAA
+    housing's own pocket wall blocks -X; the integral outboard arm blocks
+    +X). Real assembly: femur approaches from behind the coax (+Y), slides
+    forward (-Y) to seat, wheel bolts to the integral outboard boss, THEN
+    coax_hfe_plate bolts on to capture the horn."""
+    bad = False
+    coax = trimesh.load('coax_R.stl')   # plate OFF -- this is the state the
+                                         # femur must be insertable/removable in
+    femur = trimesh.load('femur_R.stl')
+    arm = trimesh.load('knee_arm.stl')
+    arm.apply_transform(trimesh.transformations.translation_matrix([59, 0, 17.75]))
+    fem_asm = np.vstack([trimesh.sample.sample_surface(femur, 8000, seed=0)[0],
+                         trimesh.sample.sample_surface(arm, 2000, seed=0)[0],
+                         trimesh.transform_points(pts0, rot_z180())])
+    M = (trimesh.transformations.translation_matrix([33.8, 11.6, -9.5])
+         @ rot_z180()
+         @ trimesh.transformations.rotation_matrix(np.pi / 2, [0, 1, 0]))
+    seated = trimesh.transform_points(fem_asm, M)
+    print('-- #53 insertion sweep (femur+HFE-servo assembly vs coax, plate OFF, +Y) --')
+    for t in range(0, 72, 4):
+        p = seated.copy()
+        p[:, 1] += t
+        # exclude the designed disc/boss interface about the hfe X-axis (same
+        # r13 convention as the hip-pitch sweep -- legitimate seated contact)
+        p = p[np.linalg.norm(p[:, 1:] - [11.6, -9.5], axis=1) > 13]
+        n = int(coax.contains(p).sum())
+        status = 'OK ' if n == 0 else 'HIT'
+        if n and t > 0: bad = True   # t=0 (seated) legitimately touches at the disc interfaces
+        print(f'   {status} t=+{t:3d}mm: {n} pts')
+    return bad
+
+
 def main():
     servo = servo_mesh()
     pts0 = sample_points(servo)
@@ -405,6 +484,8 @@ def main():
             print(f'        cluster @ ({u[0]:+.0f},{u[1]:+.0f},{u[2]:+.0f})  {c} pts')
     if do_sweep:
         bad = sweep_checks(servo, pts0) or bad
+    if '--insertion' in sys.argv or do_sweep:
+        bad = insertion_checks(servo, pts0) or bad
     if '--shoulder' in sys.argv or do_sweep:
         bad = shoulder_checks(servo, pts0) or bad
     if '--through' in sys.argv or do_sweep:
