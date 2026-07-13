@@ -51,7 +51,12 @@ HEATSET_L = 6.0;
 DECK_TOP = 79.55;
 
 // ---- base plate on the deck (center spine, clears window + horn flanges) ----
-BASE = [107, 150, -22, 22];       // x0 x1 y0 y1 (CR-5: widened +-21 -> +-22)
+BASE = [107, 150, -22.5, 22.5];   // x0 x1 y0 y1 (CR-5: +-21->+-22; #69 fix
+                                   // 2026-07-12: +-22->+-22.5 lifts the x117
+                                   // bolt edge margin 0.3->0.8mm. Capped at 22.5:
+                                   // MEASURED 22.8 left only 0.15mm to the shoulder
+                                   // horn flange (too tight for 2 printed parts);
+                                   // 22.5 keeps a safe ~0.45mm flange gap.)
 BASE_T = 4;                        // z79.55..83.55
 // deck-through bolts: M3x8 SHCS driven from the bracket top through the base
 // M3_CLEAR holes into M3x3.8 brass heat-sets pressed into the shoulder deck

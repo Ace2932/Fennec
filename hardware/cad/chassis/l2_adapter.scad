@@ -46,6 +46,13 @@ module l2_adapter() {
         // (can't boss upward), so a full 5.7 insert won't fit. At (114,±9): clears
         // the L2 CSK at (108.5,±18) by 10.5mm (was 110,±14 = 4.3, too close).
         // fastener audit 2026-07-08.
+        // #70b (2026-07-12): the ~0.85mm floor over the insert is ACCEPTED, not
+        // fixed. It is NOT in the bolt-tension path -- the bolt clamps between
+        // the crown-side head and this insert; the floor is the L2-SEAT surface
+        // above the insert (carries only the L2's weight in compression). So a
+        // press blow-through is a minor seat poke-through, not a structural
+        // failure. M3x3 isn't a Ruthex length; keep M3x3.8, press gently.
+        // check_fit floor gate WARNs this (known-constrained).
         for (sy = [-1, 1])
             translate([114, sy * 9, Z0 - EPS]) cylinder(d = 4.0, h = 4.2);
     }
