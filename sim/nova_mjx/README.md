@@ -80,11 +80,18 @@ walk on flat ideal ground:
 - **Feet-air-time reward** — rewards a real stepping gait with ground clearance,
   not a foot-dragging shuffle that face-plants on any bump.
 - **Domain randomization** (`domain_randomize`): floor friction, **per-link**
-  mass (±15%, every body), and actuator gains — the sim-to-real bridge, and it
-  lets you train **before** the final masses are weighed (robust to whatever the
-  real build turns out to be).
+  mass (±15%, every body), actuator gains, and per-env **TERRAIN**.
+- **Terrain curriculum** (`terrain.py`) — each env gets its own heightfield at a
+  random difficulty (`level` 0→`TERRAIN_MAX`): a **flat center pad** (spawn zone)
+  with rough bumps + slopes roughening outward. The blind-locomotion foundation
+  (rough ground, slopes). **Train FLAT first** (`TERRAIN_MAX = 0.0` in
+  `terrain.py`) to get basic walking, then raise to `1.0` for terrain robustness.
 
-Widen these (latency, terrain, harder pushes) as you approach hardware.
+### Stairs
+This terrain is the BLIND foundation (uneven ground / slopes / gentle steps) —
+enough to harden flat walking and handle rough floors. **Foot-precise stairs
+need exteroception**: a LiDAR **height-map** obs (elevation grid from the L2 —
+the lidar self-filter feeds it) + a bigger net. That's Phase 3, not this.
 
 ## 4. Watch the trained gait
 

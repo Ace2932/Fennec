@@ -196,17 +196,17 @@ class NovaJoystick(PipelineEnv):
 
 def domain_randomize(sys, rng):
     """Per-env randomization = the sim-to-real bridge. Covers floor friction,
-    per-link mass, and the STS3215 ACTUATOR model: position gain kp, velocity
-    gain kv, and joint damping/friction. The kp/kv/damping ranges are wide
-    placeholders around the nominal model — once you measure a real STS3215 step
-    response, NARROW them around the measured values (that's the biggest
-    remaining transfer-gap closer). Control latency is modeled in the env step
-    (per-env action delay), not here."""
+    per-link mass, the STS3215 ACTUATOR model (kp/kv/damping), and per-env
+    TERRAIN (a heightfield at a random difficulty level — the blind-locomotion
+    curriculum: each env trains on its own rough ground, flat spawn pad, so the
+    batch spans flat->rough). Narrow kp/kv/damping around a measured STS3215
+    step response later. Control latency is in the env step (per-env delay)."""
+    from terrain import terrain_field, TERRAIN_MAX
     n = rng.shape[0]
 
     @jax.vmap
     def rand(rng):
-        k1, k2, k3, k4, k5 = jax.random.split(rng, 5)
+        k1, k2, k3, k4, k5, kt = jax.random.split(rng, 6)
         friction = jax.random.uniform(k1, (), minval=0.6, maxval=1.4)
         geom_fr = sys.geom_friction.at[:, 0].set(friction)
         mscale = jax.random.uniform(k2, (sys.nbody,), minval=0.85, maxval=1.15)
@@ -217,9 +217,13 @@ def domain_randomize(sys, rng):
         # joint damping (all dofs; base freejoint dofs 0..5 unchanged)
         damp = sys.dof_damping * jax.random.uniform(
             k5, (sys.nv,), minval=0.5, maxval=1.7)
-        return geom_fr, body_mass, kp, kv, damp
+        # per-env terrain at a random difficulty level (implicit curriculum)
+        kt1, kt2 = jax.random.split(kt)
+        level = jax.random.uniform(kt2, (), minval=0.0, maxval=TERRAIN_MAX)
+        hfield = terrain_field(kt1, level)
+        return geom_fr, body_mass, kp, kv, damp, hfield
 
-    geom_fr, body_mass, kp, kv, damp = rand(rng)
+    geom_fr, body_mass, kp, kv, damp, hfield = rand(rng)
 
     # position actuator: gainprm[:,0]=kp ; biasprm[:,1]=-kp, biasprm[:,2]=-kv
     gainprm = sys.actuator_gainprm[None].repeat(n, axis=0).at[:, :, 0].set(kp)
@@ -229,11 +233,11 @@ def domain_randomize(sys, rng):
     in_axes = jax.tree_util.tree_map(lambda x: None, sys)
     in_axes = in_axes.tree_replace({
         "geom_friction": 0, "body_mass": 0, "actuator_gainprm": 0,
-        "actuator_biasprm": 0, "dof_damping": 0,
+        "actuator_biasprm": 0, "dof_damping": 0, "hfield_data": 0,
     })
     sys = sys.tree_replace({
         "geom_friction": geom_fr, "body_mass": body_mass,
         "actuator_gainprm": gainprm, "actuator_biasprm": biasprm,
-        "dof_damping": damp,
+        "dof_damping": damp, "hfield_data": hfield,
     })
     return sys, in_axes
