@@ -92,20 +92,44 @@ MuJoCo with a follow-cam → `walk.mp4` (prints how far it traveled in x). With 
 before training. **Headless (Colab/servers): `MUJOCO_GL=egl python rollout.py …`**
 (on macOS use the default, don't set it).
 
-## 5. Deploy to the Jetson (later)
+## 5. Deploy to the Jetson
 
-Export the Brax policy → ONNX/TorchScript, run it as a `nova_locomotion` policy
-node: read joint state + IMU + `cmd_vel`, build the 45-d obs exactly as `env.py`
-does, run inference at 50 Hz, write the 12 joint targets to `/joint_commands`
-(via the `joint_id_map.yaml`). Keep the scripted trot as the safety fallback.
+Scaffold is in `deploy/`. Pipeline:
+
+```bash
+# export the trained policy (on the training machine / Colab)
+python export_policy.py --policy nova_policy.pkl   # -> nova_policy.npz (+ .onnx)
+```
+
+- **`export_policy.py`** — extracts the deterministic policy (normalizer + 4×128
+  MLP) into `nova_policy.npz` (**numpy weights — the Jetson runs it with zero
+  heavy deps**) and `nova_policy.onnx` (portable, optional). Verified numerically
+  against the Brax policy (~1e-8).
+- **`deploy/policy_runner.py`** — framework-free runner (numpy only). `build_obs`
+  reproduces sim's 49-d obs EXACTLY; `joint_targets(sensors) -> 12 rad targets`.
+- **`deploy/policy_node.py`** — ROS 2 node: joint state + IMU + `cmd_vel` @ 50 Hz
+  → policy → `/joint_commands`, gated on `/safety_state`. Moves into
+  `nova_locomotion` beside the scripted-trot fallback when real.
+- **`deploy/test_policy_runner.py`** — cross-checks `build_obs` against the sim
+  env byte-for-byte (obs mismatch = silent transfer failure). Passing.
+
+⚠ **Bench-blocked hardware bindings** (marked ⛏ in `policy_node.py`), each
+transfer-critical: **joint order** (URDF ↔ Feetech IDs via `joint_id_map.yaml`),
+**rad↔ticks** (nova_calibration home offsets — same zeros the sim assumes), **IMU
+frame** (ICM-42688-P axes → trunk frame; needs the IMU integrated), **foot
+contact** (no sensors — estimate or retrain without those 4 obs), **safety**
+(clamp to limits, ramp from current pose, harness bring-up). See the
+sim-to-real reality-check before trusting any of it.
 
 ## Provisional / to refine
 
 - **Inertials** are CAD estimates (mesh volume × effective PA6-CF density +
   servo box); the hip tensor is diagonal (its CAD frame is mirror-handed — see
   `build_mjcf.py`). **Weigh the printed links** and rescale (backlog #5).
-- **Servo model** is a position actuator (`kp=35`) — measure the real STS3215
-  step response and match `kp/kv/forcerange`; DR over them meanwhile.
+- **Servo model** — position actuator, now domain-randomized over kp/kv/joint-
+  damping **plus control latency** (per-env action delay). Once you measure a
+  real STS3215 step response, NARROW the DR ranges around the measured values
+  (`env.domain_randomize`) — the biggest remaining transfer-gap closer.
 - **Migration:** Brax `PipelineEnv` is in maintenance mode; the actively-
   developed path is **[MuJoCo Playground](https://github.com/google-deepmind/mujoco_playground)**
   (MJX-native locomotion envs + DR). `nova.xml` drops straight into it when you

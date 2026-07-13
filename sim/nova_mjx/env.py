@@ -48,12 +48,13 @@ class NovaJoystick(PipelineEnv):
             [mj.body(f"{n}_foot").id - 1 for n in LEG_NAMES])
         self._push_interval = push_interval
         self._push_mag = push_mag
+        self._max_delay = 3            # control-latency buffer depth (0..2 steps)
 
     def sample_command(self, rng):
         return jax.random.uniform(rng, (3,), minval=self._cmd_lo, maxval=self._cmd_hi)
 
     def reset(self, rng):
-        rng, kc, kv, kj, ko = jax.random.split(rng, 5)
+        rng, kc, kv, kj, ko, kd = jax.random.split(rng, 6)
         q = self.sys.qpos0.at[7:].set(
             self._default_pose + jax.random.uniform(kj, (self._nu,), minval=-0.1, maxval=0.1))
         qd = jp.zeros(self.sys.nv)
@@ -63,6 +64,9 @@ class NovaJoystick(PipelineEnv):
         info = {
             "rng": rng, "cmd": self.sample_command(kc),
             "last_act": jp.zeros(self._nu), "feet_air": jp.zeros(4),
+            # control latency: apply the action `delay` steps late (bus round-trip)
+            "act_hist": jp.zeros((self._max_delay, self._nu)),
+            "delay": jax.random.randint(kd, (), 0, self._max_delay),
             "step": 0,
         }
         obs = self._get_obs(pipeline_state, info, ko)
@@ -73,7 +77,11 @@ class NovaJoystick(PipelineEnv):
         info = state.info
         rng, ka, ko, kp = jax.random.split(info["rng"], 4)
 
-        ctrl = self._default_pose + action * ACTION_SCALE
+        # ---- control latency: the servos see an OLDER action (bus + servo lag).
+        # `last_act` (obs + smoothness) stays the policy's true output. ----
+        hist = jp.concatenate([action[None], info["act_hist"][:-1]], axis=0)
+        applied = hist[info["delay"]]
+        ctrl = self._default_pose + applied * ACTION_SCALE
         pipeline_state = self.pipeline_step(state.pipeline_state, ctrl)
 
         # ---- mid-episode PUSH: kick base xy velocity, learn to recover ----
@@ -117,6 +125,7 @@ class NovaJoystick(PipelineEnv):
 
         info["rng"] = rng
         info["last_act"] = action
+        info["act_hist"] = hist
         info["feet_air"] = air
         info["step"] += 1
         info["cmd"] = jp.where(info["step"] % 250 == 0,
@@ -155,28 +164,45 @@ class NovaJoystick(PipelineEnv):
 
 
 def domain_randomize(sys, rng):
-    """Per-env randomization: floor friction, per-link mass, actuator gains.
-    The sim-to-real bridge + robustness to an unmeasured/varying build."""
+    """Per-env randomization = the sim-to-real bridge. Covers floor friction,
+    per-link mass, and the STS3215 ACTUATOR model: position gain kp, velocity
+    gain kv, and joint damping/friction. The kp/kv/damping ranges are wide
+    placeholders around the nominal model — once you measure a real STS3215 step
+    response, NARROW them around the measured values (that's the biggest
+    remaining transfer-gap closer). Control latency is modeled in the env step
+    (per-env action delay), not here."""
+    n = rng.shape[0]
+
     @jax.vmap
     def rand(rng):
-        k1, k2, k3 = jax.random.split(rng, 3)
+        k1, k2, k3, k4, k5 = jax.random.split(rng, 5)
         friction = jax.random.uniform(k1, (), minval=0.6, maxval=1.4)
         geom_fr = sys.geom_friction.at[:, 0].set(friction)
-        # jitter EVERY body mass +/-15% (not just the trunk)
         mscale = jax.random.uniform(k2, (sys.nbody,), minval=0.85, maxval=1.15)
         body_mass = sys.body_mass * mscale
-        gain = jax.random.uniform(k3, (sys.nu,), minval=25.0, maxval=45.0)
-        return geom_fr, body_mass, gain
+        # servo position gain kp and velocity gain kv (STS3215 model)
+        kp = jax.random.uniform(k3, (sys.nu,), minval=20.0, maxval=50.0)
+        kv = jax.random.uniform(k4, (sys.nu,), minval=0.4, maxval=1.6)
+        # joint damping (all dofs; base freejoint dofs 0..5 unchanged)
+        damp = sys.dof_damping * jax.random.uniform(
+            k5, (sys.nv,), minval=0.5, maxval=1.7)
+        return geom_fr, body_mass, kp, kv, damp
 
-    geom_fr, body_mass, gain = rand(rng)
+    geom_fr, body_mass, kp, kv, damp = rand(rng)
+
+    # position actuator: gainprm[:,0]=kp ; biasprm[:,1]=-kp, biasprm[:,2]=-kv
+    gainprm = sys.actuator_gainprm[None].repeat(n, axis=0).at[:, :, 0].set(kp)
+    biasprm = sys.actuator_biasprm[None].repeat(n, axis=0)
+    biasprm = biasprm.at[:, :, 1].set(-kp).at[:, :, 2].set(-kv)
+
     in_axes = jax.tree_util.tree_map(lambda x: None, sys)
     in_axes = in_axes.tree_replace({
         "geom_friction": 0, "body_mass": 0, "actuator_gainprm": 0,
+        "actuator_biasprm": 0, "dof_damping": 0,
     })
-    gainprm = sys.actuator_gainprm[None].repeat(geom_fr.shape[0], axis=0)
-    gainprm = gainprm.at[:, :, 0].set(gain)
     sys = sys.tree_replace({
         "geom_friction": geom_fr, "body_mass": body_mass,
-        "actuator_gainprm": gainprm,
+        "actuator_gainprm": gainprm, "actuator_biasprm": biasprm,
+        "dof_damping": damp,
     })
     return sys, in_axes
