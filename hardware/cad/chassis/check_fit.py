@@ -662,6 +662,124 @@ def cross_family_check():
     return bad
 
 
+# ---- case 15: mating-part fastener sides (2026-07-12) ------------------------
+# case 13/14 gate the trunk-side bores + the head<->neck-bracket joint. This
+# closes the MATING sides of the remaining bolted chassis joints, each verified
+# in its OWN part's native frame (shoulder = shoulder-local; neck_bracket/head/
+# l2_adapter = world/trunk). Every clearance scan carries a solid-material guard
+# (a ring at r+1.2 must read solid) so an empty-space false-CLEAR -- the exact
+# trap the leg coax_L mirror bug hit -- can't slip through; every heat-set scan
+# proves a real blind bore with solid backing.
+#   A shoulder foot-pad M3 clearance (nyloc seats on top)  -> trunk foot CSK (case 13)
+#   B shoulder flange end-wall M3 heat-sets (fore-aft +y)  -> trunk stock bores (case 13)
+#   C neck_bracket base M3 clearance + shoulder DECK heat-sets (deck hold-down joint)
+#   D l2_adapter rear M3 heat-sets + head CROWN clearance + 4x L2-base CSK
+SH_STL = f'{LEG}/shoulder.stl'
+# shoulder-local (shoulder.scad): foot bolt, neck-deck heat-sets, end-wall heat-sets
+SH_FOOT_XY   = [(42, -81.7), (-42, -81.7)]           # FOOT_BOLT_X/Y (both sx)
+SH_FOOT_Z    = (-33.8, -30.3)                         # pad clearance span (FOOT_Z0..+THK)
+SH_NECK_HS   = [(20, -24.2), (-20, -24.2), (19.5, 4.8), (-19.5, 4.8)]  # NECK_HS_XY
+SH_NECK_TOP  = 41.5                                   # DECK_Z1 (bore opens here, -z)
+SH_NECK_DEP  = 4.2                                    # NECK_HS_DEPTH
+SH_EW_X      = 51.75                                  # TRUNK_HOLE_X
+SH_EW_Z      = [-33.05, -14.05]                       # TRUNK_HOLE_Z
+SH_FLANGE_Y0 = -77.7                                  # FLANGE_Y0 (bore opens here, +y)
+# world/trunk: neck_bracket base bolts, crown clearance, l2_adapter heat-sets/CSK
+NB_BOLT_XY   = [(117, 20), (117, -20), (146, 19.5), (146, -19.5)]  # BOLT_XY
+NB_BASE_Z    = (79.55, 83.55)                         # DECK_TOP..+BASE_T
+CROWN_CLR_XY = [(114, 9), (114, -9)]                  # head.scad L2 rear clearance
+CROWN_Z      = (124, 128)                             # CROWN_Z0..+CROWN_T
+L2A_HS_XY    = [(114, 9), (114, -9)]                  # l2_adapter rear heat-sets
+L2A_Z0       = 128                                    # adapter bottom (bore opens, +z)
+L2A_HS_DEP   = 4.2
+L2A_CSK_XY   = [(144.5, 18), (144.5, -18), (108.5, 18), (108.5, -18)]  # CTR±18
+L2A_CSK_Z    = (128, 133)
+HS_D, HS_L   = 4.0, 6.2                               # HEATSET_D / HEATSET_L
+
+
+def mating_fastener_checks():
+    print('-- case 15: mating-part fastener sides (shoulder feet/end-wall, neck-deck, L2-crown) --')
+    bad = False
+    sh = trimesh.load(SH_STL)
+    nb = trimesh.load('neck_bracket.stl')
+    hd = trimesh.load('head.stl')
+    l2a = trimesh.load('l2_adapter.stl')
+
+    def clear_z(m, cx, cy, zlo, zhi, r, label):
+        """Vertical clearance bore: centerline VOID + a ring at r+1.2 SOLID
+        (proves a real drilled hole in material, not empty air)."""
+        t = np.linspace(zlo + 0.2, zhi - 0.2, 20)
+        center = int(m.contains(
+            np.column_stack([np.full(20, cx), np.full(20, cy), t])).sum())
+        ang = np.linspace(0, 2 * np.pi, 8, endpoint=False)
+        ring = np.column_stack([cx + (r + 1.2) * np.cos(ang),
+                                cy + (r + 1.2) * np.sin(ang),
+                                np.full(8, (zlo + zhi) / 2)])
+        rs = int(m.contains(ring).sum())
+        ok = center == 0 and rs >= 4
+        print(f'{"OK  " if ok else "FAIL"}  {label}: center_solid={center} ring_solid={rs}/8')
+        return not ok
+
+    def pocket(m, cx, cy, top, dirn, depth, label, axis='z', warn_floor=False):
+        """Blind heat-set pilot: bore OPEN `depth` from `top` along dirn, with
+        SOLID backing just past it. axis='y' scans along +/-Y (cy is the z
+        coord). warn_floor: bore must be open but thin/absent backing only
+        WARNs (the #70b-style accepted seat-surface floor)."""
+        tb = top + dirn * np.linspace(0.3, depth - 0.3, 16)
+        if axis == 'z':
+            b = np.column_stack([np.full(16, cx), np.full(16, cy), tb])
+        else:
+            b = np.column_stack([np.full(16, cx), tb, np.full(16, cy)])
+        bore = int(m.contains(b).sum())
+        tk = top + dirn * np.linspace(depth + 0.4, depth + 2.0, 6)
+        if axis == 'z':
+            k = np.column_stack([np.full(6, cx), np.full(6, cy), tk])
+        else:
+            k = np.column_stack([np.full(6, cx), tk, np.full(6, cy)])
+        back = int(m.contains(k).sum())
+        if warn_floor:
+            ok = bore == 0
+            note = '' if back >= 3 else ' -- thin floor (#70b accepted seat surface, WARN)'
+            print(f'{"OK  " if ok else "FAIL"}  {label}: bore_open={16 - bore}/16 backing={back}/6{note}')
+        else:
+            ok = bore == 0 and back >= 3
+            print(f'{"OK  " if ok else "FAIL"}  {label}: bore_open={16 - bore}/16 backing={back}/6')
+        return not ok
+
+    r3 = 3.4 / 2
+    # A. shoulder foot-pad clearance (nyloc on top) -- shoulder-local
+    for cx, cy in SH_FOOT_XY:
+        bad |= clear_z(sh, cx, cy, SH_FOOT_Z[0], SH_FOOT_Z[1], r3,
+                       f'A shoulder foot clearance ({cx:+.0f},{cy:.1f})')
+    # B. shoulder flange end-wall heat-sets (screws fore-aft from inside trunk)
+    for sx in (1, -1):
+        for hz in SH_EW_Z:
+            bad |= pocket(sh, sx * SH_EW_X, hz, SH_FLANGE_Y0, 1, HS_L,
+                          f'B shoulder end-wall heat-set x={sx * SH_EW_X:+.2f} z={hz}',
+                          axis='y')
+    # C1. neck_bracket base bolts clearance -- world
+    for bx, by in NB_BOLT_XY:
+        bad |= clear_z(nb, bx, by, NB_BASE_Z[0], NB_BASE_Z[1], r3,
+                       f'C neck-bracket base bolt ({bx},{by:+.1f})')
+    # C2. shoulder deck heat-sets receiving them (blind, backed) -- shoulder-local
+    for x, y in SH_NECK_HS:
+        bad |= pocket(sh, x, y, SH_NECK_TOP, -1, SH_NECK_DEP,
+                      f'C shoulder deck heat-set ({x},{y})')
+    # D1. head crown clearance for the 2 rear L2-adapter bolts -- world
+    for cx, cy in CROWN_CLR_XY:
+        bad |= clear_z(hd, cx, cy, CROWN_Z[0], CROWN_Z[1], r3,
+                       f'D crown clearance ({cx},{cy:+d})')
+    # D2. l2_adapter rear heat-sets (thin seat-floor above = #70b, WARN)
+    for cx, cy in L2A_HS_XY:
+        bad |= pocket(l2a, cx, cy, L2A_Z0, 1, L2A_HS_DEP,
+                      f'D l2-adapter heat-set ({cx},{cy:+d})', warn_floor=True)
+    # D3. l2_adapter 4x L2-base CSK (bolts the sensor on the bench)
+    for cx, cy in L2A_CSK_XY:
+        bad |= clear_z(l2a, cx, cy, L2A_CSK_Z[0], L2A_CSK_Z[1], r3,
+                       f'D l2-adapter L2 CSK ({cx},{cy:+d})')
+    return bad
+
+
 def main():
     bad = False
     riser = trimesh.load('riser_bay.stl')
@@ -1463,6 +1581,7 @@ def main():
           'so it drops through the -Y CASE_SLOT to the bay (#38, jetson_cowl '
           'retired); verify the bundle fit + drop-to-boards at wiring.')
 
+    bad |= mating_fastener_checks()
     bad |= floor_thickness_check()
     bad |= cross_family_check()
     sys.exit(1 if bad else 0)
