@@ -106,7 +106,13 @@ HEATSET_D  = 4.0;    // Ruthex M3 insert BORE — insert OD is 4.6, bore must
                      // bores (chassis-lane catch; STLs rebuilt).
 HEATSET_L  = 6.2;    // bore depth: 5.7 insert + 0.5 seat
 WALL       = 3.2;
-FLOOR      = 2.5;    // under the bay seat
+FLOOR      = 2.5;    // NOMINAL seat-to-exterior (FLOOR_TOP->FLOOR_BOT). #67
+                     // (2026-07-12): the connector-bay void cuts 0.375 BELOW
+                     // FLOOR_TOP (to z-20.075, forced by the servo connector
+                     // clearance), so the REAL case-screw floor is 2.125mm
+                     // (measured, all 3 pockets). SF still >1 (servo_pocket_
+                     // analysis.py). Do NOT change this value -- it's live
+                     // geometry (FLOOR_BOT, wheel window, YOKE_BOT_IN).
 FLOOR_TOP  = BAY_BOT - 0.3;              // -19.7 bay seat plane
 FLOOR_BOT  = FLOOR_TOP - FLOOR;          // -22.2
 ARM_THK    = 4.0;
