@@ -43,6 +43,8 @@ setup(
             "liveness_node = nova_ops.liveness.node:main",
             # `ros2 run nova_ops watchdog_node` — systemd WATCHDOG=1 feeder (hang recovery under nova-bringup.service)
             "watchdog_node = nova_ops.watchdog.node:main",
+            # `ros2 run nova_ops lidar_selffilter_node` — drop the robot's own ear-mast returns before SLAM
+            "lidar_selffilter_node = nova_ops.lidar_selffilter.node:main",
         ],
     },
 )
