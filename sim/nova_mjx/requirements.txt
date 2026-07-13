@@ -1,0 +1,23 @@
+# NOVA MJX training deps — PINNED to a validated, mutually-compatible set.
+#
+# ⚠ Version window matters: brax 0.14.2 uses jax.device_put_replicated (removed
+# in jax >= 0.7) but requires orbax-checkpoint >= 0.11.22 (needs jax.monitoring.
+# record_scalar, absent before jax ~0.6). jax 0.6.x is the sweet spot that has
+# BOTH — verified here (checkpoint save + resume works end to end).
+#
+# LOCAL (Mac/Linux CPU — model + env + resume validation):
+#   python3.12 -m venv venv && . venv/bin/activate
+#   pip install "jax[cpu]==0.6.0" brax==0.14.2 "orbax-checkpoint>=0.11.22" \
+#               mujoco mujoco-mjx imageio imageio-ffmpeg
+#
+# COLAB / CUDA GPU (real training) — pin the same, GPU jaxlib:
+#   pip install "jax[cuda12]==0.6.0" brax==0.14.2 "orbax-checkpoint>=0.11.22" \
+#               mujoco mujoco-mjx imageio imageio-ffmpeg
+
+jax==0.6.0
+brax==0.14.2
+orbax-checkpoint>=0.11.22
+mujoco>=3.10
+mujoco-mjx>=3.10
+imageio>=2.31
+imageio-ffmpeg>=0.4
