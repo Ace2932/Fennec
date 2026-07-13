@@ -153,16 +153,9 @@ VENT_Z = [[52, 14], [33, 12]];  // [z0, height] — upper row at logic level,
 // underslung heat-set bosses: 2.6 tall — bottoms at z 65.3, which caps the
 // mezzanine at 63.9 (58 stack + 2.0 floor-boss budget, margin 1.4). Insert
 // pressed from BELOW (pull-out direction correct for the mast moment).
-BOSS_H = 2.6;
-module deck_boss(px, py) {
-    translate([px, py, DECK_BOT - BOSS_H]) cylinder(d = 9, h = BOSS_H + EPS);
-}
-module deck_bore(px, py) {                 // O4 x 6.2 up from boss bottom,
-    translate([px, py, DECK_BOT - BOSS_H - EPS]) {  // then O3.4 through
-        cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
-        cylinder(d = M3_CLEAR, h = DECK_T + BOSS_H + 2 * EPS);
-    }
-}
+// (deck_boss / deck_bore / BOSS_H removed 2026-07-12, #72: dead code -- the
+//  head L2-column deck-boss interface was retired 2026-07-07; the modules were
+//  never called and BOSS_H was used only by them.)
 module rounded_slot(x0, x1, y0, y1, r) {
     hull() for (px = [x0 + r, x1 - r], py = [y0 + r, y1 - r])
         translate([px, py, DECK_BOT - EPS])
