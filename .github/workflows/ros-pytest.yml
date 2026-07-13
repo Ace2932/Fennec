@@ -29,7 +29,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install pytest
-        run: pip install pytest pyyaml   # pyyaml: nova_ops.joint_map loads the joint-ID map YAML
+        run: pip install pytest pyyaml numpy   # pyyaml: nova_ops.joint_map loads the joint-ID map YAML; numpy: nova_ops.lidar_selffilter mask
 
       - name: Run package unit tests
         run: |
