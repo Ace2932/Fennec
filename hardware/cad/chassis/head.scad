@@ -272,10 +272,15 @@ module head() {
         // ear-mount M3 heat-sets in the pad (2 per side, from the pad TOP z131
         // before the ears go on). The ear foot bolts down into these. (The SMA
         // antenna bore now lives in head_ear.scad, not here.)
+        // #70 fix (2026-07-12): SHORT M3 insert (Ruthex M3x3.8, bore 4.2)
+        // instead of the full 6.2 -- the pad sits over a cavity (can't deepen
+        // down) and raising the pad top would shift the ear mate, so the short
+        // insert lifts the floor 0.80->2.8mm. Light antenna-ear mount, 3.8mm
+        // engagement is ample. BOM: these 4 = M3x3.8 short (not full).
         if (STYLE)
             for (sy = [-1, 1], ex = [77, 83])
-                translate([ex, sy * 10, CROWN_Z0 + 7 - 6.2])
-                    cylinder(d = 4.0, h = 6.2 + EPS);
+                translate([ex, sy * 10, CROWN_Z0 + 7 - 4.2])
+                    cylinder(d = 4.0, h = 4.2 + EPS);
         // (#46 TPU fox-mask snout-anchor bores REMOVED 2026-07-10: the fox
         //  mask was banked, so these were dead — and their z86 Ø4 bore
         //  overlapped the z89 HM breakaway-insert bore, breaking that insert's
