@@ -93,11 +93,17 @@ HORN_CTR_D    = 6.5;  // driven-side center counterbore: clears the horn's
 HORN_CTR_DEEP = 2.5;   // counterbore depth from the seat face (screw head
                        // 1.5 proud + margin; arm is 4mm thick, so 1.5mm of
                        // solid material remains above the pocket).
-WHEEL_CTR_D    = 7.0;  // idler-side center relief: clears the wheel's black
-                        // plastic boss, Ø6 x ~1-2mm proud (MEASURED). The
-                        // idler has NO retention screw (unlike the driven
-                        // side) — this is boss clearance only.
-WHEEL_CTR_DEEP = 2.5;   // relief depth from the wheel-seat face (boss face)
+WHEEL_CTR_D    = 9.5;  // idler-side center relief: clears the wheel's raised
+                        // center HUB. FIX 2026-07-13: real hub = Ø8.8 x ~1.0mm
+                        // proud (CALIPERED off the physical servo — thin disc
+                        // 2.1mm, hub region 3.1mm, hub OD 8.8). The old Ø7.0
+                        // assumed a Ø6 boss (wrong) and BOTTOMED the Ø8.8 hub —
+                        // the idler wheel wouldn't seat (first-article catch).
+                        // Ø9.5 = 8.8 + 0.7 clearance (room for PA6-CF shrink);
+                        // relief r4.75 keeps ~0.8mm wall to the r7 BCD holes.
+                        // The idler has NO retention screw — boss clearance only.
+WHEEL_CTR_DEEP = 2.5;   // relief depth from the wheel-seat face (boss face);
+                        // clears the ~1.0mm-proud hub with margin
 HEATSET_D  = 4.0;    // Ruthex M3 insert BORE — insert OD is 4.6, bore must
                      // be 4.0 (tolerance audit). Referenced by femur +
                      // shoulder but NEVER DEFINED until 2026-07-06: OpenSCAD

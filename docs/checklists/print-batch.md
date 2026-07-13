@@ -4,6 +4,19 @@ From the 2026-07-06 batch-questions review. The caliper prereqs are now
 CLEARED (Jetson heatsink 34.9, D456 rear pattern confirmed, pack 510 g, 5191
 = external mount) — so floor_plate / battery_pocket no longer risk a re-print.
 
+## ✅ RESOLVED 2026-07-13 — servo disc-interface dims verified (issue #85)
+
+First-article caught one wrong ASSUMED servo dim: idler wheel center hub **Ø8.8**
+(not Ø6) bottomed the Ø7 `WHEEL_CTR_D` relief → **fixed → Ø9.5 (#84)**. The rest
+now CALIPERED off the real STS3215 and confirmed matching:
+- `HORN_OD` 20.0 ✓ · `WHEEL_OD` 20.0 ✓ (both discs measured 20mm)
+- `HORN_CTR_D` 6.5 relief ✓ — real retention-screw head **Ø5.1** (0.7mm/side clear)
+
+**ALL leg parts now clear to print** — reprint `coax`/`coax_hfe_plate`/`femur`/
+`knee_arm`/`shoulder`/`shoulder_plate` (+L) from the **#84 branch** (has the
+wheel-hub fix). `tibia`/`strap`/`knee_bumper`/TPU/chassis were never affected.
+(Density calibration + a full first-article grip check still owed per BOM/#5.)
+
 ## Δ since 2026-07-06 (head re-arch + fit/structure session, 2026-07-07)
 
 **RETIRED — do NOT print:** `l2_mast`, `d456_head` (→ folded into `head`),
