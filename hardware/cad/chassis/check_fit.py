@@ -597,6 +597,38 @@ def floor_thickness_check():
     return bad
 
 
+# ---- cross-family fastener-overlap gate (#68, blind-spot #3) ----------------
+# Two DIFFERENT fastener families on one part must not collide: no fastener of
+# family A within (rA + rB) of one from family B. #68: the battery csk (Ø6.8
+# head) overlapped the mezzanine standoff foot (Ø5) on floor_plate -- each
+# family was internally fine, nothing checked A-vs-B. Pure position+radius,
+# no mesh. STANDOFF_XY / STANDOFF_R_CORNERS reused from case 11f above.
+BAT_XY = [(bx, sy * 27.5) for bx in (-35, 0, 40) for sy in (1, -1)]  # floor_plate
+                          # BAT_X/BAT_Y (#68: -x col now -35); Ø6.8 csk head r3.4
+FASTENER_FAMILIES = [
+    ('floor_plate', [('battery-csk',   BAT_XY,      3.4),
+                     ('mezz-standoff', STANDOFF_XY, STANDOFF_R_CORNERS)]),
+]
+
+
+def cross_family_check():
+    print('-- cross-family fastener gate (#68): family-A vs family-B >= rA+rB --')
+    bad = False
+    for part, fams in FASTENER_FAMILIES:
+        for i in range(len(fams)):
+            for j in range(i + 1, len(fams)):
+                na, pa, ra = fams[i]
+                nb, pb, rb = fams[j]
+                need = ra + rb
+                worst = min(float(np.hypot(ax - bx, ay - by))
+                            for ax, ay in pa for bx, by in pb)
+                ok = worst >= need - 1e-6
+                bad |= not ok
+                print(f"{'OK   ' if ok else 'CLASH'} {part}: {na} <-> {nb} "
+                      f"min {worst:.2f}mm (need >= {need:.2f})")
+    return bad
+
+
 def main():
     bad = False
     riser = trimesh.load('riser_bay.stl')
@@ -1399,6 +1431,7 @@ def main():
           'retired); verify the bundle fit + drop-to-boards at wiring.')
 
     bad |= floor_thickness_check()
+    bad |= cross_family_check()
     sys.exit(1 if bad else 0)
 
 
