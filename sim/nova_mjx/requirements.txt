@@ -1,0 +1,11 @@
+# NOVA MJX training deps.
+# LOCAL (Mac CPU, model + env validation only):
+#   pip install mujoco mujoco-mjx "jax[cpu]" brax
+# COLAB / GPU (real training) — Colab already has a CUDA jax; just add:
+#   pip install mujoco mujoco-mjx brax
+mujoco>=3.10
+mujoco-mjx>=3.10
+brax>=0.12
+# jax: install the build that matches your box —
+#   local CPU:  jax[cpu]
+#   CUDA GPU:   jax[cuda12]   (Colab ships one already)
