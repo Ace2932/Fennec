@@ -56,3 +56,35 @@ jobs:
         working-directory: firmware/teensy/firmware
         if: success()
         run: pio run -e teensy41_ci --target size
+
+  native-unit-tests:
+    # Host-run unit suites for the pure-logic modules (feetech wire protocol +
+    # safety FSM). No Teensy toolchain, no hardware — runs in seconds and
+    # catches logic regressions (checksum, frame sizing, sign-magnitude packing,
+    # E-stop latch, battery debounce) that the compile-only job can't see.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache PlatformIO core + packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: pio-native-${{ runner.os }}-${{ hashFiles('firmware/teensy/firmware/platformio.ini') }}
+          restore-keys: |
+            pio-native-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Run native unit tests
+        working-directory: firmware/teensy/firmware
+        run: pio test -e native
