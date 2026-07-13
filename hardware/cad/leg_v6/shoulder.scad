@@ -121,7 +121,14 @@ FOOT_Y1   = -86.7;                 // 9.0 onto the floor (trunk x 54.5)
 FOOT_Z0   = -34.05;                // floor top z 3.9 + 0.1 drop-in gap
 FOOT_THK  = 4;
 FOOT_BOLT_X = 42;  FOOT_BOLT_Y = -81.7;   // -> trunk (59.5, +/-42)
-GUSSET_X  = 40;                    // pair, 4 thick, centered +/-40
+GUSSET_X  = 40;                    // pair, centered +/-40 (coincident with the
+                                    // riser hold-down hole -- the gusset IS the
+                                    // shoulder's only clamp material at the
+                                    // bolt's z=29.35, which sits ABOVE the flange
+                                    // top, so it CANNOT move off the hole).
+                                    // #66 fix (2026-07-12): WIDENED 4->6mm thick
+                                    // (see the gusset extrude) so the Ø3.4 riser
+                                    // bore leaves 1.3mm walls, not 0.3mm.
 
 // ---- battery-lead notch (AUD-12b, 2026-07-10) --------------------------------
 // flange bottom center, x +/-10, z -38.1..-26 — the belly pack's leads (both
@@ -205,8 +212,8 @@ module shoulder_v6() {
                           FLANGE_Y0 - FOOT_Y1 + 0.5, FOOT_THK]);
             // deck gussets: flange fore face -> deck-extension underside
             for (sx = [-1, 1])
-                translate([sx*GUSSET_X - 2, 0, 0]) rotate([90, 0, 90])
-                    linear_extrude(4) polygon([
+                translate([sx*GUSSET_X - 3, 0, 0]) rotate([90, 0, 90])
+                    linear_extrude(6) polygon([   // #66: 4->6 thick (1.3mm walls)
                         [FLANGE_Y1 - 0.5, 6], [FLANGE_Y1 - 0.5, DECK_Z0 + 0.5],
                         [FLANGE_Y1 + 29, DECK_Z0 + 0.5]]);
             // LOWER trunk-bolt insert bosses (backlog #1): the 6.2 insert

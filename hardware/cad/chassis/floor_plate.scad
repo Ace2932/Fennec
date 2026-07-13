@@ -72,7 +72,11 @@ X0 = -62; X1 = 45;              // rear 1.5 off the open end; front clear of
 HW = 48;                        // halfwidth (walls inner +/-48.93)
 // rear corner clips: the trunk's corner POSTS flare to (x -55.3..-63.3,
 // y +/-35.2..48.8) at floor level — gate catch 2026-07-06
-BAT_X = [-40, 0, 40];  BAT_Y = 27.5;  // AUD-11 fix, 2026-07-10 (was 26.5):
+BAT_X = [-35, 0, 40];  BAT_Y = 27.5;  // -x col -40->-35 (#68 fix 2026-07-12:
+                    // at -40 the Ø6.8 battery csk overlapped the -40.5 mezzanine
+                    // standoff foot by 0.38mm, 0.93mm web; -35 clears it 7.8mm.
+                    // == battery_pocket BOSS_X + trunk_build BATT_BOSS_X).
+                    // AUD-11 fix, 2026-07-10 (was 26.5):
                     // follows battery_pocket.scad's BOSS_Y move, which
                     // sealed a 0.0mm nut-trap wall breach into the LiPo
                     // cavity to >=1.5mm by moving the bolt/heat-set axis

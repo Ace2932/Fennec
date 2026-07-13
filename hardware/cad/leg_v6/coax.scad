@@ -13,12 +13,38 @@
 //     haa BOTTOM WHEEL (rev-2 pattern, both sides bolted)
 //   * FEMUR yoke: outboard arm (INTEGRAL) at x 56.2..60.2 carries a Ø19 boss
 //     inboard to 51.5 = the femur wheel face, and bolts it. Inboard (horn)
-//     side is now a REMOVABLE plate (coax_hfe_plate.scad, #53 fix
-//     2026-07-11) bolted to this bridge -- the old integral inboard arm
-//     made this a rigid closed U with no femur insertion path. Assembly:
-//     femur slides in from the open inboard side, wheel bolts to the
-//     integral outboard boss, THEN coax_hfe_plate bolts on to capture the
-//     horn. See that file for the horn coupling + mount geometry.
+//     side: LOAD/RETENTION split (#67 fix, 2026-07-12, supersedes the #53
+//     removable-plate design): the #53 fix bored the WHOLE inboard-arm disc
+//     (x 12.9..16.05, r16 about the HFE axis) open to clear femur insertion,
+//     making the entire arm a removable plate -- but the disc's own
+//     X-thickness (3.15mm) turned out too thin for ANY captured hardware
+//     (nut, heat-set) mounted through it, and every fastener redesign
+//     attempted against that thin plate ended up either sealed (unreachable)
+//     or reaching for a self-tap (rejected outright, see the hard rule).
+//     MEASURED (trimesh insertion-sweep probe, femur+HFE-servo assembly
+//     swept +Y 0..68mm against every point in the old bore): the femur
+//     assembly does NOT sweep the whole disc -- only a wedge (the HFE
+//     servo's own embedded body, which travels WITH the femur and whose
+//     horn bolts to this yoke). Clear (integral) at the back (x<13.3);
+//     narrow high-y/mid-z band swept in the middle (13.3..14.9); nearly the
+//     whole disc only right at the front (>=14.9, open to the horn seat).
+//     Shrink the bore to that wedge -- coax_hfe_bore() below -- and leave
+//     the rest INTEGRAL coax block (the STUB, continuous with the main
+//     body, carries the joint's compressive load same as the old integral
+//     arm did). A small CAP (coax_hfe_plate.scad, same file, redesigned)
+//     fills just the bored wedge, captures the horn (all 4 M2.5 bolts --
+//     MEASURED, none of the 4 land outside the swept envelope, see that
+//     file), and slides in AFTER the femur is seated. The cap fastens to
+//     the stub via a REAL M3 heat-set (coax_hfe_ear_channel() /
+//     coax_hfe_fastener_neg() below) -- axis +Y (not the disc's thin X
+//     axis), embedded in the BRIDGE (integral, 46mm deep in Y, plenty for
+//     a 6.2mm insert) via a narrow riser + wide head that stays clear of
+//     the femur's own r16.7 rotation keepout the whole way (that keepout
+//     tops out at z=7.2, strictly below the bridge's own z=7.4 floor -- see
+//     coax_hfe_ear_channel()'s own comment). Assembly unchanged from #53:
+//     femur slides in (+Y) with the wedge open, wheel bolts to the
+//     integral outboard boss, THEN the cap slides on and its heat-set bolt
+//     draws it against the stub to capture the horn.
 //   * cables: bay faces +Y (rear); tunnel exits the BOTTOM end toward the
 //     femur — wires drop down the leg. CALIPER-CONFIRMED 2026-07-10: the
 //     servo body + cable dropping out the bottom needs ~37mm; the pocket's
@@ -63,66 +89,147 @@ BRIDGE_Z0  = 7.4;                            // femur disc sweep tops at 6.35; r
 // (integral inboard arm + bridge + integral outboard arm) -- no removable
 // side, so the femur's horn+wheel disc pack had NO insertion path. Mirrors
 // the KFE (knee_arm.scad) / HAA (shoulder_plate.scad) pattern: the OUTBOARD
-// (wheel-boss) side stays integral; the INBOARD (horn) side is now a
-// separate bolt-on plate, coax_hfe_plate.scad.
+// (wheel-boss) side stays integral; the INBOARD (horn) side needs SOME
+// removable feature so the femur can pass. #53 made that removable feature
+// the WHOLE disc (bore r=ARM_HALF_YZ=16, x=PLATE_X0..ARM_IN_X1); #67 (below)
+// shrinks it to just the femur's real swept wedge, leaving most of the disc
+// INTEGRAL.
 //
 // INSERTION AXIS FINDING (trimesh sweep, all 6 axis directions tested):
 // the femur+HFE-servo assembly's real insertion path is +Y (REARWARD
 // translation), not axial +-X as first assumed -- both X directions stay
 // solid-blocked even with the arm gone (the HAA housing's own pocket wall
 // blocks -X toward the horn side; the integral outboard arm blocks +X).
-// +Y is clean full-travel (0 hits, 31k-pt sample, 0..70mm) once (a) the
-// inboard arm is gone and (b) the main block's own wall in that footprint
-// is ALSO bored open (see PLATE_X0 clearance cut below -- removing just
-// the arm was NOT sufficient, mesh-probe confirmed real block material
-// independently fills that footprint) and (c) a small sharp-corner graze
-// at (BLK_X,BLK_YF) is notched (see the corner-notch cut, measured 0.95mm
-// penetration). Assembly: femur approaches from behind the coax (+Y),
-// slides forward (-Y) until horn/wheel align at Y=HFE_Y, wheel bolts to
-// the integral outboard boss, THEN coax_hfe_plate bolts on to capture the
-// horn -- same net result the task asked for ("femur slides in, wheel
-// bolts first, plate captures the horn"), the mechanism is a Y-slide-and-
-// seat rather than a pure axial slide.
+// +Y is clean full-travel once (a) the swept wedge is open and (b) a small
+// sharp-corner graze at (BLK_X,BLK_YF) is notched (see the corner-notch
+// cut, measured 0.95mm penetration). Assembly: femur approaches from
+// behind the coax (+Y), slides forward (-Y) until horn/wheel align at
+// Y=HFE_Y, wheel bolts to the integral outboard boss, THEN the cap
+// (coax_hfe_plate.scad) slides on and bolts to capture the horn.
 //
-// coax_hfe_plate MOUNT (2026-07-11, revised after a 2nd finding): first
-// attempt put the mount bolts OUTBOARD along the bridge (x18-25) -- but the
-// plate's own disc naturally tops out at z=6.5 (r=ARM_HALF_YZ=16 around the
-// HFE axis), z 7.4..13.4 is the BRIDGE's own domain, and reaching a tab up
-// to bolt directly under the bridge there re-enters the femur's r16.7
-// swept-clearance keepout below z~7.3 -- nowhere near enough headroom.
-// Splitting the bridge itself to give the plate a same-height tab (tried)
-// left the coax's own outboard-arm/bridge stub DISCONNECTED from the main
-// block with no other part installed (mesh_health: 2 bodies, unprintable
-// standalone) -- rejected.
-// FIX: stay INBOARD instead -- mount the plate entirely within its own disc
-// footprint (x=PLATE_X0..ARM_IN_X1, i.e. x<16.1, before the r16.7 keepout
-// even starts) AND below the bridge (z<BRIDGE_Z0), not through it -- these
-// two parts don't need to share X to avoid collision, only Z: the plate's
-// disc can share (x,y) with the bridge as long as it stays under z=7.4
-// (the bridge's own bottom face) while the bridge stays above it. A THIRD
-// finding (2nd revision) confirmed the "spare material above the disc
-// bore" isn't a thin independent cap -- it mesh-probes as the BRIDGE
-// ITSELF (same 6mm-thick rib the original x18-25 attempt already found too
-// thin for a blind HEATSET_L=6.2 bore). Still not enough for a blind
-// insert -- FIX: THROUGH-BOLT + captured M3 nut (not a heat-set) run from
-// the block's true top face (z=13.4) down THROUGH the bridge, continuing
-// through open air (below the bridge, above the disc-bore's own natural
-// ~z6.5 peak) into a small local "ear" raised off the plate's disc top (a
-// <=1mm bump closing that gap -- see coax_hfe_plate.scad) with its own
-// clearance hole, nut captured at the ear's underside (accessible before
-// the plate is offered up -- the nut is dropped/glued in ahead of time).
-// Y picked at the disc's own tallest point (near HFE_Y=11.6) to minimize
-// the ear's bump height. Mesh-verified clear of the corner-notch, the
-// disc-bore, and the femur's r16.7 keepout (irrelevant here -- x<16.1).
-PLATE_MT_X = [13.5, 15.5];
-PLATE_MT_Y = [8, 15];
+// #67 fix (2026-07-12): LOAD/RETENTION split. MEASURED (trimesh
+// insertion-sweep probe: femur_R.stl + knee_arm.stl + the HFE-embedded
+// servo -- pts0, transformed the SAME way insertion_checks() does --
+// tagged per-source and swept +Y in 0.5mm steps, t=0..68): every point
+// that ever lands inside the old x=PLATE_X0..ARM_IN_X1, r<=ARM_HALF_YZ
+// bore is tagged 'servo' -- 100% of the hits. Neither femur_R.stl's own
+// solid (x>=16.05 always, a pure +Y translation never changes x) nor
+// knee_arm.stl (mounted at the femur's OWN knee end, its transformed
+// footprint sits at x=12.05..16.05 but z=-132..-68, nowhere near this
+// zone's z=-25.5..6.5 disc) ever crosses into this bore -- it's the HFE
+// SERVO's own case (embedded in the femur, horn bolted to this yoke,
+// travels rigidly with it) that needs the clearance. Its footprint here:
+//   x<13.3            : NEVER swept (0 hits at any sampled t) -> INTEGRAL
+//   x=13.3..14.9 (mid) : swept only in a narrow high-y/mid-z band
+//                        (measured y>=9.0..27.6, z=-12.1..-6.8)
+//   x>=14.9 (front)    : swept over nearly the whole disc (measured down to
+//                        y=1.6 at the front face) -- full-disc bore kept
+//                        here for robustness/simplicity, not hand-fit to
+//                        the last mm of the (very thin, load-free) low-y
+//                        sliver that stays technically clear even there.
+// coax_hfe_bore() below cuts exactly that wedge (with margin: mid-band x
+// starts 0.2mm before the first measured hit, y/z pad ~1-2mm, front-band
+// starts 0.1mm before the measured near-full-disc jump at x=15.00). The
+// STUB is everything else in the old disc footprint: the ENTIRE x<13.3
+// slab (full r16 disc) plus most of x=13.3..14.9 (all but the mid-band
+// rectangle) -- both remain continuous, single-body coax block, verified
+// via mesh_health.py.
+//
+// #67 FASTENER (supersedes the #53/rejected-attempt mount history below):
+// the disc's own X-thickness (3.15mm, PLATE_X0..ARM_IN_X1) is too thin for
+// ANY captured hardware mounted through it, at ANY (y,z) -- MEASURED via a
+// dilated depth probe over the whole disc footprint (max clear X-run
+// anywhere: 3.25mm, at the disc's own low-y edge) -- so the fastener does
+// NOT live in the disc at all. It lives in the BRIDGE (z=BRIDGE_Z0..13.4,
+// 46mm deep in Y) instead, reached by a narrow riser (coax_hfe_ear_channel()
+// below) that rises from the cap's own mid-band body (x=STUB_MIDX0..
+// STUB_MIDX1, safely x<16.05, so it NEVER enters the femur's r16.7 rotation
+// keepout regardless of z) up to the bridge's underside, then widens into a
+// HEAD once past z=BRIDGE_Z0=7.4 -- safe to widen there because the r16.7
+// keepout (cylinder from x=ARM_IN_X1+EPS outward) tops out at
+// z=HFE_Z+16.7=7.2, strictly BELOW the bridge floor (7.4): nothing at
+// bridge height can ever be inside that keepout, at any x. The head holds
+// a real M3 heat-set (HEATSET_D/HEATSET_L, unchanged spec) axis +Y, bored
+// from the bridge's own open rear tip (y=EAR_Y1=27.6 -- 0.65mm shy of the
+// y>=28.25 haa-roll/shoulder clearance limit an earlier attempt measured in
+// this same z-band) inward into solid bridge material. See
+// coax_hfe_ear_channel()/coax_hfe_fastener_neg() below and
+// coax_hfe_plate.scad's own header for the cap-side ear + reachability
+// proof.
+//
+// (superseded mount history, kept for context: the very first #53 mount
+// put through-bolts at x18-25 along the bridge and found the same z~7.3
+// keepout wall this fix routes around; a 2nd revision tried a through-bolt
+// + captured nut from the coax top through the 6mm bridge and found the
+// bridge too thin for a Z-axis blind insert -- the SAME reason #67's
+// fastener uses the bridge's Y-axis depth (46mm) instead of its Z-axis
+// depth (6mm).)
+STUB_MIDX0 = 13.3;   STUB_MIDX1 = 14.9;   // mid-band bore x-span
+STUB_MIDY0 = 7.0;    STUB_MIDY1 = 28.0;   // mid-band bore y-span
+STUB_MIDZ0 = -13.0;  STUB_MIDZ1 = -6.0;   // mid-band bore z-span
+STUB_FRONTX0 = 14.9;                      // front-band: full r16 disc from
+                                           // here to the open horn seat
+
+EAR_X0 = STUB_MIDX0; EAR_X1 = STUB_MIDX1;   // riser: same x-span as the
+                                             // mid-band bore (stays x<16.05,
+                                             // clear of the femur keepout
+                                             // at every z)
+EAR_Y0 = 24.0;        EAR_Y1 = 27.6;        // ear/head y-span == the
+                                             // bridge's own natural rear-tip
+                                             // extent (2*ARM_HALF_YZ+HFE_Y)
+HEAD_X0 = 12.9;       HEAD_X1 = 18.9;       // wide head, z>=BRIDGE_Z0 ONLY
+                                             // (see the keepout-exempt note
+                                             // above) -- room for the M3
+                                             // clearance hole + SHCS head
+HEATSET_CX = (HEAD_X0 + HEAD_X1) / 2;       // 15.9
+HEATSET_CZ = (BRIDGE_Z0 + 13.4) / 2;        // 10.4, bridge mid-height
+
 // coax_hfe_plate's disc back face -- and the depth this coax body must be
-// bored open to (see the PLATE_X0 clearance cut below). 12.9: the HAA
+// bored open to (see the coax_hfe_bore() cut below). 12.9: the HAA
 // servo's own case reaches x=12.4 max in its installed pose (CASE_HW,
 // MEASURED via direct servo-vertex check against the coax_pose transform)
 // -- 12.9 keeps 0.5mm clear of the actual servo body (matches CLR_POCKET's
 // own 0.45 slip-fit convention), not just the pocket-cavity void boundary.
 PLATE_X0 = 12.9;
+
+// #67 bore: mid-band partial box + front-band full disc (see the header
+// comment above for the measured wedge this covers).
+module coax_hfe_bore() {
+    translate([STUB_MIDX0, STUB_MIDY0, STUB_MIDZ0])
+        cube([STUB_MIDX1 - STUB_MIDX0, STUB_MIDY1 - STUB_MIDY0,
+              STUB_MIDZ1 - STUB_MIDZ0]);
+    translate([STUB_FRONTX0, HFE_Y, HFE_Z]) rotate([0, 90, 0])
+        cylinder(r = ARM_HALF_YZ, h = (ARM_IN_X1 + 0.1) - STUB_FRONTX0);
+}
+
+// #67 ear channel: narrow riser (stays inboard, x<16.05 -- never enters the
+// femur keepout) connecting the cap's mid-band body up to the bridge
+// underside, then a wide head (safe to widen -- z>=BRIDGE_Z0 is
+// unconditionally outside the femur's r16.7 keepout, see header) that
+// holds the M3 clearance hole + head counterbore into the cap's ear.
+module coax_hfe_ear_channel() {
+    translate([EAR_X0, EAR_Y0, STUB_MIDZ1])
+        cube([EAR_X1 - EAR_X0, EAR_Y1 - EAR_Y0, BRIDGE_Z0 - STUB_MIDZ1]);
+    translate([HEAD_X0, EAR_Y0, BRIDGE_Z0])
+        cube([HEAD_X1 - HEAD_X0, EAR_Y1 - EAR_Y0, 13.4 - BRIDGE_Z0]);
+}
+
+// #67 fastener negative: bolt clearance + SHCS head counterbore through the
+// cap's ear (open at y=EAR_Y1, the bridge's own exterior rear-tip face),
+// THEN a real M3 heat-set bore (HEATSET_D/HEATSET_L, unchanged spec) from
+// y=EAR_Y0 (where the ear ends) further -Y into solid, integral bridge
+// material -- axis +Y the whole way (never the disc's thin X axis).
+module coax_hfe_fastener_neg() {
+    // rotate([90,0,0]): local +Z -> world -Y, so each cylinder (naturally
+    // h along +Z from its base) extends in -Y from its translate point --
+    // i.e. INWARD, from the open rear face toward the stub.
+    translate([HEATSET_CX, EAR_Y1 + EPS, HEATSET_CZ]) rotate([90, 0, 0]) {
+        cylinder(d = M3_CLEAR, h = (EAR_Y1 - EAR_Y0) + 2*EPS);
+        cylinder(d = 5.5, h = 2.2 + EPS);   // head counterbore, recessed
+    }
+    translate([HEATSET_CX, EAR_Y0, HEATSET_CZ]) rotate([90, 0, 0])
+        cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
+}
 
 module arm_plate(x0, x1) {
     hull() {
@@ -189,44 +296,19 @@ module coax_v6() {
         // (horn_couple_neg() cut into THEIR OWN plate, not the parent). Nothing
         // left to cut here for it.
         //
-        // coax_hfe_plate CLEARANCE bore (2026-07-11, mesh-probe find): just
-        // removing arm_plate(ARM_IN_X0,ARM_IN_X1) from the union does NOT by
-        // itself free up room for the new plate -- the main HAA-pocket block
-        // (BLK_X=15.85 half-width) independently fills nearly this whole
-        // footprint (direct trimesh probe: x=13.05..16.0, r<=15.5 around the
-        // HFE axis read 56/60 SOLID even after the arm was removed). That
-        // wall is real block material, not leftover arm -- coax_hfe_plate
-        // would collide with it if left in place. Bore it out (plain
-        // cylinder, NOT the full arm_plate() hull -- the hull's box lid
-        // reaches z 7.4..13.4, which is the BRIDGE's own domain now, and
-        // bridge must stay solid for the mount bores below). r=ARM_HALF_YZ
-        // matches the plate's own disc radius; PLATE_X0=12.9 keeps 0.5mm
-        // clear of the actual HAA servo body (not just the pocket void).
-        translate([PLATE_X0, HFE_Y, HFE_Z]) rotate([0, 90, 0])
-            cylinder(r = ARM_HALF_YZ, h = ARM_IN_X1 - PLATE_X0);
-        // coax_hfe_plate EAR clearance (2026-07-11, mesh-probe find): the
-        // r=ARM_HALF_YZ bore above is a plain cylinder, so away from
-        // Y=HFE_Y its own top curves BELOW z=7.4 (e.g. z~5.1 at y=5) --
-        // real coax wall material survives in that gap (bore-top..7.4) at
-        // the plate's mount-ear Y stations, which collided with
-        // coax_hfe_plate.scad's ears (mesh-verified: 1400+/8000 plate pts
-        // landed inside the coax before this cut). Match the ears exactly
-        // (same PLATE_MT_Y/EAR_R/EAR_Z1) so both sides agree.
-        PLATE_EAR_R = 4.0; PLATE_EAR_Z1 = 7.35;
-        for (my = PLATE_MT_Y)
-            translate([PLATE_X0, my - PLATE_EAR_R, HFE_Z])
-                cube([ARM_IN_X1 - PLATE_X0, 2*PLATE_EAR_R, PLATE_EAR_Z1 - HFE_Z]);
+        // #67 fix: cap clearance = just the measured femur-swept wedge (was
+        // the FULL r=ARM_HALF_YZ disc under #53) -- see coax_hfe_bore()'s
+        // own comment above for the measurement. Everything else in the old
+        // disc footprint stays INTEGRAL stub material.
+        coax_hfe_bore();
+        // #67 fastener: ear channel (riser + head, cap-side clearance) and
+        // the heat-set bore itself -- see both modules' own comments above.
+        coax_hfe_ear_channel();
+        coax_hfe_fastener_neg();
         translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0]) {
             // outboard arm + boss = "bottom arm" (+z -> -x inboard)
             wheel_couple_neg();
         }
-        // coax_hfe_plate mount: 4x M3 through-bolt (captured nut inside the
-        // empty HAA pocket cavity, not a heat-set) -- see the PLATE_MT_X/Y
-        // comment above for why. Punches from the block's true top face
-        // (z=13.4) down into the pocket cavity void below.
-        for (mx = PLATE_MT_X, my = PLATE_MT_Y)
-            translate([mx, my, -5])
-                cylinder(d = M3_CLEAR, h = 13.4 + 5 + EPS);
 
         // side marker: 1 dot = RIGHT (L wrapper adds a 2nd).
         // LA-2 fix (2026-07-11): the old site (6, BLK_Y0-EPS, 8) targeted
@@ -282,9 +364,9 @@ module coax_v6() {
         // 2mm square notch (>2x the 0.95mm measured penetration), full
         // block Z height (the sweep was only angle-sampled at 2mm steps, so
         // the danger zone may extend past the 2 sampled z-bands on this
-        // same sharp edge). Kept SMALL and mesh-probe-verified clear of the
-        // PLATE_MT_X/Y mount bores (now inboard, x<=15.5, well clear of
-        // this x>=13.85 notch's own footprint by construction).
+        // same sharp edge). Kept SMALL; its footprint (x=13.85..16.85,
+        // y=20.2..23.2) sits 0.8mm clear of the #67 ear/head zone
+        // (y=EAR_Y0..EAR_Y1 = 24.0..27.6) by construction.
         translate([BLK_X - 2, BLK_YF - 2, -38.4 - EPS])
             cube([2 + 1, 2 + 1, 38.4 + 13.4 + 2*EPS]);   // +1: punch 1mm past
                                                           // the block's own
