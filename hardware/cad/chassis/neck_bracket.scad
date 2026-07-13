@@ -33,9 +33,11 @@
 //     rear-wall rib onto the flat deck; REAR pair unchanged at x146 (sy 4.8).
 //     Minimal shoulder-mesh addition (4 blind pockets on the deck top only)
 //     -> both shoulders (front/rear, same print) stay gate-clean.
-//   - REAR VERTICAL FACE at x121 rising z83.55..106, 4x M3 HEAT-SETS (from its
-//     rear face); the head's rear boss bolts FROM BEHIND into them (M3x14).
-//     Tall bolt rectangle (z89 & z100, y+-11) resists the fwd-tipping moment.
+//   - REAR VERTICAL FACE at x121 rising z83.55..106: the head's rear boss bolts
+//     to it. #72 fix (2026-07-12): the M3 HEAT-SETS live in the HEAD BOSS, not
+//     this wall (see head.scad) -- this wall carries only the M3 clearance
+//     shank + a rear head counterbore. Tall bolt rectangle (z89 & z100, y+-11)
+//     resists the fwd-tipping moment.
 //   - GUSSETS fore+aft tie the face to the base plate.
 // PRINT: base-down (deck face on the bed); the wall + gussets rise. PA6-CF.
 //   4mm walls. No overhangs needing support beyond the gusset undersides.

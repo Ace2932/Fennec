@@ -40,8 +40,10 @@ EPS = 0.05;
 // shell. Probed 2026-07-10 (probe_trunk.py): floor is solid z 0.00..3.90
 // at all 6 XY, no pre-existing hole -- clean new cut.
 // -----------------------------------------------------------------------
-BATT_BOSS_X   = [-40, 0, 40];
-BATT_BOSS_Y   = 26.5;
+BATT_BOSS_X   = [-35, 0, 40];   // #68/#72 (2026-07-12): -x col -40->-35 (==
+                                //  trunk_build.py BATT_BOSS_X / battery_pocket
+                                //  BOSS_X / floor_plate BAT_X -- the built STL)
+BATT_BOSS_Y   = 27.5;           // #72: was 26.5 (stale) -- == the AUD-11 axis
 BATT_CLEAR_D  = 3.4;
 BATT_BORE_Z0  = -2;      // starts below the floor bottom (z0)
 BATT_BORE_H   = 8;        // ends well above the floor top (z3.9) -- clean cut
