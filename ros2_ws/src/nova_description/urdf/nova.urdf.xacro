@@ -93,28 +93,68 @@
   <xacro:property name="lower_to_foot_x" value="0.0"/>
   <xacro:property name="lower_to_foot_z" value="-0.1290"/> <!-- MEASURED tibia length -->
 
-  <!-- ===================== masses (kg) ===================== -->
-  <!-- CAD-volume estimates 2026-07-06 (leg_v6 STL volume x 1.17 g/cm3
-       PA6-CF x 0.7 infill factor) + STS3215 0.055 each; servo rides the
-       link whose pocket houses it (coax=HAA, femur=HFE, tibia=KFE).
-       hip = coax 27g + servo; upper = femur 61 + knee_arm 6 + servo +
-       hardware; lower = tibia 70 + servo + strap; foot = TPU shoe.
-       ⚠ ESTIMATES — weigh the printed set at the next print batch
-       (backlog #5) and replace. m_base = mass budget 4.2 minus legs
-       (trunk+riser+shoulders+Jetson+battery+boards+L2+D456), the
-       roughest number here. -->
-  <xacro:property name="m_base"  value="2.83"/>
-  <xacro:property name="m_hip"   value="0.082"/>
-  <xacro:property name="m_upper" value="0.127"/>
-  <xacro:property name="m_lower" value="0.130"/>
-  <xacro:property name="m_foot"  value="0.005"/>
+  <!-- ===================== masses + inertials ===================== -->
+  <!-- COMPUTED 2026-07-13 from the REAL leg_v6 meshes + embedded STS3215 servos
+       (tools/compute_inertials.py): full mass / CoM / anisotropic inertia tensor
+       per link, mapped into each URDF link frame (frame maps validated vs the
+       URDF's own landmarks — femur STL (106.9,0,0) -> link (0,0,-0.1069)).
+       Replaces the old isotropic mass*1e-3 placeholders.
 
-  <!-- crude box inertia helper (TODO-CAD: replace with real tensors) -->
-  <xacro:macro name="link_inertial" params="mass">
+       ⚠ PROVISIONAL — REFINE BY MEASUREMENT (backlog #5). Mass = solid mesh
+       volume x effective PA6-CF density (1.17 g/cm3 x 0.70 infill) + a 60 g
+       servo box at each pocket. When you WEIGH each printed link, rescale that
+       link's whole <inertial> by measured_mass/computed_mass (CoM unchanged;
+       inertia scales linearly with mass) — one ratio absorbs the density error.
+       ⚠ Servo modeled at the shell centroid; ⚠ LEFT/RIGHT y-sign mirrored via
+       `reflect` (yf=-reflect on com_y/ixy/iyz) — VERIFY THE SIGN IN SIM (matches
+       this file's other gate->URDF sign caveats). base_link stays payload-
+       dominated (~2.8 kg trunk+Jetson+battery+boards+L2/D456); box inertia +
+       measured-CoM refinement still owed.
+       Computed right-leg masses: hip 0.087 upper 0.131 lower 0.131 foot 0.004
+       (vs the old 0.082/0.127/0.130/0.005 estimates — within ~6%). -->
+  <xacro:property name="m_base"  value="2.83"/>
+
+  <!-- base_link: trunk envelope box inertia at m_base (payload-dominated,
+       CoM at the geometric center — refine with the assembled-stack CoM). -->
+  <xacro:macro name="base_inertial" params="">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="${mass}"/>
-      <inertia ixx="${mass*1e-3}" iyy="${mass*1e-3}" izz="${mass*1e-3}"
+      <mass value="${m_base}"/>
+      <inertia ixx="8.7e-03" iyy="2.46e-02" izz="2.65e-02"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- per-link real inertials (RIGHT-leg values; yf mirrors y-terms for LEFT) -->
+  <xacro:macro name="hip_inertial" params="reflect">
+    <inertial>
+      <origin xyz="0.00710 ${-reflect*0.02004} 0.00497" rpy="0 0 0"/>
+      <mass value="0.0873"/>
+      <inertia ixx="4.452e-05" iyy="2.275e-05" izz="3.552e-05"
+               ixy="${-reflect*-2.20e-06}" ixz="8.41e-07" iyz="${-reflect*3.81e-06}"/>
+    </inertial>
+  </xacro:macro>
+  <xacro:macro name="upper_inertial" params="reflect">
+    <inertial>
+      <origin xyz="0.00000 ${-reflect*-0.00653} -0.05067" rpy="0 0 0"/>
+      <mass value="0.1313"/>
+      <inertia ixx="8.366e-05" iyy="7.473e-05" izz="2.907e-05"
+               ixy="${-reflect*-9.47e-10}" ixz="-4.45e-10" iyz="${-reflect*-4.08e-06}"/>
+    </inertial>
+  </xacro:macro>
+  <xacro:macro name="lower_inertial" params="reflect">
+    <inertial>
+      <origin xyz="-0.00054 ${-reflect*-0.01010} -0.06558" rpy="0 0 0"/>
+      <mass value="0.1312"/>
+      <inertia ixx="1.333e-04" iyy="1.225e-04" izz="2.809e-05"
+               ixy="${-reflect*-7.87e-07}" ixz="-1.94e-06" iyz="${-reflect*-1.87e-05}"/>
+    </inertial>
+  </xacro:macro>
+  <xacro:macro name="foot_inertial" params="reflect">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.0039"/>
+      <inertia ixx="2.116e-07" iyy="5.602e-07" izz="5.763e-07"
                ixy="0" ixz="0" iyz="0"/>
     </inertial>
   </xacro:macro>
@@ -129,7 +169,7 @@
     <collision>
       <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_ChassisTrunk.stl" scale="0.001 0.001 0.001"/></geometry>
     </collision>
-    <xacro:link_inertial mass="${m_base}"/>
+    <xacro:base_inertial/>
   </link>
 
   <!-- ===================== 4 legs =====================
