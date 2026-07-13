@@ -9,3 +9,6 @@ brax>=0.12
 # jax: install the build that matches your box —
 #   local CPU:  jax[cpu]
 #   CUDA GPU:   jax[cuda12]   (Colab ships one already)
+# rollout.py video rendering:
+imageio>=2.31
+imageio-ffmpeg>=0.4   # mp4 encode; .gif output needs neither

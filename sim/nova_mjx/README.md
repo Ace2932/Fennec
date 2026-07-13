@@ -55,7 +55,20 @@ of dynamics, so it survives the real build's variance. Widen the ranges (add
 link-mass and CoM jitter, latency, push perturbations) as you get closer to
 hardware.
 
-## 4. Deploy to the Jetson (later)
+## 4. Watch the trained gait
+
+```bash
+pip install imageio imageio-ffmpeg
+python rollout.py --policy nova_policy.pkl --vx 0.5 --steps 400 --out walk.mp4
+```
+
+Steps the policy with a fixed forward command, records qpos, renders it in
+MuJoCo with a follow-cam → `walk.mp4` (prints how far it traveled in x). With no
+`--policy` it renders a zero-action stand — a quick way to test the render path
+before training. **Headless (Colab/servers): `MUJOCO_GL=egl python rollout.py …`**
+(on macOS use the default, don't set it).
+
+## 5. Deploy to the Jetson (later)
 
 Export the Brax policy → ONNX/TorchScript, run it as a `nova_locomotion` policy
 node: read joint state + IMU + `cmd_vel`, build the 45-d obs exactly as `env.py`

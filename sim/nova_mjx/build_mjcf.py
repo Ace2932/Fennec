@@ -151,6 +151,7 @@ MJCF = f'''<mujoco model="nova_sm3">
     <body name="trunk" pos="0 0 0.17">
       <freejoint name="root"/>
       <site name="imu" pos="0 0 0"/>
+      <camera name="track" mode="trackcom" pos="0 -1.3 0.6" xyaxes="1 0 0 0 0.45 1"/>
       {inertial(BASE_I, 1)}
       <geom type="box" size="0.14 0.055 0.045" class="viz" rgba="0.4 0.4 0.45 1"/>
       <geom name="trunk_c" type="box" size="0.14 0.055 0.045" contype="1" conaffinity="1" group="3" rgba="0 0 0 0"/>
