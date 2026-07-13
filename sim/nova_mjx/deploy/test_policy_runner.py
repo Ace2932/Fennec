@@ -21,13 +21,15 @@ def _export_untrained_npz(path):
     from brax.training.agents.ppo import networks as ppo_networks
     from export_policy import extract
     from env import ACTION_SCALE, DEFAULT_POSE
+    from env import HIST, PROP
+    obs = HIST * PROP + 3 + 12                          # 105
     net = ppo_networks.make_ppo_networks(
-        49, 12, preprocess_observations_fn=running_statistics.normalize,
+        obs, 12, preprocess_observations_fn=running_statistics.normalize,
         policy_hidden_layer_sizes=(128, 128, 128, 128),
         value_hidden_layer_sizes=(256, 256, 256, 256))
-    norm = running_statistics.init_state(specs.Array((49,), jp.float32))
+    norm = running_statistics.init_state(specs.Array((obs,), jp.float32))
     norm = running_statistics.update(
-        norm, jax.random.normal(jax.random.PRNGKey(1), (2048, 49)))
+        norm, jax.random.normal(jax.random.PRNGKey(1), (2048, obs)))
     params = (norm, net.policy_network.init(jax.random.PRNGKey(2)))
     mean, std, W, b = extract(params)
     bundle = {"mean": mean, "std": std,
@@ -54,29 +56,31 @@ def main():
     st = jax.jit(env.reset)(jax.random.PRNGKey(0))
     ps, info = st.pipeline_state, st.info
 
-    # raw quantities exactly as the real robot would report them
+    # raw quantities exactly as the real robot would report them. The IMU
+    # reading is BIASED (the env adds a per-episode gyro bias to the frame) —
+    # the runner receives that biased reading, so include it here too.
     quat = ps.q[3:7]
     qinv = math.quat_inv(quat)
-    gyro = np.asarray(math.rotate(ps.xd.ang[0], qinv))          # body ang vel
+    gyro = np.asarray(math.rotate(ps.xd.ang[0], qinv) + info["gyro_bias"])
     proj_grav = np.asarray(math.rotate(jp.array([0., 0., -1.]), qinv))
     jpos = np.asarray(ps.q[7:])
     jvel = np.asarray(ps.qd[6:])
-    foot_z = np.asarray(ps.x.pos[env._foot_ids, 2])
-    contact = (foot_z < 0.025).astype(np.float32)
     cmd = np.asarray(info["cmd"])
 
-    # ground-truth CLEAN obs (env formula, no noise)
+    # ground-truth CLEAN obs (env formula, no noise): frame tiled x HIST + cmd
+    # + last_act (env fills the history with frame 0 on reset).
     default = np.asarray(env._default_pose)
+    frame = np.concatenate([gyro * 0.25, proj_grav, jpos - default, jvel * 0.05])
     expected = np.concatenate([
-        gyro * 0.25, proj_grav, cmd * np.array([2., 2., .25]),
-        jpos - default, jvel * 0.05, np.asarray(info["last_act"]), contact])
+        np.tile(frame, 3), cmd * np.array([2., 2., .25]),
+        np.asarray(info["last_act"])])
 
     pol = NovaPolicy(npz)
     pol.last_action = np.asarray(info["last_act"], np.float32)
-    obs = pol.build_obs(gyro, proj_grav, cmd, jpos, jvel, contact)
+    obs = pol.build_obs(gyro, proj_grav, cmd, jpos, jvel)
 
     err = float(np.max(np.abs(obs - expected)))
-    assert obs.shape == (49,), obs.shape
+    assert obs.shape == (105,), obs.shape
     assert err < 1e-5, f"OBS MISMATCH {err} — deployment obs != training obs!"
     print(f"OK  build_obs matches sim env obs (max|err| {err:.2e}, dim {obs.shape[0]})")
 
@@ -88,7 +92,7 @@ def main():
     assert aerr < 1e-4, f"INFER MISMATCH {aerr}"
     print(f"OK  numpy infer matches Brax policy (max|err| {aerr:.2e})")
 
-    tgt = pol.joint_targets(gyro, proj_grav, cmd, jpos, jvel, contact)
+    tgt = pol.joint_targets(gyro, proj_grav, cmd, jpos, jvel)
     assert tgt.shape == (12,) and np.all(np.abs(tgt - default) <= env.action_size)
     print(f"OK  joint_targets shape {tgt.shape}, near default pose")
     print("ALL DEPLOY CROSS-CHECKS PASSED")

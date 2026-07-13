@@ -27,7 +27,7 @@ JAX_PLATFORMS=cpu python -c "import jax,jax.numpy as jp; from env import NovaJoy
   print('obs',s.obs.shape); print('step ok', jax.jit(e.step)(s, jp.zeros(12)).reward)"
 ```
 
-The env builds + steps on CPU (obs dim 45, 12 actions) — good enough to confirm
+The env builds + steps on CPU (obs dim 105 (3-frame history), 12 actions) — good enough to confirm
 correctness. **Do not train on CPU** (too slow).
 
 ## 2. Train on Colab (free T4 GPU) — checkpointed, survives disconnects
@@ -64,7 +64,14 @@ Scale `--timesteps` up for a cleaner gait; tune the reward weights in `env.py`.
 The env is built to survive the sim-to-real gap and physical mishaps, not just
 walk on flat ideal ground:
 
-- **Observation noise** on every sensor group (IMU/encoders are noisy IRL).
+- **Observation HISTORY** (3 stacked proprioceptive frames) — the biggest
+  transfer lever after actuator fidelity: gives the policy the memory to infer
+  velocity / contact / latency from real-only sensors, and removes the need for
+  foot-contact sensors NOVA doesn't have (contact is inferred from the joint-vel
+  history). Obs = IMU + servo feedback + command only (105-d).
+- **Observation noise + a per-episode IMU gyro bias** (real ICM-42688-P drift).
+- **Jerk + stand-still penalties** — smooth motion, no idle shuffling (less servo
+  wear, better transfer).
 - **Randomized start** — random base velocity + joint pose each episode, so the
   policy learns to recover from off-nominal states, not just the home stance.
 - **Mid-episode pushes** — a random base-velocity kick every ~150 steps; trains
@@ -106,7 +113,7 @@ python export_policy.py --policy nova_policy.pkl   # -> nova_policy.npz (+ .onnx
   heavy deps**) and `nova_policy.onnx` (portable, optional). Verified numerically
   against the Brax policy (~1e-8).
 - **`deploy/policy_runner.py`** — framework-free runner (numpy only). `build_obs`
-  reproduces sim's 49-d obs EXACTLY; `joint_targets(sensors) -> 12 rad targets`.
+  reproduces sim's 105-d history obs EXACTLY; `joint_targets(sensors) -> 12 rad targets`.
 - **`deploy/policy_node.py`** — ROS 2 node: joint state + IMU + `cmd_vel` @ 50 Hz
   → policy → `/joint_commands`, gated on `/safety_state`. Moves into
   `nova_locomotion` beside the scripted-trot fallback when real.
