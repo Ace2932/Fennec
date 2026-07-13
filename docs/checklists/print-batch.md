@@ -4,6 +4,24 @@ From the 2026-07-06 batch-questions review. The caliper prereqs are now
 CLEARED (Jetson heatsink 34.9, D456 rear pattern confirmed, pack 510 g, 5191
 = external mount) — so floor_plate / battery_pocket no longer risk a re-print.
 
+## ⚠ BLOCKER 2026-07-13 — servo disc-interface dims unverified (issue #85)
+
+First-article caught a wrong ASSUMED servo dim: the idler wheel's raised center
+hub is **Ø8.8** (calipered), not the assumed Ø6 — the Ø7 `WHEEL_CTR_D` relief
+bottomed it. **Fixed → Ø9.5 (#84).** But `HORN_OD`/`WHEEL_OD` (=20) and
+`HORN_CTR_D` (=6.5) are still **assumed, uncalipered** — same failure mode.
+
+**HOLD (don't print until horn OD + horn-center Ø + wheel outer OD are
+calipered — issue #85):** `coax`, `coax_hfe_plate`, `femur`, `knee_arm`,
+`shoulder`, `shoulder_plate` (+ L mirrors) — every part with a horn/wheel disc
+recess. Reprint these from the #84 branch anyway (wheel-hub fix).
+
+**✅ SAFE to print now (no servo-disc recess):** `tibia_R/L` (servo pocket only
+— already calibrated), `strap`, `knee_bumper`, all TPU (shoe / cable_clip /
+skid_rail / grommets / lead_notch_grommet), and **all chassis parts** (trunk,
+riser_bay, floor_plate, battery_pocket, head, neck_bracket, l2_adapter,
+control_pod, head_ear ×2).
+
 ## Δ since 2026-07-06 (head re-arch + fit/structure session, 2026-07-07)
 
 **RETIRED — do NOT print:** `l2_mast`, `d456_head` (→ folded into `head`),
