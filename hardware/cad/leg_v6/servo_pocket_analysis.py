@@ -15,8 +15,12 @@ r = np.hypot(COL_PTS[:,0], COL_PTS[:,1])          # radius of each screw from ax
 Sr2 = (r**2).sum()
 UTS = 151.0                                        # PA6-CF flex, dry (Bambu TDS)
 UTS_WET = 75.0
-# floor bearing area per screw: M2 shank Ø2.0 x (floor 2.5 - csk 1.1) = 1.4 deep
-A_bear = 2.0 * 1.4                                 # 2.8 mm^2 (in-plane, no Z knockdown)
+# floor bearing per screw: M2 shank Ø2.0 x 0.725 deep.  #67 fix (2026-07-12):
+# the REAL floor is 2.125mm (the connector-bay void cuts to z-20.075, 0.375
+# below FLOOR_TOP -- forced by the servo connector clearance, MEASURED all 3
+# pockets) and the csk is 1.4 deep -> 2.125-1.4 = 0.725.  Was (floor 2.5 - csk
+# 1.1)=1.4, which over-stated the bearing ~2x; SF drops accordingly but stays >1.
+A_bear = 2.0 * 0.725                               # 1.45 mm^2 (in-plane, no Z knockdown)
 # case-side wall bearing IF anti-rotation engaged (the fix): 2 side flats at
 # y=±12.4 over ~45 long x ~10 tall contact
 A_wall = 45.0 * 10.0                               # per side, mm^2
