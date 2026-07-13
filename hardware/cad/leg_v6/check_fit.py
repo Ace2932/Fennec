@@ -634,6 +634,55 @@ def fastener_checks():
     return bad
 
 
+# BUGFIX gate 2026-07-12 (full-leg assembly audit): the 4x M2.5 HFE horn bolts
+# (BCD r7 about the hfe X-axis at y=HFE_Y, z=HFE_Z) are driven -X through the
+# empty HAA pocket into the femur's servo horn to capture the coax<->femur
+# joint. The #53 "nothing left to cut here" note was written when the whole
+# inboard arm became a plate; #67 then kept the LOW-Y/BACK stub INTEGRAL, so
+# the stub re-blocked every horn bolt 2.0-4.9mm and the joint could not be
+# assembled. It slipped BOTH existing gates: the insertion/hip sweeps mask an
+# r13 disc about the hfe axis (the BCD circle at r7 sits INSIDE that mask), and
+# the #67 fastener gate only samples the cap heat-set, never the BCD circle.
+# This gate closes that hole: it scans all 4 BCD channels through the coax stub
+# (coax_R/coax_L) and asserts each is clear across the ARM_THK bolt span.
+HORN_BCD_R = 7.0            # HORN_BCD/2 (leg_v6_common.scad)
+HORN_M25   = 2.9           # M25_CLEAR bolt-shank clearance
+HORN_ANGLES = (45, 135, 225, 315)
+HFE_Y, HFE_Z = 11.6, -9.5  # hfe axis (coax.scad); FEMUR_MID = horn-face x
+FEMUR_MID = 33.8
+ARM_THK = 4.0              # horn couple channel length (leg_v6_common.scad)
+
+
+def horn_bolt_checks():
+    print('-- HFE horn-bolt gate (4x M2.5 BCD channels must clear through the coax stub) --')
+    bad = False
+    for part in ('coax_R.stl', 'coax_L.stl'):
+        m = trimesh.load(part)
+        # coax_L = mirror([1,0,0]) of coax_R: the whole horn joint (and its bolt
+        # drive direction) flips in x. sx picks the correct side/direction so the
+        # L part is probed at its OWN geometry, not empty +x space (which would
+        # read a false CLEAR).
+        sx = 1 if part == 'coax_R.stl' else -1
+        for a in HORN_ANGLES:
+            y = HFE_Y + HORN_BCD_R * np.sin(np.radians(a))
+            z = HFE_Z + HORN_BCD_R * np.cos(np.radians(a))
+            # channel runs toward the stub from FEMUR_MID over the horn couple's
+            # own ARM_THK span; scan a MARGIN past both ends so a stub
+            # re-thickening (the #67 regression) can't hide just outside it.
+            base = np.array([sx * (FEMUR_MID + 0.5), y, z])
+            blocked = _axis_scan(m, base, [-sx, 0, 0],
+                                 -0.5, ARM_THK + MARGIN_MM, r=HORN_M25 / 2 - 0.1)
+            if blocked:
+                bad = True
+                print(f'BLOCK {part}: horn bolt a={a:3d} (y={y:+.1f},z={z:+.1f}) '
+                      f'blocked by stub at x={sx * (FEMUR_MID + 0.5 - blocked[0]):.2f}..'
+                      f'{sx * (FEMUR_MID + 0.5 - blocked[-1]):.2f} -- joint cannot assemble')
+            else:
+                print(f'OK    {part}: horn bolt a={a:3d} (y={y:+.1f},z={z:+.1f}) '
+                      f'clear across the {ARM_THK:.1f}mm span')
+    return bad
+
+
 def _surface_depth(mesh, ctr, n, reach=8.0, n_steps=320):
     """`n` = the face's OUTWARD normal. Starting from a point clearly OUTSIDE
     the part (ctr + reach*n) and walking INWARD (-n) back past ctr, return
@@ -683,6 +732,7 @@ def main():
         bad = cable_checks() or bad
     if '--fastener' in sys.argv or do_sweep:
         bad = fastener_checks() or bad
+        bad = horn_bolt_checks() or bad
     sys.exit(1 if bad else 0)
 
 
