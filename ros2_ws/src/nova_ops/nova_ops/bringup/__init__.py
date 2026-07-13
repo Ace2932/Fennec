@@ -42,6 +42,15 @@ PROFILES = {
             ),
             ("launch", "unitree_lidar_ros2", "launch.py", {}),
             ("launch", "nova_ops", "dashcam.launch.py", {}),
+            # Foxglove bridge — WebSocket for live viz from a laptop/browser
+            # (connect ws://<jetson>:8765). apt: ros-humble-foxglove-bridge.
+            # SKIPs cleanly if not installed (composer checks the package).
+            (
+                "node",
+                "foxglove_bridge",
+                "foxglove_bridge",
+                {"port": 8765, "address": "0.0.0.0"},
+            ),
         ],
     },
     "slam": {
@@ -71,6 +80,15 @@ PROFILES = {
             # deploy/nova-bringup.service (WatchdogSec=15, NotifyAccess=all);
             # idles harmlessly outside systemd. See nova_ops/watchdog/.
             ("node", "nova_ops", "watchdog_node", {"_respawn": True}),
+            # Foxglove bridge — live gait/IMU/telemetry viz during bring-up
+            # (ws://<jetson>:8765). Most useful profile for it: watch the
+            # policy obs/actions + joint tracking while the robot walks.
+            (
+                "node",
+                "foxglove_bridge",
+                "foxglove_bridge",
+                {"port": 8765, "address": "0.0.0.0"},
+            ),
             # Gait controller doesn't exist yet (Phase 2 deliverable).
             # ('node', 'nova_gait', 'gait_controller', {}),
             # Safety envelope is a library wrapped INSIDE gait_controller's
@@ -82,12 +100,11 @@ PROFILES = {
         "description": "walk + slam + Nav2 + Foxglove bridge",
         "preflight": True,
         "actions": [
-            ("include_profile", "walk"),
+            ("include_profile", "walk"),  # brings foxglove_bridge via walk/sensors
             ("include_profile", "slam"),
-            # Nav2 + Foxglove are external packages (apt-installable).
-            # Stubbed; Phase 3 deliverable.
+            # Nav2 stubbed; Phase 3 deliverable. Foxglove is already included
+            # (walk + sensors both run it; dedup keeps a single instance).
             # ('launch', 'nav2_bringup', 'navigation_launch.py', {}),
-            # ('launch', 'foxglove_bridge', 'foxglove_bridge_launch.xml', {}),
         ],
     },
     "vla": {
