@@ -563,6 +563,32 @@ FLOOR_BORES = [
     ('control_pod.stl',   (-71, 23,  95),   (0, 0, -1), 4.0, 3.0, 'oled M2'),
     ('battery_pocket.stl',(-35, 27.5, -0.2),(0, 0, -1), 4.2, 4.0, 'pad'),
     ('battery_pocket.stl',(40,  27.5, -0.2),(0, 0, -1), 4.2, 4.0, 'pad'),
+    # --- leg parts (first-article, printing) ---
+    (f'{LEG}/coax_R.stl',  (15.9, 24.0, 10.4),(0, -1, 0), 6.2, 4.0, 'coax HFE mount'),
+    (f'{LEG}/femur_R.stl', (65,  8, 17.75),  (0, 0, -1), 6.2, 4.0, 'knee-arm mount'),
+    (f'{LEG}/femur_R.stl', (65, -8, 17.75),  (0, 0, -1), 6.2, 4.0, 'knee-arm mount'),
+    (f'{LEG}/femur_R.stl', (75,  8, 17.75),  (0, 0, -1), 6.2, 4.0, 'knee-arm mount'),
+    (f'{LEG}/femur_R.stl', (75, -8, 17.75),  (0, 0, -1), 6.2, 4.0, 'knee-arm mount'),
+    (f'{LEG}/shoulder.stl',( 51.75, -77.7, -33.05),(0, 1, 0), 6.2, 4.0, 'trunk-flange'),
+    (f'{LEG}/shoulder.stl',(-51.75, -77.7, -33.05),(0, 1, 0), 6.2, 4.0, 'trunk-flange'),
+    (f'{LEG}/shoulder.stl',( 51.75, -77.7, -14.05),(0, 1, 0), 6.2, 4.0, 'trunk-flange'),
+    (f'{LEG}/shoulder.stl',(-51.75, -77.7, -14.05),(0, 1, 0), 6.2, 4.0, 'trunk-flange'),
+    (f'{LEG}/shoulder.stl',( 18, -73.7, -22.05),(0, -1, 0), 6.2, 4.0, 'rear-pad'),
+    (f'{LEG}/shoulder.stl',(-18, -73.7, -22.05),(0, -1, 0), 6.2, 4.0, 'rear-pad'),
+    (f'{LEG}/shoulder.stl',( 18, -73.7, -10.05),(0, -1, 0), 6.2, 4.0, 'rear-pad'),
+    (f'{LEG}/shoulder.stl',(-18, -73.7, -10.05),(0, -1, 0), 6.2, 4.0, 'rear-pad'),
+    # --- chassis (head boss / riser pod) ---
+    ('head.stl', (121,  10, 89),  (1, 0, 0), 6.2, 4.0, 'boss'),
+    ('head.stl', (121, -10, 89),  (1, 0, 0), 6.2, 4.0, 'boss'),
+    ('head.stl', (121,  10, 100), (1, 0, 0), 6.2, 4.0, 'boss'),
+    ('head.stl', (121, -10, 100), (1, 0, 0), 6.2, 4.0, 'boss'),
+    # NOTE: riser FLG + shoulder-deck (PLATE_BX/BY) heat-sets are THROUGH-
+    # mounts (Ø4 insert bore + a Ø3.4 clearance continuing to the far face for
+    # the bolt), NOT blind bores -- no floor to gate; excluded on purpose.
+    ('riser_bay.stl', (-66.5, -10, 61), (1, 0, 0), 4.0, 3.0, 'pod M2'),
+    ('riser_bay.stl', (-66.5,  10, 61), (1, 0, 0), 4.0, 3.0, 'pod M2'),
+    ('riser_bay.stl', (-66.5, -10, 66), (1, 0, 0), 4.0, 3.0, 'pod M2'),
+    ('riser_bay.stl', (-66.5,  10, 66), (1, 0, 0), 4.0, 3.0, 'pod M2'),
 ]
 
 
@@ -575,14 +601,21 @@ def floor_thickness_check():
             cache[part] = trimesh.load(part)
         a = np.asarray(ax, float); a /= np.linalg.norm(a)
         bot = np.asarray(mouth, float) + depth * a
-        ts = np.arange(0.02, 6.0, 0.02)
+        # scan outward from the bore bottom; floor = the first contiguous solid
+        # run. Skip a small leading void (<= GAP_TOL) so a scan point landing
+        # exactly on the bore-bottom boundary (void by an EPS) doesn't false-
+        # read 0 -- the bug the coax 9.71mm floor exposed.
+        ts = np.arange(0.02, 8.0, 0.02)
         ins = cache[part].contains(bot + np.outer(ts, a))
-        floor = 0.0
-        for t, i in zip(ts, ins):
-            if i:
-                floor = t
-            else:
-                break
+        GAP_TOL = 0.3
+        first = next((k for k, i in enumerate(ins) if i), None)
+        if first is None or ts[first] > GAP_TOL:
+            floor = 0.0
+        else:
+            last = first
+            while last + 1 < len(ins) and ins[last + 1]:
+                last += 1
+            floor = ts[last] - ts[first] + 0.02
         # 0.05mm tolerance absorbs the scan step + print slop so an AT-spec
         # floor (e.g. the M2 1.0mm minimum) isn't false-flagged.
         thr = FLOOR_MIN[dia]
