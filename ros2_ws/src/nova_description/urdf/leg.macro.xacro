@@ -36,7 +36,7 @@
       <collision>
         <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_${side}Coax.stl" scale="0.001 0.001 0.001"/></geometry>
       </collision>
-      <xacro:link_inertial mass="${m_hip}"/>
+      <xacro:hip_inertial reflect="${reflect}"/>
     </link>
 
     <!-- ===== HFE : hip -> upper (femur) ===== -->
@@ -62,7 +62,7 @@
       <collision>
         <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_${side}Femur.stl" scale="0.001 0.001 0.001"/></geometry>
       </collision>
-      <xacro:link_inertial mass="${m_upper}"/>
+      <xacro:upper_inertial reflect="${reflect}"/>
     </link>
 
     <!-- ===== KFE : upper -> lower (tibia) ===== -->
@@ -81,7 +81,7 @@
       <collision>
         <geometry><mesh filename="package://nova_description/meshes/SM3_Frame_${side}Tibia.stl" scale="0.001 0.001 0.001"/></geometry>
       </collision>
-      <xacro:link_inertial mass="${m_lower}"/>
+      <xacro:lower_inertial reflect="${reflect}"/>
     </link>
 
     <!-- ===== foot (fixed) ===== -->
@@ -95,7 +95,7 @@
         <geometry><mesh filename="package://nova_description/meshes/SM3_Foot.stl" scale="0.001 0.001 0.001"/></geometry>
       </visual>
       <collision><geometry><sphere radius="0.012"/></geometry></collision>
-      <xacro:link_inertial mass="${m_foot}"/>
+      <xacro:foot_inertial reflect="${reflect}"/>
     </link>
 
   </xacro:macro>
