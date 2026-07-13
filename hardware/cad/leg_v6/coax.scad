@@ -289,12 +289,20 @@ module coax_v6() {
                 cylinder(d = 2.05, h = 8.8);
 
         // ---- HFE couplings on the X axis at (HFE_Y, HFE_Z) ----
-        // #53 fix (2026-07-11): the inboard horn coupling (was horn_couple_neg()
-        // + its pocket-wall screw-head counterbores, cut into the old integral
-        // arm) moved ENTIRELY to coax_hfe_plate.scad -- that part is now a
-        // self-contained bolt-on, same pattern as knee_arm.scad/shoulder_plate.scad
-        // (horn_couple_neg() cut into THEIR OWN plate, not the parent). Nothing
-        // left to cut here for it.
+        // #53: the inboard horn coupling moved to the removable cap
+        // (coax_hfe_plate.scad). BUT the #67 stub keeps the LOW-Y/BACK arm
+        // material INTEGRAL here -- and the 4x M2.5 horn bolts (BCD r7, driven
+        // through the empty HAA pocket into the horn) pass through THAT stub.
+        // BUGFIX 2026-07-12 (full-leg assembly audit): the #53 "nothing left to
+        // cut here" was written when the WHOLE arm became a plate; #67 then kept
+        // the stub integral, so the stub blocked every horn bolt 2.0-4.9mm
+        // (MEASURED, all 4 BCD -- the joint couldn't be assembled; slipped the
+        // gates because the sweep's r13 mask + the fastener gate never sample
+        // the BCD circle). Restore horn_couple_neg on the parent -- same
+        // transform as the cap; the cap cuts its own material, this cuts the
+        // stub's, so the union clears all 4 bolt channels.
+        translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0])
+            horn_couple_neg();
         //
         // #67 fix: cap clearance = just the measured femur-swept wedge (was
         // the FULL r=ARM_HALF_YZ disc under #53) -- see coax_hfe_bore()'s

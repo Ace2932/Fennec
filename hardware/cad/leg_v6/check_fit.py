@@ -634,6 +634,161 @@ def fastener_checks():
     return bad
 
 
+# BUGFIX gate 2026-07-12 (full-leg assembly audit): the 4x M2.5 HFE horn bolts
+# (BCD r7 about the hfe X-axis at y=HFE_Y, z=HFE_Z) are driven -X through the
+# empty HAA pocket into the femur's servo horn to capture the coax<->femur
+# joint. The #53 "nothing left to cut here" note was written when the whole
+# inboard arm became a plate; #67 then kept the LOW-Y/BACK stub INTEGRAL, so
+# the stub re-blocked every horn bolt 2.0-4.9mm and the joint could not be
+# assembled. It slipped BOTH existing gates: the insertion/hip sweeps mask an
+# r13 disc about the hfe axis (the BCD circle at r7 sits INSIDE that mask), and
+# the #67 fastener gate only samples the cap heat-set, never the BCD circle.
+# This gate closes that hole: it scans all 4 BCD channels through the coax stub
+# (coax_R/coax_L) and asserts each is clear across the ARM_THK bolt span.
+HORN_BCD_R = 7.0            # HORN_BCD/2 (leg_v6_common.scad)
+HORN_M25   = 2.9           # M25_CLEAR bolt-shank clearance
+HORN_ANGLES = (45, 135, 225, 315)
+HFE_Y, HFE_Z = 11.6, -9.5  # hfe axis (coax.scad); FEMUR_MID = horn-face x
+FEMUR_MID = 33.8
+ARM_THK = 4.0              # horn couple channel length (leg_v6_common.scad)
+
+
+def horn_bolt_checks():
+    print('-- HFE horn-bolt gate (4x M2.5 BCD channels must clear through the coax stub) --')
+    bad = False
+    for part in ('coax_R.stl', 'coax_L.stl'):
+        m = trimesh.load(part)
+        # coax_L = mirror([1,0,0]) of coax_R: the whole horn joint (and its bolt
+        # drive direction) flips in x. sx picks the correct side/direction so the
+        # L part is probed at its OWN geometry, not empty +x space (which would
+        # read a false CLEAR).
+        sx = 1 if part == 'coax_R.stl' else -1
+        for a in HORN_ANGLES:
+            y = HFE_Y + HORN_BCD_R * np.sin(np.radians(a))
+            z = HFE_Z + HORN_BCD_R * np.cos(np.radians(a))
+            # channel runs toward the stub from FEMUR_MID over the horn couple's
+            # own ARM_THK span; scan a MARGIN past both ends so a stub
+            # re-thickening (the #67 regression) can't hide just outside it.
+            base = np.array([sx * (FEMUR_MID + 0.5), y, z])
+            blocked = _axis_scan(m, base, [-sx, 0, 0],
+                                 -0.5, ARM_THK + MARGIN_MM, r=HORN_M25 / 2 - 0.1)
+            if blocked:
+                bad = True
+                print(f'BLOCK {part}: horn bolt a={a:3d} (y={y:+.1f},z={z:+.1f}) '
+                      f'blocked by stub at x={sx * (FEMUR_MID + 0.5 - blocked[0]):.2f}..'
+                      f'{sx * (FEMUR_MID + 0.5 - blocked[-1]):.2f} -- joint cannot assemble')
+            else:
+                print(f'OK    {part}: horn bolt a={a:3d} (y={y:+.1f},z={z:+.1f}) '
+                      f'clear across the {ARM_THK:.1f}mm span')
+    return bad
+
+
+# KFE joint gate 2026-07-12 (matches the HAA wheel-bolt gate; closes the last
+# leg-side screw joint not under a dedicated gate). The femur is the DRIVEN
+# yoke and the tibia hosts the KFE servo (verified: "KFE servo in tibia
+# pocket"). Three bolt circles capture the joint, all about the kfe Z-axis at
+# femur-frame x=FEMUR_LEN:
+#   * TOP    knee_arm.stl 4x M2.5 horn BCD -> the tibia servo horn
+#   * BOTTOM femur_R/L wheel BCD 4x M2.5   -> the tibia idler wheel
+#   * MOUNT  knee_arm 4x M3 -> femur shelf heat-sets (holds the top plate on)
+# Every scan carries a solid-material guard (a ring at r+1.2 must read solid):
+# a bare centerline-void test reads a FALSE clear in empty space -- exactly the
+# trap the coax_L mirror bug hit -- so the guard makes the gate self-validate
+# against any future STL frame/transform change.
+FEMUR_LEN   = 106.9              # kfe axis, femur frame
+KFE_KNEE_X  = 47.9              # knee_arm-local kfe axis (FEMUR_LEN - X0=59)
+KFE_WHEEL_Z = (-27.6, -17.75)  # femur_R wheel-BCD z span (z-mirrors for _L)
+KNEE_MOUNT  = [(6, -8), (6, 8), (16, -8), (16, 8)]     # knee_arm-local M3 holes
+FEMUR_MOUNT = [(65, -8), (65, 8), (75, -8), (75, 8)]   # femur-frame heat-sets
+YOKE_TOP_IN = 17.75
+
+
+def _bolt_clear(mesh, cx, cy, z_lo, z_hi, r):
+    """True if the Z centerline at (cx,cy) is VOID across [z_lo,z_hi] AND a ring
+    at r+1.2 is SOLID -- i.e. a real drilled hole through material, not empty
+    air (the false-CLEAR trap). Returns (ok, center_solid, ring_solid)."""
+    zc = np.linspace(z_lo + 0.2, z_hi - 0.2, 24)
+    center = int(mesh.contains(
+        np.column_stack([np.full(len(zc), cx), np.full(len(zc), cy), zc])).sum())
+    ang = np.linspace(0, 2 * np.pi, 8, endpoint=False)
+    zmid = (z_lo + z_hi) / 2
+    ring = np.column_stack([cx + (r + 1.2) * np.cos(ang),
+                            cy + (r + 1.2) * np.sin(ang), np.full(8, zmid)])
+    ring_solid = int(mesh.contains(ring).sum())
+    return (center == 0 and ring_solid >= 4), center, ring_solid
+
+
+def _blind_pocket(mesh, cx, cy, z_top, dirn, depth):
+    """A heat-set pilot: bore open `depth` from z_top going `dirn`, with solid
+    backing just past it. Returns (ok, bore_open, backing_solid)."""
+    zb = z_top + dirn * np.linspace(0.3, depth - 0.3, 20)
+    bore = int(mesh.contains(
+        np.column_stack([np.full(len(zb), cx), np.full(len(zb), cy), zb])).sum())
+    zk = z_top + dirn * np.linspace(depth + 0.4, depth + 2.5, 8)
+    back = int(mesh.contains(
+        np.column_stack([np.full(len(zk), cx), np.full(len(zk), cy), zk])).sum())
+    return (bore == 0 and back >= 4), 20 - bore, back
+
+
+def kfe_bolt_checks():
+    print('-- KFE joint gate (knee-arm horn BCD + femur wheel BCD + knee-arm mount) --')
+    bad = False
+    r25 = HORN_M25 / 2
+    # 1. knee_arm horn BCD (single part, no mirror) -> tibia servo horn
+    ka = trimesh.load('knee_arm.stl')
+    for a in HORN_ANGLES:
+        cx = KFE_KNEE_X + HORN_BCD_R * np.cos(np.radians(a))
+        cy = HORN_BCD_R * np.sin(np.radians(a))
+        ok, c, rs = _bolt_clear(ka, cx, cy, -0.2, ARM_THK + 0.2, r25)
+        if not ok:
+            bad = True
+            print(f'BLOCK knee_arm.stl: horn bolt a={a:3d} not clear-in-solid '
+                  f'(center_solid={c}, ring_solid={rs}/8)')
+        else:
+            print(f'OK    knee_arm.stl: horn bolt a={a:3d} clear through the {ARM_THK:.1f}mm plate')
+    # 1b. knee_arm mount M3 clearance (into femur heat-sets)
+    for mx, my in KNEE_MOUNT:
+        ok, c, rs = _bolt_clear(ka, mx, my, -0.2, ARM_THK + 0.2, M3_CLEAR / 2)
+        if not ok:
+            bad = True
+            print(f'BLOCK knee_arm.stl: mount M3 ({mx},{my:+d}) not clear-in-solid '
+                  f'(center_solid={c}, ring_solid={rs}/8)')
+        else:
+            print(f'OK    knee_arm.stl: mount M3 ({mx},{my:+d}) clear through the plate')
+    # 2. femur wheel BCD -> tibia idler (femur_L = z-mirror)
+    for part in ('femur_R.stl', 'femur_L.stl'):
+        m = trimesh.load(part)
+        zlo, zhi = KFE_WHEEL_Z if part == 'femur_R.stl' \
+            else (-KFE_WHEEL_Z[1], -KFE_WHEEL_Z[0])
+        for a in HORN_ANGLES:
+            cx = FEMUR_LEN + HORN_BCD_R * np.cos(np.radians(a))
+            cy = HORN_BCD_R * np.sin(np.radians(a))
+            ok, c, rs = _bolt_clear(m, cx, cy, zlo, zhi, r25)
+            if not ok:
+                bad = True
+                print(f'BLOCK {part}: wheel bolt a={a:3d} not clear-in-solid '
+                      f'(center_solid={c}, ring_solid={rs}/8)')
+            else:
+                print(f'OK    {part}: wheel bolt a={a:3d} clear through the bottom boss')
+    # 3. femur shelf heat-set pilots receiving the knee-arm mount M3 (blind,
+    # aligned) -- proves the top plate actually screws to the femur.
+    for part in ('femur_R.stl', 'femur_L.stl'):
+        m = trimesh.load(part)
+        zmir = part == 'femur_L.stl'
+        z_top = -YOKE_TOP_IN if zmir else YOKE_TOP_IN
+        dirn = 1 if zmir else -1
+        for mx, my in FEMUR_MOUNT:
+            ok, bore, back = _blind_pocket(m, mx, my, z_top, dirn, HEATSET_L)
+            if not ok:
+                bad = True
+                print(f'BLOCK {part}: knee-arm heat-set ({mx},{my:+d}) not a blind '
+                      f'pocket (bore_open={bore}/20, backing={back}/8)')
+            else:
+                print(f'OK    {part}: knee-arm heat-set ({mx},{my:+d}) blind pocket '
+                      f'({HEATSET_L:.1f}mm, backed)')
+    return bad
+
+
 def _surface_depth(mesh, ctr, n, reach=8.0, n_steps=320):
     """`n` = the face's OUTWARD normal. Starting from a point clearly OUTSIDE
     the part (ctr + reach*n) and walking INWARD (-n) back past ctr, return
@@ -683,6 +838,8 @@ def main():
         bad = cable_checks() or bad
     if '--fastener' in sys.argv or do_sweep:
         bad = fastener_checks() or bad
+        bad = horn_bolt_checks() or bad
+        bad = kfe_bolt_checks() or bad
     sys.exit(1 if bad else 0)
 
 
