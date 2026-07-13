@@ -18,7 +18,8 @@ develop + validate on your Mac (CPU), train on a **free Colab GPU**.
 ## 1. Local (Mac CPU) — validate before burning Colab time
 
 ```bash
-pip install mujoco mujoco-mjx "jax[cpu]" brax
+# python 3.11/3.12; pinned combo (see requirements.txt for why the versions)
+pip install "jax[cpu]==0.6.0" brax==0.14.2 "orbax-checkpoint>=0.11.22" mujoco mujoco-mjx
 python build_mjcf.py          # -> nova.xml
 python validate_model.py      # -> "STANDS ✓"
 JAX_PLATFORMS=cpu python -c "import jax,jax.numpy as jp; from env import NovaJoystick; \
@@ -29,31 +30,54 @@ JAX_PLATFORMS=cpu python -c "import jax,jax.numpy as jp; from env import NovaJoy
 The env builds + steps on CPU (obs dim 45, 12 actions) — good enough to confirm
 correctness. **Do not train on CPU** (too slow).
 
-## 2. Train on Colab (free T4 GPU)
+## 2. Train on Colab (free T4 GPU) — checkpointed, survives disconnects
 
-New Colab notebook, **Runtime → change type → T4 GPU**, then:
+New Colab notebook, **Runtime → change type → T4 GPU**. **Mount Drive first** so
+checkpoints survive a disconnect (Colab's `/content` is wiped when the runtime
+dies — a local checkpoint dies with it):
 
 ```python
-!pip install -q mujoco mujoco-mjx brax          # Colab already has CUDA jax
+from google.colab import drive; drive.mount('/content/drive')
+# PINNED versions — brax 0.14.2 only works on jax 0.6.x (see requirements.txt)
+!pip install -q "jax[cuda12]==0.6.0" brax==0.14.2 "orbax-checkpoint>=0.11.22" mujoco mujoco-mjx
 # upload build_mjcf.py, env.py, train.py  (Files panel, or clone the repo)
 !python build_mjcf.py
-!python train.py --timesteps 60_000_000 --num_envs 2048 --out nova_policy.pkl
+!python train.py --ckpt /content/drive/MyDrive/nova_ckpt --timesteps 40_000_000
 ```
 
-~60 M steps trains a first walking gait in roughly 20–40 min on a T4. Watch
-`eval_reward` climb. `nova_policy.pkl` is the trained params — download it.
+Brax writes a full checkpoint (params + normalizer) **every eval** to `--ckpt`.
+`eval_reward` climbs over ~20–40 min on a T4.
 
-Scale `--timesteps` up (150 M+) for a cleaner gait once the reward shape looks
-right; tune the reward weights in `env.py` (`step`).
+### If Colab disconnects / crashes partway through
+**Just re-run the same `train.py` cell.** It finds the latest checkpoint under
+`--ckpt` (by mtime, robust across many resumes) and **continues from it** — no
+progress lost. Re-run as many times as needed; each invocation trains
+`--timesteps` more from wherever the last checkpoint left off. The run log
+(`--ckpt/train_log.csv`) and the latest `nova_policy.pkl` also survive on Drive.
 
-## 3. Domain randomization = robustness + "unfinished build" insurance
+*(Verified end-to-end on CPU: save → find-latest → restore → continue.)*
 
-`env.domain_randomize` jitters floor friction, trunk mass, and per-joint gains
-every env. That is the sim-to-real bridge **and** it means you can train **now**,
-before the final masses are weighed — the policy learns to be robust to a range
-of dynamics, so it survives the real build's variance. Widen the ranges (add
-link-mass and CoM jitter, latency, push perturbations) as you get closer to
-hardware.
+Scale `--timesteps` up for a cleaner gait; tune the reward weights in `env.py`.
+
+## 3. Robustness — so the trained policy holds up to real failures
+
+The env is built to survive the sim-to-real gap and physical mishaps, not just
+walk on flat ideal ground:
+
+- **Observation noise** on every sensor group (IMU/encoders are noisy IRL).
+- **Randomized start** — random base velocity + joint pose each episode, so the
+  policy learns to recover from off-nominal states, not just the home stance.
+- **Mid-episode pushes** — a random base-velocity kick every ~150 steps; trains
+  active recovery from a shove / stumble / slip (a *physical* failure partway
+  through a walk).
+- **Feet-air-time reward** — rewards a real stepping gait with ground clearance,
+  not a foot-dragging shuffle that face-plants on any bump.
+- **Domain randomization** (`domain_randomize`): floor friction, **per-link**
+  mass (±15%, every body), and actuator gains — the sim-to-real bridge, and it
+  lets you train **before** the final masses are weighed (robust to whatever the
+  real build turns out to be).
+
+Widen these (latency, terrain, harder pushes) as you approach hardware.
 
 ## 4. Watch the trained gait
 

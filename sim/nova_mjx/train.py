@@ -1,74 +1,108 @@
-"""Train a NOVA walking policy with Brax PPO on the MJX env.
+"""Train a NOVA walking policy with Brax PPO on the MJX env — CHECKPOINTED so a
+Colab disconnect / crash mid-run costs nothing.
 
-Runs on a GPU (Colab free T4 is enough). On a CPU it will import + start but is
-too slow for a full run — use it locally only to smoke-test, train on Colab.
+  python train.py --ckpt /content/drive/MyDrive/nova_ckpt --timesteps 40_000_000
 
-  python train.py --timesteps 60_000_000 --out nova_policy.pkl
+Resilience:
+  * Brax writes a full-state checkpoint (params + normalizer) every eval to
+    --ckpt. Put --ckpt on PERSISTENT storage (mounted Google Drive) — Colab's
+    /content is wiped on disconnect, so a local checkpoint dies with the run.
+  * On (re)start it finds the LATEST checkpoint under --ckpt (by mtime, robust
+    across many resumes) and CONTINUES from it. So after any dropout you just
+    re-run the same cell — it picks up where the last checkpoint left off.
+  * Each run saves to its own subdir (no step-number collisions between runs),
+    plus a flat nova_policy.pkl (latest policy, for rollout.py) and a CSV log —
+    both survive a dropout.
 
-Outputs a pickled (params) file + prints eval reward as it goes. Convert the
-policy to ONNX for Jetson deployment separately (see README).
+Re-run to keep training; watch eval_reward climb. GPU (Colab) for real runs.
 """
 import argparse
 import functools
+import os
 import pickle
 import time
 
 import jax
+from etils import epath
+
 from brax.training.agents.ppo import networks as ppo_networks
 from brax.training.agents.ppo import train as ppo
 
 from env import NovaJoystick, domain_randomize
 
 
+def find_latest_checkpoint(ckpt_dir):
+    """Newest Brax checkpoint under ckpt_dir, by mtime — correct even across
+    many resumes (each run writes its own run_*/<step>/ dir; Brax restarts its
+    step counter on restore, so mtime, not step number, is the right key).
+    Brax names each checkpoint dir with the zero-padded step (e.g. 000000006400)
+    and stores orbax data inside — so we match all-digit dir names."""
+    best, best_m = None, -1.0
+    for dirpath, _, _ in os.walk(ckpt_dir):
+        if os.path.basename(dirpath).isdigit():
+            m = os.path.getmtime(dirpath)
+            if m > best_m:
+                best_m, best = m, dirpath
+    return best
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--timesteps", type=int, default=60_000_000)
-    ap.add_argument("--out", default="nova_policy.pkl")
+    ap.add_argument("--ckpt", default="nova_ckpt",
+                    help="checkpoint dir — put on mounted Drive on Colab")
+    ap.add_argument("--timesteps", type=int, default=40_000_000,
+                    help="steps to train THIS invocation (re-run to add more)")
     ap.add_argument("--num_envs", type=int, default=2048)
+    ap.add_argument("--out", default="nova_policy.pkl")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
-    print(f"JAX backend: {jax.default_backend()}  devices: {jax.devices()}")
+    print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
     if jax.default_backend() == "cpu":
-        print("⚠ CPU backend — fine for a smoke test, far too slow for a real "
-              "run. Train on a GPU (Colab).")
+        print("⚠ CPU — fine to smoke-test, too slow for a real run. Use Colab GPU.")
+
+    root = epath.Path(args.ckpt)
+    root.mkdir(parents=True, exist_ok=True)
+    restore = find_latest_checkpoint(args.ckpt)
+    print(f"RESUME from {restore}" if restore else "FRESH start (no checkpoint)")
+    # unique per-run save subdir -> no step collisions between resumes
+    run_dir = root / f"run_{int(time.time())}"
 
     net = functools.partial(
         ppo_networks.make_ppo_networks,
         policy_hidden_layer_sizes=(128, 128, 128, 128),
         value_hidden_layer_sizes=(256, 256, 256, 256))
 
-    train_fn = functools.partial(
-        ppo.train,
-        num_timesteps=args.timesteps,
-        num_evals=max(2, args.timesteps // 3_000_000),
-        episode_length=1000,
-        unroll_length=20,
-        num_minibatches=32,
-        num_updates_per_batch=4,
-        discounting=0.97,
-        learning_rate=3e-4,
-        entropy_cost=1e-2,
-        num_envs=args.num_envs,
-        batch_size=256,
-        network_factory=net,
-        randomization_fn=domain_randomize,
-        seed=args.seed,
-    )
-
+    logf = (root / "train_log.csv").open("a")
     t0 = time.time()
 
     def progress(step, metrics):
-        r = metrics.get("eval/episode_reward", float("nan"))
-        print(f"[{time.time()-t0:6.0f}s] step {step:>12,}  "
-              f"eval_reward {r:8.2f}")
+        r = float(metrics.get("eval/episode_reward", float("nan")))
+        print(f"[{time.time()-t0:6.0f}s] step {step:>11,}  eval_reward {r:8.2f}")
+        logf.write(f"{time.time():.0f},{step},{r}\n"); logf.flush()
 
-    make_inference_fn, params, _ = train_fn(
-        environment=NovaJoystick(), progress_fn=progress)
+    def save_policy(step, make_policy, params):
+        with open(args.out, "wb") as f:      # latest policy for rollout.py
+            pickle.dump(params, f)
 
+    train_fn = functools.partial(
+        ppo.train,
+        num_timesteps=args.timesteps, episode_length=1000,
+        num_envs=args.num_envs, batch_size=256,
+        num_minibatches=32, num_updates_per_batch=4,
+        unroll_length=20, discounting=0.97, learning_rate=3e-4,
+        entropy_cost=1e-2, normalize_observations=True,
+        num_evals=max(4, args.timesteps // 2_000_000),
+        network_factory=net, randomization_fn=domain_randomize,
+        save_checkpoint_path=str(run_dir),
+        restore_checkpoint_path=restore, seed=args.seed)
+
+    _, params, _ = train_fn(environment=NovaJoystick(), progress_fn=progress,
+                            policy_params_fn=save_policy)
     with open(args.out, "wb") as f:
         pickle.dump(params, f)
-    print(f"saved policy -> {args.out}  ({time.time()-t0:.0f}s total)")
+    logf.close()
+    print(f"done ({time.time()-t0:.0f}s). policy -> {args.out}, checkpoints -> {run_dir}")
 
 
 if __name__ == "__main__":
