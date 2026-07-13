@@ -46,6 +46,13 @@ BASE_I = (2.83, (0.0, 0.0, 0.0), (8.7e-3, 2.46e-2, 2.65e-2))
 # capsule half-geometry for collision/visual (radius m)
 R_THIGH, R_SHANK, R_FOOT = 0.013, 0.011, 0.014
 
+# terrain heightfield (env.domain_randomize fills per-env; flat by default) —
+# keep TN/TR/TZ in sync with terrain.py
+TN = 40            # hfield resolution (TN x TN cells)
+TR = 2.5           # hfield half-size (m)
+TR2 = 2 * TR       # full terrain extent (m)
+TZ = 0.20          # max terrain height (m); hfield data [0,1] -> [0, TZ]
+
 LEGS = [  # name, mount sign (sx along x, sy along y = reflect)
     ("FL", +1, +1), ("FR", +1, -1), ("RL", -1, +1), ("RR", -1, -1),
 ]
@@ -142,11 +149,15 @@ MJCF = f'''<mujoco model="nova_sm3">
     <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512"/>
     <texture name="grid" type="2d" builtin="checker" rgb1="0.1 0.2 0.3" rgb2="0.2 0.3 0.4" width="300" height="300"/>
     <material name="grid" texture="grid" texrepeat="8 8" reflectance="0.2"/>
+    <!-- TERRAIN heightfield: flat by default (0 data); env.domain_randomize sets
+         per-env terrain (terrain.py). {TN}x{TN} cells over {TR2:.0f}x{TR2:.0f} m, z up to {TZ} m.
+         Robot spawns on a flat center pad, terrain roughens outward. -->
+    <hfield name="terrain" nrow="{TN}" ncol="{TN}" size="{TR} {TR} {TZ} 0.02"/>
   </asset>
 
   <worldbody>
     <light pos="0 0 3" dir="0 0 -1" directional="true"/>
-    <geom name="floor" type="plane" size="0 0 0.05" material="grid" contype="1" conaffinity="1" friction="1.2 0.02 0.001"/>
+    <geom name="floor" type="hfield" hfield="terrain" material="grid" contype="1" conaffinity="1" friction="1.2 0.02 0.001"/>
 
     <body name="trunk" pos="0 0 0.17">
       <freejoint name="root"/>

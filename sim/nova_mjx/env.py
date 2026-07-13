@@ -3,14 +3,20 @@
 MJX (GPU-parallel MuJoCo) + Brax PipelineEnv, structured like the official MJX
 Barkour tutorial so it trains on a free Colab GPU.
 
-Robustness (so the trained policy holds up to real-world failures — a stumble,
-a slip, a shove, sensor noise, an off-nominal build):
-  * observation noise on every sensor group (real IMU/encoders are noisy),
-  * randomized start velocity + joint pose (recover from perturbed states),
-  * mid-episode random PUSHES (velocity kicks) — trains fall recovery,
-  * a feet-air-time reward for a real stepping gait (not a shuffle/drag),
-  * wide domain randomization (`domain_randomize`): friction, per-link mass,
-    joint gains. Also lets you train before the final masses are measured.
+Real-world readiness (so the policy survives the sim-to-real gap):
+  * OBSERVATION HISTORY — the policy sees the last HIST proprioceptive frames,
+    not one. Real robots have latency + noise, so a single frame under-
+    determines the state; a short history lets the policy infer velocity,
+    ground contact, and latency. Single biggest transfer lever after actuator
+    fidelity, and it removes the need for foot-contact sensors NOVA doesn't
+    have — contact is inferable from the joint-vel history (so the obs uses
+    ONLY signals the real robot can produce: IMU + servo feedback + command).
+  * sensor realism — per-group noise + a per-episode IMU GYRO BIAS (the real
+    ICM-42688-P has a bias, not just noise).
+  * randomized start, mid-episode PUSHES (fall recovery), a feet-air-time gait
+    reward, jerk + stand-still penalties (smooth, no-shuffle = less servo wear
+    + better transfer), and wide domain randomization (friction/mass/gains/
+    latency). DR + measured params before hardware = the transfer recipe.
 """
 import jax
 import jax.numpy as jp
@@ -23,9 +29,12 @@ from etils import epath
 DEFAULT_POSE = jp.array([0.0, 0.6, -1.2] * 4)          # stand keyframe joints
 ACTION_SCALE = 0.4                                     # rad, target = default + a*scale
 STAND_HEIGHT = 0.17
+HIST = 3                                               # proprioceptive frames stacked
+PROP = 30                                              # per-frame: gyro3+grav3+jpos12+jvel12
 
 # observation noise (1-sigma) per group — matches real STS3215/IMU order of mag
 N_GYRO, N_GRAV, N_JPOS, N_JVEL = 0.2, 0.05, 0.02, 1.5
+GYRO_BIAS = 0.05                                       # per-episode constant IMU bias (rad/s)
 
 LEG_NAMES = ["FL", "FR", "RL", "RR"]
 
@@ -54,7 +63,7 @@ class NovaJoystick(PipelineEnv):
         return jax.random.uniform(rng, (3,), minval=self._cmd_lo, maxval=self._cmd_hi)
 
     def reset(self, rng):
-        rng, kc, kv, kj, ko, kd = jax.random.split(rng, 6)
+        rng, kc, kv, kj, ko, kd, kb = jax.random.split(rng, 7)
         q = self.sys.qpos0.at[7:].set(
             self._default_pose + jax.random.uniform(kj, (self._nu,), minval=-0.1, maxval=0.1))
         qd = jp.zeros(self.sys.nv)
@@ -63,13 +72,19 @@ class NovaJoystick(PipelineEnv):
         pipeline_state = self.pipeline_init(q, qd)
         info = {
             "rng": rng, "cmd": self.sample_command(kc),
-            "last_act": jp.zeros(self._nu), "feet_air": jp.zeros(4),
+            "last_act": jp.zeros(self._nu), "last_act2": jp.zeros(self._nu),
+            "feet_air": jp.zeros(4),
+            # per-episode IMU gyro bias (constant offset, not just noise)
+            "gyro_bias": jax.random.uniform(kb, (3,), minval=-GYRO_BIAS, maxval=GYRO_BIAS),
             # control latency: apply the action `delay` steps late (bus round-trip)
             "act_hist": jp.zeros((self._max_delay, self._nu)),
             "delay": jax.random.randint(kd, (), 0, self._max_delay),
+            "prop_hist": jp.zeros((HIST, PROP)),
             "step": 0,
         }
-        obs = self._get_obs(pipeline_state, info, ko)
+        frame = self._prop_frame(pipeline_state, info, ko)
+        info["prop_hist"] = jp.tile(frame, (HIST, 1))     # fill history with frame 0
+        obs = self._get_obs(info)
         metrics = {"track": 0.0, "air": 0.0, "height": 0.0, "energy": 0.0}
         return State(pipeline_state, obs, jp.zeros(()), jp.zeros(()), metrics, info)
 
@@ -115,67 +130,83 @@ class NovaJoystick(PipelineEnv):
         height_pen = (height - STAND_HEIGHT) ** 2
         z_pen = xd.vel[0, 2] ** 2
         act_rate = jp.sum((action - info["last_act"]) ** 2)
+        # jerk: 2nd difference of actions -> smoother motion, less servo wear
+        jerk = jp.sum((action - 2 * info["last_act"] + info["last_act2"]) ** 2)
         energy = jp.sum(action ** 2)
+        # stand still when idle: no shuffling when the command is ~zero
+        joint_vel = pipeline_state.qd[6:]
+        idle = jp.sum(cmd ** 2) < 0.02
+        stand = jp.where(idle, jp.sum(joint_vel ** 2), 0.0)
 
         reward = (1.5 * track + 0.4 * air_rew + 0.1
                   - 0.6 * upright - 4.0 * height_pen - 0.4 * z_pen
-                  - 0.02 * act_rate - 2e-3 * energy)
+                  - 0.02 * act_rate - 2e-3 * energy
+                  - 0.01 * jerk - 5e-4 * stand)
         reward = jp.clip(reward, -10.0, 10.0)
         done = jp.where((height < 0.08) | (up[2] < 0.4), 1.0, 0.0)
 
+        # push the new proprioceptive frame into the history buffer (newest first)
+        frame = self._prop_frame(pipeline_state, info, ko)
+
         info["rng"] = rng
+        info["last_act2"] = info["last_act"]
         info["last_act"] = action
         info["act_hist"] = hist
         info["feet_air"] = air
+        info["prop_hist"] = jp.concatenate([frame[None], info["prop_hist"][:-1]], axis=0)
         info["step"] += 1
         info["cmd"] = jp.where(info["step"] % 250 == 0,
                                self.sample_command(ka), cmd)
-        obs = self._get_obs(pipeline_state, info, ko)
+        obs = self._get_obs(info)
         state.metrics.update(track=track, air=air_rew, height=height, energy=energy)
         return state.replace(pipeline_state=pipeline_state, obs=obs,
                              reward=reward, done=done, info=info)
 
-    def _get_obs(self, pipeline_state, info, rng):
+    def _prop_frame(self, pipeline_state, info, rng):
+        """One PROP-d proprioceptive frame — ONLY signals the real robot can
+        produce: IMU gyro (+ per-episode bias) + projected gravity + servo joint
+        pos/vel. Plus per-group noise. No foot contacts (NOVA has no foot
+        sensors — contact is inferable from the joint-vel history)."""
         quat = pipeline_state.q[3:7]
         qinv = math.quat_inv(quat)
-        ang_vel = math.rotate(pipeline_state.xd.ang[0], qinv)
+        ang_vel = math.rotate(pipeline_state.xd.ang[0], qinv) + info["gyro_bias"]
         proj_grav = math.rotate(jp.array([0.0, 0.0, -1.0]), qinv)
         joints = pipeline_state.q[7:] - self._default_pose
         joint_vel = pipeline_state.qd[6:]
-        foot_z = pipeline_state.x.pos[self._foot_ids, 2]
-        contact = (foot_z < 0.025).astype(jp.float32)
-
-        clean = jp.concatenate([
-            ang_vel * 0.25, proj_grav,
-            info["cmd"] * jp.array([2.0, 2.0, 0.25]),
-            joints, joint_vel * 0.05, info["last_act"], contact,
-        ])
-        # sensor noise (robust to real IMU/encoder noise)
+        frame = jp.concatenate([ang_vel * 0.25, proj_grav, joints, joint_vel * 0.05])
         k1, k2, k3, k4 = jax.random.split(rng, 4)
         noise = jp.concatenate([
             jax.random.normal(k1, (3,)) * N_GYRO * 0.25,
             jax.random.normal(k2, (3,)) * N_GRAV,
-            jp.zeros(3),                                    # command: no noise
             jax.random.normal(k3, (12,)) * N_JPOS,
             jax.random.normal(k4, (12,)) * N_JVEL * 0.05,
-            jp.zeros(12 + 4),                               # last_act, contact clean
         ])
-        return clean + noise
+        return frame + noise
+
+    def _get_obs(self, info):
+        """Full obs = HIST stacked proprioceptive frames + command + last action
+        (= HIST*PROP + 3 + nu). History gives the policy the memory to infer
+        velocity/contact/latency from real-only sensors."""
+        return jp.concatenate([
+            info["prop_hist"].reshape(-1),
+            info["cmd"] * jp.array([2.0, 2.0, 0.25]),
+            info["last_act"],
+        ])
 
 
 def domain_randomize(sys, rng):
     """Per-env randomization = the sim-to-real bridge. Covers floor friction,
-    per-link mass, and the STS3215 ACTUATOR model: position gain kp, velocity
-    gain kv, and joint damping/friction. The kp/kv/damping ranges are wide
-    placeholders around the nominal model — once you measure a real STS3215 step
-    response, NARROW them around the measured values (that's the biggest
-    remaining transfer-gap closer). Control latency is modeled in the env step
-    (per-env action delay), not here."""
+    per-link mass, the STS3215 ACTUATOR model (kp/kv/damping), and per-env
+    TERRAIN (a heightfield at a random difficulty level — the blind-locomotion
+    curriculum: each env trains on its own rough ground, flat spawn pad, so the
+    batch spans flat->rough). Narrow kp/kv/damping around a measured STS3215
+    step response later. Control latency is in the env step (per-env delay)."""
+    from terrain import terrain_field, TERRAIN_MAX
     n = rng.shape[0]
 
     @jax.vmap
     def rand(rng):
-        k1, k2, k3, k4, k5 = jax.random.split(rng, 5)
+        k1, k2, k3, k4, k5, kt = jax.random.split(rng, 6)
         friction = jax.random.uniform(k1, (), minval=0.6, maxval=1.4)
         geom_fr = sys.geom_friction.at[:, 0].set(friction)
         mscale = jax.random.uniform(k2, (sys.nbody,), minval=0.85, maxval=1.15)
@@ -186,9 +217,13 @@ def domain_randomize(sys, rng):
         # joint damping (all dofs; base freejoint dofs 0..5 unchanged)
         damp = sys.dof_damping * jax.random.uniform(
             k5, (sys.nv,), minval=0.5, maxval=1.7)
-        return geom_fr, body_mass, kp, kv, damp
+        # per-env terrain at a random difficulty level (implicit curriculum)
+        kt1, kt2 = jax.random.split(kt)
+        level = jax.random.uniform(kt2, (), minval=0.0, maxval=TERRAIN_MAX)
+        hfield = terrain_field(kt1, level)
+        return geom_fr, body_mass, kp, kv, damp, hfield
 
-    geom_fr, body_mass, kp, kv, damp = rand(rng)
+    geom_fr, body_mass, kp, kv, damp, hfield = rand(rng)
 
     # position actuator: gainprm[:,0]=kp ; biasprm[:,1]=-kp, biasprm[:,2]=-kv
     gainprm = sys.actuator_gainprm[None].repeat(n, axis=0).at[:, :, 0].set(kp)
@@ -198,11 +233,11 @@ def domain_randomize(sys, rng):
     in_axes = jax.tree_util.tree_map(lambda x: None, sys)
     in_axes = in_axes.tree_replace({
         "geom_friction": 0, "body_mass": 0, "actuator_gainprm": 0,
-        "actuator_biasprm": 0, "dof_damping": 0,
+        "actuator_biasprm": 0, "dof_damping": 0, "hfield_data": 0,
     })
     sys = sys.tree_replace({
         "geom_friction": geom_fr, "body_mass": body_mass,
         "actuator_gainprm": gainprm, "actuator_biasprm": biasprm,
-        "dof_damping": damp,
+        "dof_damping": damp, "hfield_data": hfield,
     })
     return sys, in_axes

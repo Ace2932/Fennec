@@ -18,11 +18,15 @@
     <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512"/>
     <texture name="grid" type="2d" builtin="checker" rgb1="0.1 0.2 0.3" rgb2="0.2 0.3 0.4" width="300" height="300"/>
     <material name="grid" texture="grid" texrepeat="8 8" reflectance="0.2"/>
+    <!-- TERRAIN heightfield: flat by default (0 data); env.domain_randomize sets
+         per-env terrain (terrain.py). 40x40 cells over 5x5 m, z up to 0.2 m.
+         Robot spawns on a flat center pad, terrain roughens outward. -->
+    <hfield name="terrain" nrow="40" ncol="40" size="2.5 2.5 0.2 0.02"/>
   </asset>
 
   <worldbody>
     <light pos="0 0 3" dir="0 0 -1" directional="true"/>
-    <geom name="floor" type="plane" size="0 0 0.05" material="grid" contype="1" conaffinity="1" friction="1.2 0.02 0.001"/>
+    <geom name="floor" type="hfield" hfield="terrain" material="grid" contype="1" conaffinity="1" friction="1.2 0.02 0.001"/>
 
     <body name="trunk" pos="0 0 0.17">
       <freejoint name="root"/>

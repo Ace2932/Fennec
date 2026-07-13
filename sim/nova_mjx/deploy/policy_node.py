@@ -18,8 +18,8 @@ each is a real transfer-critical detail, not boilerplate:
   ⛏ IMU frame — gyro must be body-frame rad/s in the URDF trunk frame; proj_grav
     = gravity down expressed in that frame (from the IMU orientation, or
     normalize accel at low motion). Align the ICM axes to the URDF trunk axes.
-  ⛏ FOOT CONTACT — no foot sensors: estimate (servo load/velocity threshold) or
-    retrain the policy without the 4 contact obs. Zeros here = a domain shift.
+  ✓ FOOT CONTACT — no longer an obs (the policy infers contact from the joint-
+    velocity HISTORY), so NOVA's lack of foot sensors is a non-issue now.
   ⛏ SAFETY — gate on /safety_state (motion_enabled), clamp targets to the joint
     limits, RAMP from the measured current pose to default on start (never snap),
     and bring up on a harness first.
@@ -49,7 +49,6 @@ class PolicyNode(Node):
         self._jvel = np.zeros(self.pol.nu, np.float32)
         self._gyro = np.zeros(3, np.float32)
         self._grav = np.array([0, 0, -1], np.float32)
-        self._contact = np.zeros(4, np.float32)
         self._cmd = np.zeros(3, np.float32)
         self._motion_ok = False
 
@@ -92,7 +91,7 @@ class PolicyNode(Node):
 
     def _tick(self):
         target = self.pol.joint_targets(
-            self._gyro, self._grav, self._cmd, self._jpos, self._jvel, self._contact)
+            self._gyro, self._grav, self._cmd, self._jpos, self._jvel)
         # ⛏ clamp to joint limits; ⛏ ramp from current pose on enable; ⛏ rad->ticks
         if not self._motion_ok:
             self.pol.reset()                       # hold last_action clean while disabled
