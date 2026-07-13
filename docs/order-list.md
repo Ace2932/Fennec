@@ -342,6 +342,35 @@ only sink is the bulk caps (1 J into 5000 µF from 7.5 V ≈ 21 V rail — over 
 - Using Bambu's liquid glue on textured PEI for PA6-CF adhesion
 - ⚠️ Bambu's stock liquid glue is generic-purpose, not nylon-specific. **Print-test before committing to batch:** if PA6-CF first layer doesn't bond well, fallback to Magigoo PA (~$15) or similar PA-specific adhesion product.
 
+### Leg servo screws — M2/M2.5, 6 lengths — ~$18 🆕 ORDER (none owned)
+Spec + verification: `docs/fastener-schedule.md` §"leg_v6 STS3215 servo screws"
+(MEASURED 2026-07-11). Also BOM.md:161. **12 active servos (4 HAA + 4 HFE +
+4 KFE), 3 fastener families each = 144 screws** (self-consistent at 12/servo).
+
+**Cross-ref — nothing owned covers these:** the ✅-ordered **M3/M4/M5/M6
+stainless hex kit** starts at M3; every leg servo screw is **M2 or M2.5** →
+zero overlap. Owned brass M3×20 ×50 + M3 kit are all M3+ chassis hardware.
+So **order the whole set.**
+
+| Screw | Qty | Joint | Head / note | Own? |
+|---|---|---|---|---|
+| **M2×22 self-tap** | 40 | case-mount: HAA + KFE + HFE-near pair (*seats the servo in the pocket*) | CSK; ⚠ **stock case screws confirmed too short** | ❌ |
+| **M2×25 self-tap** | 8 | case-mount: HFE-far pair only (femur LA-6 ramp, floor +4.4mm) | CSK; capped at 25 (else bottoms the ~19.9mm column) | ❌ |
+| **M2.5×5** | 16 | horn (HFE, thinner LA-7 backing) | SHCS/button, no c'bore | ❌ |
+| **M2.5×6** | 32 | horn (HAA + KFE) | SHCS/button, no c'bore | ❌ |
+| **M2.5×8** | 32 | wheel (HFE + KFE) | SHCS, Ø5.2 c'bore; ⚠ only ~0.75mm disc engagement (tightest joint) | ❌ |
+| **M2.5×14** | 16 | wheel (HAA, long shoulder boss reach) | SHCS, Ø5.2 c'bore; uncommon length | ❌ |
+| stock retention (center) | 12 | horn center | factory-installed with the servo | ✅ don't source |
+
+**+~10% spares per length** (self-tap plastic-thread wear + thin wheel-disc grip).
+
+**3 buys:**
+1. **M2 self-tap** covering **22 + 25mm** (plastic/sheet-metal self-tap — bites the servo's plastic case columns). *Near-term blocker: the M2×22 is what seats the servo in the coax for the current fit test.*
+2. **M2.5 SHCS assortment** — covers **5 / 6 / 8mm** in one kit.
+3. **M2.5×14** separately (rarely in assortments).
+
+⚠ **Before ordering:** glance in the Waveshare/Feetech servo hardware bag — no verified stock length was found for the M2.5 horn/wheel screws; the factory *center* screw is the only reliable one. ⚠ Lengths are measured off the **current** STLs; re-check grip on a current-design print before final torque (esp. the M2.5×8 wheel).
+
 ---
 
 ## 5. Display
