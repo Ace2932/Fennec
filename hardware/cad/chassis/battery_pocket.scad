@@ -235,9 +235,11 @@ module battery_pocket() {
         //  through the shoulder flange's bottom-center notch (s_x +/-10 to
         //  trunk z 12, shoulder.scad rev) to the MRBF block inside.)
         // strap under-pack groove: strap wraps the pack INSIDE the rear
-        // opening; groove across the bottom lets it pass under the pack
-        translate([-77, -CAV_Y - WALL - EPS, CAV_Z0 - 2])
-            cube([16, 2 * (CAV_Y + WALL) + 2 * EPS, 2 + EPS]);
+        // opening; groove across the bottom lets it pass under the pack.
+        // #71 fix (2026-07-12): 2->1.2mm deep so the tray floor stays 2.0mm
+        // (was 1.18mm, thin under the 510g pack); 1.2 still clears a ~1mm strap.
+        translate([-77, -CAV_Y - WALL - EPS, CAV_Z0 - 1.2])
+            cube([16, 2 * (CAV_Y + WALL) + 2 * EPS, 1.2 + EPS]);
 
         // skid-rail key recesses (backlog #15, skid_rail.scad): 0.6 deep
         // in the 3.2 bottom (2.6 remains — pack load spreads over the

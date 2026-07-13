@@ -540,6 +540,95 @@ def l2_box():
                     L2_SEAT_TOP + 0.1, L2_SEAT_TOP + 63.5)
 
 
+# ---- floor-thickness gate (#67/#70 blind-spot, 2026-07-12) ------------------
+# A blind heat-set bore must leave a floor >= the material minimum between its
+# bottom and the next exterior/cavity, or the insert blows through on the
+# heat-press. Min by bore dia: M3 (Ø4) -> 1.5mm, M2 (Ø3) -> 1.0mm (fastener-
+# schedule.md). Registry = the audit-known bores; extend as bores are added.
+# (part, mouth xyz, axis-INTO-part, bore depth, bore dia, label)
+FLOOR_MIN = {4.0: 1.5, 3.0: 1.0}
+# known-constrained thin floors: WARN (documented), don't fail the gate. A NEW
+# thin floor (not listed) DOES fail -> regressions are caught.
+ACCEPTED_THIN = {('l2_adapter.stl', 'crown-mount')}  # #70b: 5mm plate + L2 on
+    # top + bolt from below -> can't thicken either way; already short insert.
+    # Design decision pending (M3x3 insert vs plate redesign).
+FLOOR_BORES = [
+    ('head.stl',          (77,  10, 131),   (0, 0, -1), 4.2, 4.0, 'ear-pad'),
+    ('head.stl',          (77, -10, 131),   (0, 0, -1), 4.2, 4.0, 'ear-pad'),
+    ('head.stl',          (83,  10, 131),   (0, 0, -1), 4.2, 4.0, 'ear-pad'),
+    ('head.stl',          (83, -10, 131),   (0, 0, -1), 4.2, 4.0, 'ear-pad'),
+    ('l2_adapter.stl',    (114,  9, 128),   (0, 0,  1), 4.2, 4.0, 'crown-mount'),
+    ('l2_adapter.stl',    (114, -9, 128),   (0, 0,  1), 4.2, 4.0, 'crown-mount'),
+    ('control_pod.stl',   (-96, 23,  95),   (0, 0, -1), 4.0, 3.0, 'oled M2'),
+    ('control_pod.stl',   (-71, 23,  95),   (0, 0, -1), 4.0, 3.0, 'oled M2'),
+    ('battery_pocket.stl',(-35, 27.5, -0.2),(0, 0, -1), 4.2, 4.0, 'pad'),
+    ('battery_pocket.stl',(40,  27.5, -0.2),(0, 0, -1), 4.2, 4.0, 'pad'),
+]
+
+
+def floor_thickness_check():
+    print('-- floor gate (#67/#70): blind heat-set bore floor >= M3 1.5 / M2 1.0 --')
+    bad = False
+    cache = {}
+    for part, mouth, ax, depth, dia, label in FLOOR_BORES:
+        if part not in cache:
+            cache[part] = trimesh.load(part)
+        a = np.asarray(ax, float); a /= np.linalg.norm(a)
+        bot = np.asarray(mouth, float) + depth * a
+        ts = np.arange(0.02, 6.0, 0.02)
+        ins = cache[part].contains(bot + np.outer(ts, a))
+        floor = 0.0
+        for t, i in zip(ts, ins):
+            if i:
+                floor = t
+            else:
+                break
+        # 0.05mm tolerance absorbs the scan step + print slop so an AT-spec
+        # floor (e.g. the M2 1.0mm minimum) isn't false-flagged.
+        thr = FLOOR_MIN[dia]
+        ok = floor >= thr - 0.05
+        accepted = (part, label) in ACCEPTED_THIN
+        tag = 'OK   ' if ok else ('WARN ' if accepted else 'THIN ')
+        if not ok and not accepted:
+            bad = True
+        print(f"{tag} {part} {label} @ {tuple(mouth)}: "
+              f"floor {floor:.2f}mm (need >= {thr})"
+              + ('  [#70b known-constrained]' if not ok and accepted else ''))
+    return bad
+
+
+# ---- cross-family fastener-overlap gate (#68, blind-spot #3) ----------------
+# Two DIFFERENT fastener families on one part must not collide: no fastener of
+# family A within (rA + rB) of one from family B. #68: the battery csk (Ø6.8
+# head) overlapped the mezzanine standoff foot (Ø5) on floor_plate -- each
+# family was internally fine, nothing checked A-vs-B. Pure position+radius,
+# no mesh. STANDOFF_XY / STANDOFF_R_CORNERS reused from case 11f above.
+BAT_XY = [(bx, sy * 27.5) for bx in (-35, 0, 40) for sy in (1, -1)]  # floor_plate
+                          # BAT_X/BAT_Y (#68: -x col now -35); Ø6.8 csk head r3.4
+FASTENER_FAMILIES = [
+    ('floor_plate', [('battery-csk',   BAT_XY,      3.4),
+                     ('mezz-standoff', STANDOFF_XY, STANDOFF_R_CORNERS)]),
+]
+
+
+def cross_family_check():
+    print('-- cross-family fastener gate (#68): family-A vs family-B >= rA+rB --')
+    bad = False
+    for part, fams in FASTENER_FAMILIES:
+        for i in range(len(fams)):
+            for j in range(i + 1, len(fams)):
+                na, pa, ra = fams[i]
+                nb, pb, rb = fams[j]
+                need = ra + rb
+                worst = min(float(np.hypot(ax - bx, ay - by))
+                            for ax, ay in pa for bx, by in pb)
+                ok = worst >= need - 1e-6
+                bad |= not ok
+                print(f"{'OK   ' if ok else 'CLASH'} {part}: {na} <-> {nb} "
+                      f"min {worst:.2f}mm (need >= {need:.2f})")
+    return bad
+
+
 def main():
     bad = False
     riser = trimesh.load('riser_bay.stl')
@@ -1341,6 +1430,8 @@ def main():
           'so it drops through the -Y CASE_SLOT to the bay (#38, jetson_cowl '
           'retired); verify the bundle fit + drop-to-boards at wiring.')
 
+    bad |= floor_thickness_check()
+    bad |= cross_family_check()
     sys.exit(1 if bad else 0)
 
 

@@ -33,9 +33,11 @@
 //     rear-wall rib onto the flat deck; REAR pair unchanged at x146 (sy 4.8).
 //     Minimal shoulder-mesh addition (4 blind pockets on the deck top only)
 //     -> both shoulders (front/rear, same print) stay gate-clean.
-//   - REAR VERTICAL FACE at x121 rising z83.55..106, 4x M3 HEAT-SETS (from its
-//     rear face); the head's rear boss bolts FROM BEHIND into them (M3x14).
-//     Tall bolt rectangle (z89 & z100, y+-11) resists the fwd-tipping moment.
+//   - REAR VERTICAL FACE at x121 rising z83.55..106: the head's rear boss bolts
+//     to it. #72 fix (2026-07-12): the M3 HEAT-SETS live in the HEAD BOSS, not
+//     this wall (see head.scad) -- this wall carries only the M3 clearance
+//     shank + a rear head counterbore. Tall bolt rectangle (z89 & z100, y+-11)
+//     resists the fwd-tipping moment.
 //   - GUSSETS fore+aft tie the face to the base plate.
 // PRINT: base-down (deck face on the bed); the wall + gussets rise. PA6-CF.
 //   4mm walls. No overhangs needing support beyond the gusset undersides.
@@ -49,7 +51,12 @@ HEATSET_L = 6.0;
 DECK_TOP = 79.55;
 
 // ---- base plate on the deck (center spine, clears window + horn flanges) ----
-BASE = [107, 150, -22, 22];       // x0 x1 y0 y1 (CR-5: widened +-21 -> +-22)
+BASE = [107, 150, -22.5, 22.5];   // x0 x1 y0 y1 (CR-5: +-21->+-22; #69 fix
+                                   // 2026-07-12: +-22->+-22.5 lifts the x117
+                                   // bolt edge margin 0.3->0.8mm. Capped at 22.5:
+                                   // MEASURED 22.8 left only 0.15mm to the shoulder
+                                   // horn flange (too tight for 2 printed parts);
+                                   // 22.5 keeps a safe ~0.45mm flange gap.)
 BASE_T = 4;                        // z79.55..83.55
 // deck-through bolts: M3x8 SHCS driven from the bracket top through the base
 // M3_CLEAR holes into M3x3.8 brass heat-sets pressed into the shoulder deck
