@@ -112,6 +112,20 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 
 **v1 scope: 12 active servos** (4 hip + 8 femur/tibia). Arm (6× STS3215) deferred to Phase 4 — kept on shelf, bus IDs 13-18 reserved, arm-rail PCB footprint reserved.
 
+> **Naming — STS3215 = ST3215 (same part).** The BOM says "STS3215" (Feetech's
+> name for the magnetic-encoder serial-bus servo); the hardware on hand is
+> Waveshare-branded **"ST3215"** — Feetech is the OEM, Waveshare rebadges it.
+> Same servo. Don't order a different part when a listing says "ST3215".
+>
+> **Variant: standard C001, 1:345 gear** (bench-confirmed 2026-07-14 — no-load
+> speed matches 1:345, not the faster low-torque **ST3215-HS**; same variant as
+> the SO-ARM101 arm servos). One servo, torque/speed set by rail voltage:
+> **19.5 kg·cm @7.4V** (legs, 1.91 N·m) / **30 kg·cm @12V** (hips, 2.94 N·m);
+> no-load 45 RPM @12V (4.71 rad/s), ~2.8 rad/s @7.5V; 6–12.6 V; 4096-count
+> magnetic encoder on the output shaft; **60 g measured** (datasheet 69 g incl
+> horn+cable). Full actuator characterization (gains, deadband 0.88°, backlash
+> 0.87°, ~75 ms latency, torque-speed): `docs/bench/README.md`.
+
 | Item | Price | Status |
 |------|-------|--------|
 | STS3215 12V 30kg × 4 (hips) | $120 | ✅ Ordered — bus IDs 1-4 |
