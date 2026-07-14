@@ -49,3 +49,24 @@ s1_step{up60,dn60}_load201_r57.csv · static hold: load_raw ≈ 1048 @ 0.11 N·m
   mount orientation in each leg (mirrored L/R legs flip it) — finalize during
   on-robot homing. JointMap default: home_tick=2048, direction from mount.
 - 4096 cnt/rev, RAW_PER_RAD = 4096/(2*pi) = 651.9.
+
+## Datasheet (Waveshare ST3215) — hip servo modelable WITHOUT a bench swap
+ST3215 is ONE servo; torque/speed set by rail voltage (waveshare.com/st3215-servo.htm):
+| spec | 7.4V leg rail | 12V hip rail |
+|------|--------------|--------------|
+| stall torque | 19.5 kg·cm = 1.91 N·m | 30 kg·cm = 2.94 N·m |
+| no-load speed | ~28 RPM ≈ 2.8 rad/s | 45 RPM (0.222 s/60°) = 4.71 rad/s |
+| stall / no-load current | — | 2.7 A / 180 mA |
+| weight | 69 g | 69 g · op 6–12.6 V |
+
+**Cross-validation:** bench peak 1800 raw @7.5V; Feetech speed unit = steps/s →
+1800/4096·2π = 2.76 rad/s ≈ datasheet 7.4V no-load (~2.8). Datasheet + bench agree,
+and confirms raw-speed = steps/s. Hip = same servo at 12V + shared control loop
+(PID 32/32/0, ~75 ms deadtime) already measured → no 12V bench swap needed.
+
+### Sim refinements this surfaced (computer-only TODO)
+1. `build_mjcf` has NO joint velocity limit (`VEL=6.0` is dead code). Real caps:
+   2.8 rad/s legs / 4.7 rad/s hips. Add a speed-governor/vel-limit so the policy
+   can't learn unachievable joint speeds (sim2real). EFF_LEG=1.8 / EFF_HIP=2.9 ≈
+   datasheet stall (1.91 / 2.94) — good.
+2. `compute_inertials.SERVO_MASS` 60 → 69 g (datasheet) until a real servo is weighed.
