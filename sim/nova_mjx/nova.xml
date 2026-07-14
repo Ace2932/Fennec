@@ -38,15 +38,15 @@
 
       <body name="FL_hip" pos="0.1412 0.0390 0.0380">
         <joint name="FL_haa" axis="1 0 0" range="-0.2620 0.6980"/>
-        <inertial pos="0.00710 +0.02000 -0.00800" mass="0.0873" diaginertia="4.4520e-05 2.2750e-05 3.5520e-05"/>
+        <inertial pos="0.00710 +0.02000 -0.00800" mass="0.0836" diaginertia="4.0990e-05 2.1200e-05 3.2550e-05"/>
         <geom type="capsule" fromto="0 0 0 0 0.0338 -0.0095" size="0.013" class="viz"/>
         <body name="FL_upper" pos="0 0.0338 -0.0095">
           <joint name="FL_hfe" axis="0 1 0" range="-1.5010 0.8730"/>
-          <inertial pos="0.00000 +0.00650 -0.05070" mass="0.1313" diaginertia="8.3660e-05 7.4730e-05 2.9070e-05"/>
+          <inertial pos="0.00000 +0.00650 -0.05070" mass="0.1219" diaginertia="7.4860e-05 6.6490e-05 2.6670e-05"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1069" size="0.013" class="viz"/>
           <body name="FL_lower" pos="0 0 -0.1069">
             <joint name="FL_kfe" axis="0 1 0" range="-1.9000 1.9000"/>
-            <inertial pos="-0.00050 +0.01010 -0.06560" mass="0.1312" diaginertia="1.3330e-04 1.2250e-04 2.8090e-05"/>
+            <inertial pos="-0.00050 +0.01010 -0.06560" mass="0.1110" diaginertia="1.0060e-04 9.1500e-05 2.3210e-05"/>
             <geom type="capsule" fromto="0 0 0 0 0.0305 -0.1290" size="0.011" class="viz"/>
             <body name="FL_foot" pos="0 0.0305 -0.1290">
               <inertial pos="0.00000 +0.00000 0.00000" mass="0.0039" diaginertia="2.1160e-07 5.6020e-07 5.7630e-07"/>
@@ -57,15 +57,15 @@
       </body>
       <body name="FR_hip" pos="0.1412 -0.0390 0.0380">
         <joint name="FR_haa" axis="1 0 0" range="-0.6980 0.2620"/>
-        <inertial pos="0.00710 -0.02000 -0.00800" mass="0.0873" diaginertia="4.4520e-05 2.2750e-05 3.5520e-05"/>
+        <inertial pos="0.00710 -0.02000 -0.00800" mass="0.0836" diaginertia="4.0990e-05 2.1200e-05 3.2550e-05"/>
         <geom type="capsule" fromto="0 0 0 0 -0.0338 -0.0095" size="0.013" class="viz"/>
         <body name="FR_upper" pos="0 -0.0338 -0.0095">
           <joint name="FR_hfe" axis="0 1 0" range="-1.5010 0.8730"/>
-          <inertial pos="0.00000 -0.00650 -0.05070" mass="0.1313" diaginertia="8.3660e-05 7.4730e-05 2.9070e-05"/>
+          <inertial pos="0.00000 -0.00650 -0.05070" mass="0.1219" diaginertia="7.4860e-05 6.6490e-05 2.6670e-05"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1069" size="0.013" class="viz"/>
           <body name="FR_lower" pos="0 0 -0.1069">
             <joint name="FR_kfe" axis="0 1 0" range="-1.9000 1.9000"/>
-            <inertial pos="-0.00050 -0.01010 -0.06560" mass="0.1312" diaginertia="1.3330e-04 1.2250e-04 2.8090e-05"/>
+            <inertial pos="-0.00050 -0.01010 -0.06560" mass="0.1110" diaginertia="1.0060e-04 9.1500e-05 2.3210e-05"/>
             <geom type="capsule" fromto="0 0 0 0 -0.0305 -0.1290" size="0.011" class="viz"/>
             <body name="FR_foot" pos="0 -0.0305 -0.1290">
               <inertial pos="0.00000 -0.00000 0.00000" mass="0.0039" diaginertia="2.1160e-07 5.6020e-07 5.7630e-07"/>
@@ -76,15 +76,15 @@
       </body>
       <body name="RL_hip" pos="-0.1412 0.0390 0.0380">
         <joint name="RL_haa" axis="1 0 0" range="-0.2620 0.6980"/>
-        <inertial pos="0.00710 +0.02000 -0.00800" mass="0.0873" diaginertia="4.4520e-05 2.2750e-05 3.5520e-05"/>
+        <inertial pos="0.00710 +0.02000 -0.00800" mass="0.0836" diaginertia="4.0990e-05 2.1200e-05 3.2550e-05"/>
         <geom type="capsule" fromto="0 0 0 0 0.0338 -0.0095" size="0.013" class="viz"/>
         <body name="RL_upper" pos="0 0.0338 -0.0095">
           <joint name="RL_hfe" axis="0 1 0" range="-1.5010 0.8730"/>
-          <inertial pos="0.00000 +0.00650 -0.05070" mass="0.1313" diaginertia="8.3660e-05 7.4730e-05 2.9070e-05"/>
+          <inertial pos="0.00000 +0.00650 -0.05070" mass="0.1219" diaginertia="7.4860e-05 6.6490e-05 2.6670e-05"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1069" size="0.013" class="viz"/>
           <body name="RL_lower" pos="0 0 -0.1069">
             <joint name="RL_kfe" axis="0 1 0" range="-1.9000 1.9000"/>
-            <inertial pos="-0.00050 +0.01010 -0.06560" mass="0.1312" diaginertia="1.3330e-04 1.2250e-04 2.8090e-05"/>
+            <inertial pos="-0.00050 +0.01010 -0.06560" mass="0.1110" diaginertia="1.0060e-04 9.1500e-05 2.3210e-05"/>
             <geom type="capsule" fromto="0 0 0 0 0.0305 -0.1290" size="0.011" class="viz"/>
             <body name="RL_foot" pos="0 0.0305 -0.1290">
               <inertial pos="0.00000 +0.00000 0.00000" mass="0.0039" diaginertia="2.1160e-07 5.6020e-07 5.7630e-07"/>
@@ -95,15 +95,15 @@
       </body>
       <body name="RR_hip" pos="-0.1412 -0.0390 0.0380">
         <joint name="RR_haa" axis="1 0 0" range="-0.6980 0.2620"/>
-        <inertial pos="0.00710 -0.02000 -0.00800" mass="0.0873" diaginertia="4.4520e-05 2.2750e-05 3.5520e-05"/>
+        <inertial pos="0.00710 -0.02000 -0.00800" mass="0.0836" diaginertia="4.0990e-05 2.1200e-05 3.2550e-05"/>
         <geom type="capsule" fromto="0 0 0 0 -0.0338 -0.0095" size="0.013" class="viz"/>
         <body name="RR_upper" pos="0 -0.0338 -0.0095">
           <joint name="RR_hfe" axis="0 1 0" range="-1.5010 0.8730"/>
-          <inertial pos="0.00000 -0.00650 -0.05070" mass="0.1313" diaginertia="8.3660e-05 7.4730e-05 2.9070e-05"/>
+          <inertial pos="0.00000 -0.00650 -0.05070" mass="0.1219" diaginertia="7.4860e-05 6.6490e-05 2.6670e-05"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1069" size="0.013" class="viz"/>
           <body name="RR_lower" pos="0 0 -0.1069">
             <joint name="RR_kfe" axis="0 1 0" range="-1.9000 1.9000"/>
-            <inertial pos="-0.00050 -0.01010 -0.06560" mass="0.1312" diaginertia="1.3330e-04 1.2250e-04 2.8090e-05"/>
+            <inertial pos="-0.00050 -0.01010 -0.06560" mass="0.1110" diaginertia="1.0060e-04 9.1500e-05 2.3210e-05"/>
             <geom type="capsule" fromto="0 0 0 0 -0.0305 -0.1290" size="0.011" class="viz"/>
             <body name="RR_foot" pos="0 -0.0305 -0.1290">
               <inertial pos="0.00000 -0.00000 0.00000" mass="0.0039" diaginertia="2.1160e-07 5.6020e-07 5.7630e-07"/>
