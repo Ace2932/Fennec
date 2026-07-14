@@ -70,3 +70,29 @@ and confirms raw-speed = steps/s. Hip = same servo at 12V + shared control loop
    can't learn unachievable joint speeds (sim2real). EFF_LEG=1.8 / EFF_HIP=2.9 ≈
    datasheet stall (1.91 / 2.94) — good.
 2. `compute_inertials.SERVO_MASS` 60 → 69 g (datasheet) until a real servo is weighed.
+
+## Online-sourced characterization (no bench needed) + corrections
+Servo confirmed **60 g MEASURED** (datasheet 69 g includes horn/cable) → compute_inertials
+SERVO_MASS=60 g is CORRECT, no change. Independent STS3215 teardown (robonine.com):
+| property | measured | sim use |
+|----------|----------|---------|
+| backlash | 0.87° (0.015 rad) | joint slop → position DR / obs noise |
+| firmware deadband | **10 counts = 0.88°** | won't move below 0.88° error → small-signal tracking floor |
+| repeatability | ±0.17° (~2 cnt) | matches bench settle |
+| real stall torque | ~35 kg·cm@12V (>30 rated) | margin |
+| speed | 45.6 RPM@100%, 21.9@50% (linear) | confirms 2.8 rad/s @7.5V |
+| thermal | 70°C protect; **±90° sustained overheats ~110 min; 2 kg trips overload** | DUTY limit — gait avoid sustained high torque |
+| gear ratio | 1:345 (C001, = SO-ARM101) | reflected inertia = motor × 345² |
+
+Bus rate: 8-axis daisy-chains run fine; LeRobot/SO-ARM drive 6+ at high rate via
+SYNC read/write → 12 @ 50 Hz is established (protocol supports it). No bench test needed.
+
+⚠ **CORRECTION to any first-order phase-lag reading:** the step response is
+RATE-LIMITED (constant-velocity traverse at ~2.8 rad/s), NOT first-order. Fitting
+tau to settle time (324–541 ms) OVERSTATES lag — the real model is
+**rate-limiter (2.8/4.7 rad/s) + ~75 ms pure delay + 10-count deadband**, not a slow
+lag. Do NOT bake "-140° @1.5 Hz" into the sim; use the rate+delay+deadband model.
+
+Ref: zeroth-robotics/bam-feetech (BAM friction sysID method — pendulum→MuJoCo, reusable
+later; no STS3215 params published yet). Feetech gear variants: C001=1:345 (19.5kg,
+slower, SO-ARM), C044=1:191 (faster) — confirm which SKU NOVA has.
