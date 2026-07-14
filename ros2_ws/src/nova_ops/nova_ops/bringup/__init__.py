@@ -60,9 +60,9 @@ PROFILES = {
             # Compose by reference: load `sensors` profile first.
             ("include_profile", "sensors"),
             ("launch", "point_lio", "mapping_unilidar_l2.launch.py", {}),
-            # robot_state_publisher needs the URDF — wired up once URDF lands.
-            # ('node', 'robot_state_publisher', 'robot_state_publisher',
-            #  {'robot_description': '<file content of nova.urdf.xacro>'}),
+            # robot_state_publisher (URDF landed 2026-07-13) — publishes
+            # /robot_description + the sensor<->base TF tree POINT-LIO needs.
+            ("launch", "nova_description", "robot_state.launch.py", {}),
         ],
     },
     "walk": {
@@ -71,6 +71,9 @@ PROFILES = {
         "actions": [
             ("launch", "nova_ops", "preflight.launch.py", {}),
             ("launch", "nova_ops", "dashcam.launch.py", {}),
+            # robot_state_publisher — /robot_description + /tf for the 3D robot
+            # in Foxglove (and any TF consumer) during gait bring-up.
+            ("launch", "nova_description", "robot_state.launch.py", {}),
             # §10 battery_low -> clean poweroff. Safety-critical: the ONLY
             # nova_ops node not allowed to crash silently.
             ("node", "nova_ops", "battery_shutdown_node", {"_respawn": True}),
