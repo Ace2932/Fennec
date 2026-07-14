@@ -62,7 +62,11 @@ class NovaJoystick(PipelineEnv):
             [mj.body(f"{n}_foot").id - 1 for n in LEG_NAMES])
         self._push_interval = push_interval
         self._push_mag = push_mag
-        self._max_delay = 3            # control-latency buffer depth (0..2 steps)
+        # control-latency buffer. Measured servo command->motion deadtime ~75 ms
+        # (docs/bench); the sim already produces ~32 ms intrinsically (friction
+        # breakaway + deadband + inertia), so the transport delay adds 0..4 steps
+        # (0..80 ms) -> total 32..112 ms, mean ~72 ms, bracketing the real 75 ms.
+        self._max_delay = 5            # delay 0..4 steps @ 50 Hz
 
     def sample_command(self, rng):
         return jax.random.uniform(rng, (3,), minval=self._cmd_lo, maxval=self._cmd_hi)
