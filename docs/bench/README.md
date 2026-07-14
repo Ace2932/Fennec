@@ -38,3 +38,14 @@ s1_step{up60,dn60}_load201_r57.csv · static hold: load_raw ≈ 1048 @ 0.11 N·m
   only near stall (~1.9 N·m ≈ 3.4 kg at this lever — not captured).
 - Load register senses direction (lift 1600 vs drop 500); static hold anchors
   raw→N·m (~1048 raw @ 0.11 N·m).
+
+## Homing convention (measured, servo ID 1)
+- **home_tick = 2048** by construction: Feetech one-key center (`--center`, reg
+  0x28 <- 128) sets present-position = 2048 at the held pose. Home EVERY joint
+  this way at assembly (joint at nominal) -> home_tick is always 2048.
+- **+tick = CLOCKWISE** viewed from the horn/output-shaft side (measured: cmd
+  2048->2388 rotated the arm CW). Fixed STS3215 property.
+- Per-joint `direction` sign = this CW convention combined with the servo's
+  mount orientation in each leg (mirrored L/R legs flip it) — finalize during
+  on-robot homing. JointMap default: home_tick=2048, direction from mount.
+- 4096 cnt/rev, RAW_PER_RAD = 4096/(2*pi) = 651.9.
