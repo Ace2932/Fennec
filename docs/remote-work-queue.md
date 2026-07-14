@@ -15,18 +15,18 @@ L2 orientation, IMU axes, on-robot homing, 12-servo bus timing. See
 Feed the bench+datasheet numbers into the sim BEFORE the big training run.
 Source of truth: `docs/bench/README.md`.
 
-- [ ] **Joint velocity cap** — `build_mjcf` `VEL=6.0` is DEAD CODE (never used).
-      Add a real rate limit: **2.8 rad/s legs, 4.7 rad/s hips** (measured/datasheet
-      no-load). Without it the policy learns joint speeds the servos can't hit.
-      Options: per-joint MuJoCo velocity limit, or model the speed governor.
-- [ ] **Deadband + backlash as joint slop** — firmware deadband **0.88°** (10 cnt)
-      + backlash **0.87°** → add ~±1° joint position noise/bias to `domain_randomize`
-      in `env.py`. Policy must tolerate it (real foot-placement uncertainty).
-- [ ] **Latency** — confirm `env.py` action-delay buffer ≈ **75 ms** (measured
-      command→motion deadtime). Already has a latency buffer; set/tune to 75 ms.
-- [ ] Keep `EFF_LEG=1.8` / `EFF_HIP=2.9` (≈ datasheet stall 1.91 / 2.94). No change.
-- [ ] Do NOT model the servo as a slow first-order lag — it's rate-limited + delay
-      + deadband (see README correction). Guard against re-introducing a tau fit.
+**✅ TIER 0 DONE — PR #91 (2026-07-14), all mujoco-validated.**
+- [x] **Joint velocity cap** — motor torque-speed model: per-joint damping =
+      stall/no_load (caps 2.8 leg / 4.71 hip rad/s even on ballistic swings),
+      kv=0 folded in, frictionloss 0.20 for gravity backdrive. (`VEL` dead code
+      was the symptom; real fix is the torque-speed curve.)
+- [x] **Deadband + backlash** — 0.88° deadband as target-hysteresis in `env.py`
+      + per-episode 0.87° joint_bias in obs (like gyro_bias). Obs shape unchanged.
+- [x] **Latency** — `_max_delay` 3→5; sim intrinsic ~32 ms + transport brackets
+      the real 75 ms.
+- [x] EFF_LEG=1.8 / EFF_HIP=2.9 kept (≈ stall). DR narrowed to measured
+      (kp 25-45, kv 0-0.3, damping 0.8-1.3×).
+- [x] Servo NOT modeled as first-order lag — rate-limit + delay + deadband.
 
 ## Tier 1 — TRAIN (the main event)
 - [ ] **Run PPO on Colab T4** (`train.py`, ~60M steps, 20–40 min) with the Tier-0
@@ -51,12 +51,13 @@ Source of truth: `docs/bench/README.md`.
       contacts, actor real-only. Brax `value_obs_key`. Better deployable policy.
 
 ## Tier 3 — Parallel non-sim (independent)
-- [ ] **PCB v6 power_v2 DRC — 12 violations** (flagged at session start; boards
-      already ORDERED, so a real catch is expensive). Verify benign vs blocking
-      (KiCad + pcb-design skill). See `feedback-kicad-headless`, board memory.
-- [ ] **BOM naming reconcile** — BOM says "STS3215" (Feetech); actual hardware is
-      Waveshare "ST3215" (same OEM part). Confirm the gear variant NOVA has —
-      **C001 = 1:345** (19.5 kg, SO-ARM101) vs C044 = 1:191 (faster). Update BOM.
+- [x] **PCB v6 power_v2 DRC — DONE, PR #93.** All 12 = benign cosmetic (9 lib
+      footprint-mismatch = intentional edits, don't update-from-lib; 3 silk).
+      0 errors, clearance enforced via netclasses. Ordered boards good, no re-spin.
+      Verdict in `hardware/pcb-mods/nova_pcb_v6_power_v2/DRC_REVIEW.md`.
+- [x] **BOM naming reconcile — DONE, PR #94.** STS3215 (Feetech) = ST3215
+      (Waveshare), same OEM part; variant C001 1:345 bench-confirmed. Specs +
+      pointer to `docs/bench/README.md` added to `BOM.md`.
 - [ ] **Firmware unit tests** — bus scheduler + INA226 scaling (software-testable).
       With sync read/write, prototype/validate the 12-servo bus timing model for
       50 Hz (theoretical ~160 Hz; confirm in the Teensy scheduler logic).
