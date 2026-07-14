@@ -32,9 +32,14 @@ LEG = f"{NOVA}/proj/hardware/cad/leg_v6"
 ORIG = f"{NOVA}/original_body_files"
 
 # ---- materials -------------------------------------------------------------
+# CALIBRATED 2026-07-13 from real prints (Bambu slicer estimate confirmed
+# accurate: femur slicer 56.7 g vs MEASURED 57 g). 40%-infill parts print at
+# 0.712 g/cm3 (femur 57 g / 80.1 cm3); the tibia is 25% infill -> 0.586 g/cm3
+# (51 g slicer / 87.0 cm3). Both ~15-30% lighter than the old 0.70 guess.
 RHO_PA6CF = 1.17e-3  # g/mm^3 (1.17 g/cm^3 solid)
-INFILL_LEG = 0.70  # 4 walls + 40% gyroid effective solid fraction
-RHO_LEG = RHO_PA6CF * INFILL_LEG  # effective density for printed legs
+INFILL_LEG = 0.608  # 40% gyroid + 4 walls -> 0.712 g/cm3 (femur-calibrated)
+RHO_LEG = RHO_PA6CF * INFILL_LEG  # 40%-infill parts (coax/femur/knee_arm/shoulder)
+RHO_TIBIA = RHO_PA6CF * 0.501  # tibia only: 25% infill -> 0.586 g/cm3
 RHO_TPU = 1.20e-3 * 0.9  # TPU shoe, ~100% -> near solid
 SERVO_MASS = 60.0  # g, STS3215 (datasheet ~60; URDF had 0.055)
 SERVO_BOX = np.array([45.4, 24.8, 39.6])  # servo bbox mm (measured STL)
@@ -104,7 +109,7 @@ LINKS = [
         R_LEG,
         np.zeros(3),
     ),
-    ("lower", [(f"{LEG}/tibia_R.stl", RHO_LEG, True)], R_LEG, np.zeros(3)),
+    ("lower", [(f"{LEG}/tibia_R.stl", RHO_TIBIA, True)], R_LEG, np.zeros(3)),
     # foot: the TPU shoe STL is in its OWN frame (not the tibia frame) and is a
     # ~4 g contact endpoint -> place its inertia at the foot link origin
     # (R=I, origin=None -> shell centroid so CoM_link ~ 0). Orientation is
