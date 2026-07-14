@@ -35,6 +35,11 @@ PROP = 30                                              # per-frame: gyro3+grav3+
 # observation noise (1-sigma) per group — matches real STS3215/IMU order of mag
 N_GYRO, N_GRAV, N_JPOS, N_JVEL = 0.2, 0.05, 0.02, 1.5
 GYRO_BIAS = 0.05                                       # per-episode constant IMU bias (rad/s)
+# measured STS3215 slop (docs/bench/README.md): firmware deadzone 10 counts =
+# 0.88 deg (no actuation below this position error), gear backlash 0.87 deg.
+JOINT_BIAS = 0.015     # per-episode per-joint position offset (rad, ~0.87 deg) —
+                       # home-cal + backlash bias. Like GYRO_BIAS but for joints.
+DEADBAND = 0.0154      # rad (10 counts) — servo ignores goal changes below this.
 
 LEG_NAMES = ["FL", "FR", "RL", "RR"]
 
@@ -57,13 +62,17 @@ class NovaJoystick(PipelineEnv):
             [mj.body(f"{n}_foot").id - 1 for n in LEG_NAMES])
         self._push_interval = push_interval
         self._push_mag = push_mag
-        self._max_delay = 3            # control-latency buffer depth (0..2 steps)
+        # control-latency buffer. Measured servo command->motion deadtime ~75 ms
+        # (docs/bench); the sim already produces ~32 ms intrinsically (friction
+        # breakaway + deadband + inertia), so the transport delay adds 0..4 steps
+        # (0..80 ms) -> total 32..112 ms, mean ~72 ms, bracketing the real 75 ms.
+        self._max_delay = 5            # delay 0..4 steps @ 50 Hz
 
     def sample_command(self, rng):
         return jax.random.uniform(rng, (3,), minval=self._cmd_lo, maxval=self._cmd_hi)
 
     def reset(self, rng):
-        rng, kc, kv, kj, ko, kd, kb = jax.random.split(rng, 7)
+        rng, kc, kv, kj, ko, kd, kb, kjb = jax.random.split(rng, 8)
         q = self.sys.qpos0.at[7:].set(
             self._default_pose + jax.random.uniform(kj, (self._nu,), minval=-0.1, maxval=0.1))
         qd = jp.zeros(self.sys.nv)
@@ -73,9 +82,13 @@ class NovaJoystick(PipelineEnv):
         info = {
             "rng": rng, "cmd": self.sample_command(kc),
             "last_act": jp.zeros(self._nu), "last_act2": jp.zeros(self._nu),
+            "last_ctrl": self._default_pose,   # effective servo target (deadband)
             "feet_air": jp.zeros(4),
             # per-episode IMU gyro bias (constant offset, not just noise)
             "gyro_bias": jax.random.uniform(kb, (3,), minval=-GYRO_BIAS, maxval=GYRO_BIAS),
+            # per-episode per-joint position bias (home-cal + backlash offset)
+            "joint_bias": jax.random.uniform(kjb, (self._nu,),
+                                             minval=-JOINT_BIAS, maxval=JOINT_BIAS),
             # control latency: apply the action `delay` steps late (bus round-trip)
             "act_hist": jp.zeros((self._max_delay, self._nu)),
             "delay": jax.random.randint(kd, (), 0, self._max_delay),
@@ -97,6 +110,13 @@ class NovaJoystick(PipelineEnv):
         hist = jp.concatenate([action[None], info["act_hist"][:-1]], axis=0)
         applied = hist[info["delay"]]
         ctrl = self._default_pose + applied * ACTION_SCALE
+        # servo firmware DEADBAND: the real STS3215 ignores goal updates smaller
+        # than 10 counts (0.88 deg) -> hold the last effective target (still full
+        # holding torque) unless the new target moves past the deadband. Stops the
+        # policy relying on finer-than-deadband positioning. The residual sag /
+        # sensing uncertainty is covered by the joint obs noise + joint_bias.
+        last_ctrl = info["last_ctrl"]
+        ctrl = jp.where(jp.abs(ctrl - last_ctrl) > DEADBAND, ctrl, last_ctrl)
         pipeline_state = self.pipeline_step(state.pipeline_state, ctrl)
 
         # ---- mid-episode PUSH: kick base xy velocity, learn to recover ----
@@ -151,6 +171,7 @@ class NovaJoystick(PipelineEnv):
         info["rng"] = rng
         info["last_act2"] = info["last_act"]
         info["last_act"] = action
+        info["last_ctrl"] = ctrl
         info["act_hist"] = hist
         info["feet_air"] = air
         info["prop_hist"] = jp.concatenate([frame[None], info["prop_hist"][:-1]], axis=0)
@@ -171,7 +192,10 @@ class NovaJoystick(PipelineEnv):
         qinv = math.quat_inv(quat)
         ang_vel = math.rotate(pipeline_state.xd.ang[0], qinv) + info["gyro_bias"]
         proj_grav = math.rotate(jp.array([0.0, 0.0, -1.0]), qinv)
-        joints = pipeline_state.q[7:] - self._default_pose
+        # joints reported relative to default pose, with a per-episode constant
+        # bias (home-cal + backlash offset) — the policy sees a persistently
+        # offset joint zero, as on the real robot.
+        joints = pipeline_state.q[7:] - self._default_pose + info["joint_bias"]
         joint_vel = pipeline_state.qd[6:]
         frame = jp.concatenate([ang_vel * 0.25, proj_grav, joints, joint_vel * 0.05])
         k1, k2, k3, k4 = jax.random.split(rng, 4)
@@ -199,8 +223,11 @@ def domain_randomize(sys, rng):
     per-link mass, the STS3215 ACTUATOR model (kp/kv/damping), and per-env
     TERRAIN (a heightfield at a random difficulty level — the blind-locomotion
     curriculum: each env trains on its own rough ground, flat spawn pad, so the
-    batch spans flat->rough). Narrow kp/kv/damping around a measured STS3215
-    step response later. Control latency is in the env step (per-env delay)."""
+    batch spans flat->rough). Control latency is in the env step (per-env delay).
+    kp/kv/damping ranges are NARROWED around the measured STS3215 (docs/bench):
+    kp~35 (P=32), kv~0 (control damping folded into the joint torque-speed
+    damping = the velocity cap), damping randomized 0.8-1.3x so the no-load speed
+    cap spans ~+-20% of the real 2.8/4.71 rad/s."""
     from terrain import terrain_field, TERRAIN_MAX
     n = rng.shape[0]
 
@@ -211,12 +238,15 @@ def domain_randomize(sys, rng):
         geom_fr = sys.geom_friction.at[:, 0].set(friction)
         mscale = jax.random.uniform(k2, (sys.nbody,), minval=0.85, maxval=1.15)
         body_mass = sys.body_mass * mscale
-        # servo position gain kp and velocity gain kv (STS3215 model)
-        kp = jax.random.uniform(k3, (sys.nu,), minval=20.0, maxval=50.0)
-        kv = jax.random.uniform(k4, (sys.nu,), minval=0.4, maxval=1.6)
-        # joint damping (all dofs; base freejoint dofs 0..5 unchanged)
+        # servo gains around measured STS3215: kp~35 (P=32), kv~0 (folded into
+        # the joint torque-speed damping); keep a small kv spread for control-
+        # damping uncertainty.
+        kp = jax.random.uniform(k3, (sys.nu,), minval=25.0, maxval=45.0)
+        kv = jax.random.uniform(k4, (sys.nu,), minval=0.0, maxval=0.3)
+        # joint damping = the torque-speed slope (velocity cap); 0.8-1.3x spans
+        # the no-load speed +-20%. base freejoint dofs 0..5 have 0 damping (x0).
         damp = sys.dof_damping * jax.random.uniform(
-            k5, (sys.nv,), minval=0.5, maxval=1.7)
+            k5, (sys.nv,), minval=0.8, maxval=1.3)
         # per-env terrain at a random difficulty level (implicit curriculum)
         kt1, kt2 = jax.random.split(kt)
         level = jax.random.uniform(kt2, (), minval=0.0, maxval=TERRAIN_MAX)

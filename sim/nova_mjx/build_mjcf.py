@@ -30,7 +30,13 @@ KFE_TO_FOOT = (0.0, 0.0305, -0.1290)           # tibia length; y by reflect
 HAA_IN, HAA_OUT = 0.262, 0.698
 HFE_FOLD, HFE_EXT = 0.873, 1.501
 KFE = 1.9
-EFF_HIP, EFF_LEG, VEL = 2.9, 1.8, 6.0          # N*m, N*m, rad/s
+EFF_HIP, EFF_LEG = 2.9, 1.8                     # N*m stall torque (datasheet)
+# No-load speed caps (rad/s): leg 7.5V bench (peak 1800 raw = 2.76), hip 12V
+# datasheet 45 RPM. Enforced as the motor torque-speed slope via per-joint
+# damping d = stall/no_load -> available torque hits 0 at no-load speed, so the
+# joint can't exceed it even on a ballistic swing (docs/bench/README.md).
+VMAX_HIP, VMAX_LEG = 4.71, 2.80                 # rad/s no-load
+DAMP_HIP, DAMP_LEG = EFF_HIP / VMAX_HIP, EFF_LEG / VMAX_LEG   # 0.616, 0.643
 
 # ---- inertials — tools/compute_inertials.py (diagonal, reasoned CoM sign) --
 # (mass kg, com (x, |y|, z) m, diag inertia (ixx,iyy,izz) kg*m^2). y-sign set
@@ -75,15 +81,15 @@ def leg_body(name, sx, sy):
     fy = KFE_TO_FOOT[1] * sy
     return f'''
       <body name="{name}_hip" pos="{sx*MOUNT['x']:.4f} {sy*MOUNT['y']:.4f} {MOUNT['z']:.4f}">
-        <joint name="{name}_haa" axis="1 0 0" range="{haa_range(sy)}"/>
+        <joint name="{name}_haa" axis="1 0 0" range="{haa_range(sy)}" damping="{DAMP_HIP:.3f}"/>
         {inertial(LINK_I['hip'], sy)}
         <geom type="capsule" fromto="0 0 0 0 {hy:.4f} {HAA_TO_HFE[2]:.4f}" size="{R_THIGH}" class="viz"/>
         <body name="{name}_upper" pos="0 {hy:.4f} {HAA_TO_HFE[2]:.4f}">
-          <joint name="{name}_hfe" axis="0 1 0" range="{-HFE_EXT:.4f} {HFE_FOLD:.4f}"/>
+          <joint name="{name}_hfe" axis="0 1 0" range="{-HFE_EXT:.4f} {HFE_FOLD:.4f}" damping="{DAMP_LEG:.3f}"/>
           {inertial(LINK_I['upper'], sy)}
           <geom type="capsule" fromto="0 0 0 0 0 {HFE_TO_KFE[2]:.4f}" size="{R_THIGH}" class="viz"/>
           <body name="{name}_lower" pos="0 0 {HFE_TO_KFE[2]:.4f}">
-            <joint name="{name}_kfe" axis="0 1 0" range="{-KFE:.4f} {KFE:.4f}"/>
+            <joint name="{name}_kfe" axis="0 1 0" range="{-KFE:.4f} {KFE:.4f}" damping="{DAMP_LEG:.3f}"/>
             {inertial(LINK_I['lower'], sy)}
             <geom type="capsule" fromto="0 0 0 0 {fy:.4f} {KFE_TO_FOOT[2]:.4f}" size="{R_SHANK}" class="viz"/>
             <body name="{name}_foot" pos="0 {fy:.4f} {KFE_TO_FOOT[2]:.4f}">
@@ -99,8 +105,11 @@ def actuators():
     out = []
     for name, _, _ in LEGS:
         for j, eff in (("haa", EFF_HIP), ("hfe", EFF_LEG), ("kfe", EFF_LEG)):
+            # kv=0: control damping folded into the joint's torque-speed damping
+            # (DAMP_HIP/DAMP_LEG) — kv and joint damping are both -c*qdot, only the
+            # sum matters, and that sum is set to the motor slope for the vel cap.
             out.append(f'    <position name="{name}_{j}" joint="{name}_{j}" '
-                       f'kp="35" kv="1.0" forcerange="{-eff} {eff}"/>')
+                       f'kp="35" kv="0" forcerange="{-eff} {eff}"/>')
     return "\n".join(out)
 
 
@@ -136,7 +145,12 @@ MJCF = f'''<mujoco model="nova_sm3">
   </option>
 
   <default>
-    <joint damping="0.5" armature="0.008" frictionloss="0.02"/>
+    <!-- damping is overridden per-joint (DAMP_HIP/DAMP_LEG = torque-speed slope,
+         the velocity cap). frictionloss 0.20 N*m = gearbox Coulomb drag: the
+         1:345 gearbox is ~non-backdrivable, so it bounds gravity-driven overspeed
+         (motor-driven speed already capped by damping). Tuned so no joint exceeds
+         its no-load cap even gravity-assisted, without eating motor speed. -->
+    <joint damping="0.5" armature="0.008" frictionloss="0.20"/>
     <default class="viz">
       <geom contype="0" conaffinity="0" group="1" density="0" rgba="0.5 0.6 0.7 1"/>
     </default>
