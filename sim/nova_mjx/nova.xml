@@ -5,7 +5,12 @@
   </option>
 
   <default>
-    <joint damping="0.5" armature="0.008" frictionloss="0.02"/>
+    <!-- damping is overridden per-joint (DAMP_HIP/DAMP_LEG = torque-speed slope,
+         the velocity cap). frictionloss 0.20 N*m = gearbox Coulomb drag: the
+         1:345 gearbox is ~non-backdrivable, so it bounds gravity-driven overspeed
+         (motor-driven speed already capped by damping). Tuned so no joint exceeds
+         its no-load cap even gravity-assisted, without eating motor speed. -->
+    <joint damping="0.5" armature="0.008" frictionloss="0.20"/>
     <default class="viz">
       <geom contype="0" conaffinity="0" group="1" density="0" rgba="0.5 0.6 0.7 1"/>
     </default>
@@ -37,15 +42,15 @@
       <geom name="trunk_c" type="box" size="0.14 0.055 0.045" contype="1" conaffinity="1" group="3" rgba="0 0 0 0"/>
 
       <body name="FL_hip" pos="0.1412 0.0390 0.0380">
-        <joint name="FL_haa" axis="1 0 0" range="-0.2620 0.6980"/>
+        <joint name="FL_haa" axis="1 0 0" range="-0.2620 0.6980" damping="0.616"/>
         <inertial pos="0.00710 +0.02000 -0.00800" mass="0.0836" diaginertia="4.0990e-05 2.1200e-05 3.2550e-05"/>
         <geom type="capsule" fromto="0 0 0 0 0.0338 -0.0095" size="0.013" class="viz"/>
         <body name="FL_upper" pos="0 0.0338 -0.0095">
-          <joint name="FL_hfe" axis="0 1 0" range="-1.5010 0.8730"/>
+          <joint name="FL_hfe" axis="0 1 0" range="-1.5010 0.8730" damping="0.643"/>
           <inertial pos="0.00000 +0.00650 -0.05070" mass="0.1219" diaginertia="7.4860e-05 6.6490e-05 2.6670e-05"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1069" size="0.013" class="viz"/>
           <body name="FL_lower" pos="0 0 -0.1069">
-            <joint name="FL_kfe" axis="0 1 0" range="-1.9000 1.9000"/>
+            <joint name="FL_kfe" axis="0 1 0" range="-1.9000 1.9000" damping="0.643"/>
             <inertial pos="-0.00050 +0.01010 -0.06560" mass="0.1110" diaginertia="1.0060e-04 9.1500e-05 2.3210e-05"/>
             <geom type="capsule" fromto="0 0 0 0 0.0305 -0.1290" size="0.011" class="viz"/>
             <body name="FL_foot" pos="0 0.0305 -0.1290">
@@ -56,15 +61,15 @@
         </body>
       </body>
       <body name="FR_hip" pos="0.1412 -0.0390 0.0380">
-        <joint name="FR_haa" axis="1 0 0" range="-0.6980 0.2620"/>
+        <joint name="FR_haa" axis="1 0 0" range="-0.6980 0.2620" damping="0.616"/>
         <inertial pos="0.00710 -0.02000 -0.00800" mass="0.0836" diaginertia="4.0990e-05 2.1200e-05 3.2550e-05"/>
         <geom type="capsule" fromto="0 0 0 0 -0.0338 -0.0095" size="0.013" class="viz"/>
         <body name="FR_upper" pos="0 -0.0338 -0.0095">
-          <joint name="FR_hfe" axis="0 1 0" range="-1.5010 0.8730"/>
+          <joint name="FR_hfe" axis="0 1 0" range="-1.5010 0.8730" damping="0.643"/>
           <inertial pos="0.00000 -0.00650 -0.05070" mass="0.1219" diaginertia="7.4860e-05 6.6490e-05 2.6670e-05"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1069" size="0.013" class="viz"/>
           <body name="FR_lower" pos="0 0 -0.1069">
-            <joint name="FR_kfe" axis="0 1 0" range="-1.9000 1.9000"/>
+            <joint name="FR_kfe" axis="0 1 0" range="-1.9000 1.9000" damping="0.643"/>
             <inertial pos="-0.00050 -0.01010 -0.06560" mass="0.1110" diaginertia="1.0060e-04 9.1500e-05 2.3210e-05"/>
             <geom type="capsule" fromto="0 0 0 0 -0.0305 -0.1290" size="0.011" class="viz"/>
             <body name="FR_foot" pos="0 -0.0305 -0.1290">
@@ -75,15 +80,15 @@
         </body>
       </body>
       <body name="RL_hip" pos="-0.1412 0.0390 0.0380">
-        <joint name="RL_haa" axis="1 0 0" range="-0.2620 0.6980"/>
+        <joint name="RL_haa" axis="1 0 0" range="-0.2620 0.6980" damping="0.616"/>
         <inertial pos="0.00710 +0.02000 -0.00800" mass="0.0836" diaginertia="4.0990e-05 2.1200e-05 3.2550e-05"/>
         <geom type="capsule" fromto="0 0 0 0 0.0338 -0.0095" size="0.013" class="viz"/>
         <body name="RL_upper" pos="0 0.0338 -0.0095">
-          <joint name="RL_hfe" axis="0 1 0" range="-1.5010 0.8730"/>
+          <joint name="RL_hfe" axis="0 1 0" range="-1.5010 0.8730" damping="0.643"/>
           <inertial pos="0.00000 +0.00650 -0.05070" mass="0.1219" diaginertia="7.4860e-05 6.6490e-05 2.6670e-05"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1069" size="0.013" class="viz"/>
           <body name="RL_lower" pos="0 0 -0.1069">
-            <joint name="RL_kfe" axis="0 1 0" range="-1.9000 1.9000"/>
+            <joint name="RL_kfe" axis="0 1 0" range="-1.9000 1.9000" damping="0.643"/>
             <inertial pos="-0.00050 +0.01010 -0.06560" mass="0.1110" diaginertia="1.0060e-04 9.1500e-05 2.3210e-05"/>
             <geom type="capsule" fromto="0 0 0 0 0.0305 -0.1290" size="0.011" class="viz"/>
             <body name="RL_foot" pos="0 0.0305 -0.1290">
@@ -94,15 +99,15 @@
         </body>
       </body>
       <body name="RR_hip" pos="-0.1412 -0.0390 0.0380">
-        <joint name="RR_haa" axis="1 0 0" range="-0.6980 0.2620"/>
+        <joint name="RR_haa" axis="1 0 0" range="-0.6980 0.2620" damping="0.616"/>
         <inertial pos="0.00710 -0.02000 -0.00800" mass="0.0836" diaginertia="4.0990e-05 2.1200e-05 3.2550e-05"/>
         <geom type="capsule" fromto="0 0 0 0 -0.0338 -0.0095" size="0.013" class="viz"/>
         <body name="RR_upper" pos="0 -0.0338 -0.0095">
-          <joint name="RR_hfe" axis="0 1 0" range="-1.5010 0.8730"/>
+          <joint name="RR_hfe" axis="0 1 0" range="-1.5010 0.8730" damping="0.643"/>
           <inertial pos="0.00000 -0.00650 -0.05070" mass="0.1219" diaginertia="7.4860e-05 6.6490e-05 2.6670e-05"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1069" size="0.013" class="viz"/>
           <body name="RR_lower" pos="0 0 -0.1069">
-            <joint name="RR_kfe" axis="0 1 0" range="-1.9000 1.9000"/>
+            <joint name="RR_kfe" axis="0 1 0" range="-1.9000 1.9000" damping="0.643"/>
             <inertial pos="-0.00050 -0.01010 -0.06560" mass="0.1110" diaginertia="1.0060e-04 9.1500e-05 2.3210e-05"/>
             <geom type="capsule" fromto="0 0 0 0 -0.0305 -0.1290" size="0.011" class="viz"/>
             <body name="RR_foot" pos="0 -0.0305 -0.1290">
@@ -116,18 +121,18 @@
   </worldbody>
 
   <actuator>
-    <position name="FL_haa" joint="FL_haa" kp="35" kv="1.0" forcerange="-2.9 2.9"/>
-    <position name="FL_hfe" joint="FL_hfe" kp="35" kv="1.0" forcerange="-1.8 1.8"/>
-    <position name="FL_kfe" joint="FL_kfe" kp="35" kv="1.0" forcerange="-1.8 1.8"/>
-    <position name="FR_haa" joint="FR_haa" kp="35" kv="1.0" forcerange="-2.9 2.9"/>
-    <position name="FR_hfe" joint="FR_hfe" kp="35" kv="1.0" forcerange="-1.8 1.8"/>
-    <position name="FR_kfe" joint="FR_kfe" kp="35" kv="1.0" forcerange="-1.8 1.8"/>
-    <position name="RL_haa" joint="RL_haa" kp="35" kv="1.0" forcerange="-2.9 2.9"/>
-    <position name="RL_hfe" joint="RL_hfe" kp="35" kv="1.0" forcerange="-1.8 1.8"/>
-    <position name="RL_kfe" joint="RL_kfe" kp="35" kv="1.0" forcerange="-1.8 1.8"/>
-    <position name="RR_haa" joint="RR_haa" kp="35" kv="1.0" forcerange="-2.9 2.9"/>
-    <position name="RR_hfe" joint="RR_hfe" kp="35" kv="1.0" forcerange="-1.8 1.8"/>
-    <position name="RR_kfe" joint="RR_kfe" kp="35" kv="1.0" forcerange="-1.8 1.8"/>
+    <position name="FL_haa" joint="FL_haa" kp="35" kv="0" forcerange="-2.9 2.9"/>
+    <position name="FL_hfe" joint="FL_hfe" kp="35" kv="0" forcerange="-1.8 1.8"/>
+    <position name="FL_kfe" joint="FL_kfe" kp="35" kv="0" forcerange="-1.8 1.8"/>
+    <position name="FR_haa" joint="FR_haa" kp="35" kv="0" forcerange="-2.9 2.9"/>
+    <position name="FR_hfe" joint="FR_hfe" kp="35" kv="0" forcerange="-1.8 1.8"/>
+    <position name="FR_kfe" joint="FR_kfe" kp="35" kv="0" forcerange="-1.8 1.8"/>
+    <position name="RL_haa" joint="RL_haa" kp="35" kv="0" forcerange="-2.9 2.9"/>
+    <position name="RL_hfe" joint="RL_hfe" kp="35" kv="0" forcerange="-1.8 1.8"/>
+    <position name="RL_kfe" joint="RL_kfe" kp="35" kv="0" forcerange="-1.8 1.8"/>
+    <position name="RR_haa" joint="RR_haa" kp="35" kv="0" forcerange="-2.9 2.9"/>
+    <position name="RR_hfe" joint="RR_hfe" kp="35" kv="0" forcerange="-1.8 1.8"/>
+    <position name="RR_kfe" joint="RR_kfe" kp="35" kv="0" forcerange="-1.8 1.8"/>
   </actuator>
 
   <sensor>
