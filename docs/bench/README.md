@@ -22,3 +22,19 @@ max_torque = 1000 · angle limits 0..4095. Sim `kp=35` ≈ measured P=32 — goo
 
 CSV cols: `t_s, cmd_cnt, pos_cnt, speed_raw, load_raw`. 4096 cnt/rev.
 Loaded captures (torque-speed) = TODO at bench.
+
+## Loaded step @ 7.5 V — 201 g at 57.1 mm lever (~0.11 N·m horizontal)
+s1_step{up60,dn60}_load201_r57.csv · static hold: load_raw ≈ 1048 @ 0.11 N·m.
+
+| run | settle | peak speed (raw) | peak load (raw) |
+|-----|--------|------------------|-----------------|
+| no-load 60°   | 0.69 s | 1800 | 1548 |
+| +60° lifting  | 0.69 s | 1800 | 1600 |
+| −60° dropping | 0.69 s | 1800 |  500 |
+
+- Speed UNCHANGED under 0.11 N·m (~6% stall) → in normal regime the servo is
+  **speed-governed / rate-limited**, not torque-limited. Model it as a
+  rate-limited position tracker in the sim (NOT a spring); torque-speed droop
+  only near stall (~1.9 N·m ≈ 3.4 kg at this lever — not captured).
+- Load register senses direction (lift 1600 vs drop 500); static hold anchors
+  raw→N·m (~1048 raw @ 0.11 N·m).
