@@ -144,12 +144,19 @@ class NovaJoystick(PipelineEnv):
         air = jp.where(contact, 0.0, air + self._dt)
 
         # ---- rewards ----
-        # SHARPENED tracking (exp -8, was -4): at cmd 0.5 / vel 0 the old kernel
-        # still paid 0.37 of the xy term, so standing scored ~86% of `track` and
-        # a rigid stand was the optimum (1st run: traveled 0.02 m at vx=0.5). -8
-        # widens the walk-vs-stand gap (stand xy term 0.37 -> 0.14).
-        track = jp.exp(-8.0 * jp.sum((cmd[:2] - lin_vel[:2]) ** 2))
-        track += 0.5 * jp.exp(-8.0 * (cmd[2] - ang_vel[2]) ** 2)
+        # PRIMARY locomotion driver — LINEAR forward/lateral progress, FLOOR-FREE:
+        # dot(cmd_xy, vel_xy) is 0 for a stationary robot and paid up to the
+        # command magnitude for moving the commanded way. Runs 1-2 STOOD (traveled
+        # 0.02 / 0.07 m at vx=0.5) because the exp `track` below has a FLOOR (a
+        # stand at cmd 0.5 scored ~0.14) AND the yaw term handed a stationary robot
+        # a free 0.5 for "not rotating" — a stand farmed ~1.7/step. This term pays
+        # ONLY for real movement, so a stand now scores near zero.
+        cmd_xy = cmd[:2]
+        progress = jp.clip(jp.dot(cmd_xy, lin_vel[:2]), 0.0, jp.dot(cmd_xy, cmd_xy) + 1e-6)
+        # SECONDARY: exp fine-tracking (sharpens the match once moving) + yaw at a
+        # SMALL weight (was 0.5 = the standing free-lunch).
+        track = jp.exp(-8.0 * jp.sum((cmd_xy - lin_vel[:2]) ** 2))
+        yaw_track = jp.exp(-8.0 * (cmd[2] - ang_vel[2]) ** 2)
         upright = jp.sum((up - jp.array([0.0, 0.0, 1.0])) ** 2)
         height_pen = (height - STAND_HEIGHT) ** 2
         z_pen = xd.vel[0, 2] ** 2
@@ -162,11 +169,12 @@ class NovaJoystick(PipelineEnv):
         idle = jp.sum(cmd ** 2) < 0.02
         stand = jp.where(idle, jp.sum(joint_vel ** 2), 0.0)
 
-        # Rebalanced to beat the stand-still optimum: track 1.5->2.5 (forward
-        # tracking dominates), height_pen 4.0->1.5 (was punishing the vertical bob
-        # a gait needs -> forced a rigid stand), air_rew 0.4->0.8 (reward real
-        # stepping / feet air time).
-        reward = (2.5 * track + 0.8 * air_rew + 0.1
+        # progress (floor-free) is the primary driver; exp track/yaw only refine.
+        # Rough per-step scores at cmd 0.5: a STAND ~0.44 (progress 0, track 0.14,
+        # yaw 0.2, alive 0.1) vs WALKING at 0.4 m/s ~1.6 (progress 0.4, track 0.92,
+        # yaw 0.2, +air) — standing is no longer viable. height_pen 1.5 / air 0.8
+        # kept from run 2.
+        reward = (2.0 * progress + 1.0 * track + 0.2 * yaw_track + 0.8 * air_rew + 0.1
                   - 0.6 * upright - 1.5 * height_pen - 0.4 * z_pen
                   - 0.02 * act_rate - 2e-3 * energy
                   - 0.01 * jerk - 5e-4 * stand)
