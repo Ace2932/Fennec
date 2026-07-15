@@ -134,21 +134,32 @@ class NovaJoystick(PipelineEnv):
         height = x.pos[0, 2]
         cmd = info["cmd"]
 
-        # ---- feet air time (reward a real stepping gait) ----
-        # GATED on actual forward motion (fwd > 0.05 m/s) AND capped per touchdown:
-        # run 3 learned to MARCH IN PLACE (traveled 0.00 m, reward 610), and one
-        # variant just HELD A FOOT UP to bank airtime for a big touchdown payout.
-        # The motion gate kills the stationary farm; the [0,0.3] cap kills the
-        # hold-a-foot-up farm (a normal swing is ~0.2-0.3 s, so real steps are
-        # unaffected — only an abnormally long hold is clipped).
+        # ---- feet air time (bootstraps stepping) ----
+        # Gated ONLY on a nonzero command (NOT on forward velocity, per legged_gym
+        # /Rudin). Runs 3-5 STOOD partly because a forward-velocity gate here was a
+        # chicken-and-egg: no stepping reward until already moving, but you can't
+        # move without stepping. threshold 0.2 s + cap 0.4 s -> rewards real swings,
+        # not a held foot; short in-place shuffles pay little.
         foot_z = x.pos[self._foot_ids, 2]
         contact = foot_z < 0.025
         air = info["feet_air"]
         first_contact = (air > 0.0) & contact
         cmd_moving = math.normalize(cmd[:2])[1] > 0.05
-        fwd = jp.dot(cmd[:2], lin_vel[:2])                 # progress in commanded dir
-        air_rew = jp.sum(jp.clip(air - 0.1, 0.0, 0.3) * first_contact) * cmd_moving * (fwd > 0.05)
+        air_rew = jp.sum(jp.clip(air - 0.2, 0.0, 0.4) * first_contact) * cmd_moving
         air = jp.where(contact, 0.0, air + self._dt)
+
+        # ---- trot GAIT-PHASE reward (the stand-basin breaker) ----
+        # A 2 Hz clock; diagonal pairs (FL,RR)/(FR,RL) alternate swing. Rewarding
+        # feet for following the trot schedule makes rhythmic stepping the optimum
+        # and a planted stand score ~chance, so the deep stand basin (EVERY run so
+        # far converged to it — video showed a static splayed stance) collapses.
+        # Standard fix (Walk These Ways / CPG). Only when a motion is commanded.
+        gait_phase = (info["step"] * self._dt * 2.0) % 1.0
+        sw = gait_phase < 0.5                              # FL,RR swing first half
+        des_up = jp.array([sw, jp.logical_not(sw), jp.logical_not(sw), sw])  # FL FR RL RR
+        foot_up = jp.logical_not(contact)
+        gait_match = jp.sum(jp.where(des_up, foot_up, contact).astype(jp.float32))  # 0..4
+        gait_rew = (gait_match - 2.0) * cmd_moving         # -2..+2; 0 for a planted stand
 
         # ---- rewards ----
         # PRIMARY locomotion driver — LINEAR forward/lateral progress, FLOOR-FREE:
@@ -159,11 +170,12 @@ class NovaJoystick(PipelineEnv):
         # a free 0.5 for "not rotating" — a stand farmed ~1.7/step. This term pays
         # ONLY for real movement, so a stand now scores near zero.
         cmd_xy = cmd[:2]
+        # floor-free forward progress: 0 for a stand, paid for real displacement.
         progress = jp.clip(jp.dot(cmd_xy, lin_vel[:2]), 0.0, jp.dot(cmd_xy, cmd_xy) + 1e-6)
-        # SECONDARY: exp fine-tracking (sharpens the match once moving) + yaw at a
-        # SMALL weight (was 0.5 = the standing free-lunch).
-        track = jp.exp(-8.0 * jp.sum((cmd_xy - lin_vel[:2]) ** 2))
-        yaw_track = jp.exp(-8.0 * (cmd[2] - ang_vel[2]) ** 2)
+        # SHARP velocity tracking — sigma 0.25 (legged_gym): a stand at cmd 0.5
+        # scores exp(-4)=0.02, near zero, vs the old exp(-8*.25)=0.14 floor.
+        track = jp.exp(-jp.sum((cmd_xy - lin_vel[:2]) ** 2) / 0.0625)
+        yaw_track = jp.exp(-(cmd[2] - ang_vel[2]) ** 2 / 0.0625)
         upright = jp.sum((up - jp.array([0.0, 0.0, 1.0])) ** 2)
         height_pen = (height - STAND_HEIGHT) ** 2
         z_pen = xd.vel[0, 2] ** 2
@@ -176,14 +188,13 @@ class NovaJoystick(PipelineEnv):
         idle = jp.sum(cmd ** 2) < 0.02
         stand = jp.where(idle, jp.sum(joint_vel ** 2), 0.0)
 
-        # progress (floor-free) is the primary driver; exp track/yaw only refine.
-        # Rough per-step scores at cmd 0.5: a STAND ~0.44 (progress 0, track 0.14,
-        # yaw 0.2, alive 0.1) vs WALKING at 0.4 m/s ~1.6 (progress 0.4, track 0.92,
-        # yaw 0.2, +air) — standing is no longer viable. height_pen 1.5 / air 0.8
-        # kept from run 2.
-        # progress 2.0->3.0 (make real displacement dominate), yaw 0.2->0.1 (trim
-        # the standing floor), air 0.8 kept but now motion-gated (above).
-        reward = (3.0 * progress + 1.0 * track + 0.1 * yaw_track + 0.8 * air_rew + 0.1
+        # Research-grounded set (legged_gym sharp tracking + ungated air, Walk-
+        # These-Ways trot gait clock). Rough per-step at cmd 0.5: STAND ~0.4,
+        # TROT-IN-PLACE ~2.0, TROT-FORWARD ~3.4 — the gait clock lifts stepping far
+        # above a stand (breaking the basin), then progress+track pull the trot
+        # forward. Every transition is uphill.
+        reward = (1.5 * track + 0.3 * yaw_track + 1.0 * progress
+                  + 1.0 * air_rew + 0.6 * gait_rew + 0.1
                   - 0.6 * upright - 1.5 * height_pen - 0.4 * z_pen
                   - 0.02 * act_rate - 2e-3 * energy
                   - 0.01 * jerk - 5e-4 * stand)
