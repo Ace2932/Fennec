@@ -98,9 +98,10 @@ def main():
         num_envs=args.num_envs, batch_size=256,
         num_minibatches=32, num_updates_per_batch=4,
         unroll_length=20, discounting=0.97, learning_rate=3e-4,
-        # entropy 1e-2 -> 2e-2: more exploration to escape the one-leg-wiggle
-        # local optimum (run 7 plateaued there) and find a real forward trot.
-        entropy_cost=2e-2, normalize_observations=True,
+        # entropy back to 1e-2: 2e-2 was too noisy (run 8 plateaued ~1050, below
+        # the wiggle). The forward-only command curriculum now forces walking, so
+        # heavy exploration isn't needed — clean exploitation is better.
+        entropy_cost=1e-2, normalize_observations=True,
         num_evals=max(4, args.timesteps // 2_000_000),
         network_factory=net, randomization_fn=domain_randomize,
         save_checkpoint_path=str(run_dir),

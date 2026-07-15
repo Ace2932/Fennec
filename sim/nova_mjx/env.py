@@ -55,8 +55,16 @@ class NovaJoystick(PipelineEnv):
 
         self._default_pose = DEFAULT_POSE
         self._nu = sys.nu
-        self._cmd_lo = jp.array([-0.6, -0.4, -0.7])
-        self._cmd_hi = jp.array([1.0, 0.4, 0.7])
+        # CURRICULUM STAGE 1 — forward-only commands. Runs 1-8 kept converging to
+        # a stand/wiggle because the command range included idle + backward + big
+        # turns, and standing SATISFIES the idle commands, so the policy hedged
+        # toward not-moving. Every command here has forward velocity (0.3-0.7 m/s)
+        # + gentle lateral/yaw, so standing NEVER satisfies the task -> the only
+        # way to score is to walk forward. Widen back to full range (below) once a
+        # forward gait is solid. (legged_gym-style command curriculum.)
+        self._cmd_lo = jp.array([0.3, -0.1, -0.2])
+        self._cmd_hi = jp.array([0.7, 0.1, 0.2])
+        # full range for stage 2: jp.array([-0.6,-0.4,-0.7]) .. jp.array([1.0,0.4,0.7])
         # brax link index = mj body id - 1 (world excluded)
         self._foot_ids = jp.array(
             [mj.body(f"{n}_foot").id - 1 for n in LEG_NAMES])
