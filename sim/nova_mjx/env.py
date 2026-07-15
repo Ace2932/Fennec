@@ -150,16 +150,17 @@ class NovaJoystick(PipelineEnv):
 
         # ---- trot GAIT-PHASE reward (the stand-basin breaker) ----
         # A 2 Hz clock; diagonal pairs (FL,RR)/(FR,RL) alternate swing. Rewarding
-        # feet for following the trot schedule makes rhythmic stepping the optimum
-        # and a planted stand score ~chance, so the deep stand basin (EVERY run so
-        # far converged to it — video showed a static splayed stance) collapses.
-        # Standard fix (Walk These Ways / CPG). Only when a motion is commanded.
-        gait_phase = (info["step"] * self._dt * 2.0) % 1.0
-        sw = gait_phase < 0.5                              # FL,RR swing first half
-        des_up = jp.array([sw, jp.logical_not(sw), jp.logical_not(sw), sw])  # FL FR RL RR
-        foot_up = jp.logical_not(contact)
-        gait_match = jp.sum(jp.where(des_up, foot_up, contact).astype(jp.float32))  # 0..4
-        gait_rew = (gait_match - 2.0) * cmd_moving         # -2..+2; 0 for a planted stand
+        # SELF-ORGANIZED trot (no clock) — reward DIAGONAL asymmetry: a diagonal
+        # foot-pair airborne while the other pair is planted (the trot swing).
+        # Run 6 used a fixed-phase clock, but the phase is NOT in the observation,
+        # so the policy was blind to it and couldn't match it — the reward was
+        # effectively noise and it plateaued at a stand (~280). This form rewards a
+        # pattern the policy DIRECTLY CONTROLS (which feet are up), so it's
+        # discoverable: from a stand, lifting a diagonal pair is immediately +.
+        # Stand / pronk (all up) / bound (front or rear pair) all score 0; only a
+        # diagonal swing pays. Continuous -> dense gradient.
+        foot_up = jp.logical_not(contact).astype(jp.float32)   # [FL, FR, RL, RR]
+        gait_rew = jp.abs((foot_up[0] + foot_up[3]) - (foot_up[1] + foot_up[2])) / 2.0 * cmd_moving
 
         # ---- rewards ----
         # PRIMARY locomotion driver — LINEAR forward/lateral progress, FLOOR-FREE:
@@ -194,7 +195,7 @@ class NovaJoystick(PipelineEnv):
         # above a stand (breaking the basin), then progress+track pull the trot
         # forward. Every transition is uphill.
         reward = (1.5 * track + 0.3 * yaw_track + 1.0 * progress
-                  + 1.0 * air_rew + 0.6 * gait_rew + 0.1
+                  + 1.0 * air_rew + 1.5 * gait_rew + 0.1
                   - 0.6 * upright - 1.5 * height_pen - 0.4 * z_pen
                   - 0.02 * act_rate - 2e-3 * energy
                   - 0.01 * jerk - 5e-4 * stand)
