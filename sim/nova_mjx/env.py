@@ -144,8 +144,12 @@ class NovaJoystick(PipelineEnv):
         air = jp.where(contact, 0.0, air + self._dt)
 
         # ---- rewards ----
-        track = jp.exp(-4.0 * jp.sum((cmd[:2] - lin_vel[:2]) ** 2))
-        track += 0.5 * jp.exp(-4.0 * (cmd[2] - ang_vel[2]) ** 2)
+        # SHARPENED tracking (exp -8, was -4): at cmd 0.5 / vel 0 the old kernel
+        # still paid 0.37 of the xy term, so standing scored ~86% of `track` and
+        # a rigid stand was the optimum (1st run: traveled 0.02 m at vx=0.5). -8
+        # widens the walk-vs-stand gap (stand xy term 0.37 -> 0.14).
+        track = jp.exp(-8.0 * jp.sum((cmd[:2] - lin_vel[:2]) ** 2))
+        track += 0.5 * jp.exp(-8.0 * (cmd[2] - ang_vel[2]) ** 2)
         upright = jp.sum((up - jp.array([0.0, 0.0, 1.0])) ** 2)
         height_pen = (height - STAND_HEIGHT) ** 2
         z_pen = xd.vel[0, 2] ** 2
@@ -158,8 +162,12 @@ class NovaJoystick(PipelineEnv):
         idle = jp.sum(cmd ** 2) < 0.02
         stand = jp.where(idle, jp.sum(joint_vel ** 2), 0.0)
 
-        reward = (1.5 * track + 0.4 * air_rew + 0.1
-                  - 0.6 * upright - 4.0 * height_pen - 0.4 * z_pen
+        # Rebalanced to beat the stand-still optimum: track 1.5->2.5 (forward
+        # tracking dominates), height_pen 4.0->1.5 (was punishing the vertical bob
+        # a gait needs -> forced a rigid stand), air_rew 0.4->0.8 (reward real
+        # stepping / feet air time).
+        reward = (2.5 * track + 0.8 * air_rew + 0.1
+                  - 0.6 * upright - 1.5 * height_pen - 0.4 * z_pen
                   - 0.02 * act_rate - 2e-3 * energy
                   - 0.01 * jerk - 5e-4 * stand)
         reward = jp.clip(reward, -10.0, 10.0)
