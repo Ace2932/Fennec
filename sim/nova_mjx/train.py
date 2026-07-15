@@ -55,11 +55,18 @@ def main():
     ap.add_argument("--num_envs", type=int, default=2048)
     ap.add_argument("--out", default="nova_policy.pkl")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--allow-cpu", action="store_true",
+                    help="permit a CPU run (smoke-test only; ~100x too slow for real training)")
     args = ap.parse_args()
 
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
-    if jax.default_backend() == "cpu":
-        print("⚠ CPU — fine to smoke-test, too slow for a real run. Use Colab GPU.")
+    if jax.default_backend() == "cpu" and not args.allow_cpu:
+        raise SystemExit(
+            "✗ JAX is on CPU — real training would take days, not minutes.\n"
+            "  Set the Colab runtime to GPU (Runtime > Change runtime type > GPU),\n"
+            "  re-run the deps-install cell, then re-run this. If the GPU won't\n"
+            "  allocate, you've likely hit the free-tier quota (wait ~24h or use\n"
+            "  Colab Pro). Pass --allow-cpu only to force a slow smoke-test.")
 
     root = epath.Path(args.ckpt)
     root.mkdir(parents=True, exist_ok=True)
