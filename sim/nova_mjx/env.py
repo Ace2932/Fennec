@@ -135,12 +135,19 @@ class NovaJoystick(PipelineEnv):
         cmd = info["cmd"]
 
         # ---- feet air time (reward a real stepping gait) ----
+        # GATED on actual forward motion (fwd > 0.05 m/s) AND capped per touchdown:
+        # run 3 learned to MARCH IN PLACE (traveled 0.00 m, reward 610), and one
+        # variant just HELD A FOOT UP to bank airtime for a big touchdown payout.
+        # The motion gate kills the stationary farm; the [0,0.3] cap kills the
+        # hold-a-foot-up farm (a normal swing is ~0.2-0.3 s, so real steps are
+        # unaffected — only an abnormally long hold is clipped).
         foot_z = x.pos[self._foot_ids, 2]
         contact = foot_z < 0.025
         air = info["feet_air"]
         first_contact = (air > 0.0) & contact
         cmd_moving = math.normalize(cmd[:2])[1] > 0.05
-        air_rew = jp.sum((air - 0.1) * first_contact) * cmd_moving
+        fwd = jp.dot(cmd[:2], lin_vel[:2])                 # progress in commanded dir
+        air_rew = jp.sum(jp.clip(air - 0.1, 0.0, 0.3) * first_contact) * cmd_moving * (fwd > 0.05)
         air = jp.where(contact, 0.0, air + self._dt)
 
         # ---- rewards ----
@@ -174,7 +181,9 @@ class NovaJoystick(PipelineEnv):
         # yaw 0.2, alive 0.1) vs WALKING at 0.4 m/s ~1.6 (progress 0.4, track 0.92,
         # yaw 0.2, +air) — standing is no longer viable. height_pen 1.5 / air 0.8
         # kept from run 2.
-        reward = (2.0 * progress + 1.0 * track + 0.2 * yaw_track + 0.8 * air_rew + 0.1
+        # progress 2.0->3.0 (make real displacement dominate), yaw 0.2->0.1 (trim
+        # the standing floor), air 0.8 kept but now motion-gated (above).
+        reward = (3.0 * progress + 1.0 * track + 0.1 * yaw_track + 0.8 * air_rew + 0.1
                   - 0.6 * upright - 1.5 * height_pen - 0.4 * z_pen
                   - 0.02 * act_rate - 2e-3 * energy
                   - 0.01 * jerk - 5e-4 * stand)
