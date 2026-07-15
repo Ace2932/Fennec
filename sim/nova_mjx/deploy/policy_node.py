@@ -9,12 +9,13 @@ scripted trot (the safety fallback).
 control flow is complete; the HARDWARE BINDINGS below are TODOs (marked ⛏), and
 each is a real transfer-critical detail, not boilerplate:
 
-  ⛏ JOINT ORDER — the policy's 12 outputs are URDF order (FL,FR,RL,RR × haa,hfe,
-    kfe). Map to/from Feetech servo IDs via config/joint_id_map.yaml. A wrong
-    permutation = instant flail.
-  ⛏ rad <-> ticks — servo present-position/goal are 0..4095 ticks; the policy is
-    radians. Convert with the per-joint home offset + direction sign + scale
-    from nova_calibration (the SAME zeros the sim's default_pose assumes).
+  ✓ JOINT ORDER — JOINT_ORDER (from joint_map, matches joint_id_map.yaml): the
+    policy's output index i maps straight to Feetech servo ID i+1 (per-leg-
+    sequential, identity — no permutation). Locked by test_joint_map.
+  ✓ rad <-> ticks — via joint_map.JointMap.rad_to_ticks (tested, clamps to the
+    encoder range). ⚠ its home_tick + direction are PLACEHOLDERS until the servos
+    are homed (nova_calibration) + signs verified in sim — plug the measured
+    values into JointMap(home_tick, direction) then. The formula is tested now.
   ⛏ IMU frame — gyro must be body-frame rad/s in the URDF trunk frame; proj_grav
     = gravity down expressed in that frame (from the IMU orientation, or
     normalize accel at low motion). Align the ICM axes to the URDF trunk axes.
@@ -29,13 +30,10 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu, JointState
-from std_msgs.msg import Float32MultiArray, Int32
+from std_msgs.msg import Int32, Int32MultiArray
 
+from joint_map import JOINT_ORDER, JointMap
 from policy_runner import NovaPolicy
-
-# ⛏ URDF joint order the policy expects (must match sim env + joint_id_map.yaml)
-JOINT_ORDER = [f"{leg}_{j}" for leg in ("FL", "FR", "RL", "RR")
-               for j in ("haa", "hfe", "kfe")]
 
 
 class PolicyNode(Node):
@@ -51,18 +49,24 @@ class PolicyNode(Node):
         self._grav = np.array([0, 0, -1], np.float32)
         self._cmd = np.zeros(3, np.float32)
         self._motion_ok = False
+        # rad<->ticks + joint order. ⚠ home_tick/direction are placeholders until
+        # the servos are homed (nova_calibration) — replace via
+        # JointMap(home_tick, direction) with the measured values then.
+        self.jmap = JointMap()
 
         self.create_subscription(JointState, "/joint_states", self._on_joints, 10)
         self.create_subscription(Imu, "/imu", self._on_imu, 10)
         self.create_subscription(Twist, "/cmd_vel", self._on_cmd, 10)
         self.create_subscription(Int32, "/safety_state", self._on_safety, 10)
-        self.pub = self.create_publisher(Float32MultiArray, "/joint_commands", 10)
+        # goal ticks (0..4095) per servo, ID order 1..12 (what the bus bridge writes)
+        self.pub = self.create_publisher(Int32MultiArray, "/joint_goal_ticks", 10)
 
         hz = self.get_parameter("control_hz").value
         self.create_timer(1.0 / hz, self._tick)
         self.get_logger().warn(
-            "nova_policy SCAFFOLD — verify JOINT_ORDER, rad<->ticks, IMU frame, "
-            "foot-contact, and safety before enabling torque (see module docstring).")
+            "nova_policy SCAFFOLD — joint order + rad<->ticks wired (joint_map); "
+            "STILL verify: JointMap home_tick/direction (calibration), IMU frame, "
+            "and safety (clamp/ramp/harness) before enabling torque.")
 
     def _on_joints(self, msg):
         idx = {n: i for i, n in enumerate(msg.name)}
@@ -90,13 +94,14 @@ class PolicyNode(Node):
         self._motion_ok = (msg.data == 0)          # 0 = SAFETY_NORMAL (see safety_state.h)
 
     def _tick(self):
-        target = self.pol.joint_targets(
-            self._gyro, self._grav, self._cmd, self._jpos, self._jvel)
-        # ⛏ clamp to joint limits; ⛏ ramp from current pose on enable; ⛏ rad->ticks
         if not self._motion_ok:
             self.pol.reset()                       # hold last_action clean while disabled
             return
-        self.pub.publish(Float32MultiArray(data=target.tolist()))
+        target_rad = self.pol.joint_targets(
+            self._gyro, self._grav, self._cmd, self._jpos, self._jvel)
+        # ⛏ still TODO: clamp to joint limits + RAMP from current pose on enable
+        ticks = self.jmap.rad_to_ticks(target_rad)   # -> servo goal ticks (ID order)
+        self.pub.publish(Int32MultiArray(data=ticks.tolist()))
 
 
 def main(args=None):
