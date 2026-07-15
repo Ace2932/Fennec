@@ -197,6 +197,20 @@ class NovaJoystick(PipelineEnv):
         idle = jp.sum(cmd ** 2) < 0.02
         stand = jp.where(idle, jp.sum(joint_vel ** 2), 0.0)
 
+        # ---- reference gait-shapers (MuJoCo Playground Go1 uses these to get a
+        # clean gait on flat WITHOUT a gait prior; NOVA was missing them, and 9
+        # runs stood or wiggled in place). These target the EXACT failures the
+        # rollout video showed: a splayed stance + feet dragging in place. ----
+        foot_xy_speed = jp.linalg.norm(xd.vel[self._foot_ids, :2], axis=-1)   # (4,) world
+        # feet_slip: penalize a foot sliding while IN CONTACT. A wiggle/shuffle
+        # DRAGS feet on the ground; this forces the robot to LIFT a foot to move it
+        # -> real forward steps, not an in-place drag. (ref: feet_slip.)
+        slip_pen = jp.sum(foot_xy_speed * contact.astype(jp.float32))
+        # splay: the rollout showed the hips abducted WIDE. Penalize haa (hip-
+        # abduction, joint idx 0,3,6,9) deviation from the default (0); the hfe/kfe
+        # swing joints stay free. (ref: pose regularizer, focused on the splay.)
+        splay_pen = jp.sum(pipeline_state.q[7:][jp.array([0, 3, 6, 9])] ** 2)
+
         # Research-grounded set (legged_gym sharp tracking + ungated air, Walk-
         # These-Ways trot gait clock). Rough per-step at cmd 0.5: STAND ~0.4,
         # TROT-IN-PLACE ~2.0, TROT-FORWARD ~3.4 — the gait clock lifts stepping far
@@ -206,9 +220,16 @@ class NovaJoystick(PipelineEnv):
         # but plateaued ~1360 on a ONE-LEG WIGGLE — stepping in place without going
         # anywhere, because forward displacement was under-incentivized. Make it
         # the dominant term so the stepping is pulled forward.
+        # air_rew 1.0 -> 0.5: the MuJoCo Playground Go1 reference weights feet-air-
+        # time at only 0.1; NOVA's 1.0 (10x) is what the march/wiggle farmed. Trim
+        # it toward the reference so forward progress dominates. gait_rew kept (it
+        # broke the stand basin) but is the wiggle's other farm — watch it.
+        # gait_rew 1.5 -> 0.5: it broke the stand basin but the wiggle farmed it;
+        # slip_pen + splay_pen (below) are the real gait-shapers now, so demote it.
         reward = (1.5 * track + 0.3 * yaw_track + 2.5 * progress
-                  + 1.0 * air_rew + 1.5 * gait_rew + 0.1
+                  + 0.5 * air_rew + 0.5 * gait_rew + 0.1
                   - 0.6 * upright - 1.5 * height_pen - 0.4 * z_pen
+                  - 0.5 * slip_pen - 0.8 * splay_pen
                   - 0.02 * act_rate - 2e-3 * energy
                   - 0.01 * jerk - 5e-4 * stand)
         reward = jp.clip(reward, -10.0, 10.0)

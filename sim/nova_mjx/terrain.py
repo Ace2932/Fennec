@@ -17,9 +17,13 @@ TZ = 0.20          # hfield max height (m); data in [0,1] -> [0, TZ]
 FLAT_R = 5         # flat center-pad radius (cells) — the spawn zone
 BUMP_M = 0.12      # max bump height (m) at level 1
 # curriculum knob: per-env difficulty is sampled in [0, TERRAIN_MAX].
-# Train FLAT first (TERRAIN_MAX = 0.0) to get basic walking, then raise to 1.0
-# for rough-terrain robustness. (Adaptive per-env advancement = a future add.)
-TERRAIN_MAX = 1.0
+# STAGE 1 = FLAT (0.0) to get basic forward walking — this is what the reference
+# MuJoCo Playground Go1 JoystickFlatTerrain env trains on, and every legged-RL
+# curriculum starts flat. It was 1.0 (up to 12 cm blind bumps from step 0, robot
+# is ~17 cm tall) — nearly impossible from scratch, which is a big reason runs
+# 1-9 STOOD. Raise to 1.0 for STAGE 2 (rough-terrain robustness) once flat
+# forward walking is solid.
+TERRAIN_MAX = 0.0
 
 
 def terrain_field(rng, level, n=TN):
