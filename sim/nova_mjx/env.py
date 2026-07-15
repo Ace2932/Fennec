@@ -194,7 +194,11 @@ class NovaJoystick(PipelineEnv):
         # TROT-IN-PLACE ~2.0, TROT-FORWARD ~3.4 — the gait clock lifts stepping far
         # above a stand (breaking the basin), then progress+track pull the trot
         # forward. Every transition is uphill.
-        reward = (1.5 * track + 0.3 * yaw_track + 1.0 * progress
+        # progress 1.0 -> 2.5: run 7 broke the stand basin (diagonal gait reward)
+        # but plateaued ~1360 on a ONE-LEG WIGGLE — stepping in place without going
+        # anywhere, because forward displacement was under-incentivized. Make it
+        # the dominant term so the stepping is pulled forward.
+        reward = (1.5 * track + 0.3 * yaw_track + 2.5 * progress
                   + 1.0 * air_rew + 1.5 * gait_rew + 0.1
                   - 0.6 * upright - 1.5 * height_pen - 0.4 * z_pen
                   - 0.02 * act_rate - 2e-3 * energy
