@@ -206,8 +206,12 @@ class NovaJoystick(PipelineEnv):
         # but plateaued ~1360 on a ONE-LEG WIGGLE — stepping in place without going
         # anywhere, because forward displacement was under-incentivized. Make it
         # the dominant term so the stepping is pulled forward.
+        # air_rew 1.0 -> 0.5: the MuJoCo Playground Go1 reference weights feet-air-
+        # time at only 0.1; NOVA's 1.0 (10x) is what the march/wiggle farmed. Trim
+        # it toward the reference so forward progress dominates. gait_rew kept (it
+        # broke the stand basin) but is the wiggle's other farm — watch it.
         reward = (1.5 * track + 0.3 * yaw_track + 2.5 * progress
-                  + 1.0 * air_rew + 1.5 * gait_rew + 0.1
+                  + 0.5 * air_rew + 1.5 * gait_rew + 0.1
                   - 0.6 * upright - 1.5 * height_pen - 0.4 * z_pen
                   - 0.02 * act_rate - 2e-3 * energy
                   - 0.01 * jerk - 5e-4 * stand)
