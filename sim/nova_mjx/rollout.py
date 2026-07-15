@@ -9,12 +9,18 @@ CPU (slow but fine for a few-hundred-step clip) or GPU.
 With no --policy it rolls out zero actions (a stand/settle) so you can test the
 render path before training.
 
-Headless (Colab/servers): set MUJOCO_GL=egl before running.
+Headless (Colab/servers): auto-uses EGL (set below) — no display needed.
 Deps: + imageio imageio-ffmpeg  (mp4; .gif needs no ffmpeg).
 """
 import argparse
 import functools
+import os
 import pickle
+
+# Headless OpenGL for the render (Colab / servers have no X display). MUST be
+# set before `import mujoco`. setdefault so an explicit MUJOCO_GL still wins
+# (e.g. MUJOCO_GL=osmesa if EGL is unavailable).
+os.environ.setdefault("MUJOCO_GL", "egl")
 
 import imageio
 import jax
