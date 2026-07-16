@@ -32,9 +32,17 @@ from env import NovaJoystick
 
 
 def load_policy(path, obs_size, act_size):
+    from brax.training.acme import running_statistics
     from brax.training.agents.ppo import networks as ppo_networks
+    # ⚠ MUST match training: train.py runs normalize_observations=True, so the
+    # policy was trained on NORMALIZED obs. make_ppo_networks DEFAULTS to an
+    # identity preprocessor, which silently IGNORES the pickled normalizer params
+    # and feeds the net raw obs -> out-of-distribution inputs -> degraded, wrong
+    # behavior. (Same gotcha already fixed in export_policy.py; this file was
+    # missed — every earlier rollout video rendered a mis-driven policy.)
     net = ppo_networks.make_ppo_networks(
         obs_size, act_size,
+        preprocess_observations_fn=running_statistics.normalize,
         policy_hidden_layer_sizes=(128, 128, 128, 128),
         value_hidden_layer_sizes=(256, 256, 256, 256))
     make_policy = ppo_networks.make_inference_fn(net)
