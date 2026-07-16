@@ -62,8 +62,14 @@ class NovaJoystick(PipelineEnv):
         # + gentle lateral/yaw, so standing NEVER satisfies the task -> the only
         # way to score is to walk forward. Widen back to full range (below) once a
         # forward gait is solid. (legged_gym-style command curriculum.)
-        self._cmd_lo = jp.array([0.3, -0.1, -0.2])
-        self._cmd_hi = jp.array([0.7, 0.1, 0.2])
+        # Speeds sized to the MEASURED actuator: leg joints are velocity-capped at
+        # 2.8 rad/s (bench, #91), so body speed tops out ~0.2-0.3 m/s (joint vel x
+        # ~0.21 m hip-to-foot radius, derated by stance arc + the torque-speed
+        # line under load; hobby-servo quadrupeds walk 0.1-0.2 m/s). The earlier
+        # 0.3-0.7 m/s range commanded speeds the robot PHYSICALLY CANNOT reach —
+        # the tracking gradient flattened and a torque-cheap CROUCH became optimal.
+        self._cmd_lo = jp.array([0.15, -0.1, -0.2])
+        self._cmd_hi = jp.array([0.35, 0.1, 0.2])
         # full range for stage 2: jp.array([-0.6,-0.4,-0.7]) .. jp.array([1.0,0.4,0.7])
         # brax link index = mj body id - 1 (world excluded)
         self._foot_ids = jp.array(
@@ -180,7 +186,20 @@ class NovaJoystick(PipelineEnv):
         # ONLY for real movement, so a stand now scores near zero.
         cmd_xy = cmd[:2]
         # floor-free forward progress: 0 for a stand, paid for real displacement.
-        progress = jp.clip(jp.dot(cmd_xy, lin_vel[:2]), 0.0, jp.dot(cmd_xy, cmd_xy) + 1e-6)
+        # NORMALIZED progress = achieved speed along the commanded direction,
+        # capped at the commanded speed. (The old dot-product form capped at
+        # ||cmd||^2, which scales QUADRATICALLY with command speed — at 0.25 m/s
+        # it nearly vanished, 0.0625/step, silently gutting the forward driver.)
+        cmd_speed = jp.linalg.norm(cmd_xy) + 1e-6
+        progress = jp.clip(jp.dot(cmd_xy, lin_vel[:2]) / cmd_speed, 0.0, cmd_speed)
+        # MOVE GATE: the gait is stable + dynamic but IN-PLACE (survives 400 steps
+        # yet traveled only 0.12 m at vx 0.5). The gait-shapers (air/gait/clearance)
+        # are farmable by stepping in place, so it does. Scale them by forward speed
+        # -> an in-place gait earns ~0 on them, so the stepping must TRANSLATE to
+        # score. The robot already steps (no discovery chicken-egg now).
+        # gate fully open at 0.1 m/s achieved along the command (~half the new
+        # achievable command range)
+        move_gate = jp.clip(jp.dot(cmd_xy, lin_vel[:2]) / cmd_speed / 0.1, 0.0, 1.0)
         # SHARP velocity tracking — sigma 0.25 (legged_gym): a stand at cmd 0.5
         # scores exp(-4)=0.02, near zero, vs the old exp(-8*.25)=0.14 floor.
         track = jp.exp(-jp.sum((cmd_xy - lin_vel[:2]) ** 2) / 0.0625)
@@ -221,6 +240,12 @@ class NovaJoystick(PipelineEnv):
         # abduction, joint idx 0,3,6,9) deviation from the default (0); the hfe/kfe
         # swing joints stay free. (ref: pose regularizer, focused on the splay.)
         splay_pen = jp.sum(pipeline_state.q[7:][jp.array([0, 3, 6, 9])] ** 2)
+        # pose: reward the thigh/shank (hfe/kfe) staying near their default bend
+        # (0.6 / -1.2). The video showed the FRONT LEGS BUCKLED/COLLAPSED into a
+        # hunched crouch; this pulls the legs back to a normal extended stance.
+        # exp -> mild, so they can still swing for the gait. (ref: pose regularizer.)
+        _hk = jp.array([1, 2, 4, 5, 7, 8, 10, 11])   # hfe,kfe of each leg
+        pose_rew = jp.exp(-2.0 * jp.sum((pipeline_state.q[7:][_hk] - self._default_pose[_hk]) ** 2))
 
         # Research-grounded set (legged_gym sharp tracking + ungated air, Walk-
         # These-Ways trot gait clock). Rough per-step at cmd 0.5: STAND ~0.4,
@@ -241,7 +266,8 @@ class NovaJoystick(PipelineEnv):
         # gait. progress 2.5 -> 3.0: a bit more forward-speed pull (it tracked only
         # ~0.02 of the 0.5 m/s command).
         reward = (1.5 * track + 0.3 * yaw_track + 3.0 * progress
-                  + 0.5 * air_rew + 0.5 * gait_rew + 3.0 * clearance_rew + 0.1
+                  + move_gate * (0.5 * air_rew + 0.5 * gait_rew + 3.0 * clearance_rew)
+                  + 0.5 * pose_rew + 0.1
                   - 2.5 * upright - 0.2 * ang_vel_xy - 1.5 * height_pen - 0.4 * z_pen
                   - 0.5 * slip_pen - 0.8 * splay_pen
                   - 0.02 * act_rate - 2e-3 * energy
