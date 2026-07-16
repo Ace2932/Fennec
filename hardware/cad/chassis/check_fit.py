@@ -89,6 +89,18 @@ point inside the designed part = the part cuts its counterpart. Cases:
      actually checks it); a mirrored-LEFT haa roll sweep (leg assembly vs
      shoulder + shoulder_plate_L.stl) -- leg_v6/check_fit.py's own
      shoulder_checks() only ever swept the RIGHT horn plate.
+ 16. Neck-bracket cable slot <-> shoulder deck window continuity (2026-07-16
+     review): the head/L2/D456 cable drops from neck_bracket.scad's
+     base-plate slot straight down through the (front) shoulder's own deck
+     lightening window -- two independently-authored voids, in different
+     parts and different local frames, that no case before this one ever
+     checked against each other. A hand-transform (shoulder-local sx =
+     world_y, sy = world_x - HIP_FA, sz = world_z - HIP_Z -- the same
+     inverse shoulder.scad's own NECK_HS_XY derivation comment documents)
+     found only ~0.8mm margin at one edge. This case makes that transform
+     an automated, regression-caught assert: FAIL if the slot footprint
+     misses the window outright, WARN (not a hard fail) at the known
+     ~0.8mm-margin boundary.
 
 Exit 0 = clean, 1 = interference. Run via build_all.sh after every change.
 """
@@ -777,6 +789,69 @@ def mating_fastener_checks():
     for cx, cy in L2A_CSK_XY:
         bad |= clear_z(l2a, cx, cy, L2A_CSK_Z[0], L2A_CSK_Z[1], r3,
                        f'D l2-adapter L2 CSK ({cx},{cy:+d})')
+    return bad
+
+
+# ---- case 16: neck-bracket cable slot <-> shoulder deck window (2026-07-16
+# review) -----------------------------------------------------------------
+# neck_bracket.scad: translate([128, -7, DECK_TOP-EPS]) cube([18, 14,
+# BASE_T+2*EPS]) -- the L2/head cable-drop slot cut through the base plate,
+# world footprint x 128..146, y -7..7 (at the deck-top interface plane,
+# z=DECK_TOP=79.55; neck_bracket.scad's own header comment already proves
+# DECK_TOP(79.55) - HIP_Z(38.05) = 41.5 = shoulder.scad's DECK_Z1 exactly,
+# so the two parts' z-bands coincide and only the XY footprint needs a
+# fresh check here).
+NECK_SLOT_WORLD_X = (128, 146)
+NECK_SLOT_WORLD_Y = (-7, 7)
+# shoulder.scad: translate([-16, -14, DECK_Z0-1]) cube([32, 26,
+# DECK_Z1-DECK_Z0+2]) -- the deck lightening/vent window between the hips,
+# shoulder-local x -16..16, y -14..12 (z 34..~42.5, the deck slab band).
+SH_WINDOW_X = (-16, 16)
+SH_WINDOW_Y = (-14, 12)
+
+
+def neck_slot_shoulder_window_check():
+    """FIX 3 (2026-07-16 review): the head/L2/D456 cable falls from the
+    neck_bracket base-plate slot straight into the FRONT shoulder's own deck
+    lightening window -- two independently-authored voids that were never
+    checked against each other. Transform the neck-bracket slot's world
+    footprint into shoulder-local using the SAME inverse shoulder.scad's own
+    NECK_HS_XY comment documents for the FRONT placement (end=+1: sx =
+    world_y, sy = world_x - HIP_FA, sz = world_z - HIP_Z), then assert the
+    transformed footprint lands fully inside the window, reporting the
+    margin on every side. FAIL if any margin < 0 (the aperture misses the
+    window -- the cable pinches on solid deck material); WARN (does not fail
+    the gate) if the worst margin < 1.0mm -- the known-tight boundary this
+    review found (~0.8mm at the -y edge) is real but not yet a hard failure,
+    flagged so a future window/slot shrink regresses loudly instead of
+    silently."""
+    print('-- case 16: neck-bracket cable slot vs shoulder deck window continuity --')
+    bad = False
+    sx_lo, sx_hi = NECK_SLOT_WORLD_Y                       # sx = world_y
+    sy_lo = NECK_SLOT_WORLD_X[0] - HIP_FA                  # sy = world_x - HIP_FA
+    sy_hi = NECK_SLOT_WORLD_X[1] - HIP_FA
+    margins = {
+        f'-x (window {SH_WINDOW_X[0]})': sx_lo - SH_WINDOW_X[0],
+        f'+x (window {SH_WINDOW_X[1]})': SH_WINDOW_X[1] - sx_hi,
+        f'-y (window {SH_WINDOW_Y[0]})': sy_lo - SH_WINDOW_Y[0],
+        f'+y (window {SH_WINDOW_Y[1]})': SH_WINDOW_Y[1] - sy_hi,
+    }
+    for label, m in margins.items():
+        print(f'      margin {label}: {m:+.2f}mm')
+    worst_label = min(margins, key=margins.get)
+    worst = margins[worst_label]
+    if worst < 0:
+        tag = 'FAIL'
+        bad = True
+    elif worst < 1.0:
+        tag = 'WARN'
+    else:
+        tag = 'OK  '
+    print(f'{tag}  neck slot (shoulder-local x[{sx_lo:.1f},{sx_hi:.1f}] '
+          f'y[{sy_lo:.1f},{sy_hi:.1f}]) vs window (x{SH_WINDOW_X} y{SH_WINDOW_Y}): '
+          f'worst margin {worst:+.2f}mm at {worst_label}'
+          + ('  -- KNOWN TIGHT BOUNDARY (2026-07-16 review, not a hard fail)'
+             if tag == 'WARN' else ''))
     return bad
 
 
@@ -1584,6 +1659,7 @@ def main():
     bad |= mating_fastener_checks()
     bad |= floor_thickness_check()
     bad |= cross_family_check()
+    bad |= neck_slot_shoulder_window_check()
     sys.exit(1 if bad else 0)
 
 

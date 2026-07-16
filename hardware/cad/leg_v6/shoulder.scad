@@ -315,15 +315,24 @@ module shoulder_v6() {
             translate([sx*32, FLANGE_Y0 - 1, -26]) rotate([-90, 0, 0])
                 cylinder(d = 12, h = FLANGE_Y1 - FLANGE_Y0 + 2);
 
-        // deck lightening/vent window between the hips
+        // deck lightening/vent window between the hips — ALSO the L2/D456
+        // cable pass-through (current route, post-2026-07-07 head
+        // re-architecture + AUD-12): neck_bracket.scad's 18x14 cable slot
+        // (deck top) drops the bundle through here into the C-box, then out
+        // the flange's O12 grommet below. See hardware/wiring/README.md.
         translate([-16, -14, DECK_Z0 - 1])
             cube([32, 26, DECK_Z1 - DECK_Z0 + 2]);
 
         // ---- riser-bay interface (chassis lane, 2026-07-06) ----
         // center notch: flange + deck-extension strip x +/-26 above z 19.5
-        // (trunk z 57.55). Front end: the D456 head bosses + USB3 grommet on
-        // the riser front wall reach through here; kept on BOTH ends so the
-        // shoulder stays ONE part. Horn plates start at x 27 — untouched.
+        // (trunk z 57.55). Kept on BOTH ends so the shoulder stays ONE part.
+        // Horn plates start at x 27 — untouched. Front end: RETIRED
+        // 2026-07-07 (head re-architecture) — the D456/USB-C/L2 no longer
+        // bolt to or route through the riser front wall (see
+        // riser_bay.scad's own RETIRED notes). The head now lives on
+        // neck_bracket.scad, forward on this same shoulder's deck; its
+        // L2/D456 cable bundle instead drops through the DECK LIGHTENING
+        // WINDOW above, not through this notch.
         translate([-26, FLANGE_Y0 - 0.1, 19.5])
             cube([52, REAR_W0 - FLANGE_Y0 + 0.1 + EPS, DECK_Z1 - 19.5 + 0.1]);
         // riser hold-down holes: M3x12 from outside into heat-sets in the

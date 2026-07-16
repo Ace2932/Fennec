@@ -353,6 +353,39 @@ module coax_v6() {
             translate([sx * 7, 17, -36]) rotate([0, sx*90, 0])
                 cylinder(d = 3.2, h = BLK_X - 6);
 
+        // HAA connector-bay zip anchor (LA-29, cable-management review
+        // 2026-07-16): HFE (femur x44/x52/x84) and KFE (tibia x44/x62/x84)
+        // both have zip-anchor pairs PLUS a swept anchor-span WARN gate
+        // (check_fit.py cable_checks(), LA-20) -- the HAA roll crossing
+        // (coax<->shoulder, the LARGEST ROM on the leg: sw +/-40deg,
+        // measured mech stop ~+/-45deg, see shoulder_checks()) had NEITHER.
+        // The tunnel-exit pair above flanks the BOTTOM tunnel toward the
+        // femur; this new pair instead flanks the REAR (+Y) face next to
+        // the connector bay (common-frame BAY_X0..BAY_X1, where the
+        // servo's own 2 mid-body sockets sit) -- same style (single Ø3.2
+        // hole per +/-X side wall, axis X, starting inside an already-open
+        // void and punching out through the solid wall to the exterior),
+        // same bore, different (y,z) siting. The MATING fixed-side anchor
+        // is the shoulder's own Ø12 flange grommet (shoulder.scad,
+        // "2x Ø12 cable grommets at (+/-32,-26)" -- the trunk<->C-box
+        // interface; shoulder.scad is a different agent's file this
+        // session, read-only here) -- see check_fit.py cable_checks()'s
+        // new HAA case for the swept anchor-to-anchor span.
+        // GRID-VERIFIED (2026-07-16, same probing method as LA-16): x=+/-7
+        // sits inside the bay void (bay void spans x +/-12.85 in this
+        // frame) so each hole's inner end is already open air; y=19 clears
+        // the corner-notch cut (that notch only exists at y>=20.2, +X
+        // side only) and sits 0.85mm inside the bay's own y<=19.85 upper
+        // edge; z=-27 keeps a real radial margin (measured ~2.3mm) clear
+        // of the femur-swept clearance cylinder (r16.7 about the hfe axis
+        // at y=11.6,z=-9.5 -- distance from (19,-27) to that axis is
+        // ~19.0mm) and sits below the #67 HFE bore's own mid-band
+        // (z=-13..-6) and front-disc reach, so this cannot reopen into the
+        // coax_hfe_plate cavity on the +X (outboard) side.
+        for (sx = [-1, 1])
+            translate([sx * 7, 19, -27]) rotate([0, sx*90, 0])
+                cylinder(d = 3.2, h = BLK_X - 6);
+
         // femur swept clearance between the arms (stops at the boss face)
         translate([ARM_IN_X1 + EPS, HFE_Y, HFE_Z]) rotate([0, 90, 0])
             cylinder(r = 16.7, h = (FEMUR_MID - WHEEL_Z0) - ARM_IN_X1 - 0.1);   // disc r16.05 + 0.65 (was 16.4/0.35 — under print tol)

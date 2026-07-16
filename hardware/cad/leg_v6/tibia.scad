@@ -148,6 +148,33 @@ module tibia_v6() {
         // femur.scad x44/x52 finding — same shared zip_pair_neg default
         // usage). h=40 matches the x62/84 through-hole convention below.
         zip_pair_neg(44, 0, SLAB_Z0 - 1, 40);
+        // LA-30 fix (cable-management review, 2026-07-16): the KNEE loop
+        // (femur x84 <-> this tunnel-exit x44 pair, check_fit.py
+        // cable_checks()) collapsed to 39.2mm span at the kfe118 mech stop
+        // vs the 80mm (2x40mm bend radius) target -- see backlog #18/LA-14.
+        // ADDS a SECOND, dedicated pair farther from the kfe axis (x58 vs
+        // x44) rather than moving/removing the x44 pair, which stays the
+        // tunnel-exit strain relief it always was (LA-4/#31). Geometry:
+        // the loop's worst-case span is dominated by the TIBIA-side
+        // anchor's radius from the kfe axis (this part's own origin) --
+        // moving the femur's fixed x84 anchor barely moves the worst-case
+        // number (law-of-cosines cross term), so all of the improvement
+        // budget went here. x58 still sits on the full-width blade taper
+        // (union of the pocket slab's own rounded cap + the blade hull,
+        // POCKET_END_X=40 -> TIP_R=16.05 tapering to r=9 at x=112): real
+        // half-width at x58 is ~14.2mm, far more than the >=6.6mm the
+        // Ø3.2/spacing-10 pair needs, and the new holes sit >=6.4mm
+        // center-to-center from the existing x62 single hole (>3.2mm edge
+        // clearance, no merge). MEASURED (check_fit.py --cable, this
+        // review): worst-case KNEE span 39.2mm (kfe118, old x44 pair only)
+        // -> ~51.6mm (kfe118, x58 pair) -- see cable_checks() for the exact
+        // swept table. Still short of the 80mm target (moving the tibia
+        // anchor much farther starts trading against "the loop should stay
+        // near the knee crossing", not just wall material) -- best
+        // achievable via anchor relocation alone; the fold-before-zip
+        // discipline (cable_clip.scad, README "Free-loop length") still
+        // applies for the remaining shortfall.
+        zip_pair_neg(58, 0, SLAB_Z0 - 1, 40);
         for (zx = [62, 84])
             translate([zx, 0, SLAB_Z0 - 1]) cylinder(d = 3.2, h = 40);
 

@@ -73,6 +73,25 @@ COL_PTS   = [[-8.3, 10.2], [-8.3, -10.2], [-32.8, 10.25], [-32.8, -10.25]];
 // clear of the screw columns (-8.3/-32.8), the bay (z<-15.5) + wheel window.
 ANTIROT_X     = [-30, -12];   ANTIROT_Z = [-13, 13];
 ANTIROT_PROUD = 0.35;         ANTIROT_BASE = 1.4;
+// LEAD-IN (2026-07-16): the servo case enters the open pocket TOP (+Z, see
+// sts_pocket_neg's "open top" comment) and seats DOWN toward the floor
+// (-Z, bay/case-column side) -- so the rib's FIRST contact as the case
+// drops in is its +Z end (ANTIROT_Z[1] = 13, only 1.7mm below the CASE_TOP
+// rim). Full 0.35 interference right at that mouth would gouge/gall the
+// case on entry (drop-in assembly needs a soft touchdown, not a scrape).
+// Ramp the last ANTIROT_LEADIN mm of the +Z end from ~0 interference (flush
+// with the void wall, hw) down to the full crush profile at
+// ANTIROT_Z[1]-ANTIROT_LEADIN; the -Z (floor) end is untouched (case seats
+// there last, already at full engagement, no lead-in needed).
+ANTIROT_LEADIN = 2.5;
+// The taper's mouth-end profile can't be a truly zero-area polygon (apex
+// exactly ON the base line) -- OpenSCAD silently drops a degenerate/zero-
+// area polygon's linear_extrude, which collapsed the hull() to just the
+// full-interference slice in testing (no taper at all, confirmed by
+// scratch-render + ray-cast probe). ANTIROT_MOUTH_PROUD is a tiny residual
+// interference (not a real design dimension) that only exists to keep the
+// polygon non-degenerate; functionally it IS ~0.
+ANTIROT_MOUTH_PROUD = 0.02;
 
 // ---- fits / hardware ---------------------------------------------------------
 CLR_POCKET = 0.45;   // DROP-IN slip fit. NOT the 0.30 press calibration
@@ -147,12 +166,40 @@ YOKE_BOT_IN = FLOOR_BOT - 0.4;           // -22.6 bottom-arm plate top (0.4: PA6
 // wall (y = ±(CASE_HW+CLR_POCKET)), apex PROUD inward toward the case flat.
 module antirot_ribs() {
     hw = CASE_HW + CLR_POCKET;                 // 12.85 = void wall plane
-    for (rx = ANTIROT_X, sy = [-1, 1])
-        translate([rx, 0, (ANTIROT_Z[0] + ANTIROT_Z[1]) / 2])
-            linear_extrude(ANTIROT_Z[1] - ANTIROT_Z[0], center = true)
+    z_full_top = ANTIROT_Z[1] - ANTIROT_LEADIN;  // 10.5: full-crush zone stops
+                                                   // here; mouth-ward of it is
+                                                   // the lead-in taper only.
+    for (rx = ANTIROT_X, sy = [-1, 1]) {
+        // full-interference body (UNCHANGED cross-section: base/proud as
+        // before, just shortened by ANTIROT_LEADIN at the +Z mouth end so
+        // the taper below can occupy that span) -- SF 573 wall-bearing calc
+        // depends on this profile, do not resize it.
+        translate([rx, 0, (ANTIROT_Z[0] + z_full_top) / 2])
+            linear_extrude(z_full_top - ANTIROT_Z[0], center = true)
                 polygon([[-ANTIROT_BASE / 2, sy * hw],
                          [ ANTIROT_BASE / 2, sy * hw],
                          [0, sy * (hw - ANTIROT_PROUD)]]);
+        // lead-in taper: hull() from the full-crush profile at z_full_top
+        // down to a FLUSH (zero-interference, apex = base = hw) profile at
+        // the mouth (ANTIROT_Z[1]) -- a linear ramp in crush depth over the
+        // last ANTIROT_LEADIN mm of insertion travel, so the case's flat
+        // wall meets ~0 interference on first touch and only crushes the
+        // full 0.35 -> 0.1 once it's past the mouth and running true.
+        hull() {
+            translate([rx, 0, z_full_top])
+                linear_extrude(EPS, center = true)
+                    polygon([[-ANTIROT_BASE / 2, sy * hw],
+                             [ ANTIROT_BASE / 2, sy * hw],
+                             [0, sy * (hw - ANTIROT_PROUD)]]);
+            translate([rx, 0, ANTIROT_Z[1]])
+                linear_extrude(EPS, center = true)
+                    polygon([[-ANTIROT_BASE / 2, sy * hw],
+                             [ ANTIROT_BASE / 2, sy * hw],
+                             [0, sy * (hw - ANTIROT_MOUTH_PROUD)]]);  // ~0
+                                                        // interference (see
+                                                        // ANTIROT_MOUTH_PROUD)
+        }
+    }
 }
 
 module sts_pocket_neg(extra_top = 30) {
