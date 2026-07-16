@@ -5,11 +5,12 @@
 // =============================================================================
 // #53 (2026-07-11) made the WHOLE inboard-arm disc (x=PLATE_X0..ARM_IN_X1,
 // r=ARM_HALF_YZ=16 about the HFE axis) a removable plate, because SOME of
-// it had to open for femur insertion. But its own X-thickness (3.15mm)
-// turned out too thin for any captured hardware (nut or heat-set) mounted
-// through it -- every fastener redesign against that thin plate ended up
-// either unreachable or reaching for a self-tap (rejected: NEVER self-tap
-// into printed filament).
+// it had to open for femur insertion. But its own X-thickness (3.15mm --
+// this was the OLD #53 full-disc span; NOT this file's current thickness,
+// see the #7-fix note below) turned out too thin for any captured hardware
+// (nut or heat-set) mounted through it -- every fastener redesign against
+// that thin plate ended up either unreachable or reaching for a self-tap
+// (rejected: NEVER self-tap into printed filament).
 //
 // #67 fix: MEASURED (trimesh insertion-sweep probe, femur_R.stl + knee_arm
 // .stl + the HFE-embedded servo, tagged per-source, swept +Y in 0.5mm steps
@@ -71,6 +72,25 @@
 // (not a circular disc any more) -- it cannot spin about the single bolt
 // axis without the mid-band/front-band walls binding against the stub.
 // Flagged for a first-article load check, same as #53.
+//
+// #7-fix (2026-07-16, load-analysis.md §7 first-article audit): that flag
+// was warranted -- the audit found the front-band alone (1.15mm at the horn
+// bolts) landed exactly on the SF 2.5 wet floor, and the M3 clamp bolt
+// FAILED outright (SF 0.44 wet) under the conservative assumption that a
+// slip-fit key can't react a tension/peel component (this cap's mid-band
+// box has NO stub-facing wall at Z1 -- flush/internal to the riser, see
+// above -- so a +Z peel had no compression path at all, leaving the single
+// bolt as the sole reactor). Fix: BAND_* below adds two standalone
+// bearing/engagement bodies (coax_hfe_cap_body()), matching NEW bores
+// coax.scad's coax_hfe_bore() cuts in the stub, bracketing the horn-bolt
+// BCD circle in already-measured never-swept territory (same x-column as
+// the mid-band bore, z flanking it with >=0.5mm margin off the mid-band's
+// own measured-swept z-limits). Unlike the mid-band box, these bands are
+// shrunk (CLR_KEY) on ALL FOUR sides (Y0,Y1,Z0,Z1) -- no flush/internal
+// escape -- so they react +Z AND -Z by compression, right at the bolts
+// (near-zero lever arm). Net: cap thickness at the bolts 1.15->2.75mm, and
+// the M3 bolt is no longer the sole path for the peel case. See
+// load-analysis.md §7 for the full old->new SF table.
 
 include <leg_v6_common.scad>
 
@@ -85,6 +105,9 @@ BRIDGE_Z0  = 7.4;                      // == coax.scad's BRIDGE_Z0
 CLR = 0.2;   // slip-fit clearance off true stub-facing walls (matches this
              // file set's small-margin convention: CLR_HORN=0.15,
              // CLR_POCKET=0.45)
+CLR_KEY = 0.15;   // #7-fix: tighter clearance for the NEW BAND_* positive-
+                  // engagement walls (matches CLR_HORN's precedent) -- less
+                  // lost motion before this closed 4-wall key bears
 
 // == coax.scad's #67 constants, byte-identical (see that file's header for
 // the full measured-wedge derivation) ==
@@ -92,6 +115,12 @@ STUB_MIDX0 = 13.3;   STUB_MIDX1 = 14.9;
 STUB_MIDY0 = 7.0;    STUB_MIDY1 = 28.0;
 STUB_MIDZ0 = -13.0;  STUB_MIDZ1 = -6.0;
 STUB_FRONTX0 = 14.9;
+
+// == coax.scad's #7-fix BAND_* constants, byte-identical ==
+BAND_X0 = STUB_MIDX0;  BAND_X1 = STUB_MIDX1;
+BAND_Y0 = 3.0;   BAND_Y1 = 20.0;
+BAND_LO_Z0 = -17.0;  BAND_LO_Z1 = -12.6;
+BAND_HI_Z0 = -6.3;   BAND_HI_Z1 = -2.0;
 
 EAR_X0 = STUB_MIDX0; EAR_X1 = STUB_MIDX1;
 EAR_Y0 = 24.0;        EAR_Y1 = 27.6;
@@ -123,6 +152,19 @@ module coax_hfe_cap_body() {
     translate([HEAD_X0, EAR_Y0 + CLR, BRIDGE_Z0])
         cube([HEAD_X1 - HEAD_X0, (EAR_Y1 - EAR_Y0) - 2*CLR,
               (13.4 - BRIDGE_Z0) - CLR]);
+    // #7-fix bands: standalone bearing/engagement bodies bracketing the
+    // horn-bolt BCD circle (see coax.scad's BAND_* header for the measured
+    // never-swept-territory derivation). Unlike every other body in this
+    // module, ALL FOUR side walls (Y0,Y1,Z0,Z1) are shrunk -- genuine
+    // stub-facing surfaces, no flush/internal escape -- only X1 stays
+    // flush (internal union into the front-band disc, same convention as
+    // the mid-band body above).
+    translate([BAND_X0 + CLR_KEY, BAND_Y0 + CLR_KEY, BAND_LO_Z0 + CLR_KEY])
+        cube([(BAND_X1 - BAND_X0) - CLR_KEY, (BAND_Y1 - BAND_Y0) - 2*CLR_KEY,
+              (BAND_LO_Z1 - BAND_LO_Z0) - 2*CLR_KEY]);
+    translate([BAND_X0 + CLR_KEY, BAND_Y0 + CLR_KEY, BAND_HI_Z0 + CLR_KEY])
+        cube([(BAND_X1 - BAND_X0) - CLR_KEY, (BAND_Y1 - BAND_Y0) - 2*CLR_KEY,
+              (BAND_HI_Z1 - BAND_HI_Z0) - 2*CLR_KEY]);
 }
 
 module coax_hfe_plate_R() {
@@ -130,8 +172,14 @@ module coax_hfe_plate_R() {
         coax_hfe_cap_body();
 
         // horn coupling -- same call as the #53 plate used (LA-7 ctr_deep):
-        // this cap's front-band thickness at the horn seat (3.15mm nominal,
-        // matches the old plate) leaves the same ~1.5mm counterbore floor.
+        // the CENTER hole sits at the hfe axis (11.6,-9.5), inside the
+        // mid-band body's own footprint (y=7..28, z=-13..-6, unchanged by
+        // the #7-fix bands below) -- real local thickness there is
+        // mid-band(1.6) + front-band(1.15) = 2.75mm, NOT the 3.15mm old-
+        // plate figure this comment used to claim "matches" (off by
+        // 0.4mm even before the #7-fix); ctr_deep=1.65 still leaves a
+        // ~1.1mm solid floor behind the counterbore, plenty for the
+        // driven-side retention screw head it clears.
         translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0])
             horn_couple_neg(ctr_deep = 1.65);
 

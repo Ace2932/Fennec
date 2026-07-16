@@ -343,12 +343,51 @@ module zip_pair_neg(x0, y0 = 0, z0 = -30, h = 60, spacing = 10) {
         translate([x0, y0 + s*spacing/2, z0]) cylinder(d = 3.2, h = h);
 }
 
-// Retention-strap pilots: 2x Ø2.05 self-tap into the side-wall rims (LINK
-// frame; wall_y = wall centerline, rim_z = pocket rim = CASE_TOP).
+// Retention-strap ZIP-TIE bores (CONVERTED 2026-07-16, owner decision --
+// was 2x Ø2.05 self-tap pilots into the side-wall rims). The self-tap
+// pilot centered on wall_y (14.25) measured only 0.374mm of wall to the
+// servo cavity (CASE_HW+CLR_POCKET = 12.85 void wall, TRIMESH-PROBED
+// against tibia_R.stl) -- too thin for any insert or nut, and self-
+// tapping into filament is banned project-wide (see leg_v6/README.md +
+// nova-proj/feedback-no-self-tap-into-filament.md). All of that pilot's
+// margin sat on the WRONG side: 2.474mm remained outboard (pilot edge to
+// the raised Ø7 boss's own OD) vs 0.374mm inboard (pilot edge to the
+// pocket wall). The strap is BACKUP-ONLY retention (anti-rotation ribs
+// carry the servo torque -- see those ribs' own notes above) so a zip
+// tie is mechanically sufficient once it isn't drilled through the thin
+// side: a straight Ø3.2 through-bore (zip_pair_neg's own diameter,
+// standard 2.5mm zip tie) sized for a tie to loop strap-end -> through
+// the boss -> back, cinching the strap flush.
+// ZIP_Y_OUT shifts the bore's Y center OUTBOARD off wall_y by a fixed
+// amount (not a caller param -- x0/wall_y/rim_z keep their ORIGINAL
+// meaning and this module keeps its ORIGINAL name/signature so
+// tibia.scad's one call site, strap_pilot_neg(31, 14.25, SLAB_Z1+3.2),
+// needs no edit) so the bore's INBOARD edge clears the servo-cavity wall
+// by >=1.0mm instead of 0.374mm. TRIMESH-PROBED at wall_y+1.35 (=15.60):
+// inboard wall to the pocket void = 1.15mm, matching strap.scad's own
+// slot wall (1.44mm, see strap.scad) -- both comfortably >=1.0mm. The
+// bore's OUTBOARD edge sits close to the boss's own Ø7 OD (~0.55mm
+// remaining) -- thin, but that side is the boss's exterior shoulder, not
+// a cavity wall, so it isn't the safety-critical direction; nothing
+// breaks through.
+// Depth: a self-tap pilot could be blind (h=8, from rim_z-8 to rim_z);
+// a zip tie can't -- it must be feedable end-to-end (matches this file's
+// own zip_pair_neg()/LA-21 through-hole convention). Top just clears the
+// boss (rim_z, as originally); bottom runs to FLOOR_BOT-3, past the
+// tibia's real underside at this X (TRIMESH-PROBED: solid the whole
+// column at x0=31 down to ~FLOOR_BOT, air just past it).
+// NOTE: coax.scad has its OWN separate strap-pilot cut (~line 286-289,
+// NOT this shared module) that still drills the old Ø2.05 self-tap
+// pilot -- it does not call strap_pilot_neg() and is therefore now
+// INCONSISTENT with this zip-tie conversion. Left untouched here
+// (coax.scad is a concurrent agent's file); flagged as a follow-up.
+ZIP_BORE_D = 3.2;    // matches zip_pair_neg's cable-tie bore diameter
+ZIP_Y_OUT  = 1.35;   // outboard shift applied to wall_y (14.25 -> 15.60)
 module strap_pilot_neg(x0 = 31, wall_y = 14.25, rim_z = CASE_TOP) {
+    z0 = FLOOR_BOT - 3;
     for (sy = [-1, 1])
-        translate([x0, sy*wall_y, rim_z - 8])
-            cylinder(d = 2.05, h = 8 + EPS);
+        translate([x0, sy*(wall_y + ZIP_Y_OUT), z0])
+            cylinder(d = ZIP_BORE_D, h = (rim_z + EPS) - z0);
 }
 
 // STS3215 solid, spline at origin (preview): case + bay + horn + wheel.

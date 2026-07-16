@@ -17,10 +17,12 @@
 //     removable-plate design): the #53 fix bored the WHOLE inboard-arm disc
 //     (x 12.9..16.05, r16 about the HFE axis) open to clear femur insertion,
 //     making the entire arm a removable plate -- but the disc's own
-//     X-thickness (3.15mm) turned out too thin for ANY captured hardware
-//     (nut, heat-set) mounted through it, and every fastener redesign
-//     attempted against that thin plate ended up either sealed (unreachable)
-//     or reaching for a self-tap (rejected outright, see the hard rule).
+//     X-thickness (3.15mm, the OLD #53 full-disc span PLATE_X0..ARM_IN_X1 --
+//     NOT the #67 cap's own thickness, see below) turned out too thin for
+//     ANY captured hardware (nut, heat-set) mounted through it, and every
+//     fastener redesign attempted against that thin plate ended up either
+//     sealed (unreachable) or reaching for a self-tap (rejected outright,
+//     see the hard rule).
 //     MEASURED (trimesh insertion-sweep probe, femur+HFE-servo assembly
 //     swept +Y 0..68mm against every point in the old bore): the femur
 //     assembly does NOT sweep the whole disc -- only a wedge (the HFE
@@ -45,6 +47,18 @@
 //     femur slides in (+Y) with the wedge open, wheel bolts to the
 //     integral outboard boss, THEN the cap slides on and its heat-set bolt
 //     draws it against the stub to capture the horn.
+//     #7-fix (2026-07-16, load-analysis.md §7): the #67 cap's real
+//     independent front-band thickness at the horn BCD bolts was only
+//     1.15mm (NOT the 3.15mm above -- see the STUB_FRONTX0 note below) --
+//     SF 2.5 wet, exactly on the floor -- and the single M3 clamp bolt
+//     failed outright (SF 0.44 wet) under the conservative assumption that
+//     the mid-band box's slip-fit can't react a +Z peel (its Z1 face is
+//     flush/internal, no stub wall there). Fixed with two NEW standalone
+//     bearing/engagement bands (BAND_* below, coax_hfe_bore()) bracketing
+//     the horn-bolt BCD circle in already-measured never-swept territory --
+//     thickens the cap to 2.75mm there AND gives it closed 4-wall (Y0/Y1/
+//     Z0/Z1) stub engagement right at the load, killing the single-
+//     fastener dependency. See load-analysis.md §7 for the full SF table.
 //   * cables: bay faces +Y (rear); tunnel exits the BOTTOM end toward the
 //     femur — wires drop down the leg. CALIPER-CONFIRMED 2026-07-10: the
 //     servo body + cable dropping out the bottom needs ~37mm; the pocket's
@@ -136,7 +150,8 @@ BRIDGE_Z0  = 7.4;                            // femur disc sweep tops at 6.35; r
 // via mesh_health.py.
 //
 // #67 FASTENER (supersedes the #53/rejected-attempt mount history below):
-// the disc's own X-thickness (3.15mm, PLATE_X0..ARM_IN_X1) is too thin for
+// the disc's own X-thickness (3.15mm, PLATE_X0..ARM_IN_X1 -- the OLD #53
+// full-disc span, not the #67/#7-fix cap's own thickness) is too thin for
 // ANY captured hardware mounted through it, at ANY (y,z) -- MEASURED via a
 // dilated depth probe over the whole disc footprint (max clear X-run
 // anywhere: 3.25mm, at the disc's own low-y edge) -- so the fastener does
@@ -168,7 +183,63 @@ STUB_MIDX0 = 13.3;   STUB_MIDX1 = 14.9;   // mid-band bore x-span
 STUB_MIDY0 = 7.0;    STUB_MIDY1 = 28.0;   // mid-band bore y-span
 STUB_MIDZ0 = -13.0;  STUB_MIDZ1 = -6.0;   // mid-band bore z-span
 STUB_FRONTX0 = 14.9;                      // front-band: full r16 disc from
-                                           // here to the open horn seat
+                                           // here to the open horn seat.
+                                           // NOTE: the cap's OWN independent
+                                           // material at this front-band is
+                                           // only HORN_SEAT-STUB_FRONTX0 =
+                                           // 16.05-14.9 = 1.15mm -- NOT the
+                                           // 3.15mm (PLATE_X0..ARM_IN_X1 =
+                                           // 12.9..16.05) either .scad header
+                                           // used to quote for "the cap's
+                                           // thickness" -- 3.15mm was only
+                                           // ever the OLD #53 full-disc
+                                           // plate's span; measured load-
+                                           // analysis.md §7a caught the
+                                           // stale claim (2026-07-16). See
+                                           // BAND_* below for the #7-fix that
+                                           // actually thickens the bolt zone.
+
+// #7-fix (2026-07-16, load-analysis.md §7 rework): load-analysis.md's
+// first-article audit found the cap's real independent bearing section at
+// the 4x horn BCD bolts was only 1.15mm (front-band alone, see the
+// STUB_FRONTX0 note above) -- SF 2.5 wet, exactly on the floor -- AND the
+// cap's ONLY stub engagement in the Z direction was one-sided (mid-band
+// box's Z0 floor reacts compression; its Z1/X1 faces are flush/internal,
+// see coax_hfe_plate.scad -- no wall reacts a +Z "peel" at all), so the
+// single M3 clamp bolt was the sole path for that peel (SF 0.44 wet,
+// FAILS). Fix: two NEW standalone engagement/bearing bands, same x-column
+// as the mid-band bore (13.3..14.9, MEASURED never-swept there -- see
+// coax_hfe_bore()'s own header), bracketing the horn-bolt BCD circle
+// (all 4 bolts sit at r=7 about the hfe axis, z=-4.55/-14.45 -- both
+// outside the mid-band bore's own z=-13..-6 span, confirmed via a direct
+// trimesh probe of the built STLs, 2026-07-16) with >=0.5mm margin off the
+// mid-band bore's own measured-swept z-limits (-12.1/-6.8) so neither band
+// reopens that insertion clearance. Effect: (a) the cap's independent
+// thickness at every bolt grows to front-band(1.15) + band(1.6) = 2.75mm
+// (b) unlike the mid-band box, EVERY side of these bands (Y0,Y1,Z0,Z1) is a
+// genuine stub-facing wall (no flush/internal escape) -- a slip-fit, but a
+// CLOSED one: the cap cannot move +Z OR -Z here without compressing against
+// real stub material, right at the load application point (near-zero lever
+// arm for any local prying). This directly answers the "needs a real
+// interference/engagement spec, not hope" bar -- the engagement is a
+// measured, closed 4-wall pocket, not an assumption.
+BAND_X0 = STUB_MIDX0;  BAND_X1 = STUB_MIDX1;      // 13.3..14.9, same column
+BAND_Y0 = 3.0;   BAND_Y1 = 20.0;   // covers both bolt y's (6.65 low, 16.55
+                                   // high) with >=3mm radial margin each
+BAND_LO_Z0 = -17.0;  BAND_LO_Z1 = -12.6;   // brackets bolt z=-14.45; stops
+                                            // 0.5mm clear of the mid-band
+                                            // bore's own measured swept
+                                            // floor (z=-12.1)
+BAND_HI_Z0 = -6.3;   BAND_HI_Z1 = -2.0;    // brackets bolt z=-4.55; stops
+                                            // 0.5mm clear of the mid-band
+                                            // bore's own measured swept
+                                            // ceiling (z=-6.8)
+                                            // (CLR_KEY, the cap-side shrink
+                                            // off these bands, lives in
+                                            // coax_hfe_plate.scad only --
+                                            // this file cuts the bands at
+                                            // full size, same convention as
+                                            // the mid-band bore above)
 
 EAR_X0 = STUB_MIDX0; EAR_X1 = STUB_MIDX1;   // riser: same x-span as the
                                              // mid-band bore (stays x<16.05,
@@ -194,12 +265,18 @@ PLATE_X0 = 12.9;
 
 // #67 bore: mid-band partial box + front-band full disc (see the header
 // comment above for the measured wedge this covers).
+// #7-fix (2026-07-16): + two standalone bolt-bearing bands (see the BAND_*
+// header comment above) -- same column, flanking z, never-swept territory.
 module coax_hfe_bore() {
     translate([STUB_MIDX0, STUB_MIDY0, STUB_MIDZ0])
         cube([STUB_MIDX1 - STUB_MIDX0, STUB_MIDY1 - STUB_MIDY0,
               STUB_MIDZ1 - STUB_MIDZ0]);
     translate([STUB_FRONTX0, HFE_Y, HFE_Z]) rotate([0, 90, 0])
         cylinder(r = ARM_HALF_YZ, h = (ARM_IN_X1 + 0.1) - STUB_FRONTX0);
+    translate([BAND_X0, BAND_Y0, BAND_LO_Z0])
+        cube([BAND_X1 - BAND_X0, BAND_Y1 - BAND_Y0, BAND_LO_Z1 - BAND_LO_Z0]);
+    translate([BAND_X0, BAND_Y0, BAND_HI_Z0])
+        cube([BAND_X1 - BAND_X0, BAND_Y1 - BAND_Y0, BAND_HI_Z1 - BAND_HI_Z0]);
 }
 
 // #67 ear channel: narrow riser (stays inboard, x<16.05 -- never enters the
@@ -283,10 +360,54 @@ module coax_v6() {
         // ---- HAA pocket: spline = Y axis, horn -Y, bulk down ----
         rotate([0, -90, 0]) rotate([90, 0, 0]) sts_pocket_neg(extra_top = 25);
 
-        // front strap pilots (through the bosses into the wall rims)
+        // front strap ZIP-TIE bores (CONVERTED 2026-07-16, coordinator
+        // follow-up to the concurrent agent's tibia.scad fix): this part
+        // has its OWN separate strap-pilot cut (different axis/face from
+        // leg_v6_common.scad's strap_pilot_neg() -- that module bores a
+        // Z-axis hole through a SIDE wall; this one bores a Y-axis hole
+        // through the FRONT horn-face pads -- so it can't just call the
+        // shared module, it's converted by hand, same numbers). The old
+        // Ø2.05 self-tap pilot at x=±14.25 measured only ~0.37mm of wall to
+        // the HAA servo-pocket cavity (TRIMESH-PROBED against this part's
+        // own STL: cavity wall at x=12.85, exterior wall at x=16.05 -- only
+        // WALL=3.2mm total between them at this z) -- same defect
+        // strap_pilot_neg()'s own header describes, self-tapping into
+        // filament banned project-wide. Fix: Ø3.2 (ZIP_BORE_D) at
+        // x=±(14.25+ZIP_Y_OUT)=±15.60 -- matches strap_pilot_neg()'s own
+        // ZIP_Y_OUT shift AND strap.scad's own zip-tie hole spacing (the
+        // SAME strap part must fit both joints) -- gives 1.15mm clear to
+        // the cavity wall (TRIMESH-PROBED, the safety-critical side, >=1.0mm
+        // per the tibia precedent).
+        // HONEST finding (this joint's wall is thinner than tibia's, not
+        // just a copy-paste): at x=15.60 the hole's OUTBOARD edge (17.2)
+        // runs past this part's own exterior wall (16.05 at this z) by
+        // ~1.15mm. Closing that gap by growing the wall outboard would risk
+        // the KNOWN femur-rim graze this same pad's own header already
+        // found (x=16.6 grazed the femur at full hip swing, "front strap
+        // pads" above) -- so the outboard side is left open (a thin slot on
+        // the exterior face over the bore's length, not a fully round hole
+        // there) rather than reinforced into that collision. This mirrors
+        // strap_pilot_neg()'s own precedent -- its outboard/non-cavity side
+        // is thin too ("not the safety-critical direction") -- just more so
+        // here, because this wall started thinner. Genuine through-bore
+        // (not blind): TRIMESH-PROBED the pad face to y=21.0 lands well
+        // past the corner-notch's own open void (y>=20.2, punched to true
+        // exterior air, see the corner-notch cut below) -- so the tie
+        // feeds end-to-end, same convention as zip_pair_neg()/LA-21.
+        // BUGFIX (2026-07-16, coordinator follow-up, first-article probe):
+        // this comment originally assumed the corner-notch already covered
+        // BOTH +/-X sides -- it didn't (cut on +X only, 4+ years of
+        // history, its own header even says so). The -X bore (this part's
+        // sx=-1 / coax_L's mirrored +x) landed in a genuine ~1.2mm BLIND
+        // PLUG at y=21.0..22.2 -- a zip tie could not feed through on that
+        // side. Fixed by mirroring the notch itself (see that cut's own
+        // updated comment below) rather than adding a redundant one-off
+        // exit here, since the notch is the thing both bores actually rely
+        // on. TRIMESH-PROBED clear end-to-end on both sides post-fix.
         for (sx = [-1, 1])
-            translate([sx*14.25, BLK_Y0 - 0.8 - EPS, -31]) rotate([-90, 0, 0])
-                cylinder(d = 2.05, h = 8.8);
+            translate([sx*(14.25 + ZIP_Y_OUT), BLK_Y0 - 0.8 - EPS, -31])
+                rotate([-90, 0, 0])
+                    cylinder(d = ZIP_BORE_D, h = 39.6);
 
         // ---- HFE couplings on the X axis at (HFE_Y, HFE_Z) ----
         // #53: the inboard horn coupling moved to the removable cap
@@ -374,12 +495,14 @@ module coax_v6() {
         // GRID-VERIFIED (2026-07-16, same probing method as LA-16): x=+/-7
         // sits inside the bay void (bay void spans x +/-12.85 in this
         // frame) so each hole's inner end is already open air; y=19 clears
-        // the corner-notch cut (that notch only exists at y>=20.2, +X
-        // side only) and sits 0.85mm inside the bay's own y<=19.85 upper
-        // edge; z=-27 keeps a real radial margin (measured ~2.3mm) clear
-        // of the femur-swept clearance cylinder (r16.7 about the hfe axis
-        // at y=11.6,z=-9.5 -- distance from (19,-27) to that axis is
-        // ~19.0mm) and sits below the #67 HFE bore's own mid-band
+        // the corner-notch cut (that notch only exists at y>=20.2 -- was
+        // +X side only, MIRRORED to both +/-X 2026-07-16, see the notch's
+        // own comment below -- either way y=19 stays below its y>=20.2
+        // floor on both sides) and sits 0.85mm inside the bay's own
+        // y<=19.85 upper edge; z=-27 keeps a real radial margin (measured
+        // ~2.3mm) clear of the femur-swept clearance cylinder (r16.7 about
+        // the hfe axis at y=11.6,z=-9.5 -- distance from (19,-27) to that
+        // axis is ~19.0mm) and sits below the #67 HFE bore's own mid-band
         // (z=-13..-6) and front-disc reach, so this cannot reopen into the
         // coax_hfe_plate cavity on the +X (outboard) side.
         for (sx = [-1, 1])
@@ -397,7 +520,7 @@ module coax_v6() {
         // wall on the horn side, and the integral outboard arm on the wheel
         // side). That +Y sweep is CLEAN except a small graze (trimesh
         // sweep-checked, max 0.95mm penetration, <=16 sample pts) against
-        // the main block's sharp rear-outboard-top corner (x=BLK_X,
+        // the main block's sharp rear-outboard-top corner (x=+BLK_X,
         // y=BLK_YF) -- a plain 90-degree box corner with zero fillet. This
         // corner sits OUTSIDE the HAA pocket cavity's own Y footprint
         // (cavity Y max ~15.95 < BLK_YF 22.2) -- pure wall/floor material,
@@ -408,15 +531,37 @@ module coax_v6() {
         // same sharp edge). Kept SMALL; its footprint (x=13.85..16.85,
         // y=20.2..23.2) sits 0.8mm clear of the #67 ear/head zone
         // (y=EAR_Y0..EAR_Y1 = 24.0..27.6) by construction.
-        translate([BLK_X - 2, BLK_YF - 2, -38.4 - EPS])
-            cube([2 + 1, 2 + 1, 38.4 + 13.4 + 2*EPS]);   // +1: punch 1mm past
-                                                          // the block's own
-                                                          // edge (BLK_X/BLK_YF)
-                                                          // so the cut face
-                                                          // isn't coincident
-                                                          // with it (coincident
-                                                          // faces gave a non-
-                                                          // manifold mesh)
+        // MIRRORED 2026-07-16 (coordinator follow-up): this was cut on the
+        // +X side ONLY for 4+ years of history -- the femur assembly that
+        // motivated it only ever exists at +X (its own insertion sweep
+        // "stays solid-blocked" toward -X per the header above, i.e. there
+        // is NOTHING femur-related to graze on the -X side, so mirroring
+        // costs nothing there) -- but the front strap zip-tie bore
+        // (below, both +/-15.60) relies on THIS notch to reach true
+        // exterior air at its rear end, and a Ø2.05 self-tap pilot never
+        // needed to (it was blind, only 8.8mm deep, never reached y=20).
+        // The -X strap bore was landing in a genuine BLIND POCKET (~1.2mm
+        // solid plug at y=21.0..22.2, TRIMESH-PROBED post-conversion,
+        // coax_R.stl -x side / coax_L.stl mirrored +x side) because the
+        // notch was never mirrored. Fixed by cutting BOTH corners
+        // (sx=+/-1) -- re-verified clear against the full insertion +
+        // hip-pitch + shoulder-roll sweeps (`check_fit.py --sweep`) after
+        // this change, exit 0, see load-analysis / build log.
+        for (sx = [-1, 1])
+            translate([sx > 0 ? BLK_X - 2 : -(BLK_X + 1), BLK_YF - 2, -38.4 - EPS])
+                cube([2 + 1, 2 + 1, 38.4 + 13.4 + 2*EPS]);   // +1: punch 1mm
+                                                              // past the
+                                                              // block's own
+                                                              // edge (BLK_X/
+                                                              // BLK_YF) so
+                                                              // the cut face
+                                                              // isn't
+                                                              // coincident
+                                                              // with it
+                                                              // (coincident
+                                                              // faces gave a
+                                                              // non-manifold
+                                                              // mesh)
     }
 }
 

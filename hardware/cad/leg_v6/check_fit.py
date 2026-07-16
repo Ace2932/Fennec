@@ -316,6 +316,35 @@ COAX_R_ZIP_HOLES_H = 16.05 - 6
 COAX_HAA_ZIP_Y = 19.0
 COAX_HAA_ZIP_Z = -27.0
 
+# LA-30 (2026-07-16, coordinator follow-up to the #7-fix session): two zip-
+# tie bore classes existed with NO through-hole gate at all until now --
+# both converted from self-tap pilots this same session and both bit a
+# first-article probe before landing here (a blind-pocket regression class
+# this table exists to catch, per LA-21's own header):
+#   * tibia.scad's strap_pilot_neg() call (leg_v6_common.scad, CONVERTED
+#     2026-07-16 from a self-tap pilot -- x0=31, wall_y=14.25, rim_z=
+#     SLAB_Z1+3.2=17.9): real bore is Z-axis at (31, +/-(14.25+ZIP_Y_OUT)=
+#     +/-15.60), z0=FLOOR_BOT-3=-25.2 .. z1=17.9. tibia_L is the SAME
+#     Z-mirror convention as TIBIA_R_ZIP_HOLES above (tibia_L.scad:
+#     mirror([0,0,1])) -- same (x0,y0), z-range negated.
+#   * coax.scad's OWN separate front-strap-pilot cut (different axis/face,
+#     doesn't call strap_pilot_neg() -- see that file's header), also
+#     CONVERTED 2026-07-16: Y-axis bore at x=+/-(14.25+ZIP_Y_OUT)=+/-15.60,
+#     z=-31, y spanning the pad face (-18.6) to well past the rear corner-
+#     notch exit (21.0) -- the notch itself was MIRRORED this same pass
+#     (coax.scad's corner-notch cut, was +X only) after a probe caught the
+#     -X/coax_L +X bore landing in a genuine ~1.2mm blind plug there.
+#     coax_L is coax.scad's own X-mirror convention (mirror([1,0,0])) --
+#     same y-span, x negated.
+TIBIA_STRAP_ZIP_HOLES = [
+    ('strap', 31, 15.60, -25.2, 17.9),
+    ('strap', 31, -15.60, -25.2, 17.9),
+]
+COAX_STRAP_ZIP_X = 14.25 + 1.35    # == leg_v6_common.scad's 14.25+ZIP_Y_OUT
+COAX_STRAP_ZIP_Z = -31.0
+COAX_STRAP_ZIP_Y0 = -18.6
+COAX_STRAP_ZIP_Y1 = 21.0
+
 
 def through_hole_checks():
     print('-- LA-21: through-hole probe (zip-tie / cable bores must be open end-to-end) --')
@@ -340,6 +369,20 @@ def through_hole_checks():
     for label, x0, y0, z0, z1 in TIBIA_R_ZIP_HOLES:
         bad |= check('tibia_R.stl', f'zip {label} y={y0:+d}', [x0, y0, 0], [0, 0, 1], z0, z1)
         bad |= check('tibia_L.stl', f'zip {label} y={y0:+d}', [x0, y0, 0], [0, 0, 1], -z1, -z0)
+    # LA-30 (2026-07-16): tibia's strap_pilot_neg() zip bores, same Z-mirror
+    # convention as TIBIA_R_ZIP_HOLES above.
+    for label, x0, y0, z0, z1 in TIBIA_STRAP_ZIP_HOLES:
+        bad |= check('tibia_R.stl', f'{label} y={y0:+.2f}', [x0, y0, 0], [0, 0, 1], z0, z1)
+        bad |= check('tibia_L.stl', f'{label} y={y0:+.2f}', [x0, y0, 0], [0, 0, 1], -z1, -z0)
+    # LA-30 (2026-07-16): coax's own front-strap zip bores (Y-axis, NOT the
+    # X-axis convention the tunnel-exit/HAA-bay pairs below use) -- coax_L is
+    # coax.scad's own X-mirror (mirror([1,0,0])): same y-span, x negated.
+    for sx in (1, -1):
+        x0 = sx * COAX_STRAP_ZIP_X
+        bad |= check('coax_R.stl', f'strap sx={sx:+d}', [x0, 0, COAX_STRAP_ZIP_Z],
+                     [0, 1, 0], COAX_STRAP_ZIP_Y0, COAX_STRAP_ZIP_Y1)
+        bad |= check('coax_L.stl', f'strap sx={sx:+d}', [-x0, 0, COAX_STRAP_ZIP_Z],
+                     [0, 1, 0], COAX_STRAP_ZIP_Y0, COAX_STRAP_ZIP_Y1)
     for sx in (1, -1):
         x0 = sx * COAX_R_ZIP_HOLES_X
         t_lo, t_hi = sorted([x0, x0 + sx * COAX_R_ZIP_HOLES_H])
