@@ -235,7 +235,13 @@ class NovaJoystick(PipelineEnv):
         # tiny steps, 0.14 m at vx 0.5, plateaued ~990. Rewarding a higher swing
         # lift -> bigger, committed steps -> more forward speed. Capped at target
         # so it can't farm by holding feet absurdly high. (ref: feet_clearance.)
-        clearance_rew = jp.sum(jp.minimum(foot_z, 0.08) * jp.logical_not(contact).astype(jp.float32))
+        # SCALED BY horizontal foot speed (reference feet_clearance): a SWINGING
+        # foot earns, a HELD foot (xy-speed ~0) earns ~nothing. The unscaled form
+        # reopened the hold-a-foot farm — the ckpt12 walker carried the rear-right
+        # foot in the air the ENTIRE rollout (~0.24/step free once the move-gate
+        # opened) and the 3-legged thrust asymmetry caused the heading VEER.
+        clearance_rew = jp.sum(jp.minimum(foot_z, 0.08) * foot_xy_speed
+                               * jp.logical_not(contact).astype(jp.float32))
         # splay: the rollout showed the hips abducted WIDE. Penalize haa (hip-
         # abduction, joint idx 0,3,6,9) deviation from the default (0); the hfe/kfe
         # swing joints stay free. (ref: pose regularizer, focused on the splay.)
@@ -266,7 +272,7 @@ class NovaJoystick(PipelineEnv):
         # gait. progress 2.5 -> 3.0: a bit more forward-speed pull (it tracked only
         # ~0.02 of the 0.5 m/s command).
         reward = (1.5 * track + 0.3 * yaw_track + 3.0 * progress
-                  + move_gate * (0.5 * air_rew + 0.5 * gait_rew + 3.0 * clearance_rew)
+                  + move_gate * (0.5 * air_rew + 0.5 * gait_rew + 10.0 * clearance_rew)
                   + 0.5 * pose_rew + 0.1
                   - 2.5 * upright - 0.2 * ang_vel_xy - 1.5 * height_pen - 0.4 * z_pen
                   - 0.5 * slip_pen - 0.8 * splay_pen
