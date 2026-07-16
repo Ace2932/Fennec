@@ -181,6 +181,12 @@ class NovaJoystick(PipelineEnv):
         cmd_xy = cmd[:2]
         # floor-free forward progress: 0 for a stand, paid for real displacement.
         progress = jp.clip(jp.dot(cmd_xy, lin_vel[:2]), 0.0, jp.dot(cmd_xy, cmd_xy) + 1e-6)
+        # MOVE GATE: the gait is stable + dynamic but IN-PLACE (survives 400 steps
+        # yet traveled only 0.12 m at vx 0.5). The gait-shapers (air/gait/clearance)
+        # are farmable by stepping in place, so it does. Scale them by forward speed
+        # -> an in-place gait earns ~0 on them, so the stepping must TRANSLATE to
+        # score. The robot already steps (no discovery chicken-egg now).
+        move_gate = jp.clip(jp.dot(cmd_xy, lin_vel[:2]) / 0.2, 0.0, 1.0)  # 0 at rest, 1 at 0.2 m/s fwd
         # SHARP velocity tracking — sigma 0.25 (legged_gym): a stand at cmd 0.5
         # scores exp(-4)=0.02, near zero, vs the old exp(-8*.25)=0.14 floor.
         track = jp.exp(-jp.sum((cmd_xy - lin_vel[:2]) ** 2) / 0.0625)
@@ -241,7 +247,7 @@ class NovaJoystick(PipelineEnv):
         # gait. progress 2.5 -> 3.0: a bit more forward-speed pull (it tracked only
         # ~0.02 of the 0.5 m/s command).
         reward = (1.5 * track + 0.3 * yaw_track + 3.0 * progress
-                  + 0.5 * air_rew + 0.5 * gait_rew + 3.0 * clearance_rew + 0.1
+                  + move_gate * (0.5 * air_rew + 0.5 * gait_rew + 3.0 * clearance_rew) + 0.1
                   - 2.5 * upright - 0.2 * ang_vel_xy - 1.5 * height_pen - 0.4 * z_pen
                   - 0.5 * slip_pen - 0.8 * splay_pen
                   - 0.02 * act_rate - 2e-3 * energy
