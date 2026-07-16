@@ -19,8 +19,13 @@ import numpy as np
 
 
 def extract(params):
-    """(normalizer, policy_params) -> mean, std, [kernels], [biases]."""
-    norm, pol = params
+    """(normalizer, policy_params[, value_params]) -> mean, std, [kernels], [biases].
+
+    train.py's policy_params_fn pickles brax's FULL params tuple, which is
+    (normalizer, policy, value) — 3 elements — while train_fn's return value is
+    the 2-tuple. Index instead of unpacking so both work (value net is not
+    exported; the robot doesn't need it)."""
+    norm, pol = params[0], params[1]
     mean = np.asarray(norm.mean, np.float32)
     std = np.asarray(norm.std, np.float32)
     layers = pol["params"]
