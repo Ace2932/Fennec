@@ -227,6 +227,12 @@ class NovaJoystick(PipelineEnv):
         # abduction, joint idx 0,3,6,9) deviation from the default (0); the hfe/kfe
         # swing joints stay free. (ref: pose regularizer, focused on the splay.)
         splay_pen = jp.sum(pipeline_state.q[7:][jp.array([0, 3, 6, 9])] ** 2)
+        # pose: reward the thigh/shank (hfe/kfe) staying near their default bend
+        # (0.6 / -1.2). The video showed the FRONT LEGS BUCKLED/COLLAPSED into a
+        # hunched crouch; this pulls the legs back to a normal extended stance.
+        # exp -> mild, so they can still swing for the gait. (ref: pose regularizer.)
+        _hk = jp.array([1, 2, 4, 5, 7, 8, 10, 11])   # hfe,kfe of each leg
+        pose_rew = jp.exp(-2.0 * jp.sum((pipeline_state.q[7:][_hk] - self._default_pose[_hk]) ** 2))
 
         # Research-grounded set (legged_gym sharp tracking + ungated air, Walk-
         # These-Ways trot gait clock). Rough per-step at cmd 0.5: STAND ~0.4,
@@ -247,7 +253,8 @@ class NovaJoystick(PipelineEnv):
         # gait. progress 2.5 -> 3.0: a bit more forward-speed pull (it tracked only
         # ~0.02 of the 0.5 m/s command).
         reward = (1.5 * track + 0.3 * yaw_track + 3.0 * progress
-                  + move_gate * (0.5 * air_rew + 0.5 * gait_rew + 3.0 * clearance_rew) + 0.1
+                  + move_gate * (0.5 * air_rew + 0.5 * gait_rew + 3.0 * clearance_rew)
+                  + 0.5 * pose_rew + 0.1
                   - 2.5 * upright - 0.2 * ang_vel_xy - 1.5 * height_pen - 0.4 * z_pen
                   - 0.5 * slip_pen - 0.8 * splay_pen
                   - 0.02 * act_rate - 2e-3 * energy
