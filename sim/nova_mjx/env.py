@@ -186,6 +186,11 @@ class NovaJoystick(PipelineEnv):
         track = jp.exp(-jp.sum((cmd_xy - lin_vel[:2]) ** 2) / 0.0625)
         yaw_track = jp.exp(-(cmd[2] - ang_vel[2]) ** 2 / 0.0625)
         upright = jp.sum((up - jp.array([0.0, 0.0, 1.0])) ** 2)
+        # roll/pitch angular-velocity penalty — damps the tipping motion. With
+        # bigger/faster steps (feet_clearance) the robot NOSE-DIVED forward and
+        # fell (rollout: fell at 1.3 s). This + a stronger upright weight give it
+        # the pitch stability to support a dynamic gait. (ref: ang_vel_xy.)
+        ang_vel_xy = jp.sum(ang_vel[:2] ** 2)
         height_pen = (height - STAND_HEIGHT) ** 2
         z_pen = xd.vel[0, 2] ** 2
         act_rate = jp.sum((action - info["last_act"]) ** 2)
@@ -237,7 +242,7 @@ class NovaJoystick(PipelineEnv):
         # ~0.02 of the 0.5 m/s command).
         reward = (1.5 * track + 0.3 * yaw_track + 3.0 * progress
                   + 0.5 * air_rew + 0.5 * gait_rew + 3.0 * clearance_rew + 0.1
-                  - 0.6 * upright - 1.5 * height_pen - 0.4 * z_pen
+                  - 2.5 * upright - 0.2 * ang_vel_xy - 1.5 * height_pen - 0.4 * z_pen
                   - 0.5 * slip_pen - 0.8 * splay_pen
                   - 0.02 * act_rate - 2e-3 * energy
                   - 0.01 * jerk - 5e-4 * stand)
