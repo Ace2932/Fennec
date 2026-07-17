@@ -112,7 +112,24 @@ class NovaJoystick(PipelineEnv):
         frame = self._prop_frame(pipeline_state, info, ko)
         info["prop_hist"] = jp.tile(frame, (HIST, 1))     # fill history with frame 0
         obs = self._get_obs(info)
-        metrics = {"track": 0.0, "air": 0.0, "height": 0.0, "energy": 0.0}
+        # INSTRUMENTATION (no effect on reward): every WEIGHTED reward
+        # contribution + the per-foot stats needed to diagnose a farm. Only
+        # track/air/height/energy were logged through ckpt12, which is why the
+        # held-foot farm ran unseen for 12 checkpoints — the clearance and gait
+        # terms that pay for it were never in the metrics.
+        metrics = {k: 0.0 for k in (
+            "track", "air", "height", "energy",
+            # weighted contributions (what actually competes for the policy)
+            "w_track", "w_yaw", "w_progress", "w_air", "w_gait", "w_clearance",
+            "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
+            "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand",
+            # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
+            # carried leg reads ~1.0 here while the others cycle
+            "air_FL", "air_FR", "air_RL", "air_RR",
+            # mean |xy| speed of feet that are OFF the ground: the number the
+            # clearance farm is scaled by (was assumed, never measured)
+            "swing_xy_speed", "move_gate", "fwd_speed",
+        )}
         return State(pipeline_state, obs, jp.zeros(()), jp.zeros(()), metrics, info)
 
     def step(self, state, action):
@@ -271,13 +288,31 @@ class NovaJoystick(PipelineEnv):
         # + 3.0 * clearance_rew: reward bigger swing lifts to un-stick the timid
         # gait. progress 2.5 -> 3.0: a bit more forward-speed pull (it tracked only
         # ~0.02 of the 0.5 m/s command).
-        reward = (1.5 * track + 0.3 * yaw_track + 3.0 * progress
-                  + move_gate * (0.5 * air_rew + 0.5 * gait_rew + 10.0 * clearance_rew)
-                  + 0.5 * pose_rew + 0.1
-                  - 2.5 * upright - 0.2 * ang_vel_xy - 1.5 * height_pen - 0.4 * z_pen
-                  - 0.5 * slip_pen - 0.8 * splay_pen
-                  - 0.02 * act_rate - 2e-3 * energy
-                  - 0.01 * jerk - 5e-4 * stand)
+        # Each weighted term is a NAMED variable, and `reward` is their sum, so
+        # the logged metrics are the reward by construction and cannot drift
+        # from it. (They already had: the comment above says "+ 3.0 *
+        # clearance_rew" while the live weight was 10.0.)
+        w_track = 1.5 * track
+        w_yaw = 0.3 * yaw_track
+        w_progress = 3.0 * progress
+        w_air = move_gate * 0.5 * air_rew
+        w_gait = move_gate * 0.5 * gait_rew
+        w_clearance = move_gate * 10.0 * clearance_rew
+        w_pose = 0.5 * pose_rew
+        w_upright = -2.5 * upright
+        w_angvel = -0.2 * ang_vel_xy
+        w_height = -1.5 * height_pen
+        w_z = -0.4 * z_pen
+        w_slip = -0.5 * slip_pen
+        w_splay = -0.8 * splay_pen
+        w_actrate = -0.02 * act_rate
+        w_energy = -2e-3 * energy
+        w_jerk = -0.01 * jerk
+        w_stand = -5e-4 * stand
+        reward = (w_track + w_yaw + w_progress + w_air + w_gait + w_clearance
+                  + w_pose + 0.1
+                  + w_upright + w_angvel + w_height + w_z
+                  + w_slip + w_splay + w_actrate + w_energy + w_jerk + w_stand)
         reward = jp.clip(reward, -10.0, 10.0)
         done = jp.where((height < 0.08) | (up[2] < 0.4), 1.0, 0.0)
 
@@ -295,7 +330,26 @@ class NovaJoystick(PipelineEnv):
         info["cmd"] = jp.where(info["step"] % 250 == 0,
                                self.sample_command(ka), cmd)
         obs = self._get_obs(info)
-        state.metrics.update(track=track, air=air_rew, height=height, energy=energy)
+        # airborne fraction per foot — averaged over an episode, a CARRIED leg
+        # reads ~1.0 while a stepping leg reads ~0.3-0.5 (its swing duty).
+        foot_air_f = jp.logical_not(contact).astype(jp.float32)
+        # mean |xy| speed over feet that are off the ground (0 if all planted) —
+        # this is the multiplier the clearance term pays on.
+        n_swing = jp.sum(foot_air_f)
+        swing_xy_speed = jp.where(n_swing > 0,
+                                  jp.sum(foot_xy_speed * foot_air_f) / jp.maximum(n_swing, 1.0),
+                                  0.0)
+        state.metrics.update(
+            track=track, air=air_rew, height=height, energy=energy,
+            w_track=w_track, w_yaw=w_yaw, w_progress=w_progress, w_air=w_air,
+            w_gait=w_gait, w_clearance=w_clearance, w_pose=w_pose,
+            w_upright=w_upright, w_angvel=w_angvel, w_height=w_height, w_z=w_z,
+            w_slip=w_slip, w_splay=w_splay, w_actrate=w_actrate,
+            w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand,
+            air_FL=foot_air_f[0], air_FR=foot_air_f[1],
+            air_RL=foot_air_f[2], air_RR=foot_air_f[3],
+            swing_xy_speed=swing_xy_speed, move_gate=move_gate,
+            fwd_speed=jp.dot(cmd_xy, lin_vel[:2]) / cmd_speed)
         return state.replace(pipeline_state=pipeline_state, obs=obs,
                              reward=reward, done=done, info=info)
 
