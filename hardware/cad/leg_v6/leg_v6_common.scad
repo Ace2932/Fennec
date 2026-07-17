@@ -73,6 +73,25 @@ COL_PTS   = [[-8.3, 10.2], [-8.3, -10.2], [-32.8, 10.25], [-32.8, -10.25]];
 // clear of the screw columns (-8.3/-32.8), the bay (z<-15.5) + wheel window.
 ANTIROT_X     = [-30, -12];   ANTIROT_Z = [-13, 13];
 ANTIROT_PROUD = 0.35;         ANTIROT_BASE = 1.4;
+// LEAD-IN (2026-07-16): the servo case enters the open pocket TOP (+Z, see
+// sts_pocket_neg's "open top" comment) and seats DOWN toward the floor
+// (-Z, bay/case-column side) -- so the rib's FIRST contact as the case
+// drops in is its +Z end (ANTIROT_Z[1] = 13, only 1.7mm below the CASE_TOP
+// rim). Full 0.35 interference right at that mouth would gouge/gall the
+// case on entry (drop-in assembly needs a soft touchdown, not a scrape).
+// Ramp the last ANTIROT_LEADIN mm of the +Z end from ~0 interference (flush
+// with the void wall, hw) down to the full crush profile at
+// ANTIROT_Z[1]-ANTIROT_LEADIN; the -Z (floor) end is untouched (case seats
+// there last, already at full engagement, no lead-in needed).
+ANTIROT_LEADIN = 2.5;
+// The taper's mouth-end profile can't be a truly zero-area polygon (apex
+// exactly ON the base line) -- OpenSCAD silently drops a degenerate/zero-
+// area polygon's linear_extrude, which collapsed the hull() to just the
+// full-interference slice in testing (no taper at all, confirmed by
+// scratch-render + ray-cast probe). ANTIROT_MOUTH_PROUD is a tiny residual
+// interference (not a real design dimension) that only exists to keep the
+// polygon non-degenerate; functionally it IS ~0.
+ANTIROT_MOUTH_PROUD = 0.02;
 
 // ---- fits / hardware ---------------------------------------------------------
 CLR_POCKET = 0.45;   // DROP-IN slip fit. NOT the 0.30 press calibration
@@ -147,12 +166,40 @@ YOKE_BOT_IN = FLOOR_BOT - 0.4;           // -22.6 bottom-arm plate top (0.4: PA6
 // wall (y = ±(CASE_HW+CLR_POCKET)), apex PROUD inward toward the case flat.
 module antirot_ribs() {
     hw = CASE_HW + CLR_POCKET;                 // 12.85 = void wall plane
-    for (rx = ANTIROT_X, sy = [-1, 1])
-        translate([rx, 0, (ANTIROT_Z[0] + ANTIROT_Z[1]) / 2])
-            linear_extrude(ANTIROT_Z[1] - ANTIROT_Z[0], center = true)
+    z_full_top = ANTIROT_Z[1] - ANTIROT_LEADIN;  // 10.5: full-crush zone stops
+                                                   // here; mouth-ward of it is
+                                                   // the lead-in taper only.
+    for (rx = ANTIROT_X, sy = [-1, 1]) {
+        // full-interference body (UNCHANGED cross-section: base/proud as
+        // before, just shortened by ANTIROT_LEADIN at the +Z mouth end so
+        // the taper below can occupy that span) -- SF 573 wall-bearing calc
+        // depends on this profile, do not resize it.
+        translate([rx, 0, (ANTIROT_Z[0] + z_full_top) / 2])
+            linear_extrude(z_full_top - ANTIROT_Z[0], center = true)
                 polygon([[-ANTIROT_BASE / 2, sy * hw],
                          [ ANTIROT_BASE / 2, sy * hw],
                          [0, sy * (hw - ANTIROT_PROUD)]]);
+        // lead-in taper: hull() from the full-crush profile at z_full_top
+        // down to a FLUSH (zero-interference, apex = base = hw) profile at
+        // the mouth (ANTIROT_Z[1]) -- a linear ramp in crush depth over the
+        // last ANTIROT_LEADIN mm of insertion travel, so the case's flat
+        // wall meets ~0 interference on first touch and only crushes the
+        // full 0.35 -> 0.1 once it's past the mouth and running true.
+        hull() {
+            translate([rx, 0, z_full_top])
+                linear_extrude(EPS, center = true)
+                    polygon([[-ANTIROT_BASE / 2, sy * hw],
+                             [ ANTIROT_BASE / 2, sy * hw],
+                             [0, sy * (hw - ANTIROT_PROUD)]]);
+            translate([rx, 0, ANTIROT_Z[1]])
+                linear_extrude(EPS, center = true)
+                    polygon([[-ANTIROT_BASE / 2, sy * hw],
+                             [ ANTIROT_BASE / 2, sy * hw],
+                             [0, sy * (hw - ANTIROT_MOUTH_PROUD)]]);  // ~0
+                                                        // interference (see
+                                                        // ANTIROT_MOUTH_PROUD)
+        }
+    }
 }
 
 module sts_pocket_neg(extra_top = 30) {
@@ -296,12 +343,51 @@ module zip_pair_neg(x0, y0 = 0, z0 = -30, h = 60, spacing = 10) {
         translate([x0, y0 + s*spacing/2, z0]) cylinder(d = 3.2, h = h);
 }
 
-// Retention-strap pilots: 2x Ø2.05 self-tap into the side-wall rims (LINK
-// frame; wall_y = wall centerline, rim_z = pocket rim = CASE_TOP).
+// Retention-strap ZIP-TIE bores (CONVERTED 2026-07-16, owner decision --
+// was 2x Ø2.05 self-tap pilots into the side-wall rims). The self-tap
+// pilot centered on wall_y (14.25) measured only 0.374mm of wall to the
+// servo cavity (CASE_HW+CLR_POCKET = 12.85 void wall, TRIMESH-PROBED
+// against tibia_R.stl) -- too thin for any insert or nut, and self-
+// tapping into filament is banned project-wide (see leg_v6/README.md +
+// nova-proj/feedback-no-self-tap-into-filament.md). All of that pilot's
+// margin sat on the WRONG side: 2.474mm remained outboard (pilot edge to
+// the raised Ø7 boss's own OD) vs 0.374mm inboard (pilot edge to the
+// pocket wall). The strap is BACKUP-ONLY retention (anti-rotation ribs
+// carry the servo torque -- see those ribs' own notes above) so a zip
+// tie is mechanically sufficient once it isn't drilled through the thin
+// side: a straight Ø3.2 through-bore (zip_pair_neg's own diameter,
+// standard 2.5mm zip tie) sized for a tie to loop strap-end -> through
+// the boss -> back, cinching the strap flush.
+// ZIP_Y_OUT shifts the bore's Y center OUTBOARD off wall_y by a fixed
+// amount (not a caller param -- x0/wall_y/rim_z keep their ORIGINAL
+// meaning and this module keeps its ORIGINAL name/signature so
+// tibia.scad's one call site, strap_pilot_neg(31, 14.25, SLAB_Z1+3.2),
+// needs no edit) so the bore's INBOARD edge clears the servo-cavity wall
+// by >=1.0mm instead of 0.374mm. TRIMESH-PROBED at wall_y+1.35 (=15.60):
+// inboard wall to the pocket void = 1.15mm, matching strap.scad's own
+// slot wall (1.44mm, see strap.scad) -- both comfortably >=1.0mm. The
+// bore's OUTBOARD edge sits close to the boss's own Ø7 OD (~0.55mm
+// remaining) -- thin, but that side is the boss's exterior shoulder, not
+// a cavity wall, so it isn't the safety-critical direction; nothing
+// breaks through.
+// Depth: a self-tap pilot could be blind (h=8, from rim_z-8 to rim_z);
+// a zip tie can't -- it must be feedable end-to-end (matches this file's
+// own zip_pair_neg()/LA-21 through-hole convention). Top just clears the
+// boss (rim_z, as originally); bottom runs to FLOOR_BOT-3, past the
+// tibia's real underside at this X (TRIMESH-PROBED: solid the whole
+// column at x0=31 down to ~FLOOR_BOT, air just past it).
+// NOTE: coax.scad has its OWN separate strap-pilot cut (~line 286-289,
+// NOT this shared module) that still drills the old Ø2.05 self-tap
+// pilot -- it does not call strap_pilot_neg() and is therefore now
+// INCONSISTENT with this zip-tie conversion. Left untouched here
+// (coax.scad is a concurrent agent's file); flagged as a follow-up.
+ZIP_BORE_D = 3.2;    // matches zip_pair_neg's cable-tie bore diameter
+ZIP_Y_OUT  = 1.35;   // outboard shift applied to wall_y (14.25 -> 15.60)
 module strap_pilot_neg(x0 = 31, wall_y = 14.25, rim_z = CASE_TOP) {
+    z0 = FLOOR_BOT - 3;
     for (sy = [-1, 1])
-        translate([x0, sy*wall_y, rim_z - 8])
-            cylinder(d = 2.05, h = 8 + EPS);
+        translate([x0, sy*(wall_y + ZIP_Y_OUT), z0])
+            cylinder(d = ZIP_BORE_D, h = (rim_z + EPS) - z0);
 }
 
 // STS3215 solid, spline at origin (preview): case + bay + horn + wheel.

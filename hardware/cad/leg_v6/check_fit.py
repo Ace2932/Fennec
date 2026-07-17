@@ -297,6 +297,10 @@ FEMUR_R_ZIP_HOLES = [
 ]
 TIBIA_R_ZIP_HOLES = [
     ('x44', 44, -5, -23.2, 16.8), ('x44', 44, 5, -23.2, 16.8),
+    # LA-30 (2026-07-16): second KNEE-loop anchor pair, farther from the kfe
+    # axis than x44 (which stays the tunnel-exit strain relief) -- see
+    # tibia.scad's own zip_pair_neg(58, ...) comment for the rationale.
+    ('x58', 58, -5, -23.2, 16.8), ('x58', 58, 5, -23.2, 16.8),
     ('x62', 62, 0, -23.2, 16.8),
     ('x84', 84, 0, -23.2, 16.8),
 ]
@@ -305,6 +309,41 @@ TIBIA_R_ZIP_HOLES = [
 # CLR_POCKET+WALL).
 COAX_R_ZIP_HOLES_X = 7.0
 COAX_R_ZIP_HOLES_H = 16.05 - 6
+# LA-29 (2026-07-16): HAA connector-bay zip anchor -- same X-axis/Ø3.2 style
+# as the tunnel-exit pair above, sited near the rear (+Y) connector-bay face
+# instead (see coax.scad's own comment on this pair for the (y,z) siting
+# rationale). Same COAX_R_ZIP_HOLES_X/H reuse (identical wall geometry).
+COAX_HAA_ZIP_Y = 19.0
+COAX_HAA_ZIP_Z = -27.0
+
+# LA-30 (2026-07-16, coordinator follow-up to the #7-fix session): two zip-
+# tie bore classes existed with NO through-hole gate at all until now --
+# both converted from self-tap pilots this same session and both bit a
+# first-article probe before landing here (a blind-pocket regression class
+# this table exists to catch, per LA-21's own header):
+#   * tibia.scad's strap_pilot_neg() call (leg_v6_common.scad, CONVERTED
+#     2026-07-16 from a self-tap pilot -- x0=31, wall_y=14.25, rim_z=
+#     SLAB_Z1+3.2=17.9): real bore is Z-axis at (31, +/-(14.25+ZIP_Y_OUT)=
+#     +/-15.60), z0=FLOOR_BOT-3=-25.2 .. z1=17.9. tibia_L is the SAME
+#     Z-mirror convention as TIBIA_R_ZIP_HOLES above (tibia_L.scad:
+#     mirror([0,0,1])) -- same (x0,y0), z-range negated.
+#   * coax.scad's OWN separate front-strap-pilot cut (different axis/face,
+#     doesn't call strap_pilot_neg() -- see that file's header), also
+#     CONVERTED 2026-07-16: Y-axis bore at x=+/-(14.25+ZIP_Y_OUT)=+/-15.60,
+#     z=-31, y spanning the pad face (-18.6) to well past the rear corner-
+#     notch exit (21.0) -- the notch itself was MIRRORED this same pass
+#     (coax.scad's corner-notch cut, was +X only) after a probe caught the
+#     -X/coax_L +X bore landing in a genuine ~1.2mm blind plug there.
+#     coax_L is coax.scad's own X-mirror convention (mirror([1,0,0])) --
+#     same y-span, x negated.
+TIBIA_STRAP_ZIP_HOLES = [
+    ('strap', 31, 15.60, -25.2, 17.9),
+    ('strap', 31, -15.60, -25.2, 17.9),
+]
+COAX_STRAP_ZIP_X = 14.25 + 1.35    # == leg_v6_common.scad's 14.25+ZIP_Y_OUT
+COAX_STRAP_ZIP_Z = -31.0
+COAX_STRAP_ZIP_Y0 = -18.6
+COAX_STRAP_ZIP_Y1 = 21.0
 
 
 def through_hole_checks():
@@ -330,12 +369,35 @@ def through_hole_checks():
     for label, x0, y0, z0, z1 in TIBIA_R_ZIP_HOLES:
         bad |= check('tibia_R.stl', f'zip {label} y={y0:+d}', [x0, y0, 0], [0, 0, 1], z0, z1)
         bad |= check('tibia_L.stl', f'zip {label} y={y0:+d}', [x0, y0, 0], [0, 0, 1], -z1, -z0)
+    # LA-30 (2026-07-16): tibia's strap_pilot_neg() zip bores, same Z-mirror
+    # convention as TIBIA_R_ZIP_HOLES above.
+    for label, x0, y0, z0, z1 in TIBIA_STRAP_ZIP_HOLES:
+        bad |= check('tibia_R.stl', f'{label} y={y0:+.2f}', [x0, y0, 0], [0, 0, 1], z0, z1)
+        bad |= check('tibia_L.stl', f'{label} y={y0:+.2f}', [x0, y0, 0], [0, 0, 1], -z1, -z0)
+    # LA-30 (2026-07-16): coax's own front-strap zip bores (Y-axis, NOT the
+    # X-axis convention the tunnel-exit/HAA-bay pairs below use) -- coax_L is
+    # coax.scad's own X-mirror (mirror([1,0,0])): same y-span, x negated.
+    for sx in (1, -1):
+        x0 = sx * COAX_STRAP_ZIP_X
+        bad |= check('coax_R.stl', f'strap sx={sx:+d}', [x0, 0, COAX_STRAP_ZIP_Z],
+                     [0, 1, 0], COAX_STRAP_ZIP_Y0, COAX_STRAP_ZIP_Y1)
+        bad |= check('coax_L.stl', f'strap sx={sx:+d}', [-x0, 0, COAX_STRAP_ZIP_Z],
+                     [0, 1, 0], COAX_STRAP_ZIP_Y0, COAX_STRAP_ZIP_Y1)
     for sx in (1, -1):
         x0 = sx * COAX_R_ZIP_HOLES_X
         t_lo, t_hi = sorted([x0, x0 + sx * COAX_R_ZIP_HOLES_H])
         bad |= check('coax_R.stl', f'zip sx={sx:+d}', [0, 17, -36], [1, 0, 0], t_lo, t_hi)
         # coax_L = X-mirror of coax_R (coax_L.scad: mirror([1,0,0]))
         bad |= check('coax_L.stl', f'zip sx={sx:+d}', [0, 17, -36], [1, 0, 0], -t_hi, -t_lo)
+    # LA-29 (2026-07-16): HAA connector-bay zip anchor -- same geometry
+    # convention as the tunnel-exit pair just above, different (y,z) siting.
+    for sx in (1, -1):
+        x0 = sx * COAX_R_ZIP_HOLES_X
+        t_lo, t_hi = sorted([x0, x0 + sx * COAX_R_ZIP_HOLES_H])
+        bad |= check('coax_R.stl', f'zip-haa sx={sx:+d}',
+                     [0, COAX_HAA_ZIP_Y, COAX_HAA_ZIP_Z], [1, 0, 0], t_lo, t_hi)
+        bad |= check('coax_L.stl', f'zip-haa sx={sx:+d}',
+                     [0, COAX_HAA_ZIP_Y, COAX_HAA_ZIP_Z], [1, 0, 0], -t_hi, -t_lo)
     # HAA rear-arm wheel-bolt holes (2026-07-11, user catch: "the rear shoulder
     # holes don't look cut"): 4/station on the Ø14 BCD about each haa axis
     # (sx*HIP_X=39.05, z=0), drilled along +Y through the rear wall (-26.6..
@@ -356,10 +418,10 @@ def cable_checks():
     tighter than the design's own >=40mm bend-radius spec, backlog #18).
     Places the documented zip-tie anchor points (cable_clip.scad's own
     pairing: "coax tunnel-exit pair + femur x44 pair = the HIP loop
-    (haa+hfe)"; "femur x84 (yoke plate) + tibia x44 pair = the KNEE loop
+    (haa+hfe)"; "femur x84 (yoke plate) + tibia x58 pair = the KNEE loop
     (kfe)") at the LITERAL translate() coordinates each anchor is cut at in
-    the .scad (coax.scad:170, femur.scad:148/153, tibia.scad:150), and
-    sweeps their 3D separation with the SAME kfe/hfe transforms
+    the .scad (coax.scad:170, femur.scad:148/153, tibia.scad's zip_pair_neg
+    calls), and sweeps their 3D separation with the SAME kfe/hfe transforms
     sweep_checks() already uses. A loop needs >= 2x the min bend radius
     (backlog #18: >=40mm radius -> 80mm span) to avoid folding tighter than
     spec.
@@ -375,15 +437,37 @@ def cable_checks():
     (z=-38.4) rather than this zip-hole's own coordinate; noted here as an
     approximation, not re-derived (see the priority-order note on LA-20 in
     the fault audit -- a full loop-length model was out of scope for this
-    pass)."""
+    pass).
+
+    LA-29 (cable-management review, 2026-07-16): added a 3rd case, the HAA
+    loop -- coax.scad's new +Y connector-bay zip anchor (this review) vs
+    the shoulder's own fixed Ø12 flange grommet (shoulder.scad, read-only
+    this session; "2x Ø12 cable grommets at (+/-32,-26)", the trunk<->C-box
+    interface -- the only fixed anchor available on that side). Same
+    coax->shoulder transform shoulder_checks() already uses (mirror-Y, then
+    translate to the hip station), same haa sweep angles (sw +/-40, mech
+    stop ~+/-45). The grommet doesn't move (fixed to the shoulder); only
+    the coax-side anchor sweeps with haa.
+
+    LA-30 (same review): the KNEE loop's tibia-side anchor moved from x44
+    to a NEW, dedicated x58 pair (x44 stays, now only the tunnel-exit
+    strain relief -- see tibia.scad's own comment) to close some of the
+    39.2mm-at-kfe118 gap found by LA-14. Anchor-radius law of cosines makes
+    the tibia-side radius the dominant lever (the femur-side anchor barely
+    moves the worst case) -- see tibia.scad for the full geometric
+    rationale. Worst-case span improved 39.2mm -> ~51.6mm (still short of
+    the 80mm target -- best achievable via anchor relocation alone without
+    moving the loop noticeably farther from the actual knee crossing; the
+    fold-before-zip discipline still covers the remaining shortfall)."""
     print('-- LA-20: cable service-loop anchor separation vs ROM (backlog #18, >=40mm bend radius) --')
     MIN_SPAN = 80.0   # 2 x the >=40mm min bend radius (backlog #18)
     T = trimesh.transformations.translation_matrix
 
-    # ---- KNEE loop: femur x84 (yoke-crossing zip pair) <-> tibia x44
-    # (tunnel-exit zip pair), swept across kfe.
+    # ---- KNEE loop: femur x84 (yoke-crossing zip pair) <-> tibia x58
+    # (LA-30, 2026-07-16: dedicated KNEE-loop pair, farther from the kfe
+    # axis than the x44 tunnel-exit pair -- see tibia.scad), swept across kfe.
     fem_anchor = np.array([84, 0, -27.6])
-    tib_anchor = np.array([44, 0, -23.2])
+    tib_anchor = np.array([58, 0, -23.2])
     T_knee = T([106.9, 0, 0])
     worst_knee = None
     for kfe in [-109, -90, -60, -30, 0, 30, 60, 90, 109, 118]:
@@ -410,10 +494,31 @@ def cable_checks():
         tag = 'WARN' if d < MIN_SPAN else 'OK  '
         print(f'   {tag} HIP  loop hfe {hfe:+4d}deg: {d:.1f}mm span (>= {MIN_SPAN:.0f}mm wanted)')
 
-    print(f'   worst-case span: KNEE {worst_knee:.1f}mm, HIP {worst_hip:.1f}mm -- '
-          f'LA-14 (open, not fixed): both loops fold tighter than the '
-          f'{MIN_SPAN:.0f}mm spec across part of the ROM. WARN only (informational; '
-          f'does not fail the gate) -- see backlog #18 / LA-14.')
+    # ---- HAA loop (LA-29, 2026-07-16): coax's new +Y connector-bay zip
+    # anchor <-> the shoulder's fixed Ø12 flange grommet. Same coax->
+    # shoulder transform as shoulder_checks() (mirror-Y, then translate to
+    # the right hip station); the grommet is FIXED (on the shoulder), only
+    # the coax-side anchor sweeps with haa.
+    HIP_T = T([39.05, 0, 0])
+    MIR = np.eye(4); MIR[1, 1] = -1
+    base_cs = HIP_T @ MIR   # coax frame -> shoulder frame (right hip)
+    haa_anchor = np.array([0, 19, -27])          # coax.scad's new pair midpoint (x=+/-7 avg 0)
+    grommet = np.array([32, -75.7, -26])         # shoulder.scad Ø12 grommet bore midpoint
+    worst_haa = None
+    for haa in [-45, -40, -25, 0, 25, 40, 45]:
+        S = rot_about(haa, [0, 1, 0], [39.05, 0, 0])
+        p = trimesh.transform_points([haa_anchor], base_cs)[0]
+        p = trimesh.transform_points([p], S)[0]
+        d = float(np.linalg.norm(p - grommet))
+        worst_haa = d if worst_haa is None else min(worst_haa, d)
+        tag = 'WARN' if d < MIN_SPAN else 'OK  '
+        print(f'   {tag} HAA  loop haa {haa:+4d}deg: {d:.1f}mm span (>= {MIN_SPAN:.0f}mm wanted)')
+
+    print(f'   worst-case span: KNEE {worst_knee:.1f}mm, HIP {worst_hip:.1f}mm, '
+          f'HAA {worst_haa:.1f}mm -- LA-14 (open, not fixed): all three loops fold '
+          f'tighter than the {MIN_SPAN:.0f}mm spec across part of the ROM. WARN only '
+          f'(informational; does not fail the gate) -- see backlog #18 / LA-14 / '
+          f'LA-29 / LA-30.')
     return False   # WARN-only by design (see docstring) -- never fails the gate
 
 

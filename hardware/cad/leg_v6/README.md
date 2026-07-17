@@ -30,7 +30,7 @@ correct: those were blocks, not leg designs).
 | `knee_arm.scad` (print 4) | ✅ gated | bolt-on knee top arm — horn-seat face prints ON BED; 4× M3 into shelf heat-sets, diagonal pair Ø3.1 close-fit (registration) |
 | `tibia.scad` (+`_L`) | ✅ gated | KFE pocket + blade + **toe_v2 designed seat** (disc/boss/key-pockets, mates the SM3_Foot crescent — `check_shoe.py` gated) @129.0, jog −30.5 outboard (stock stance); vents, anchors, dots |
 | `coax.scad` (+`_L`) | ✅ gated | HAA pocket (horn −Y, front insert), femur yoke (horn arm 16.6 / wheel boss →51.5, bridge 7.4), front strap pads, vent, bottom cable tunnel |
-| `strap.scad` (print 4+) | ✅ | servo tail retention, 2× M2.5 self-tap into rim-pad pilots |
+| `strap.scad` (print 4+) | ✅ | servo tail retention, 2× Ø3.2 zip-tie bores into rim-pad zip cuts (2026-07-16: was M2.5 self-tap — see row 15) |
 | shoulder | ✅ gated (rev 2026-07-06) | v6 crossmember per trunk end; **riser interface rev**: flange center notch (x ±26 above z 19.5) + 2× Ø3.4 riser hold-down holes (x ±40, z 26.95) — see `../chassis/README.md` |
 
 **ROM (sweep-gate verified, LEG-LOCAL):** kfe ±109° sw / ~118° mech ·
@@ -66,7 +66,13 @@ the horn/wheel discs). rev 2, from `feetech_servo_models/converted_stl/servo.stl
 
 ## Hardware per joint
 4× M2 ≈stock+3mm (case columns, countersunk) · 4+1× M2.5×6 (horn + M3 center)
-· 4+1× M2.5×8 (wheel, through boss, counterbored) · 2× M2.5 self-tap + strap.
+· 4+1× M2.5×8 (wheel, through boss, counterbored) · strap retention: **tibia**
+zip tie (2026-07-16, Ø3.2 through-bore — see row 15); **coax** also zip tie
+(2026-07-16, coordinator follow-up — Ø3.2 through-bore at x=±15.60 in its own
+separate strap-pilot cut, coax.scad — hand-converted, not a
+`strap_pilot_neg()` call, same axis-different-frame reason as before; 1.15mm
+verified clear to the servo cavity, outboard side left thin/open to avoid
+the known femur-rim graze at x≳16.6).
 
 ## Connection & tolerance map (audited 2026-07-06)
 Every mate, its fit, and who provides location:
@@ -87,7 +93,7 @@ Every mate, its fit, and who provides location:
 | 12 | femur disc r16.05 ↔ coax void r16.7 | 0.65 radial (was 0.35 — under print tol, widened) | — |
 | 13 | knee arm ↔ shelf | flat + 2× Ø3.1 dowel-fit M3 (0.12) + 2× Ø3.4 | dowel screws |
 | 14 | M3 heat-sets | **bore Ø4.0** (insert OD 4.6 — a 4.6 bore drops through; audit catch). ⚠ 2026-07-06: `HEATSET_D/L` were referenced but NEVER DEFINED — OpenSCAD silently dropped every insert bore from femur + shoulder STLs; now defined in `leg_v6_common.scad`, STLs rebuilt. If a printed femur/shoulder predates this, its shelf/deck has NO bores — reprint | — |
-| 15 | strap ↔ pads | Ø2.05 pilots, M2.5 self-tap; pad top 17.6+, cap gap ≥0.2 | — |
+| 15 | strap ↔ pads | **zip tie** (2026-07-16, was M2.5 self-tap — 0.374mm wall to the servo cavity, no insert/nut fits, banned project-wide): Ø3.2 through-bore in the boss/rim (`strap_pilot_neg()`) + matching Ø3.2 bore in the strap, both at ±15.60 (shifted outboard off the old 14.25 for ≥1.0mm wall — 1.15mm boss-side / 1.44mm strap-side, TRIMESH-PROBED); pad top 17.6+, cap gap ≥0.2 | — |
 | 16 | toe_v2 seat ↔ SM3_Foot | **designed seat** (2026-07-06, replaces the stock outline — it never mated the crescent, sloppy ring): core disc r12.35×14.2 on the shoe's inner face r12.53 (0.18 clr), boss r10.15 under the edge lips (r10.35), 2 sector key pockets take the mid-band tabs (tips r6.88); θ = 54 exactly, ±~2° slop. Contact plumb under the post by construction (dimensions.md SM3_Foot **v3**). **Gated: `check_shoe.py`** (0 penetration, seat gap median 0.28) | key pockets |
 | 17 | cable plugs ↔ tunnel | 19×5.9 tunnel — **✅ AUD-3 RESOLVED 2026-07-10 (user caliper)**: real servo dual-connector exits side-by-side at 15.1mm (< 19 tunnel width), plug height <5.9mm (< tunnel height) — the cabled servo passes the tunnel plugged-in, no pocket change needed | — |
 First-article: run an M3 through the Ø3.1 dowel pair (prints ~3.0), M2 through

@@ -3,6 +3,15 @@
 ("leg-internal pockets sized in the design memo, unchanged"). All 3 leg joints
 share sts_pocket_neg + COL_PTS, so one analysis covers haa/hfe/kfe.
 
+Housekeeping update (2026-07-16 review): the anti-rotation fix this script's
+analysis motivated ("fix B" below) was IMPLEMENTED 2026-07-07, same day as
+this file, in leg_v6_common.scad — antirot_ribs() (called from
+sts_pocket_neg()) + the ANTIROT_X/ANTIROT_Z/ANTIROT_PROUD/ANTIROT_BASE
+constants (crush ribs on the ±Y case flats, proud 0.35mm, crushing to a
+0.1mm nominal clearance). It is built into every pocket on disk, not an
+unimplemented proposal. The math below is unchanged and matches the built
+geometry.
+
 Load path: the STS3215 OUTPUT axis = Z. Joint torque is reacted about Z. The
 walls are SLIP-FIT (0.45) so they DON'T engage -> the full reaction rides the
 4x M2 case screws in tangential shear, transmitted to the pocket FLOOR via the
@@ -52,7 +61,11 @@ print("   cyclic, with the 0.45 slip-fit + NO anti-rotation. Self-tap-in-plastic
 print("   under 1e5 cyc/hr classically BACKS OUT / wallows -> preload loss ->")
 print("   servo rattles in the slip -> accelerating wear. No static SF captures")
 print("   this; it is a retention/reliability failure, not a strength one.\n")
-print("== ANTI-ROTATION (fix B) — reaction moves to WALL BEARING ==")
+print("== ANTI-ROTATION (fix B) — IMPLEMENTED 2026-07-07, leg_v6_common.scad ==")
+print("   antirot_ribs() (called from sts_pocket_neg()): crush ribs on the ±Y")
+print("   case flats (ANTIROT_X=[-30,-12], ANTIROT_Z=[-13,13], PROUD 0.35mm,")
+print("   BASE 1.4mm) reduce the rotational slop 0.45->0.1mm and move the")
+print("   torque reaction to WALL BEARING, off the case screws:")
 for name,T in [('STALL 12V',2.94)]:
     F_wall = T*1000/(2*12.4)                       # couple across 2 side flats @ 12.4
     print(f"   {name}: wall force {F_wall:.0f} N/side over {A_wall:.0f} mm² "

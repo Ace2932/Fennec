@@ -199,9 +199,17 @@ Switch can be pulled from its case to save ~60 % volume inside the chassis.
 ## Strain relief + routing notes
 
 - Feetech daisy chain follows the opposite chassis edge from the high-current servo power (reduces capacitive coupling)
-- L2 pigtail feeds DOWN the mast bore into the riser deck's 14×12 slot
-  (`../cad/chassis/`); add a TPU strain-relief insert (patterns.md §8b
-  pattern) into the slot AFTER feeding the RJ45/DC plugs through
+- **L2/D456 cable path** (current, post-2026-07-07 head re-architecture +
+  AUD-12 — supersedes the old mast-bore/riser-deck-slot route): L2 pigtail
+  enters `head.scad`'s crown bore (Ø13×11, x126.5 ±6.5/±5.5). D456's USB-C
+  reuses that SAME bore below z106 — rerouted down the column front through
+  the face-plate window (AUD-12 fix: a separate channel there would have
+  hollowed the head-mount boss's own heat-set inserts). Both then drop
+  through `neck_bracket.scad`'s cable slot (18×14, at the deck top) into
+  this shoulder's **deck lightening window**, through the shoulder C-box,
+  out the Ø12 shoulder flange grommet, into the trunk. Add a TPU
+  strain-relief insert (patterns.md §8b pattern) where the bundle
+  transitions at the flange grommet.
 - Servo wire entry at each leg gets a TPU strain relief (same source)
 - **Jetson −Y bundle** (DC barrel + RJ45 + USB-C right-angle adapters,
   backlog #41): sleeve the 3-cable run in spiral wrap (BOM §9) before

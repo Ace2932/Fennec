@@ -12,19 +12,28 @@
 // clamping bundle to clip to leg — no leg reprints, clip retrofits any
 // O3.2-pair anchor (10 mm spacing).
 //
-// Install (4 per leg, both ends of each service loop):
+// Install (5 per leg, both ends of each service loop):
 //   coax tunnel-exit pair + femur x44 pair   = the HIP loop (haa+hfe)
-//   femur x84 (yoke plate) + tibia x44 pair  = the KNEE loop (kfe)
-// Spiral wrap (O6, BOM) covers the free loop BETWEEN clips; loop radius
-// >= 40 (8x bundle O5). Assembly checklist: leg_v6 README "cable
-// dressing" + tug-test every anchor.
+//   femur x84 (yoke plate) + tibia x58 pair  = the KNEE loop (kfe)
+//   coax +Y connector-bay pair + shoulder's Ø12 flange grommet = the HAA
+//     loop (haa roll -- LA-29, cable-management review 2026-07-16; the
+//     shoulder-side end is the grommet itself, no clip needed there)
+// tibia's original x44 pair stays in place as the tunnel-exit strain
+// relief (LA-4/#31) -- it is NOT part of the KNEE loop's span calc any
+// more (LA-30, same review: the KNEE loop now anchors at tibia x58,
+// farther from the kfe axis, to close some of the 39.2mm-at-full-fold
+// gap below). Spiral wrap (O6, BOM) covers the free loop BETWEEN clips;
+// loop radius >= 40 (8x bundle O5). Assembly checklist: leg_v6 README
+// "cable dressing" + tug-test every anchor.
 //
-// ASSEMBLY RULE (backlog #18 / LA-14, --cable WARN gate LA-20): anchor
-// separation shrinks below the >=40 spec across ROM (KNEE ~39mm at kfe
-// fold, HIP ~60-79mm across hfe) -- resolved by discipline, not geometry.
-// Fold the joint to its mechanical limit FIRST, THEN zip the loop to
-// this clip, so the loop is slack (not taut) at full fold. See leg_v6
-// README "Free-loop length" note.
+// ASSEMBLY RULE (backlog #18 / LA-14, --cable WARN gate LA-20/LA-29/
+// LA-30): anchor separation shrinks below the >=40 spec across ROM (KNEE
+// ~39.2mm -> ~51.6mm at kfe full fold after the LA-30 x58 anchor move,
+// still short of spec; HIP ~60-81mm across hfe; HAA ~57-63mm across haa,
+// LA-29) -- mitigated by geometry where practical (LA-30) and by
+// discipline for the remainder. Fold the joint to its mechanical limit
+// FIRST, THEN zip the loop to this clip, so the loop is slack (not taut)
+// at full fold. See leg_v6 README "Free-loop length" note.
 //
 // Print: TPU 95A, flat (base down), 100% infill, ~1 g each (LA-28,
 // 2026-07-11: was "~2 g" -- measured mesh volume 850.7mm^3 (post LA-24
