@@ -48,17 +48,33 @@ LEG_NAMES = ["FL", "FR", "RL", "RR"]
 # so `foot_z` (the link position) sits one radius ABOVE the ground on touchdown.
 # Measured standing on all four, weight fully settled: foot_z = 0.0125.
 #
-# ⚠ The live contact test is `foot_z < 0.025` (see step), which is 12.5mm ABOVE
-# the weight-bearing height — a foot can float a centimetre off the floor and
-# still be scored as PLANTED. Every gait shaper (air/gait/clearance/slip) reads
-# that test, so all four are blind inside the dead band. The Barkour reference
-# subtracts the radius: `contact = (foot_z - foot_radius) < 1e-3`; MuJoCo
-# Playground uses real collision sensors.
+# The contact test WAS `foot_z < 0.025` — 12.5mm above the weight-bearing height,
+# so a foot could float a centimetre off the floor and still be scored PLANTED.
+# Every gait shaper (air/gait/clearance/slip) read it, so all four were blind
+# inside that dead band. Now radius-corrected, per the Barkour reference
+# (`contact = (foot_z - foot_radius) < 1e-3`); Playground uses real collision
+# sensors, which would be better still but needs contact sensors in the MJCF.
 #
-# Not yet wired into the reward — the metrics below measure BOTH definitions on
-# the same trajectory first, so the true gait is known before any weight moves.
+# The `airT_*` / `ghost_*` metrics keep BOTH definitions visible so this can never
+# silently drift again.
 FOOT_RADIUS = 0.014
 CONTACT_EPS = 1e-3
+
+# Target swing height for the feet_clearance COST. The reference (Playground Go1)
+# uses max_foot_height = 0.1, but that is GO1-SCALED: a 0.1m lift on a robot whose
+# body sits at ~0.3m. NOVA stands at STAND_HEIGHT 0.17 with a ~0.21m hip-to-foot
+# leg, so 0.1 would demand a lift of 59% of body height every stride — servo-
+# punishing and nothing like a real trot. Scaled to NOVA's geometry: 0.1 * 0.17/0.3
+# ~= 0.057, and by leg length 0.1 * 0.21/0.35 = 0.06 -> take 0.05 (a lift of ~32%
+# of the foot's 157mm vertical range).
+#
+# ⚠ This is the class of bug that keeps biting: an imported reference constant
+# that was never rescaled to NOVA. `track`'s sigma is the other live one — 0.0625
+# was correct for a 0.5 m/s command, but 170f072 lowered commands to 0.15-0.35 and
+# never rescaled it, so a STANDING robot now scores 0.55 there (measured stand:
+# 1.357/step total). Left alone deliberately: the robot walks, so the stand basin
+# is not the active failure. Fix it when the evidence says to, not before.
+FOOT_TARGET_Z = 0.05
 
 
 class NovaJoystick(PipelineEnv):
@@ -137,7 +153,7 @@ class NovaJoystick(PipelineEnv):
         metrics = {k: 0.0 for k in (
             "track", "air", "height", "energy",
             # weighted contributions (what actually competes for the policy)
-            "w_track", "w_yaw", "w_progress", "w_air", "w_gait", "w_clearance",
+            "w_track", "w_yaw", "w_progress", "w_air", "w_clearance",
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
@@ -193,26 +209,33 @@ class NovaJoystick(PipelineEnv):
         # move without stepping. threshold 0.2 s + cap 0.4 s -> rewards real swings,
         # not a held foot; short in-place shuffles pay little.
         foot_z = x.pos[self._foot_ids, 2]
-        contact = foot_z < 0.025
+        # RADIUS-CORRECTED contact (Barkour ref: `(foot_z - foot_radius) < 1e-3`).
+        # Was `foot_z < 0.025` — 12.5mm above the measured weight-bearing height
+        # (0.0125), so a foot could float a centimetre up and still score as
+        # planted. PROBED on ckpt12: FR/RL were airborne 11.0%/12.2% of the time
+        # and the reward saw 0.0% — their ENTIRE air time fell inside the dead
+        # band. Every gait shaper reads this, so small correct steps were both
+        # invisible (no clearance/air/gait) and PUNISHED (slip bills a swinging
+        # foot as sliding, because contact never went false). The policy carried
+        # a leg because that was the only motion the reward could see.
+        contact = (foot_z - FOOT_RADIUS) < CONTACT_EPS
         air = info["feet_air"]
         first_contact = (air > 0.0) & contact
         cmd_moving = math.normalize(cmd[:2])[1] > 0.05
         air_rew = jp.sum(jp.clip(air - 0.2, 0.0, 0.4) * first_contact) * cmd_moving
         air = jp.where(contact, 0.0, air + self._dt)
 
-        # ---- trot GAIT-PHASE reward (the stand-basin breaker) ----
-        # A 2 Hz clock; diagonal pairs (FL,RR)/(FR,RL) alternate swing. Rewarding
-        # SELF-ORGANIZED trot (no clock) — reward DIAGONAL asymmetry: a diagonal
-        # foot-pair airborne while the other pair is planted (the trot swing).
-        # Run 6 used a fixed-phase clock, but the phase is NOT in the observation,
-        # so the policy was blind to it and couldn't match it — the reward was
-        # effectively noise and it plateaued at a stand (~280). This form rewards a
-        # pattern the policy DIRECTLY CONTROLS (which feet are up), so it's
-        # discoverable: from a stand, lifting a diagonal pair is immediately +.
-        # Stand / pronk (all up) / bound (front or rear pair) all score 0; only a
-        # diagonal swing pays. Continuous -> dense gradient.
-        foot_up = jp.logical_not(contact).astype(jp.float32)   # [FL, FR, RL, RR]
-        gait_rew = jp.abs((foot_up[0] + foot_up[3]) - (foot_up[1] + foot_up[2])) / 2.0 * cmd_moving
+        # ---- gait reward: DELETED ----
+        # Was: `|(FL+RR) - (FR+RL)|/2` — instantaneous diagonal asymmetry, with NO
+        # temporal component, so a FROZEN half-trot scores exactly like a real one.
+        # ckpt12 found that: it held the FL/RR diagonal up and dragged FR/RL, and
+        # the term paid |(0.472+0.970) - 0|/2 * 0.5 = 0.3606/step for it — matching
+        # the probe's measured 0.3606 to four decimals. Rewarding alternation needs
+        # a phase, and a phase the policy cannot observe is noise (that's what
+        # sank the run-6 clock — see the note in the class docstring). The
+        # reference (MuJoCo Playground Go1) carries NO gait reward at all and
+        # still produces a clean trot on flat ground; the gait falls out of
+        # tracking + the clearance/slip COSTS. Removed rather than re-shaped.
 
         # ---- rewards ----
         # PRIMARY locomotion driver — LINEAR forward/lateral progress, FLOOR-FREE:
@@ -278,8 +301,22 @@ class NovaJoystick(PipelineEnv):
         # reopened the hold-a-foot farm — the ckpt12 walker carried the rear-right
         # foot in the air the ENTIRE rollout (~0.24/step free once the move-gate
         # opened) and the 3-legged thrust asymmetry caused the heading VEER.
-        clearance_rew = jp.sum(jp.minimum(foot_z, 0.08) * foot_xy_speed
-                               * jp.logical_not(contact).astype(jp.float32))
+        # FLIPPED to the reference COST form (Playground `_cost_feet_clearance`):
+        #     sum(|foot_z - target| * sqrt(|vel_xy|)),  weight -2.0
+        # The old form REWARDED height*speed, so max height * max speed = max pay,
+        # with nothing requiring the foot to ever land — farmable by construction,
+        # whatever the speed. Probed on ckpt12 it paid +0.709/step (20.6% of all
+        # positive reward) to a leg carried 97.5% of the time doing zero
+        # locomotion. Swing-scaling (25bad0c) didn't close that; it only stopped a
+        # MOTIONLESS held foot, and the policy simply waved the foot instead
+        # (measured swing_xy_speed 0.754 m/s).
+        #
+        # The cost form is self-limiting from BOTH sides: a foot dragging too low
+        # while moving is penalized, a foot held too high while moving is
+        # penalized, and a foot at the target pays nothing however fast it swings.
+        # It also reads NO contact flag, so it cannot be fooled by a bad contact
+        # threshold at all.
+        clearance_cost = jp.sum(jp.abs(foot_z - FOOT_TARGET_Z) * jp.sqrt(foot_xy_speed))
         # splay: the rollout showed the hips abducted WIDE. Penalize haa (hip-
         # abduction, joint idx 0,3,6,9) deviation from the default (0); the hfe/kfe
         # swing joints stay free. (ref: pose regularizer, focused on the splay.)
@@ -291,24 +328,35 @@ class NovaJoystick(PipelineEnv):
         _hk = jp.array([1, 2, 4, 5, 7, 8, 10, 11])   # hfe,kfe of each leg
         pose_rew = jp.exp(-2.0 * jp.sum((pipeline_state.q[7:][_hk] - self._default_pose[_hk]) ** 2))
 
-        # Research-grounded set (legged_gym sharp tracking + ungated air, Walk-
-        # These-Ways trot gait clock). Rough per-step at cmd 0.5: STAND ~0.4,
-        # TROT-IN-PLACE ~2.0, TROT-FORWARD ~3.4 — the gait clock lifts stepping far
-        # above a stand (breaking the basin), then progress+track pull the trot
-        # forward. Every transition is uphill.
-        # progress 1.0 -> 2.5: run 7 broke the stand basin (diagonal gait reward)
-        # but plateaued ~1360 on a ONE-LEG WIGGLE — stepping in place without going
-        # anywhere, because forward displacement was under-incentivized. Make it
-        # the dominant term so the stepping is pulled forward.
-        # air_rew 1.0 -> 0.5: the MuJoCo Playground Go1 reference weights feet-air-
-        # time at only 0.1; NOVA's 1.0 (10x) is what the march/wiggle farmed. Trim
-        # it toward the reference so forward progress dominates. gait_rew kept (it
-        # broke the stand basin) but is the wiggle's other farm — watch it.
-        # gait_rew 1.5 -> 0.5: it broke the stand basin but the wiggle farmed it;
-        # slip_pen + splay_pen (below) are the real gait-shapers now, so demote it.
-        # + 3.0 * clearance_rew: reward bigger swing lifts to un-stick the timid
-        # gait. progress 2.5 -> 3.0: a bit more forward-speed pull (it tracked only
-        # ~0.02 of the 0.5 m/s command).
+        # ---- REWARD ARCHITECTURE (read this before adding a term) ----
+        # Twelve runs of shaping history are in git; the pattern across all of
+        # them is one line:
+        #
+        #     EVERY POSITIVE SHAPER GOT FARMED. NO COST EVER DID.
+        #
+        # clearance+, gait+, air+ each went in to fix the previous run's symptom
+        # and each became the next run's exploit. slip-, splay-, upright- just
+        # quietly did their job. That is not luck: an additive bonus on a proxy
+        # creates an incentive to maximise the proxy, and the policy always finds
+        # the cheapest way — which is rarely locomotion. A cost only ever
+        # constrains.
+        #
+        # The reference (Playground Go1) makes this explicit. Its whole POSITIVE
+        # budget is 2.1 (tracking_lin_vel 1.0, tracking_ang_vel 0.5, pose 0.5,
+        # feet_air_time 0.1) and every other one of its 16 terms is a cost. It has
+        # no gait reward and no progress term, and it still learns a clean trot on
+        # flat ground. NOVA's positive weight had reached 16.4, with clearance
+        # alone at +10.0 — 5x the reference's entire positive budget, sign-flipped.
+        #
+        # RULE: the ONLY positive terms are the task (track / yaw_track /
+        # progress) plus the alive bonus. Anything shaping HOW the robot moves is
+        # a COST. If you are about to add a positive shaper, you are about to
+        # start run 13.
+        #
+        # progress is the one deliberate exception to the reference: linear and
+        # floor-free, it pulls a slow (0.15-0.35 m/s) robot forward where the
+        # saturating exp of `track` gives little gradient. It is not farmable —
+        # it requires real displacement.
         # Each weighted term is a NAMED variable, and `reward` is their sum, so
         # the logged metrics are the reward by construction and cannot drift
         # from it. (They already had: the comment above says "+ 3.0 *
@@ -317,8 +365,11 @@ class NovaJoystick(PipelineEnv):
         w_yaw = 0.3 * yaw_track
         w_progress = 3.0 * progress
         w_air = move_gate * 0.5 * air_rew
-        w_gait = move_gate * 0.5 * gait_rew
-        w_clearance = move_gate * 10.0 * clearance_rew
+        # NOT gated by move_gate: gating a COST by forward speed would let the
+        # robot dodge it by standing still. Ungated is also the reference's form,
+        # and it needs no gate — a planted foot has ~zero xy speed, so it pays
+        # ~zero regardless.
+        w_clearance = -2.0 * clearance_cost
         w_pose = 0.5 * pose_rew
         w_upright = -2.5 * upright
         w_angvel = -0.2 * ang_vel_xy
@@ -330,7 +381,7 @@ class NovaJoystick(PipelineEnv):
         w_energy = -2e-3 * energy
         w_jerk = -0.01 * jerk
         w_stand = -5e-4 * stand
-        reward = (w_track + w_yaw + w_progress + w_air + w_gait + w_clearance
+        reward = (w_track + w_yaw + w_progress + w_air + w_clearance
                   + w_pose + 0.1
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_actrate + w_energy + w_jerk + w_stand)
@@ -369,7 +420,7 @@ class NovaJoystick(PipelineEnv):
         state.metrics.update(
             track=track, air=air_rew, height=height, energy=energy,
             w_track=w_track, w_yaw=w_yaw, w_progress=w_progress, w_air=w_air,
-            w_gait=w_gait, w_clearance=w_clearance, w_pose=w_pose,
+            w_clearance=w_clearance, w_pose=w_pose,
             w_upright=w_upright, w_angvel=w_angvel, w_height=w_height, w_z=w_z,
             w_slip=w_slip, w_splay=w_splay, w_actrate=w_actrate,
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand,
