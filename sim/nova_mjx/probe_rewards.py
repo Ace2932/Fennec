@@ -85,10 +85,13 @@ def main():
     print(f"  {'SUM':>10}: {sum(terms.values())+0.1:+8.4f}   (+0.1 alive bonus)")
 
     print("\n-- per-foot airborne fraction (1.0 = never touches down) --")
+    print(f"  {'':4} {'reward sees':>12} {'TRUE (radius-corr)':>19} {'ghost':>8}")
     for f in ("FL", "FR", "RL", "RR"):
-        v = mean[f"air_{f}"]
-        flag = "  <-- CARRIED?" if v > 0.85 else ("  <-- barely lifts" if v < 0.05 else "")
-        print(f"  {f}: {v:.3f}{flag}")
+        v, vt, g = mean[f"air_{f}"], mean[f"airT_{f}"], mean[f"ghost_{f}"]
+        flag = "  <-- CARRIED?" if vt > 0.85 else ("  <-- never lifts" if vt < 0.05 else "")
+        print(f"  {f}: {v:12.3f} {vt:19.3f} {g:8.3f}{flag}")
+    print("  ghost = reward scored it PLANTED while it was airborne. The gait")
+    print("  shapers are blind to anything that happens inside that fraction.")
 
     print(f"\n-- diagnostics --")
     print(f"  swing_xy_speed : {mean['swing_xy_speed']:.3f} m/s   "

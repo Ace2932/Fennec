@@ -43,6 +43,23 @@ DEADBAND = 0.0154      # rad (10 counts) — servo ignores goal changes below th
 
 LEG_NAMES = ["FL", "FR", "RL", "RR"]
 
+# Foot geom is a sphere of this radius centred on the foot BODY ORIGIN
+# (nova.xml: `<geom name="FL_foot" type="sphere" size="0.014" class="foot"/>`),
+# so `foot_z` (the link position) sits one radius ABOVE the ground on touchdown.
+# Measured standing on all four, weight fully settled: foot_z = 0.0125.
+#
+# ⚠ The live contact test is `foot_z < 0.025` (see step), which is 12.5mm ABOVE
+# the weight-bearing height — a foot can float a centimetre off the floor and
+# still be scored as PLANTED. Every gait shaper (air/gait/clearance/slip) reads
+# that test, so all four are blind inside the dead band. The Barkour reference
+# subtracts the radius: `contact = (foot_z - foot_radius) < 1e-3`; MuJoCo
+# Playground uses real collision sensors.
+#
+# Not yet wired into the reward — the metrics below measure BOTH definitions on
+# the same trajectory first, so the true gait is known before any weight moves.
+FOOT_RADIUS = 0.014
+CONTACT_EPS = 1e-3
+
 
 class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6, **kwargs):
@@ -126,6 +143,10 @@ class NovaJoystick(PipelineEnv):
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
             # carried leg reads ~1.0 here while the others cycle
             "air_FL", "air_FR", "air_RL", "air_RR",
+            # same, under the RADIUS-CORRECTED contact test, + the "ghost"
+            # fraction where the proxy says planted but the foot is airborne
+            "airT_FL", "airT_FR", "airT_RL", "airT_RR",
+            "ghost_FL", "ghost_FR", "ghost_RL", "ghost_RR",
             # mean |xy| speed of feet that are OFF the ground: the number the
             # clearance farm is scaled by (was assumed, never measured)
             "swing_xy_speed", "move_gate", "fwd_speed",
@@ -333,6 +354,12 @@ class NovaJoystick(PipelineEnv):
         # airborne fraction per foot — averaged over an episode, a CARRIED leg
         # reads ~1.0 while a stepping leg reads ~0.3-0.5 (its swing duty).
         foot_air_f = jp.logical_not(contact).astype(jp.float32)
+        # TRUE contact (radius-corrected, Barkour ref) vs the live proxy. `ghost`
+        # = the reward believes this foot is planted while it is actually in the
+        # air. Diagnostic only — the reward still uses `contact` above.
+        contact_true = (foot_z - FOOT_RADIUS) < CONTACT_EPS
+        air_true_f = jp.logical_not(contact_true).astype(jp.float32)
+        ghost_f = (contact & jp.logical_not(contact_true)).astype(jp.float32)
         # mean |xy| speed over feet that are off the ground (0 if all planted) —
         # this is the multiplier the clearance term pays on.
         n_swing = jp.sum(foot_air_f)
@@ -348,6 +375,10 @@ class NovaJoystick(PipelineEnv):
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand,
             air_FL=foot_air_f[0], air_FR=foot_air_f[1],
             air_RL=foot_air_f[2], air_RR=foot_air_f[3],
+            airT_FL=air_true_f[0], airT_FR=air_true_f[1],
+            airT_RL=air_true_f[2], airT_RR=air_true_f[3],
+            ghost_FL=ghost_f[0], ghost_FR=ghost_f[1],
+            ghost_RL=ghost_f[2], ghost_RR=ghost_f[3],
             swing_xy_speed=swing_xy_speed, move_gate=move_gate,
             fwd_speed=jp.dot(cmd_xy, lin_vel[:2]) / cmd_speed)
         return state.replace(pipeline_state=pipeline_state, obs=obs,
