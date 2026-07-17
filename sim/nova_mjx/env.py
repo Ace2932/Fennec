@@ -384,7 +384,14 @@ class NovaJoystick(PipelineEnv):
         # from it. (They already had: the comment above says "+ 3.0 *
         # clearance_rew" while the live weight was 10.0.)
         w_track = 1.5 * track
-        w_yaw = 0.3 * yaw_track
+        # 0.3 -> 0.75: at 0.3 the policy walked a constant-yaw CIRCLE (rollout at
+        # cmd [0.25,0,0]: traveled 0.51m in world x but body-frame fwd_speed 0.253
+        # -> an arc, yaw_track only 0.38). The heading command is wz=0, so holding
+        # heading is the TASK, not a shaper. NOVA ran track:yaw = 1.5:0.3 = 5:1;
+        # the reference (Playground Go1) runs lin:ang = 1.0:0.5 = 2:1. 0.75 puts
+        # yaw back on the reference ratio so a residual gait asymmetry can't steer
+        # a slow drift the tracking term is happy to ignore.
+        w_yaw = 0.75 * yaw_track
         w_progress = 3.0 * progress
         w_air = move_gate * 0.5 * air_rew
         # NOT gated by move_gate: gating a COST by forward speed would let the
