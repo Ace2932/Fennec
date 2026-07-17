@@ -46,6 +46,37 @@ def find_latest_checkpoint(ckpt_dir):
     return best
 
 
+def print_fingerprint():
+    """Print WHICH reward is about to be trained, before a single GPU-hour burns.
+
+    A 60M-step run was once launched against a stale checkout: Colab's `git clone`
+    fails with "destination path already exists" when the repo is already there,
+    the following `%cd` succeeds anyway, and training silently proceeds on old
+    code. It cost an hour, and the only reason it was caught is that eval_reward
+    sat ~1000 points above what the new reward could possibly produce.
+
+    Reads the real module constants and the real git SHA — nothing here is a
+    hand-maintained copy, so it cannot drift from what actually runs.
+    """
+    import subprocess
+    import env as _env
+    try:
+        sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"],
+                                      stderr=subprocess.DEVNULL, text=True).strip()
+        if subprocess.call(["git", "diff", "--quiet"], stderr=subprocess.DEVNULL) != 0:
+            sha += " (+uncommitted changes)"
+    except Exception:
+        sha = "UNKNOWN — not a git checkout?"
+    print("--- reward fingerprint ---------------------------------------")
+    print(f"  code         : {sha}")
+    print(f"  contact      : (foot_z - {_env.FOOT_RADIUS}) < {_env.CONTACT_EPS}"
+          "   [radius-corrected]")
+    print(f"  clearance    : COST, target foot z = {_env.FOOT_TARGET_Z}")
+    print("  Sanity: resuming ckpt12 under THIS reward evals ~1700, not ~2700.")
+    print("  If eval_reward starts near the old value, you are on stale code.")
+    print("--------------------------------------------------------------")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default="nova_ckpt",
@@ -60,6 +91,7 @@ def main():
     args = ap.parse_args()
 
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
+    print_fingerprint()
     if jax.default_backend() == "cpu" and not args.allow_cpu:
         raise SystemExit(
             "✗ JAX is on CPU — real training would take days, not minutes.\n"
