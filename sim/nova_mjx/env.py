@@ -76,6 +76,12 @@ CONTACT_EPS = 1e-3
 # is not the active failure. Fix it when the evidence says to, not before.
 FOOT_TARGET_Z = 0.05
 
+# Carry cost: a foot airborne longer than AIR_MAX seconds is being HELD, not
+# stepping (a real swing tops out ~0.2-0.3s). Penalize the excess, capped so one
+# parked leg can't swamp the reward. See the derivation at the term itself.
+AIR_MAX = 0.4          # s of air a normal stride is allowed, penalty-free
+AIR_CARRY_CAP = 0.6    # s — max penalized excess per foot (bounds a held leg)
+
 
 class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6, **kwargs):
@@ -155,6 +161,7 @@ class NovaJoystick(PipelineEnv):
             # weighted contributions (what actually competes for the policy)
             "w_track", "w_yaw", "w_progress", "w_air", "w_clearance",
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
+            "w_carry",
             "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
             # carried leg reads ~1.0 here while the others cycle
@@ -224,6 +231,21 @@ class NovaJoystick(PipelineEnv):
         cmd_moving = math.normalize(cmd[:2])[1] > 0.05
         air_rew = jp.sum(jp.clip(air - 0.2, 0.0, 0.4) * first_contact) * cmd_moving
         air = jp.where(contact, 0.0, air + self._dt)
+        # CARRY COST — a foot airborne past one stride bleeds. This is the term
+        # the reward was missing: at 0.15-0.35 m/s THREE legs already satisfy
+        # track + progress, so the 4th is dead weight the reward was indifferent
+        # to (probe after the contact/clearance fix: RR still carried 0.970,
+        # PINNED at ckpt12's value — zero gradient, not slow). The clearance cost
+        # is |z - 0.05|, so a foot PARKED at the 0.05 target costs nothing; the
+        # target height just became the carry height. This makes the carry itself
+        # expensive, regardless of how cleverly it's held.
+        #
+        # A real swing tops out ~0.2-0.3s, so AIR_MAX 0.4 leaves normal stepping
+        # free; only a HELD foot crosses it. Capped so one parked leg can't swamp
+        # the whole reward (a foot airborne the full episode would otherwise dwarf
+        # everything). It is a COST — it shapes HOW, so it is not positive. This
+        # does not reopen a farm: there is no way to earn by triggering it.
+        carry_cost = jp.sum(jp.clip(air - AIR_MAX, 0.0, AIR_CARRY_CAP))
 
         # ---- gait reward: DELETED ----
         # Was: `|(FL+RR) - (FR+RL)|/2` — instantaneous diagonal asymmetry, with NO
@@ -377,6 +399,11 @@ class NovaJoystick(PipelineEnv):
         w_z = -0.4 * z_pen
         w_slip = -0.5 * slip_pen
         w_splay = -0.8 * splay_pen
+        # -1.5: a fully-carried foot (excess clipped to AIR_CARRY_CAP 0.6) costs
+        # 0.9/step, which no positive term can offset for a leg contributing
+        # nothing — so putting it down is strictly uphill. A normal stride stays
+        # below AIR_MAX and pays 0.
+        w_carry = -1.5 * carry_cost
         w_actrate = -0.02 * act_rate
         w_energy = -2e-3 * energy
         w_jerk = -0.01 * jerk
@@ -384,7 +411,8 @@ class NovaJoystick(PipelineEnv):
         reward = (w_track + w_yaw + w_progress + w_air + w_clearance
                   + w_pose + 0.1
                   + w_upright + w_angvel + w_height + w_z
-                  + w_slip + w_splay + w_actrate + w_energy + w_jerk + w_stand)
+                  + w_slip + w_splay + w_carry
+                  + w_actrate + w_energy + w_jerk + w_stand)
         reward = jp.clip(reward, -10.0, 10.0)
         done = jp.where((height < 0.08) | (up[2] < 0.4), 1.0, 0.0)
 
@@ -422,7 +450,8 @@ class NovaJoystick(PipelineEnv):
             w_track=w_track, w_yaw=w_yaw, w_progress=w_progress, w_air=w_air,
             w_clearance=w_clearance, w_pose=w_pose,
             w_upright=w_upright, w_angvel=w_angvel, w_height=w_height, w_z=w_z,
-            w_slip=w_slip, w_splay=w_splay, w_actrate=w_actrate,
+            w_slip=w_slip, w_splay=w_splay, w_carry=w_carry,
+            w_actrate=w_actrate,
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand,
             air_FL=foot_air_f[0], air_FR=foot_air_f[1],
             air_RL=foot_air_f[2], air_RR=foot_air_f[3],
