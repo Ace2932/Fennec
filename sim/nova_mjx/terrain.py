@@ -13,9 +13,9 @@ Keep TN / TZ in sync with build_mjcf.py.
 import jax
 import jax.numpy as jp
 
-TN = 40            # hfield resolution (TN x TN), matches build_mjcf
+TN = 100           # hfield resolution (TN x TN), matches build_mjcf (5cm cells)
 TZ = 0.20          # hfield max height (m); data in [0,1] -> [0, TZ]
-FLAT_R = 5         # flat center-pad radius (cells) — the spawn zone
+FLAT_R = 12        # flat center-pad radius (cells) — the spawn zone (~60cm)
 BUMP_M = 0.12      # max bump height (m) at level 1
 # DISCRETE STEP height at level 1 (m). Quantizing the smooth field into terraces
 # of this height gives edge/step-reactivity the smooth terrain can't. 0.05 = 5cm
@@ -30,12 +30,12 @@ STEP_M = 0.05
 # directed). Rise per step = STAIR_RISE * level, so `level` sweeps the step height
 # ACROSS envs — that's how the privileged teacher finds NOVA's max climbable step
 # (it succeeds up to some rise, fails above). STAIR_RUN_CELLS = tread depth.
-# ⚠ At 40cell/5m, a riser spans ~1 cell (12.5cm) -> RAMP-steps not vertical, so
-# this UNDER-estimates difficulty (a ramp is easier than a wall). An honest sharp-
-# stair test needs a finer hfield (higher TN + build_mjcf sync); this is the first
-# feasibility pass. Needs the HEIGHT-MAP obs to be climbable (blind can't see it).
+# At 100cell/5m a riser spans ~1 cell (5cm) -> ~58deg risers (step-like, not a
+# walkable ramp): an 8cm rise over 5cm run. Near-vertical (>75deg) steps would
+# need TN~240; 58deg is a fair first feasibility pass. Needs the HEIGHT-MAP obs
+# to be climbable (blind can't see the step edge coming).
 STAIR_RISE = 0.08          # m per step at level 1 (brackets the ~8-12cm expected max)
-STAIR_RUN_CELLS = 2        # tread depth in cells (2 = 25cm)
+STAIR_RUN_CELLS = 4        # tread depth in cells (4 = 20cm @ 5cm cells)
 # curriculum knob: per-env difficulty is sampled in [0, TERRAIN_MAX].
 # STAGE 1 = FLAT (0.0) to get basic forward walking — this is what the reference
 # MuJoCo Playground Go1 JoystickFlatTerrain env trains on, and every legged-RL
