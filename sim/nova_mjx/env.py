@@ -528,53 +528,79 @@ class NovaJoystick(PipelineEnv):
         ])
 
 
-def make_domain_randomize(terrain_max=None):
-    """Build the per-env randomization fn, optionally overriding the terrain
-    ceiling. `terrain_max=None` uses terrain.TERRAIN_MAX (flat, 0.0). Pass a value
-    in (0, 1] to train rough-terrain robustness — the top sim-to-real lever, and
-    the code's own next curriculum step now that flat walking is solid. RESUME the
-    flat walk into it; ramp gently (e.g. 0.3-0.5), don't jump to 1.0 from a flat
-    policy. Obs is UNCHANGED (the policy infers terrain from proprioception), so a
-    terrain-trained policy stays deploy-compatible."""
+def make_domain_randomize(terrain_max=None, dr_scale=1.0):
+    """Build the per-env randomization fn.
+
+    terrain_max: rough-ground ceiling (None -> terrain.TERRAIN_MAX = flat). Obs is
+      unchanged (proprioceptive terrain inference), so terrain policies stay
+      deploy-compatible.
+    dr_scale: global width multiplier on every DR range about its measured center.
+      1.0 = the measured-grounded defaults; >1 = wider (more conservative, safer
+      transfer at some sim-peak cost); <1 = tighter. Resume a trained walk into a
+      wider dr_scale the same way as terrain — the policy generalizes to the added
+      uncertainty. The real robot must fall inside every range or transfer fails,
+      so widen when the real params are genuinely uncertain."""
     from terrain import TERRAIN_MAX as _TM_DEFAULT
     tmax = _TM_DEFAULT if terrain_max is None else float(terrain_max)
+    ds = float(dr_scale)
+
+    # Each range is (center, half-width). `dr_scale` widens/narrows the half-width
+    # about the center (1.0 = the measured-grounded default below, >1 = more
+    # conservative for safer transfer, <1 = tighter for peak sim performance). The
+    # center is the best estimate; the width is the genuine UNCERTAINTY about the
+    # real robot -- the real NOVA is one sample from this, so it must fall inside.
+    def span(center, hw, lo=None, hi=None):
+        a, b = center - hw * ds, center + hw * ds
+        return (max(a, lo) if lo is not None else a,
+                min(b, hi) if hi is not None else b)
+
+    FR_LO, FR_HI = span(1.0, 0.4, lo=0.1)          # foot-floor friction (surface unknown)
+    M_LO, M_HI = span(1.0, 0.15, lo=0.5)           # per-link mass (payload + estimate error)
+    KP_LO, KP_HI = span(35.0, 10.0, lo=5.0)        # servo P gain (~measured 32)
+    KV_LO, KV_HI = span(0.15, 0.15, lo=0.0)        # control-damping uncertainty
+    D_LO, D_HI = span(1.05, 0.25, lo=0.1)          # velocity-cap slope (no-load speed +-20%)
+    # TORQUE HEADROOM (NEW): the forcerange in the MJCF is the FULL-VOLTAGE stall
+    # torque (haa 2.9 @12V, hfe/kfe 1.8 @7.4V). Real available torque is LOWER and
+    # varies: battery sag under load, warm servos, and the 19kg-vs-30kg variant all
+    # cut headroom. Randomizing 0.7-1.0x teaches the policy to walk when torque is
+    # short (low battery / hot / weak servo) instead of leaning on headroom that
+    # isn't always there -- a top transfer lever the DR was missing. Capped at 1.0
+    # (never exceed the physical full-voltage stall).
+    T_LO, T_HI = span(0.85, 0.15, lo=0.3, hi=1.0)
 
     def domain_randomize(sys, rng):
         """Per-env randomization = the sim-to-real bridge. Covers floor friction,
-        per-link mass, the STS3215 ACTUATOR model (kp/kv/damping), and per-env
-        TERRAIN (a heightfield at a random difficulty level in [0, tmax] — the
-        blind-locomotion curriculum: each env trains on its own rough ground, flat
-        spawn pad, so the batch spans flat->rough). Control latency is in the env
-        step (per-env delay). kp/kv/damping ranges are NARROWED around the measured
-        STS3215 (docs/bench): kp~35 (P=32), kv~0 (control damping folded into the
-        joint torque-speed damping = the velocity cap), damping randomized 0.8-1.3x
-        so the no-load speed cap spans ~+-20% of the real 2.8/4.71 rad/s."""
+        per-link mass + INERTIA (scaled together), the STS3215 ACTUATOR model
+        (kp/kv/damping + TORQUE HEADROOM), and per-env TERRAIN. Control latency is
+        in the env step. All ranges are measured-grounded (docs/bench) and scaled
+        by dr_scale. The real robot must land inside every range or transfer
+        fails; wider (dr_scale>1) trades sim peak for transfer safety."""
         from terrain import terrain_field
         n = rng.shape[0]
 
         @jax.vmap
         def rand(rng):
-            k1, k2, k3, k4, k5, kt = jax.random.split(rng, 6)
-            friction = jax.random.uniform(k1, (), minval=0.6, maxval=1.4)
+            k1, k2, k3, k4, k5, k6, kt = jax.random.split(rng, 7)
+            friction = jax.random.uniform(k1, (), minval=FR_LO, maxval=FR_HI)
             geom_fr = sys.geom_friction.at[:, 0].set(friction)
-            mscale = jax.random.uniform(k2, (sys.nbody,), minval=0.85, maxval=1.15)
+            # mass AND inertia scale by the SAME per-body factor (a denser/lighter
+            # link has proportional inertia — scaling mass alone is inconsistent).
+            mscale = jax.random.uniform(k2, (sys.nbody,), minval=M_LO, maxval=M_HI)
             body_mass = sys.body_mass * mscale
-            # servo gains around measured STS3215: kp~35 (P=32), kv~0 (folded into
-            # the joint torque-speed damping); keep a small kv spread for control-
-            # damping uncertainty.
-            kp = jax.random.uniform(k3, (sys.nu,), minval=25.0, maxval=45.0)
-            kv = jax.random.uniform(k4, (sys.nu,), minval=0.0, maxval=0.3)
-            # joint damping = the torque-speed slope (velocity cap); 0.8-1.3x spans
-            # the no-load speed +-20%. base freejoint dofs 0..5 have 0 damping (x0).
+            body_inertia = sys.body_inertia * mscale[:, None]
+            kp = jax.random.uniform(k3, (sys.nu,), minval=KP_LO, maxval=KP_HI)
+            kv = jax.random.uniform(k4, (sys.nu,), minval=KV_LO, maxval=KV_HI)
             damp = sys.dof_damping * jax.random.uniform(
-                k5, (sys.nv,), minval=0.8, maxval=1.3)
-            # per-env terrain at a random difficulty level in [0, tmax]
+                k5, (sys.nv,), minval=D_LO, maxval=D_HI)
+            # per-servo torque headroom -> scale the |forcerange| bounds
+            tscale = jax.random.uniform(k6, (sys.nu,), minval=T_LO, maxval=T_HI)
+            forcerange = sys.actuator_forcerange * tscale[:, None]
             kt1, kt2 = jax.random.split(kt)
             level = jax.random.uniform(kt2, (), minval=0.0, maxval=tmax)
             hfield = terrain_field(kt1, level)
-            return geom_fr, body_mass, kp, kv, damp, hfield
+            return geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield
 
-        geom_fr, body_mass, kp, kv, damp, hfield = rand(rng)
+        geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield = rand(rng)
 
         # position actuator: gainprm[:,0]=kp ; biasprm[:,1]=-kp, biasprm[:,2]=-kv
         gainprm = sys.actuator_gainprm[None].repeat(n, axis=0).at[:, :, 0].set(kp)
@@ -583,13 +609,15 @@ def make_domain_randomize(terrain_max=None):
 
         in_axes = jax.tree_util.tree_map(lambda x: None, sys)
         in_axes = in_axes.tree_replace({
-            "geom_friction": 0, "body_mass": 0, "actuator_gainprm": 0,
-            "actuator_biasprm": 0, "dof_damping": 0, "hfield_data": 0,
+            "geom_friction": 0, "body_mass": 0, "body_inertia": 0,
+            "actuator_gainprm": 0, "actuator_biasprm": 0, "dof_damping": 0,
+            "actuator_forcerange": 0, "hfield_data": 0,
         })
         sys2 = sys.tree_replace({
             "geom_friction": geom_fr, "body_mass": body_mass,
-            "actuator_gainprm": gainprm, "actuator_biasprm": biasprm,
-            "dof_damping": damp, "hfield_data": hfield,
+            "body_inertia": body_inertia, "actuator_gainprm": gainprm,
+            "actuator_biasprm": biasprm, "dof_damping": damp,
+            "actuator_forcerange": forcerange, "hfield_data": hfield,
         })
         return sys2, in_axes
 
