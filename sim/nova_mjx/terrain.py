@@ -25,6 +25,17 @@ BUMP_M = 0.12      # max bump height (m) at level 1
 # finer hfield (higher TN + build_mjcf sync). Blind reactive climbing tops out
 # ~3-5cm on this robot; full 17cm building stairs need perception (Phase 3).
 STEP_M = 0.05
+# STAIRCASE (tier-2 teacher): radial concentric steps rising OUTWARD from the pad,
+# so any forward command climbs them (the policy is velocity-commanded, not goal-
+# directed). Rise per step = STAIR_RISE * level, so `level` sweeps the step height
+# ACROSS envs — that's how the privileged teacher finds NOVA's max climbable step
+# (it succeeds up to some rise, fails above). STAIR_RUN_CELLS = tread depth.
+# ⚠ At 40cell/5m, a riser spans ~1 cell (12.5cm) -> RAMP-steps not vertical, so
+# this UNDER-estimates difficulty (a ramp is easier than a wall). An honest sharp-
+# stair test needs a finer hfield (higher TN + build_mjcf sync); this is the first
+# feasibility pass. Needs the HEIGHT-MAP obs to be climbable (blind can't see it).
+STAIR_RISE = 0.08          # m per step at level 1 (brackets the ~8-12cm expected max)
+STAIR_RUN_CELLS = 2        # tread depth in cells (2 = 25cm)
 # curriculum knob: per-env difficulty is sampled in [0, TERRAIN_MAX].
 # STAGE 1 = FLAT (0.0) to get basic forward walking — this is what the reference
 # MuJoCo Playground Go1 JoystickFlatTerrain env trains on, and every legged-RL
@@ -35,13 +46,14 @@ STEP_M = 0.05
 TERRAIN_MAX = 0.0
 
 
-def terrain_field(rng, level, step_frac=0.0, n=TN):
+def terrain_field(rng, level, step_frac=0.0, stair_frac=0.0, n=TN):
     """Per-env hfield data, shape (n*n,) in [0,1]. Smooth rough bumps rising from
-    a flat center pad, amplitude scaled by difficulty `level`. With probability
-    `step_frac` this env's terrain is QUANTIZED into discrete steps (terraces of
-    STEP_M*level) instead of smooth — tier-1 curb/step reactivity. The flat spawn
-    pad stays flat either way (0 quantizes to 0)."""
-    k1, ksl, kstep = jax.random.split(rng, 3)
+    a flat center pad, amplitude scaled by difficulty `level`. Per-env terrain TYPE
+    (mutually exclusive, by probability): `stair_frac` -> a STAIRCASE (radial steps
+    rising outward, rise STAIR_RISE*level — tier-2 teacher), else `step_frac` -> a
+    QUANTIZED terrace (tier-1 curb/step), else smooth rough. Flat spawn pad stays
+    flat in every case (0 quantizes/floors to 0)."""
+    k1, ksl, kstep, kstair = jax.random.split(rng, 4)
     # low-frequency noise upsampled -> smooth body-scale bumps
     low = jax.random.uniform(k1, (6, 6))
     rough = jax.image.resize(low, (n, n), method="linear")
@@ -62,11 +74,18 @@ def terrain_field(rng, level, step_frac=0.0, n=TN):
 
     height_m = field * pad * (BUMP_M * level)          # meters, 0 at center
 
-    # DISCRETE STEPS: quantize to terraces of STEP_M*level for a step_frac slice
-    # of envs. round(0)=0 so the flat pad stays flat; the smooth->stepped choice
-    # is per-env so the batch spans smooth-rough AND stepped ground.
+    # DISCRETE STEPS (tier-1): quantize to terraces of STEP_M*level for a step_frac
+    # slice. round(0)=0 so the flat pad stays flat.
     step_h = jp.maximum(STEP_M * level, 1e-4)          # guard level->0
     stepped = jp.round(height_m / step_h) * step_h
     is_step = jax.random.uniform(kstep, ()) < step_frac
     height_m = jp.where(is_step, stepped, height_m)
-    return (height_m / TZ).reshape(-1)                 # -> [0,1] hfield data
+
+    # STAIRCASE (tier-2): radial concentric steps rising outward from the pad edge,
+    # rise = STAIR_RISE*level per step. floor(0)=0 keeps the pad flat.
+    step_idx = jp.floor(jp.clip((r - FLAT_R) / STAIR_RUN_CELLS, 0.0, None))
+    stair_m = step_idx * (STAIR_RISE * level)
+    is_stair = jax.random.uniform(kstair, ()) < stair_frac
+    height_m = jp.where(is_stair, stair_m, height_m)
+
+    return jp.clip(height_m / TZ, 0.0, 1.0).reshape(-1)   # -> [0,1] hfield data

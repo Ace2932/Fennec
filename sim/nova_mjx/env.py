@@ -87,10 +87,23 @@ FOOT_TARGET_Z = 0.05
 AIR_MAX = 0.4          # s of air a normal stride is allowed, penalty-free
 AIR_CARRY_CAP = 0.6    # s — max penalized excess per foot (bounds a held leg)
 
+# ---- HEIGHT MAP (tier-2 PRIVILEGED teacher, opt-in NovaJoystick(heightmap=True)) ----
+# A local terrain-elevation grid sampled from the sim heightfield, appended to the
+# obs (LAST dims -> obs 105 -> 105+HM_N*HM_N). This is the PERFECT/omniscient map:
+# no occlusion, noise, FOV, or latency. Fine for the TEACHER (feasibility + expert)
+# but NOT what the real D456+L2 elevation map looks like — the STUDENT must be
+# distilled on a realistic occluded/noisy map (needs hardware calibration). See
+# project-sim-roadmap-perception-nav. Each cell = terrain_height - base_z (how far
+# the ground sits below the robot there; a step up reads less negative). Grid is
+# YAW-aligned (rotates with heading) and centred on the base.
+HM_N = 11                 # grid is HM_N x HM_N cells
+HM_EXTENT = 0.4           # metres: grid spans +-HM_EXTENT around the base (8cm cells)
+
 
 class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
-                 cmd_stage=2, **kwargs):
+                 cmd_stage=2, heightmap=False, **kwargs):
+        self._heightmap = heightmap
         path = epath.Path(__file__).parent / xml
         mj = mujoco.MjModel.from_xml_path(str(path))
         sys = mjcf.load_model(mj)
@@ -132,6 +145,12 @@ class NovaJoystick(PipelineEnv):
             self._cmd_lo = jp.array([-0.15, -0.15, -0.5])
             self._cmd_hi = jp.array([ 0.35,  0.15,  0.5])
         self._cmd_stage = cmd_stage
+        # heightfield geom centre + span, for the height-map sampler (world<->grid).
+        # Static (only hfield_data is per-env randomized), so cache it here.
+        self._floor_pos = jp.array(mj.geom("floor").pos)
+        self._hf_size = jp.array(mj.hfield_size[0])           # [rx, ry, ztop, zbot]
+        self._hf_nrow = int(mj.hfield_nrow[0])
+        self._hf_ncol = int(mj.hfield_ncol[0])
         # brax link index = mj body id - 1 (world excluded)
         self._foot_ids = jp.array(
             [mj.body(f"{n}_foot").id - 1 for n in LEG_NAMES])
@@ -172,7 +191,7 @@ class NovaJoystick(PipelineEnv):
         }
         frame = self._prop_frame(pipeline_state, info, ko)
         info["prop_hist"] = jp.tile(frame, (HIST, 1))     # fill history with frame 0
-        obs = self._get_obs(info)
+        obs = self._get_obs(info, pipeline_state)
         # INSTRUMENTATION (no effect on reward): every WEIGHTED reward
         # contribution + the per-foot stats needed to diagnose a farm. Only
         # track/air/height/energy were logged through ckpt12, which is why the
@@ -458,7 +477,7 @@ class NovaJoystick(PipelineEnv):
         info["step"] += 1
         info["cmd"] = jp.where(info["step"] % 250 == 0,
                                self.sample_command(ka), cmd)
-        obs = self._get_obs(info)
+        obs = self._get_obs(info, pipeline_state)
         # airborne fraction per foot — averaged over an episode, a CARRIED leg
         # reads ~1.0 while a stepping leg reads ~0.3-0.5 (its swing duty).
         foot_air_f = jp.logical_not(contact).astype(jp.float32)
@@ -517,18 +536,49 @@ class NovaJoystick(PipelineEnv):
         ])
         return frame + noise
 
-    def _get_obs(self, info):
-        """Full obs = HIST stacked proprioceptive frames + command + last action
-        (= HIST*PROP + 3 + nu). History gives the policy the memory to infer
-        velocity/contact/latency from real-only sensors."""
-        return jp.concatenate([
+    def _sample_heightmap(self, pipeline_state):
+        """Local terrain elevation grid (HM_N x HM_N), yaw-aligned + base-centred,
+        each cell = terrain_height - base_z. Reads self.sys.hfield_data, which the
+        brax randomization wrapper makes PER-ENV inside step (so it's this env's
+        terrain, not the nominal flat one). PRIVILEGED (perfect) — see the header."""
+        import jax.scipy.ndimage as jnd
+        base = pipeline_state.x.pos[0]
+        bx, by, bz = base[0], base[1], base[2]
+        w, qx, qy, qz = pipeline_state.q[3], pipeline_state.q[4], \
+            pipeline_state.q[5], pipeline_state.q[6]
+        yaw = jp.arctan2(2 * (w * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz))
+        g = jp.linspace(-HM_EXTENT, HM_EXTENT, HM_N)
+        gx, gy = jp.meshgrid(g, g, indexing="ij")     # gx forward, gy lateral
+        c, s = jp.cos(yaw), jp.sin(yaw)
+        wx = bx + c * gx - s * gy                      # robot-frame -> world
+        wy = by + s * gx + c * gy
+        rx, ry, ztop = self._hf_size[0], self._hf_size[1], self._hf_size[2]
+        fx, fy, fz = self._floor_pos[0], self._floor_pos[1], self._floor_pos[2]
+        # world xy -> fractional (row,col) into the hfield grid (x->col, y->row)
+        col = (wx - (fx - rx)) / (2 * rx) * (self._hf_ncol - 1)
+        row = (wy - (fy - ry)) / (2 * ry) * (self._hf_nrow - 1)
+        data = self.sys.hfield_data.reshape(self._hf_nrow, self._hf_ncol)
+        terrain = jnd.map_coordinates(
+            data, [row.ravel(), col.ravel()], order=1, mode="nearest")
+        terrain = terrain * ztop + fz                  # hfield data[0,1] -> metres
+        return (terrain - bz).reshape(-1)              # relative to base
+
+    def _get_obs(self, info, pipeline_state=None):
+        """Full obs = HIST proprioceptive frames + command + last action
+        (= HIST*PROP + 3 + nu), plus the height-map grid (HM_N^2) LAST when the
+        teacher's heightmap is enabled. History lets the policy infer velocity/
+        contact/latency from real-only sensors."""
+        parts = [
             info["prop_hist"].reshape(-1),
             info["cmd"] * CMD_OBS_SCALE,
             info["last_act"],
-        ])
+        ]
+        if self._heightmap:
+            parts.append(self._sample_heightmap(pipeline_state))
+        return jp.concatenate(parts)
 
 
-def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0):
+def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_frac=0.0):
     """Build the per-env randomization fn.
 
     terrain_max: rough-ground ceiling (None -> terrain.TERRAIN_MAX = flat). Obs is
@@ -602,7 +652,7 @@ def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0):
             forcerange = sys.actuator_forcerange * tscale[:, None]
             kt1, kt2 = jax.random.split(kt)
             level = jax.random.uniform(kt2, (), minval=0.0, maxval=tmax)
-            hfield = terrain_field(kt1, level, step_frac)
+            hfield = terrain_field(kt1, level, step_frac, stair_frac)
             return geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield
 
         geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield = rand(rng)

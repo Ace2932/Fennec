@@ -46,7 +46,7 @@ def find_latest_checkpoint(ckpt_dir):
     return best
 
 
-def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0):
+def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=0.0):
     """Print WHAT is about to be trained, before a single GPU-hour burns.
 
     A 60M-step run was once launched against a stale checkout: Colab's `git clone`
@@ -84,6 +84,15 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0):
         import terrain as _terr
         print(f"  step terrain : {step_frac:.2f} of envs quantized to discrete steps "
               f"(STEP_M={_terr.STEP_M}m)   [blind curb/step, needs terrain>0]")
+    if stair_frac > 0:
+        import terrain as _terr
+        print(f"  STAIRCASE    : {stair_frac:.2f} of envs (rise {_terr.STAIR_RISE}m*level) "
+              f"[tier-2 teacher, needs terrain>0 + --heightmap]")
+    if getattr(env, "_heightmap", False):
+        import env as _e
+        print(f"  HEIGHT MAP   : ON — obs +{_e.HM_N**2} ({_e.HM_N}x{_e.HM_N} grid, +-{_e.HM_EXTENT}m) "
+              f"= {env.observation_size}. PRIVILEGED (perfect) teacher map; NOT the "
+              f"real D456/L2 view. Needs a grafted init + heightmap runner to deploy.")
     print("  Sanity: resuming the stage-1 walk evals ~2100-2500. cmd stage 2")
     print("  (reverse+lateral+turn) transiently DIPS reward as it generalizes;")
     print("  judge by a probe, not by eval_reward. A ~2700 start = stale code.")
@@ -116,13 +125,27 @@ def main():
                     help="fraction of envs whose terrain is quantized into DISCRETE "
                          "STEPS (blind tier-1 curb/step robustness). Needs --terrain>0. "
                          "Resume a terrain walk into it; obs unchanged (blind).")
+    ap.add_argument("--stair-frac", type=float, default=0.0,
+                    help="fraction of envs that are STAIRCASES (tier-2 teacher). Rise "
+                         "sweeps with the terrain level to find the max climbable step. "
+                         "Needs --terrain>0 AND --heightmap (blind can't climb stairs).")
+    ap.add_argument("--heightmap", action="store_true",
+                    help="add the PRIVILEGED height-map obs (obs 105->105+HM_N^2) for a "
+                         "tier-2 stair-climbing TEACHER. Resume a walk via "
+                         "graft_obs.py --add-dims HM_N^2 + --restore-params-pkl. NOT "
+                         "deployable (privileged map != real D456/L2); train the student next.")
+    ap.add_argument("--restore-params-pkl", default=None,
+                    help="graft output (.pkl of [norm,policy,value]) to init from, "
+                         "bypassing the checkpoint dir. For the FIRST obs-expansion "
+                         "resume (e.g. --heightmap via graft_obs.py); later resumes "
+                         "read the fresh larger-obs checkpoints.")
     ap.add_argument("--allow-cpu", action="store_true",
                     help="permit a CPU run (smoke-test only; ~100x too slow for real training)")
     args = ap.parse_args()
 
-    env = NovaJoystick(cmd_stage=args.cmd_stage)
+    env = NovaJoystick(cmd_stage=args.cmd_stage, heightmap=args.heightmap)
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
-    print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac)
+    print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac)
     if jax.default_backend() == "cpu" and not args.allow_cpu:
         raise SystemExit(
             "✗ JAX is on CPU — real training would take days, not minutes.\n"
@@ -133,8 +156,20 @@ def main():
 
     root = epath.Path(args.ckpt)
     root.mkdir(parents=True, exist_ok=True)
-    restore = find_latest_checkpoint(args.ckpt)
-    print(f"RESUME from {restore}" if restore else "FRESH start (no checkpoint)")
+    # graft init (obs expansion, e.g. --heightmap): load the padded [norm,policy,
+    # value] and hand them to ppo.train as restore_params, which OVERRIDES the
+    # checkpoint dir. Skip find_latest so a stale smaller-obs checkpoint can't
+    # shape-clash. Use a FRESH --ckpt dir; later resumes read the new checkpoints.
+    restore_params = None
+    if args.restore_params_pkl:
+        with open(args.restore_params_pkl, "rb") as f:
+            restore_params = pickle.load(f)
+        restore = None
+        print(f"GRAFT init from {args.restore_params_pkl} "
+              f"(obs {int(restore_params[0].mean.shape[0])}) — checkpoint dir skipped")
+    else:
+        restore = find_latest_checkpoint(args.ckpt)
+        print(f"RESUME from {restore}" if restore else "FRESH start (no checkpoint)")
     # unique per-run save subdir -> no step collisions between resumes
     run_dir = root / f"run_{int(time.time())}"
 
@@ -167,9 +202,10 @@ def main():
         entropy_cost=1e-2, normalize_observations=True,
         num_evals=max(4, args.timesteps // 2_000_000),
         network_factory=net,
-        randomization_fn=make_domain_randomize(args.terrain, args.dr_scale, args.step_frac),
+        randomization_fn=make_domain_randomize(args.terrain, args.dr_scale, args.step_frac, args.stair_frac),
         save_checkpoint_path=str(run_dir),
-        restore_checkpoint_path=restore, seed=args.seed)
+        restore_checkpoint_path=restore, restore_params=restore_params,
+        seed=args.seed)
 
     _, params, _ = train_fn(environment=env, progress_fn=progress,
                             policy_params_fn=save_policy)
