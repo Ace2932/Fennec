@@ -22,7 +22,7 @@ PROP = 30
 
 class NovaPolicy:
     def __init__(self, npz_path):
-        d = np.load(npz_path)
+        d = np.load(npz_path, allow_pickle=False)
         self.mean = d["mean"].astype(np.float32)
         self.std = d["std"].astype(np.float32)
         self.default_pose = d["default_pose"].astype(np.float32)
@@ -31,6 +31,36 @@ class NovaPolicy:
         self.W = [d[f"W{i}"].astype(np.float32) for i in range(n)]
         self.b = [d[f"b{i}"].astype(np.float32) for i in range(n)]
         self.nu = len(self.default_pose)
+
+        # --- VALIDATE THE OBSERVATION CONTRACT (fail LOUD, not on the robot) ---
+        # A weight file trained with a different obs layout (different HIST/PROP,
+        # a phase clock, a changed cmd scale) must be REJECTED at load, not run.
+        # On hardware a silent mismatch drives 12 servos with garbage. Newer .npz
+        # files carry the contract (export_policy); older ones don't -> fall back
+        # to the runner's own constants with a warning, but still check shapes.
+        self.hist = int(d["hist"]) if "hist" in d.files else HIST
+        self.prop = int(d["prop"]) if "prop" in d.files else PROP
+        self.cmd_scale = (d["cmd_scale"].astype(np.float32)
+                          if "cmd_scale" in d.files else CMD_SCALE)
+        self.meta = {k: (d[k].item() if d[k].ndim == 0 else d[k].tolist())
+                     for k in ("obs_dim", "act_dim", "sha", "created", "label")
+                     if k in d.files}
+        expected_obs = self.hist * self.prop + 3 + self.nu
+        weights_obs = int(self.mean.shape[0])
+        if weights_obs != expected_obs:
+            raise ValueError(
+                f"policy obs mismatch: weights expect {weights_obs}-dim obs but "
+                f"this runner builds {expected_obs} "
+                f"(hist {self.hist} * prop {self.prop} + 3 cmd + {self.nu} act). "
+                f"The policy was trained with a DIFFERENT observation layout — "
+                f"do NOT deploy. If you added a phase clock or changed HIST/PROP, "
+                f"update policy_runner to match before exporting. "
+                f"meta={self.meta}")
+        if "cmd_scale" in d.files and not np.allclose(self.cmd_scale, CMD_SCALE):
+            raise ValueError(
+                f"cmd_scale mismatch: weights {self.cmd_scale.tolist()} vs runner "
+                f"{CMD_SCALE.tolist()} — the command was scaled differently in "
+                f"training; /cmd_vel would be mis-fed. Sync CMD_SCALE. meta={self.meta}")
         self.reset()
 
     def reset(self):
@@ -51,12 +81,12 @@ class NovaPolicy:
     def build_obs(self, gyro, proj_grav, cmd, joint_pos, joint_vel):
         f = self._frame(gyro, proj_grav, joint_pos, joint_vel)
         if self.prop_hist is None:
-            self.prop_hist = np.tile(f, (HIST, 1))
+            self.prop_hist = np.tile(f, (self.hist, 1))
         else:                            # push newest first (matches sim)
             self.prop_hist = np.concatenate([f[None], self.prop_hist[:-1]], axis=0)
         return np.concatenate([
             self.prop_hist.reshape(-1),
-            np.asarray(cmd, np.float32) * CMD_SCALE,
+            np.asarray(cmd, np.float32) * self.cmd_scale,   # from the artifact
             self.last_action,
         ]).astype(np.float32)
 

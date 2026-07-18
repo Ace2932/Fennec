@@ -84,22 +84,69 @@ def main():
     ap.add_argument("--policy", default="nova_policy.pkl")
     ap.add_argument("--npz", default="nova_policy.npz")
     ap.add_argument("--onnx", default="nova_policy.onnx")
+    ap.add_argument("--label", default="", help="human name for this policy "
+                    "(e.g. 'omni-flat-40M') — travels in the artifact metadata")
     args = ap.parse_args()
 
-    from env import ACTION_SCALE, DEFAULT_POSE
+    from env import ACTION_SCALE, DEFAULT_POSE, HIST, PROP, CMD_OBS_SCALE
     with open(args.policy, "rb") as f:
         params = pickle.load(f)
     mean, std, W, b = extract(params)
-    print(f"MLP: {[Wi.shape for Wi in W]}  obs={mean.shape[0]}")
+    obs_dim, act_dim = int(mean.shape[0]), len(DEFAULT_POSE)
+    print(f"MLP: {[Wi.shape for Wi in W]}  obs={obs_dim}")
+
+    # The OBSERVATION CONTRACT the deploy runner must satisfy. Bundling it makes
+    # the artifact self-describing: policy_runner reads these back and REFUSES to
+    # run weights whose contract it can't meet (e.g. an obs-shape change from a
+    # phase clock) instead of failing silently on the robot. Same anti-drift move
+    # as the reward fingerprint, applied to the sim->real handoff.
+    import subprocess as _sp
+    import time as _time
+    try:
+        sha = _sp.check_output(["git", "rev-parse", "--short", "HEAD"],
+                               stderr=_sp.DEVNULL, text=True).strip()
+        if _sp.call(["git", "diff", "--quiet", "--", "env.py", "export_policy.py"],
+                    stderr=_sp.DEVNULL) != 0:
+            sha += "+dirty"
+    except Exception:
+        sha = "unknown"
 
     # numpy weights bundle — everything the deploy node needs, self-contained
     bundle = {"mean": mean, "std": std,
               "action_scale": np.float32(ACTION_SCALE),
-              "default_pose": np.asarray(DEFAULT_POSE, np.float32)}
+              "default_pose": np.asarray(DEFAULT_POSE, np.float32),
+              # --- observation contract (validated on load) ---
+              "obs_dim": np.int64(obs_dim),
+              "act_dim": np.int64(act_dim),
+              "hist": np.int64(HIST),
+              "prop": np.int64(PROP),
+              "cmd_scale": np.asarray(CMD_OBS_SCALE, np.float32),
+              # --- provenance ---
+              "sha": np.str_(sha),
+              "created": np.str_(_time.strftime("%Y-%m-%dT%H:%M:%S")),
+              "label": np.str_(args.label or "unlabeled")}
     for i, (Wi, bi) in enumerate(zip(W, b)):
         bundle[f"W{i}"], bundle[f"b{i}"] = Wi, bi
+    # self-consistency: the bundled obs_dim MUST equal the runner's build_obs math
+    expect = HIST * PROP + 3 + act_dim
+    assert obs_dim == expect, (
+        f"obs_dim {obs_dim} != HIST*PROP+3+act {expect} — the trained net and the "
+        f"env obs layout disagree; the runner would reject this. Do not ship.")
     np.savez(args.npz, **bundle)
-    print(f"saved {args.npz}")
+    print(f"saved {args.npz}  [obs {obs_dim}, act {act_dim}, hist {HIST}, "
+          f"prop {PROP}, sha {sha}, label '{args.label or 'unlabeled'}']")
+
+    # human-readable sidecar so you can see what a .npz is without loading numpy
+    import json as _json
+    meta = {"label": args.label or "unlabeled", "sha": sha,
+            "created": _time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "obs_dim": obs_dim, "act_dim": act_dim, "hist": HIST, "prop": PROP,
+            "cmd_scale": [float(v) for v in np.asarray(CMD_OBS_SCALE)],
+            "mlp": [list(Wi.shape) for Wi in W], "source_pkl": args.policy}
+    meta_path = args.npz.rsplit(".", 1)[0] + ".meta.json"
+    with open(meta_path, "w") as f:
+        _json.dump(meta, f, indent=2)
+    print(f"saved {meta_path}")
 
     # verify numpy forward matches the Brax deterministic policy
     try:

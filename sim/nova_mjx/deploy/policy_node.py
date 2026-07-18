@@ -41,7 +41,15 @@ class PolicyNode(Node):
         super().__init__("nova_policy")
         self.declare_parameter("policy_npz", "nova_policy.npz")
         self.declare_parameter("control_hz", 50.0)
-        self.pol = NovaPolicy(self.get_parameter("policy_npz").value)
+        npz = self.get_parameter("policy_npz").value
+        self.pol = NovaPolicy(npz)      # raises on an obs-contract mismatch
+        # log WHICH policy is running — provenance travels in the .npz metadata,
+        # so a wrong/stale weight file is visible in the startup log, not a mystery.
+        m = self.pol.meta
+        self.get_logger().info(
+            f"loaded {npz}: label='{m.get('label','?')}' sha={m.get('sha','?')} "
+            f"created={m.get('created','?')} obs={self.pol.mean.shape[0]} "
+            f"hist={self.pol.hist} prop={self.pol.prop}")
 
         self._jpos = np.asarray(self.pol.default_pose, np.float32)
         self._jvel = np.zeros(self.pol.nu, np.float32)
