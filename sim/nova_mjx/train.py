@@ -28,7 +28,7 @@ from etils import epath
 from brax.training.agents.ppo import networks as ppo_networks
 from brax.training.agents.ppo import train as ppo
 
-from env import NovaJoystick, domain_randomize
+from env import NovaJoystick, make_domain_randomize
 
 
 def find_latest_checkpoint(ckpt_dir):
@@ -46,7 +46,7 @@ def find_latest_checkpoint(ckpt_dir):
     return best
 
 
-def print_fingerprint(env):
+def print_fingerprint(env, terrain=0.0):
     """Print WHAT is about to be trained, before a single GPU-hour burns.
 
     A 60M-step run was once launched against a stale checkout: Colab's `git clone`
@@ -77,6 +77,7 @@ def print_fingerprint(env):
     print(f"  clearance    : COST, target foot z = {_env.FOOT_TARGET_Z}")
     print(f"  cmd stage {env._cmd_stage}  : vx[{lo[0]:+.2f},{hi[0]:+.2f}] "
           f"vy[{lo[1]:+.2f},{hi[1]:+.2f}] wz[{lo[2]:+.2f},{hi[2]:+.2f}]")
+    print(f"  terrain      : {terrain:.2f}   ({'FLAT' if terrain == 0 else 'rough — sim2real robustness'})")
     print("  Sanity: resuming the stage-1 walk evals ~2100-2500. cmd stage 2")
     print("  (reverse+lateral+turn) transiently DIPS reward as it generalizes;")
     print("  judge by a probe, not by eval_reward. A ~2700 start = stale code.")
@@ -95,13 +96,18 @@ def main():
     ap.add_argument("--cmd-stage", type=int, default=2, choices=(1, 2),
                     help="command curriculum: 1 = forward-only (builds the gait "
                          "from scratch), 2 = omnidirectional (resume a stage-1 walk)")
+    ap.add_argument("--terrain", type=float, default=0.0,
+                    help="rough-terrain ceiling in [0,1] (per-env difficulty is "
+                         "sampled [0,terrain]). 0 = flat. Resume the flat walk and "
+                         "ramp gently (~0.3-0.5) for sim-to-real robustness; obs "
+                         "unchanged so it stays deploy-compatible.")
     ap.add_argument("--allow-cpu", action="store_true",
                     help="permit a CPU run (smoke-test only; ~100x too slow for real training)")
     args = ap.parse_args()
 
     env = NovaJoystick(cmd_stage=args.cmd_stage)
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
-    print_fingerprint(env)
+    print_fingerprint(env, args.terrain)
     if jax.default_backend() == "cpu" and not args.allow_cpu:
         raise SystemExit(
             "✗ JAX is on CPU — real training would take days, not minutes.\n"
@@ -145,7 +151,7 @@ def main():
         # heavy exploration isn't needed — clean exploitation is better.
         entropy_cost=1e-2, normalize_observations=True,
         num_evals=max(4, args.timesteps // 2_000_000),
-        network_factory=net, randomization_fn=domain_randomize,
+        network_factory=net, randomization_fn=make_domain_randomize(args.terrain),
         save_checkpoint_path=str(run_dir),
         restore_checkpoint_path=restore, seed=args.seed)
 
