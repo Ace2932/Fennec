@@ -54,7 +54,7 @@ R_THIGH, R_SHANK, R_FOOT = 0.013, 0.011, 0.014
 
 # terrain heightfield (env.domain_randomize fills per-env; flat by default) —
 # keep TN/TR/TZ in sync with terrain.py
-TN = 40            # hfield resolution (TN x TN cells)
+TN = 100           # hfield resolution (TN x TN cells) — 5cm over 5m
 TR = 2.5           # hfield half-size (m)
 TR2 = 2 * TR       # full terrain extent (m)
 TZ = 0.20          # max terrain height (m); hfield data [0,1] -> [0, TZ]

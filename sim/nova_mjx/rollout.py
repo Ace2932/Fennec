@@ -101,6 +101,10 @@ def main():
 
     # render the qpos trajectory in plain MuJoCo
     m = mujoco.MjModel.from_xml_path("nova.xml")
+    if args.stair_level > 0:            # show the SAME terrain the policy was driven on
+        import numpy as _np
+        from terrain import terrain_field as _tf
+        m.hfield_data[:] = _np.asarray(_tf(jax.random.PRNGKey(0), args.stair_level, 0.0, 1.0))
     d = mujoco.MjData(m)
     cam = m.camera("track").id
     with mujoco.Renderer(m, height=480, width=640) as r:
