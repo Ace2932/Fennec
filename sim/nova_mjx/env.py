@@ -37,6 +37,24 @@ PROP = 30                                              # per-frame: gyro3+grav3+
 # (this exact triple-hardcode is the drift the weight pipeline now closes).
 CMD_OBS_SCALE = jp.array([2.0, 2.0, 0.25])
 
+# ---- GAIT PHASE CLOCK (Walk-These-Ways style, opt-in via NovaJoystick(phase_clock=True)) ----
+# A fixed-frequency clock the policy can SEE (sin/cos of phase appended to the obs
+# as the LAST 2 dims -> obs 105 -> 107) and is rewarded for matching. This fixes
+# the residual gait asymmetry (RR over-swings, ~22% heading curve): instead of
+# hoping symmetry emerges, the clock PRESCRIBES a trot rhythm. The old clock (run
+# 6) failed ONLY because the phase was NOT observable — the reward asked the
+# policy to match a signal it couldn't see. Putting sin/cos(phase) in the obs is
+# the whole fix. Resume the current flat walk via graft_phase_clock.py (pads the
+# input weights with 2 zero rows -> phase ignored at step 0 -> the walk is
+# preserved and the clock influence grows). The phase dims MUST stay LAST in the
+# obs so the graft's zero-pad lines up.
+PHASE_FREQ = 2.0          # Hz — trot cadence. per-step d(phase) = FREQ * dt (0.04 @ 50Hz)
+PHASE_DUTY = 0.6          # stance fraction: a foot is DOWN 60% of its cycle
+# per-foot phase offset for a TROT (diagonal pairs alternate), order [FL,FR,RL,RR]:
+# (FL,RR) share phase 0, (FR,RL) share phase 0.5 -> the two diagonals swing 180 apart
+PHASE_OFFSET = jp.array([0.0, 0.5, 0.5, 0.0])
+PHASE_W = 0.75            # weight of the phase-match COST (primary rhythm shaper)
+
 # observation noise (1-sigma) per group — matches real STS3215/IMU order of mag
 N_GYRO, N_GRAV, N_JPOS, N_JVEL = 0.2, 0.05, 0.02, 1.5
 GYRO_BIAS = 0.05                                       # per-episode constant IMU bias (rad/s)
@@ -90,7 +108,7 @@ AIR_CARRY_CAP = 0.6    # s — max penalized excess per foot (bounds a held leg)
 
 class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
-                 cmd_stage=2, **kwargs):
+                 cmd_stage=2, phase_clock=False, **kwargs):
         path = epath.Path(__file__).parent / xml
         mj = mujoco.MjModel.from_xml_path(str(path))
         sys = mjcf.load_model(mj)
@@ -132,6 +150,7 @@ class NovaJoystick(PipelineEnv):
             self._cmd_lo = jp.array([-0.15, -0.15, -0.5])
             self._cmd_hi = jp.array([ 0.35,  0.15,  0.5])
         self._cmd_stage = cmd_stage
+        self._phase_clock = phase_clock
         # brax link index = mj body id - 1 (world excluded)
         self._foot_ids = jp.array(
             [mj.body(f"{n}_foot").id - 1 for n in LEG_NAMES])
@@ -168,6 +187,7 @@ class NovaJoystick(PipelineEnv):
             "act_hist": jp.zeros((self._max_delay, self._nu)),
             "delay": jax.random.randint(kd, (), 0, self._max_delay),
             "prop_hist": jp.zeros((HIST, PROP)),
+            "phase": jp.zeros(()),        # gait clock in [0,1); advances in step
             "step": 0,
         }
         frame = self._prop_frame(pipeline_state, info, ko)
@@ -194,7 +214,7 @@ class NovaJoystick(PipelineEnv):
             "ghost_FL", "ghost_FR", "ghost_RL", "ghost_RR",
             # mean |xy| speed of feet that are OFF the ground: the number the
             # clearance farm is scaled by (was assumed, never measured)
-            "swing_xy_speed", "move_gate", "fwd_speed",
+            "swing_xy_speed", "move_gate", "fwd_speed", "w_phase",
         )}
         return State(pipeline_state, obs, jp.zeros(()), jp.zeros(()), metrics, info)
 
@@ -252,6 +272,20 @@ class NovaJoystick(PipelineEnv):
         first_contact = (air > 0.0) & contact
         cmd_moving = math.normalize(cmd[:2])[1] > 0.05
         air_rew = jp.sum(jp.clip(air - 0.2, 0.0, 0.4) * first_contact) * cmd_moving
+
+        # ---- GAIT PHASE CLOCK (opt-in) ----
+        # Advance the clock; the phase-match COST rewards each foot for being in
+        # the stance/swing state the trot clock prescribes at this phase. Gated on
+        # cmd_moving (an idle robot isn't asked to trot). `self._phase_clock` is a
+        # static Python flag, so this whole branch compiles away when disabled and
+        # the obs stays 105. (phase is exposed to _get_obs via info["phase"].)
+        if self._phase_clock:
+            phase = (info["phase"] + PHASE_FREQ * self._dt) % 1.0
+            desired_stance = (((phase + PHASE_OFFSET) % 1.0) < PHASE_DUTY).astype(jp.float32)
+            phase_cost = jp.sum(jp.abs(contact.astype(jp.float32) - desired_stance)) * cmd_moving
+        else:
+            phase = info["phase"]           # stays 0, no cost
+            phase_cost = jp.zeros(())
         air = jp.where(contact, 0.0, air + self._dt)
         # CARRY COST — a foot airborne past one stride bleeds. This is the term
         # the reward was missing: at 0.15-0.35 m/s THREE legs already satisfy
@@ -433,6 +467,7 @@ class NovaJoystick(PipelineEnv):
         # nothing — so putting it down is strictly uphill. A normal stride stays
         # below AIR_MAX and pays 0.
         w_carry = -1.5 * carry_cost
+        w_phase = -PHASE_W * phase_cost      # 0 when the clock is off
         w_actrate = -0.02 * act_rate
         w_energy = -2e-3 * energy
         w_jerk = -0.01 * jerk
@@ -440,7 +475,7 @@ class NovaJoystick(PipelineEnv):
         reward = (w_track + w_yaw + w_progress + w_air + w_clearance
                   + w_pose + 0.1
                   + w_upright + w_angvel + w_height + w_z
-                  + w_slip + w_splay + w_carry
+                  + w_slip + w_splay + w_carry + w_phase
                   + w_actrate + w_energy + w_jerk + w_stand)
         reward = jp.clip(reward, -10.0, 10.0)
         done = jp.where((height < 0.08) | (up[2] < 0.4), 1.0, 0.0)
@@ -454,6 +489,7 @@ class NovaJoystick(PipelineEnv):
         info["last_ctrl"] = ctrl
         info["act_hist"] = hist
         info["feet_air"] = air
+        info["phase"] = phase
         info["prop_hist"] = jp.concatenate([frame[None], info["prop_hist"][:-1]], axis=0)
         info["step"] += 1
         info["cmd"] = jp.where(info["step"] % 250 == 0,
@@ -479,7 +515,7 @@ class NovaJoystick(PipelineEnv):
             w_track=w_track, w_yaw=w_yaw, w_progress=w_progress, w_air=w_air,
             w_clearance=w_clearance, w_pose=w_pose,
             w_upright=w_upright, w_angvel=w_angvel, w_height=w_height, w_z=w_z,
-            w_slip=w_slip, w_splay=w_splay, w_carry=w_carry,
+            w_slip=w_slip, w_splay=w_splay, w_carry=w_carry, w_phase=w_phase,
             w_actrate=w_actrate,
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand,
             air_FL=foot_air_f[0], air_FR=foot_air_f[1],
@@ -521,11 +557,15 @@ class NovaJoystick(PipelineEnv):
         """Full obs = HIST stacked proprioceptive frames + command + last action
         (= HIST*PROP + 3 + nu). History gives the policy the memory to infer
         velocity/contact/latency from real-only sensors."""
-        return jp.concatenate([
+        parts = [
             info["prop_hist"].reshape(-1),
             info["cmd"] * CMD_OBS_SCALE,
             info["last_act"],
-        ])
+        ]
+        if self._phase_clock:            # sin/cos of the gait clock — LAST obs dims
+            ph = 2.0 * jp.pi * info["phase"]
+            parts.append(jp.array([jp.sin(ph), jp.cos(ph)]))
+        return jp.concatenate(parts)
 
 
 def make_domain_randomize(terrain_max=None):

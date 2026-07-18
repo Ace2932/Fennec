@@ -86,9 +86,12 @@ def main():
     ap.add_argument("--onnx", default="nova_policy.onnx")
     ap.add_argument("--label", default="", help="human name for this policy "
                     "(e.g. 'omni-flat-40M') — travels in the artifact metadata")
+    ap.add_argument("--phase-clock", action="store_true",
+                    help="the policy was trained with the gait phase clock (obs "
+                         "+2). Bundles phase metadata so the runner advances the clock.")
     args = ap.parse_args()
 
-    from env import ACTION_SCALE, DEFAULT_POSE, HIST, PROP, CMD_OBS_SCALE
+    from env import ACTION_SCALE, DEFAULT_POSE, HIST, PROP, CMD_OBS_SCALE, PHASE_FREQ
     with open(args.policy, "rb") as f:
         params = pickle.load(f)
     mean, std, W, b = extract(params)
@@ -121,6 +124,8 @@ def main():
               "hist": np.int64(HIST),
               "prop": np.int64(PROP),
               "cmd_scale": np.asarray(CMD_OBS_SCALE, np.float32),
+              "phase_clock": np.int64(1 if args.phase_clock else 0),
+              "phase_freq": np.float32(PHASE_FREQ if args.phase_clock else 0.0),
               # --- provenance ---
               "sha": np.str_(sha),
               "created": np.str_(_time.strftime("%Y-%m-%dT%H:%M:%S")),
@@ -128,10 +133,10 @@ def main():
     for i, (Wi, bi) in enumerate(zip(W, b)):
         bundle[f"W{i}"], bundle[f"b{i}"] = Wi, bi
     # self-consistency: the bundled obs_dim MUST equal the runner's build_obs math
-    expect = HIST * PROP + 3 + act_dim
+    expect = HIST * PROP + 3 + act_dim + (2 if args.phase_clock else 0)
     assert obs_dim == expect, (
-        f"obs_dim {obs_dim} != HIST*PROP+3+act {expect} — the trained net and the "
-        f"env obs layout disagree; the runner would reject this. Do not ship.")
+        f"obs_dim {obs_dim} != HIST*PROP+3+act{'+2(phase)' if args.phase_clock else ''} "
+        f"= {expect}. {'Pass --phase-clock' if obs_dim == expect + 2 else 'Drop --phase-clock' if obs_dim == expect - 2 else 'The trained net and env obs layout disagree'}. Do not ship.")
     np.savez(args.npz, **bundle)
     print(f"saved {args.npz}  [obs {obs_dim}, act {act_dim}, hist {HIST}, "
           f"prop {PROP}, sha {sha}, label '{args.label or 'unlabeled'}']")
@@ -142,6 +147,8 @@ def main():
             "created": _time.strftime("%Y-%m-%dT%H:%M:%S"),
             "obs_dim": obs_dim, "act_dim": act_dim, "hist": HIST, "prop": PROP,
             "cmd_scale": [float(v) for v in np.asarray(CMD_OBS_SCALE)],
+            "phase_clock": bool(args.phase_clock),
+            "phase_freq": (PHASE_FREQ if args.phase_clock else 0.0),
             "mlp": [list(Wi.shape) for Wi in W], "source_pkl": args.policy}
     meta_path = args.npz.rsplit(".", 1)[0] + ".meta.json"
     with open(meta_path, "w") as f:

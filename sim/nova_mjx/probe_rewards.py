@@ -39,9 +39,11 @@ def main():
     ap.add_argument("--vx", type=float, default=0.25, help="fwd command m/s")
     ap.add_argument("--wz", type=float, default=0.0, help="yaw command rad/s")
     ap.add_argument("--steps", type=int, default=400)
+    ap.add_argument("--phase-clock", action="store_true",
+                    help="build the phase-clock env (obs 107) to probe a phase policy")
     args = ap.parse_args()
 
-    env = NovaJoystick()
+    env = NovaJoystick(phase_clock=args.phase_clock)
     cmd = jp.array([args.vx, 0.0, args.wz])
 
     if args.policy:

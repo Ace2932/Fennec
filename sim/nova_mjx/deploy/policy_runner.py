@@ -21,7 +21,10 @@ PROP = 30
 
 
 class NovaPolicy:
-    def __init__(self, npz_path):
+    def __init__(self, npz_path, control_dt=0.02):
+        # control_dt (default 0.02 = 50 Hz) advances the gait clock in lockstep
+        # with training. Must match the node's control period.
+        self.control_dt = float(control_dt)
         d = np.load(npz_path, allow_pickle=False)
         self.mean = d["mean"].astype(np.float32)
         self.std = d["std"].astype(np.float32)
@@ -42,10 +45,14 @@ class NovaPolicy:
         self.prop = int(d["prop"]) if "prop" in d.files else PROP
         self.cmd_scale = (d["cmd_scale"].astype(np.float32)
                           if "cmd_scale" in d.files else CMD_SCALE)
+        # gait phase clock: if the policy was trained with it, the runner must
+        # advance the SAME clock and append sin/cos as the last 2 obs dims.
+        self.phase_clock = bool(int(d["phase_clock"])) if "phase_clock" in d.files else False
+        self.phase_freq = float(d["phase_freq"]) if "phase_freq" in d.files else 0.0
         self.meta = {k: (d[k].item() if d[k].ndim == 0 else d[k].tolist())
                      for k in ("obs_dim", "act_dim", "sha", "created", "label")
                      if k in d.files}
-        expected_obs = self.hist * self.prop + 3 + self.nu
+        expected_obs = self.hist * self.prop + 3 + self.nu + (2 if self.phase_clock else 0)
         weights_obs = int(self.mean.shape[0])
         if weights_obs != expected_obs:
             raise ValueError(
@@ -66,6 +73,7 @@ class NovaPolicy:
     def reset(self):
         self.last_action = np.zeros(self.nu, np.float32)
         self.prop_hist = None            # filled (tiled) on the first frame
+        self.phase = 0.0                 # gait clock; advanced each build_obs
 
     def _frame(self, gyro, proj_grav, joint_pos, joint_vel):
         """One proprioceptive frame (30). Inputs in the ROBOT/URDF frame + joint
@@ -84,11 +92,14 @@ class NovaPolicy:
             self.prop_hist = np.tile(f, (self.hist, 1))
         else:                            # push newest first (matches sim)
             self.prop_hist = np.concatenate([f[None], self.prop_hist[:-1]], axis=0)
-        return np.concatenate([
-            self.prop_hist.reshape(-1),
-            np.asarray(cmd, np.float32) * self.cmd_scale,   # from the artifact
-            self.last_action,
-        ]).astype(np.float32)
+        parts = [self.prop_hist.reshape(-1),
+                 np.asarray(cmd, np.float32) * self.cmd_scale,   # from the artifact
+                 self.last_action]
+        if self.phase_clock:             # sin/cos of the clock, then advance (matches sim)
+            ph = 2.0 * np.pi * self.phase
+            parts.append(np.array([np.sin(ph), np.cos(ph)], np.float32))
+            self.phase = (self.phase + self.phase_freq * self.control_dt) % 1.0
+        return np.concatenate(parts).astype(np.float32)
 
     def infer(self, obs):
         """obs (105,) -> action (12) in [-1,1]. Stores it as last_action."""

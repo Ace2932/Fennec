@@ -78,6 +78,9 @@ def print_fingerprint(env, terrain=0.0):
     print(f"  cmd stage {env._cmd_stage}  : vx[{lo[0]:+.2f},{hi[0]:+.2f}] "
           f"vy[{lo[1]:+.2f},{hi[1]:+.2f}] wz[{lo[2]:+.2f},{hi[2]:+.2f}]")
     print(f"  terrain      : {terrain:.2f}   ({'FLAT' if terrain == 0 else 'rough — sim2real robustness'})")
+    if getattr(env, "_phase_clock", False):
+        print(f"  phase clock  : ON (obs +2 = 107, freq {_env.PHASE_FREQ}Hz) — "
+              f"needs a grafted init + a phase-aware runner to deploy")
     print("  Sanity: resuming the stage-1 walk evals ~2100-2500. cmd stage 2")
     print("  (reverse+lateral+turn) transiently DIPS reward as it generalizes;")
     print("  judge by a probe, not by eval_reward. A ~2700 start = stale code.")
@@ -101,11 +104,19 @@ def main():
                          "sampled [0,terrain]). 0 = flat. Resume the flat walk and "
                          "ramp gently (~0.3-0.5) for sim-to-real robustness; obs "
                          "unchanged so it stays deploy-compatible.")
+    ap.add_argument("--phase-clock", action="store_true",
+                    help="add the gait phase clock (obs 105->107). Resume a flat "
+                         "walk via graft_phase_clock.py + --restore-params-pkl; use "
+                         "a FRESH --ckpt dir (don't mix 105/107 checkpoints).")
+    ap.add_argument("--restore-params-pkl", default=None,
+                    help="graft output (.pkl of [norm,policy,value]) to init from, "
+                         "bypassing the checkpoint dir. Use for the FIRST phase-clock "
+                         "resume; later resumes read the fresh 107-dim checkpoints.")
     ap.add_argument("--allow-cpu", action="store_true",
                     help="permit a CPU run (smoke-test only; ~100x too slow for real training)")
     args = ap.parse_args()
 
-    env = NovaJoystick(cmd_stage=args.cmd_stage)
+    env = NovaJoystick(cmd_stage=args.cmd_stage, phase_clock=args.phase_clock)
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
     print_fingerprint(env, args.terrain)
     if jax.default_backend() == "cpu" and not args.allow_cpu:
@@ -118,8 +129,21 @@ def main():
 
     root = epath.Path(args.ckpt)
     root.mkdir(parents=True, exist_ok=True)
-    restore = find_latest_checkpoint(args.ckpt)
-    print(f"RESUME from {restore}" if restore else "FRESH start (no checkpoint)")
+    # graft init: load [norm,policy,value] and hand them to ppo.train as
+    # restore_params (which OVERRIDES the checkpoint dir). Skip find_latest so a
+    # stale 105-dim checkpoint in a shared dir can't shape-clash with the 107-dim
+    # graft. Later phase-clock resumes omit --restore-params-pkl and read the
+    # fresh 107-dim checkpoints normally.
+    restore_params = None
+    if args.restore_params_pkl:
+        with open(args.restore_params_pkl, "rb") as f:
+            restore_params = pickle.load(f)
+        restore = None
+        print(f"GRAFT init from {args.restore_params_pkl} "
+              f"(obs {int(restore_params[0].mean.shape[0])}) — checkpoint dir skipped")
+    else:
+        restore = find_latest_checkpoint(args.ckpt)
+        print(f"RESUME from {restore}" if restore else "FRESH start (no checkpoint)")
     # unique per-run save subdir -> no step collisions between resumes
     run_dir = root / f"run_{int(time.time())}"
 
@@ -153,7 +177,8 @@ def main():
         num_evals=max(4, args.timesteps // 2_000_000),
         network_factory=net, randomization_fn=make_domain_randomize(args.terrain),
         save_checkpoint_path=str(run_dir),
-        restore_checkpoint_path=restore, seed=args.seed)
+        restore_checkpoint_path=restore, restore_params=restore_params,
+        seed=args.seed)
 
     _, params, _ = train_fn(environment=env, progress_fn=progress,
                             policy_params_fn=save_policy)
