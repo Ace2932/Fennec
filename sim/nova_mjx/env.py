@@ -84,7 +84,8 @@ AIR_CARRY_CAP = 0.6    # s — max penalized excess per foot (bounds a held leg)
 
 
 class NovaJoystick(PipelineEnv):
-    def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6, **kwargs):
+    def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
+                 cmd_stage=2, **kwargs):
         path = epath.Path(__file__).parent / xml
         mj = mujoco.MjModel.from_xml_path(str(path))
         sys = mjcf.load_model(mj)
@@ -94,22 +95,38 @@ class NovaJoystick(PipelineEnv):
 
         self._default_pose = DEFAULT_POSE
         self._nu = sys.nu
-        # CURRICULUM STAGE 1 — forward-only commands. Runs 1-8 kept converging to
-        # a stand/wiggle because the command range included idle + backward + big
-        # turns, and standing SATISFIES the idle commands, so the policy hedged
-        # toward not-moving. Every command here has forward velocity (0.3-0.7 m/s)
-        # + gentle lateral/yaw, so standing NEVER satisfies the task -> the only
-        # way to score is to walk forward. Widen back to full range (below) once a
-        # forward gait is solid. (legged_gym-style command curriculum.)
-        # Speeds sized to the MEASURED actuator: leg joints are velocity-capped at
-        # 2.8 rad/s (bench, #91), so body speed tops out ~0.2-0.3 m/s (joint vel x
-        # ~0.21 m hip-to-foot radius, derated by stance arc + the torque-speed
-        # line under load; hobby-servo quadrupeds walk 0.1-0.2 m/s). The earlier
-        # 0.3-0.7 m/s range commanded speeds the robot PHYSICALLY CANNOT reach —
-        # the tracking gradient flattened and a torque-cheap CROUCH became optimal.
-        self._cmd_lo = jp.array([0.15, -0.1, -0.2])
-        self._cmd_hi = jp.array([0.35, 0.1, 0.2])
-        # full range for stage 2: jp.array([-0.6,-0.4,-0.7]) .. jp.array([1.0,0.4,0.7])
+        # COMMAND CURRICULUM.
+        #
+        # STAGE 1 (forward-only) built the gait. Runs 1-8 kept converging to a
+        # stand/wiggle because the range included idle + backward + big turns, and
+        # standing SATISFIES an idle command, so the policy hedged toward not
+        # moving. Stage 1 made every command forward, so standing NEVER satisfied
+        # the task -> the only way to score was to walk. It worked: a forward trot.
+        #
+        # STAGE 2 (default now) opens reverse + lateral + turning for an
+        # omnidirectional joystick policy. RESUME the stage-1 walk into it; do NOT
+        # train stage 2 from scratch (that reopens the stand-basin the curriculum
+        # exists to avoid). The stand basin is now also guarded by the fixed
+        # reward: `track` is floor-free (a stand scores ~0 for any nonzero cmd) and
+        # the `stand` penalty handles commanded-idle correctly, so standing-when-
+        # idle is the CORRECT behavior here, not the trap it was pre-fix.
+        #
+        # ⚠ ALL ranges stay INSIDE the MEASURED actuator envelope. Leg joints cap
+        # at 2.8 rad/s (bench, #91) -> body speed tops out ~0.2-0.3 m/s. The old
+        # commented hint (vx to 1.0, the "[-0.6..1.0]" line) predated that finding
+        # and commanded 3x-unreachable speeds -> the tracking gradient flattened
+        # and a torque-cheap CROUCH became optimal (the #112 regression). We do NOT
+        # use it. Stage 2 keeps vx at the same 0.35 forward cap, adds only GENTLE
+        # reverse (reverse is harder), modest lateral, and a moderate yaw the legs
+        # can produce by foot placement (not forward-speed-limited). Widen further
+        # only after a probe shows the walk survived this step.
+        if cmd_stage == 1:
+            self._cmd_lo = jp.array([0.15, -0.10, -0.2])
+            self._cmd_hi = jp.array([0.35,  0.10,  0.2])
+        else:                                    # stage 2 — omnidirectional, capped
+            self._cmd_lo = jp.array([-0.15, -0.15, -0.5])
+            self._cmd_hi = jp.array([ 0.35,  0.15,  0.5])
+        self._cmd_stage = cmd_stage
         # brax link index = mj body id - 1 (world excluded)
         self._foot_ids = jp.array(
             [mj.body(f"{n}_foot").id - 1 for n in LEG_NAMES])

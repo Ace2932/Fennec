@@ -46,8 +46,8 @@ def find_latest_checkpoint(ckpt_dir):
     return best
 
 
-def print_fingerprint():
-    """Print WHICH reward is about to be trained, before a single GPU-hour burns.
+def print_fingerprint(env):
+    """Print WHAT is about to be trained, before a single GPU-hour burns.
 
     A 60M-step run was once launched against a stale checkout: Colab's `git clone`
     fails with "destination path already exists" when the repo is already there,
@@ -55,8 +55,10 @@ def print_fingerprint():
     code. It cost an hour, and the only reason it was caught is that eval_reward
     sat ~1000 points above what the new reward could possibly produce.
 
-    Reads the real module constants and the real git SHA — nothing here is a
-    hand-maintained copy, so it cannot drift from what actually runs.
+    Reads the real module constants, the real git SHA, and the LIVE env instance
+    (its actual command range) — nothing here is a hand-maintained copy, so it
+    cannot drift from what actually runs. `env` is the exact object handed to
+    train_fn, so the printed range is the trained range.
     """
     import subprocess
     import env as _env
@@ -67,13 +69,17 @@ def print_fingerprint():
             sha += " (+uncommitted changes)"
     except Exception:
         sha = "UNKNOWN — not a git checkout?"
+    lo, hi = [float(v) for v in env._cmd_lo], [float(v) for v in env._cmd_hi]
     print("--- reward fingerprint ---------------------------------------")
     print(f"  code         : {sha}")
     print(f"  contact      : (foot_z - {_env.FOOT_RADIUS}) < {_env.CONTACT_EPS}"
           "   [radius-corrected]")
     print(f"  clearance    : COST, target foot z = {_env.FOOT_TARGET_Z}")
-    print("  Sanity: resuming ckpt12 under THIS reward evals ~1700, not ~2700.")
-    print("  If eval_reward starts near the old value, you are on stale code.")
+    print(f"  cmd stage {env._cmd_stage}  : vx[{lo[0]:+.2f},{hi[0]:+.2f}] "
+          f"vy[{lo[1]:+.2f},{hi[1]:+.2f}] wz[{lo[2]:+.2f},{hi[2]:+.2f}]")
+    print("  Sanity: resuming the stage-1 walk evals ~2100-2500. cmd stage 2")
+    print("  (reverse+lateral+turn) transiently DIPS reward as it generalizes;")
+    print("  judge by a probe, not by eval_reward. A ~2700 start = stale code.")
     print("--------------------------------------------------------------")
 
 
@@ -86,12 +92,16 @@ def main():
     ap.add_argument("--num_envs", type=int, default=2048)
     ap.add_argument("--out", default="nova_policy.pkl")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--cmd-stage", type=int, default=2, choices=(1, 2),
+                    help="command curriculum: 1 = forward-only (builds the gait "
+                         "from scratch), 2 = omnidirectional (resume a stage-1 walk)")
     ap.add_argument("--allow-cpu", action="store_true",
                     help="permit a CPU run (smoke-test only; ~100x too slow for real training)")
     args = ap.parse_args()
 
+    env = NovaJoystick(cmd_stage=args.cmd_stage)
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
-    print_fingerprint()
+    print_fingerprint(env)
     if jax.default_backend() == "cpu" and not args.allow_cpu:
         raise SystemExit(
             "✗ JAX is on CPU — real training would take days, not minutes.\n"
@@ -139,7 +149,7 @@ def main():
         save_checkpoint_path=str(run_dir),
         restore_checkpoint_path=restore, seed=args.seed)
 
-    _, params, _ = train_fn(environment=NovaJoystick(), progress_fn=progress,
+    _, params, _ = train_fn(environment=env, progress_fn=progress,
                             policy_params_fn=save_policy)
     with open(args.out, "wb") as f:
         pickle.dump(params, f)
