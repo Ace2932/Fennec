@@ -528,7 +528,7 @@ class NovaJoystick(PipelineEnv):
         ])
 
 
-def make_domain_randomize(terrain_max=None, dr_scale=1.0):
+def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0):
     """Build the per-env randomization fn.
 
     terrain_max: rough-ground ceiling (None -> terrain.TERRAIN_MAX = flat). Obs is
@@ -539,7 +539,12 @@ def make_domain_randomize(terrain_max=None, dr_scale=1.0):
       transfer at some sim-peak cost); <1 = tighter. Resume a trained walk into a
       wider dr_scale the same way as terrain — the policy generalizes to the added
       uncertainty. The real robot must fall inside every range or transfer fails,
-      so widen when the real params are genuinely uncertain."""
+      so widen when the real params are genuinely uncertain.
+    step_frac: fraction of envs whose terrain is quantized into DISCRETE STEPS
+      (terraces of STEP_M*level) rather than smooth rough — tier-1 blind curb/step
+      robustness. 0 = all smooth (current). Needs terrain_max>0 to have any effect
+      (steps quantize the terrain height). Resume a terrain policy into it; obs
+      unchanged (blind), deploy-compatible."""
     from terrain import TERRAIN_MAX as _TM_DEFAULT
     tmax = _TM_DEFAULT if terrain_max is None else float(terrain_max)
     ds = float(dr_scale)
@@ -597,7 +602,7 @@ def make_domain_randomize(terrain_max=None, dr_scale=1.0):
             forcerange = sys.actuator_forcerange * tscale[:, None]
             kt1, kt2 = jax.random.split(kt)
             level = jax.random.uniform(kt2, (), minval=0.0, maxval=tmax)
-            hfield = terrain_field(kt1, level)
+            hfield = terrain_field(kt1, level, step_frac)
             return geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield
 
         geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield = rand(rng)
