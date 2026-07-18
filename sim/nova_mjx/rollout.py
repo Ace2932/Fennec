@@ -58,9 +58,19 @@ def main():
     ap.add_argument("--wz", type=float, default=0.0, help="yaw command rad/s")
     ap.add_argument("--steps", type=int, default=400)
     ap.add_argument("--out", default="rollout.mp4")
+    ap.add_argument("--heightmap", action="store_true",
+                    help="build the height-map env (obs +HM_N^2) for a tier-2 teacher")
+    ap.add_argument("--stair-level", type=float, default=0.0,
+                    help="inject a STAIRCASE (rise STAIR_RISE*level) into the single-env "
+                         "terrain so you can watch the teacher climb. Needs --heightmap.")
     args = ap.parse_args()
 
-    env = NovaJoystick()
+    env = NovaJoystick(heightmap=args.heightmap)
+    if args.stair_level > 0:            # inject stairs into this env's hfield
+        import jax.numpy as _jp
+        from terrain import terrain_field
+        hf = terrain_field(jax.random.PRNGKey(0), args.stair_level, 0.0, 1.0)
+        env.sys = env.sys.tree_replace({"hfield_data": _jp.asarray(hf)})
     cmd = jp.array([args.vx, 0.0, args.wz])
 
     if args.policy:
