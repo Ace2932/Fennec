@@ -99,6 +99,53 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
     print("--------------------------------------------------------------")
 
 
+def run_stage(env, args, terrain, stair_frac, timesteps, ckpt_dir, restore,
+              restore_params, t0, logf):
+    """One PPO training segment at a FIXED difficulty. Brax freezes per-env terrain
+    at env construction, so an auto-ramp curriculum = several of these chained, each
+    resuming the previous stage's full checkpoint (policy+value+normalizer) at a
+    higher `terrain`. Writes the flat nova_policy.pkl every eval so a mid-stage
+    dropout still leaves a usable policy. Returns the final params."""
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    net = functools.partial(
+        ppo_networks.make_ppo_networks,
+        policy_hidden_layer_sizes=(128, 128, 128, 128),
+        value_hidden_layer_sizes=(256, 256, 256, 256))
+
+    def progress(step, metrics):
+        r = float(metrics.get("eval/episode_reward", float("nan")))
+        print(f"[{time.time()-t0:6.0f}s] step {step:>11,}  eval_reward {r:8.2f}")
+        logf.write(f"{time.time():.0f},{step},{r}\n"); logf.flush()
+
+    def save_policy(step, make_policy, params):
+        with open(args.out, "wb") as f:      # latest policy for rollout.py
+            pickle.dump(params, f)
+
+    train_fn = functools.partial(
+        ppo.train,
+        num_timesteps=timesteps, episode_length=1000,
+        num_envs=args.num_envs, batch_size=256,
+        num_minibatches=32, num_updates_per_batch=4,
+        unroll_length=20, discounting=0.97, learning_rate=3e-4,
+        # entropy back to 1e-2: 2e-2 was too noisy (run 8 plateaued ~1050, below
+        # the wiggle). The forward-only command curriculum now forces walking, so
+        # heavy exploration isn't needed — clean exploitation is better.
+        entropy_cost=1e-2, normalize_observations=True,
+        num_evals=max(4, timesteps // 2_000_000),
+        network_factory=net,
+        randomization_fn=make_domain_randomize(terrain, args.dr_scale,
+                                               args.step_frac, stair_frac),
+        save_checkpoint_path=str(ckpt_dir),
+        restore_checkpoint_path=restore, restore_params=restore_params,
+        seed=args.seed)
+
+    _, params, _ = train_fn(environment=env, progress_fn=progress,
+                            policy_params_fn=save_policy)
+    with open(args.out, "wb") as f:
+        pickle.dump(params, f)
+    return params
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default="nova_ckpt",
@@ -129,6 +176,17 @@ def main():
                     help="fraction of envs that are STAIRCASES (tier-2 teacher). Rise "
                          "sweeps with the terrain level to find the max climbable step. "
                          "Needs --terrain>0 AND --heightmap (blind can't climb stairs).")
+    ap.add_argument("--curriculum", action="store_true",
+                    help="AUTO-RAMP terrain difficulty in stages within one run. Brax "
+                         "bakes per-env terrain at env build, so this CHAINS N stages, "
+                         "each resuming the last at higher --terrain (one cell instead of "
+                         "manual staged resumes). Ramps --curriculum-start -> --terrain "
+                         "over --curriculum-stages; --timesteps is the TOTAL (split evenly). "
+                         "Resumable: stable stage{i} dirs + DONE markers survive a dropout.")
+    ap.add_argument("--curriculum-stages", type=int, default=4,
+                    help="number of difficulty stages for --curriculum")
+    ap.add_argument("--curriculum-start", type=float, default=0.25,
+                    help="terrain level of the FIRST curriculum stage (ramps to --terrain)")
     ap.add_argument("--heightmap", action="store_true",
                     help="add the PRIVILEGED height-map obs (obs 105->105+HM_N^2) for a "
                          "tier-2 stair-climbing TEACHER. Resume a walk via "
@@ -170,49 +228,53 @@ def main():
     else:
         restore = find_latest_checkpoint(args.ckpt)
         print(f"RESUME from {restore}" if restore else "FRESH start (no checkpoint)")
-    # unique per-run save subdir -> no step collisions between resumes
-    run_dir = root / f"run_{int(time.time())}"
-
-    net = functools.partial(
-        ppo_networks.make_ppo_networks,
-        policy_hidden_layer_sizes=(128, 128, 128, 128),
-        value_hidden_layer_sizes=(256, 256, 256, 256))
 
     logf = (root / "train_log.csv").open("a")
     t0 = time.time()
 
-    def progress(step, metrics):
-        r = float(metrics.get("eval/episode_reward", float("nan")))
-        print(f"[{time.time()-t0:6.0f}s] step {step:>11,}  eval_reward {r:8.2f}")
-        logf.write(f"{time.time():.0f},{step},{r}\n"); logf.flush()
-
-    def save_policy(step, make_policy, params):
-        with open(args.out, "wb") as f:      # latest policy for rollout.py
-            pickle.dump(params, f)
-
-    train_fn = functools.partial(
-        ppo.train,
-        num_timesteps=args.timesteps, episode_length=1000,
-        num_envs=args.num_envs, batch_size=256,
-        num_minibatches=32, num_updates_per_batch=4,
-        unroll_length=20, discounting=0.97, learning_rate=3e-4,
-        # entropy back to 1e-2: 2e-2 was too noisy (run 8 plateaued ~1050, below
-        # the wiggle). The forward-only command curriculum now forces walking, so
-        # heavy exploration isn't needed — clean exploitation is better.
-        entropy_cost=1e-2, normalize_observations=True,
-        num_evals=max(4, args.timesteps // 2_000_000),
-        network_factory=net,
-        randomization_fn=make_domain_randomize(args.terrain, args.dr_scale, args.step_frac, args.stair_frac),
-        save_checkpoint_path=str(run_dir),
-        restore_checkpoint_path=restore, restore_params=restore_params,
-        seed=args.seed)
-
-    _, params, _ = train_fn(environment=env, progress_fn=progress,
-                            policy_params_fn=save_policy)
-    with open(args.out, "wb") as f:
-        pickle.dump(params, f)
-    logf.close()
-    print(f"done ({time.time()-t0:.0f}s). policy -> {args.out}, checkpoints -> {run_dir}")
+    if args.curriculum:
+        # Brax freezes per-env terrain at env build, so difficulty can't ramp inside
+        # one ppo.train. Run STAGES of increasing terrain, each resuming the prior
+        # stage's full checkpoint. STABLE stage{i}_t{level} dirs + a DONE marker make
+        # it resumable: a plain re-run after a dropout skips finished stages and
+        # picks up the interrupted one from its own latest checkpoint.
+        s = max(1, args.curriculum_stages)
+        lo = min(args.curriculum_start, args.terrain)
+        levels = ([args.terrain] if s == 1 else
+                  [lo + (args.terrain - lo) * i / (s - 1) for i in range(s)])
+        per = max(1, args.timesteps // s)
+        print(f"=== AUTO-RAMP CURRICULUM: {s} stages x {per:,} steps, terrain "
+              f"{lo:.2f} -> {args.terrain:.2f}, stair-frac {args.stair_frac:.2f} ===")
+        prev_ckpt, prev_params = restore, restore_params
+        for i, lvl in enumerate(levels):
+            sdir = root / f"stage{i}_t{lvl:.2f}"
+            if (sdir / "DONE").exists():
+                print(f"--- stage {i+1}/{s} (terrain {lvl:.2f}) already DONE — skip ---")
+                prev_ckpt, prev_params = find_latest_checkpoint(str(sdir)), None
+                continue
+            own = find_latest_checkpoint(str(sdir))       # mid-stage dropout resume
+            if own is not None:
+                r, rp = own, None
+            elif i == 0:
+                r, rp = prev_ckpt, prev_params            # initial resume / graft
+            else:
+                r, rp = prev_ckpt, None                   # prior stage's checkpoint
+            print(f"--- stage {i+1}/{s}  terrain {lvl:.2f}  ({per:,} steps)  "
+                  f"init={'graft' if rp else (r or 'fresh')} ---")
+            run_stage(env, args, lvl, args.stair_frac, per, sdir, r, rp, t0, logf)
+            (sdir / "DONE").write_text("done")
+            prev_ckpt, prev_params = find_latest_checkpoint(str(sdir)), None
+        logf.close()
+        print(f"done ({time.time()-t0:.0f}s). curriculum complete -> {args.out}, "
+              f"checkpoints -> {root}")
+    else:
+        # unique per-run save subdir -> no step collisions between resumes
+        run_dir = root / f"run_{int(time.time())}"
+        run_stage(env, args, args.terrain, args.stair_frac, args.timesteps,
+                  run_dir, restore, restore_params, t0, logf)
+        logf.close()
+        print(f"done ({time.time()-t0:.0f}s). policy -> {args.out}, "
+              f"checkpoints -> {run_dir}")
 
 
 if __name__ == "__main__":
