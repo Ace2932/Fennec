@@ -128,11 +128,28 @@ def test_T4_obs_heightmap_unchanged():
     # reference, so a sign flip / s-c swap / bx-by swap would all pass. Rebuild
     # the pipeline state with a non-zero translation and a yaw that is not a
     # multiple of 90 deg, so the rotation and translation terms are constrained.
-    yaw_set = 0.7
+    #
+    # The orientation must be a FULL roll-pitch-yaw pose, not pure yaw. A pure-yaw
+    # quaternion has qx == qy == 0, which kills every term of the live yaw
+    # expression that touches them:
+    #     yaw = arctan2(2*(w*qz + qx*qy), 1 - 2*(qy*qy + qz*qz))
+    # so a qx/qy index confusion (reading roll where pitch belongs) is invisible
+    # -- the mutant `qy*qy -> qx*qx` reproduces the clean deviation byte for byte.
+    # That matters in production: on rough terrain the trained base is tilted on
+    # every step, so roll and pitch are never zero there either.
+    roll_set, pitch_set, yaw_set = 0.15, -0.2, 0.7
+    cr, sr = np.cos(roll_set / 2), np.sin(roll_set / 2)
+    cp, sp = np.cos(pitch_set / 2), np.sin(pitch_set / 2)
+    cy, sy = np.cos(yaw_set / 2), np.sin(yaw_set / 2)
+    quat = jp.array([                        # standard ZYX RPY -> (w, x, y, z)
+        cr * cp * cy + sr * sp * sy,
+        sr * cp * cy - cr * sp * sy,
+        cr * sp * cy + sr * cp * sy,
+        cr * cp * sy - sr * sp * cy,
+    ])
     q_mod = state.pipeline_state.q
     q_mod = q_mod.at[0:3].set(jp.array([0.37, -0.52, float(q_mod[2])]))
-    q_mod = q_mod.at[3:7].set(jp.array([np.cos(yaw_set / 2), 0.0, 0.0,
-                                        np.sin(yaw_set / 2)]))
+    q_mod = q_mod.at[3:7].set(quat)
     ps = e.pipeline_init(q_mod, jp.zeros(e.sys.nv))
     hm = np.asarray(e._sample_heightmap(ps))
     # reference: original inline computation, reproduced verbatim
@@ -140,9 +157,18 @@ def test_T4_obs_heightmap_unchanged():
     q = ps.q
     yaw = np.arctan2(2 * (q[3] * q[6] + q[4] * q[5]),
                      1 - 2 * (q[5] ** 2 + q[6] ** 2))
+    # the reference's own arctan2 transcription must be pinned against an
+    # externally known value, else an error mirrored in live + reference cancels
+    assert abs(float(yaw) - yaw_set) < 1e-5, \
+        f"reference yaw {yaw} != composed yaw {yaw_set}"
     # guard: this test must actually exercise the rotation + translation path
     assert abs(float(yaw)) > 0.1, f"degenerate yaw, rotation untested: {yaw}"
     assert abs(np.sin(float(yaw))) > 0.1, f"sin(yaw) ~ 0, rotation untested: {yaw}"
+    assert abs(np.cos(float(yaw))) > 0.1, f"cos(yaw) ~ 0, rotation untested: {yaw}"
+    # roll and pitch must stay non-zero, or the qx/qy index confusion above goes
+    # invisible again
+    assert abs(float(q[4])) > 0.05, f"qx ~ 0, roll/pitch index errors hidden: {q[3:7]}"
+    assert abs(float(q[5])) > 0.05, f"qy ~ 0, roll/pitch index errors hidden: {q[3:7]}"
     assert abs(float(base[0])) > 0.1 and abs(float(base[1])) > 0.1, \
         f"degenerate base xy, translation untested: {base}"
     assert abs(float(base[0])) != abs(float(base[1])), \
@@ -161,7 +187,11 @@ def test_T4_obs_heightmap_unchanged():
                               [jp.asarray(row.ravel()), jp.asarray(col.ravel())],
                               order=1, mode="nearest")
     ref = np.asarray(ref) * ztop + fz - float(base[2])
-    assert np.allclose(hm, ref, atol=1e-6), np.abs(hm - ref).max()
+    # atol is 1e-5, not the observed float32 deviation (~3.3e-07) plus a hair:
+    # 3x headroom is flaky across a jax bump or a different backend. Every mutant
+    # this test targets misses by 1e-3 or worse, so 1e-5 keeps 2+ orders of
+    # discrimination while tolerating float32 reassociation.
+    assert np.allclose(hm, ref, atol=1e-5), np.abs(hm - ref).max()
     print(f"    T4: max |obs - bilinear ref| = {np.abs(hm - ref).max():.3e}")
 
 
