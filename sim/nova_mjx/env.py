@@ -263,6 +263,13 @@ class NovaJoystick(PipelineEnv):
         # and foot_h == foot_z: bit-identical to the pre-terrain-relative code.
         ground_z = self._terrain_ground_z(foot_xy[:, 0], foot_xy[:, 1])
         foot_h = foot_z - ground_z
+        # done/height ground reference: MIN over the four feet, NOT a CoM point
+        # sample — hip span (~0.28 m) exceeds a tread run (~0.20 m), so a
+        # climbing robot NORMALLY straddles two treads; a CoM sample past the
+        # riser reads the upper tread and can under-read base_h by ~0.10 m,
+        # spuriously terminating a healthy climb. min() errs toward survival
+        # and is identical on flat (all zeros).
+        base_h = height - jp.min(ground_z)
         # TERRAIN-RELATIVE contact — reads foot_h (height above LOCAL ground; see
         # _terrain_ground_z), not absolute world z. On the radial staircase an
         # absolute-z test read a foot PLANTED on an elevated step as airborne, so
@@ -344,7 +351,14 @@ class NovaJoystick(PipelineEnv):
         # fell (rollout: fell at 1.3 s). This + a stronger upright weight give it
         # the pitch stability to support a dynamic gait. (ref: ang_vel_xy.)
         ang_vel_xy = jp.sum(ang_vel[:2] ** 2)
-        height_pen = (height - STAND_HEIGHT) ** 2
+        # TERRAIN-RELATIVE posture cost — reads base_h (base height above LOCAL
+        # ground; see the min-over-feet note above), not absolute world z. With
+        # absolute z this quadratic penalized the robot for being elevated at
+        # all: on the radial staircase every step climbed added (step_h)^2 of
+        # cost, a direct anti-climb gradient. base_h strips the terrain offset so
+        # the target posture costs the same at every elevation; on flat (all-zero
+        # hfield) base_h == height and this is bit-identical to the old code.
+        height_pen = (base_h - STAND_HEIGHT) ** 2
         z_pen = xd.vel[0, 2] ** 2
         act_rate = jp.sum((action - info["last_act"]) ** 2)
         # jerk: 2nd difference of actions -> smoother motion, less servo wear
@@ -478,7 +492,14 @@ class NovaJoystick(PipelineEnv):
                   + w_slip + w_splay + w_carry
                   + w_actrate + w_energy + w_jerk + w_stand)
         reward = jp.clip(reward, -10.0, 10.0)
-        done = jp.where((height < 0.08) | (up[2] < 0.4), 1.0, 0.0)
+        # TERRAIN-RELATIVE termination — the low-height gate reads base_h (height
+        # above LOCAL ground; see the min-over-feet note above), not absolute
+        # world z. With absolute z a face-planted robot on an elevated step never
+        # tripped the 0.08 floor (its base_z stays well above it), so corpses
+        # kept accruing reward and polluting metrics. min-over-feet errs toward
+        # survival (a straddling climber reads the LOWER tread), so a healthy
+        # climb is never spuriously killed. On flat base_h == height: identical.
+        done = jp.where((base_h < 0.08) | (up[2] < 0.4), 1.0, 0.0)
 
         # push the new proprioceptive frame into the history buffer (newest first)
         frame = self._prop_frame(pipeline_state, info, ko)

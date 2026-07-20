@@ -276,6 +276,36 @@ def test_T6_clearance_matches_flat_at_elevation():
     assert abs(c_flat - c_high) < 0.05, (c_flat, c_high)
 
 
+def test_T7_faceplant_terminates_and_straddle_survives():
+    # BUG 3, env-level: a collapsed robot on an elevated plateau never
+    # terminated (absolute base_z stays >> 0.08). Post-fix it must. reset/
+    # pipeline_init/step are jitted for the same reason as _settle: eager brax
+    # stepping on CPU is minutes per call and jitting is a pure speed change.
+    e = _plateau_env(0.18)
+    reset, pinit, step = jax.jit(e.reset), jax.jit(e.pipeline_init), jax.jit(e.step)
+    state = reset(jax.random.PRNGKey(4))
+    # collapse the base onto the plateau: z = plateau + 0.03 (below the 0.08 gate)
+    q = state.pipeline_state.q.at[2].set(0.18 + 0.03)
+    ps = pinit(q, state.pipeline_state.qd)
+    state = step(state.replace(pipeline_state=ps), jp.zeros(e.action_size))
+    assert float(state.done) == 1.0, "corpse on an elevated step must terminate"
+
+    # AND the fix must not over-correct: a HEALTHY robot straddling two treads
+    # (hip span ~0.28 m > tread run ~0.20 m — the normal climbing stance) must
+    # NOT terminate. Ledge at x >= 0 so front and rear feet sit on different
+    # levels; base at proper stand height above the LOWER tread.
+    n_r, n_c = _grid(e)
+    data = np.full((n_r, n_c), 0.10 / 0.20)
+    data[:, n_c // 2:] = 0.18 / 0.20
+    e2 = _env_with_field(data)
+    reset2, pinit2, step2 = jax.jit(e2.reset), jax.jit(e2.pipeline_init), jax.jit(e2.step)
+    s2 = reset2(jax.random.PRNGKey(4))
+    q2 = s2.pipeline_state.q.at[2].add(0.10)
+    ps2 = pinit2(q2, s2.pipeline_state.qd)
+    s2 = step2(s2.replace(pipeline_state=ps2), jp.zeros(e2.action_size))
+    assert float(s2.done) == 0.0, "healthy straddle must survive"
+
+
 def test_T9_ghost_stays_zero():
     # contact and contact_true are textually identical TODAY (ghost_* is 0 by
     # construction). They must move in LOCKSTEP or ghost_* starts reporting
