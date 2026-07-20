@@ -564,7 +564,12 @@ class NovaJoystick(PipelineEnv):
         — enough to re-open the absolute-z contact bug at exactly the tread edges
         climbing needs (spec 2026-07-20, empirically measured vs mj_ray). The
         reward/done consumers therefore read THIS, and the obs keeps bilinear
-        (_sample_heightmap) because the policy was trained on it."""
+        (_sample_heightmap) because the policy was trained on it.
+
+        Flat no-op invariant (foot_h == foot_z on flat) is bit-exact only because
+        fz == 0: nova.xml's floor geom sits at z == 0, so `z*ztop + fz` collapses
+        to `z*ztop` and a zero field returns EXACTLY 0. Reposition the floor and
+        that identity breaks (test_T1 is the canary)."""
         rx, ry, ztop = self._hf_size[0], self._hf_size[1], self._hf_size[2]
         fx, fy, fz = self._floor_pos[0], self._floor_pos[1], self._floor_pos[2]
         # world xy -> fractional (row, col), same mapping as _sample_heightmap

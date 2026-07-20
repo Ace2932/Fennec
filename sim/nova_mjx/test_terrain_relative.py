@@ -32,6 +32,9 @@ def test_T1_flat_is_zero():
     xs = jp.array([0.0, 0.3, -1.0, 2.0])
     ys = jp.array([0.0, -0.4, 1.2, -2.0])
     z = e._terrain_ground_z(xs, ys)
+    # EXACTLY 0 (not just small) also pins the floor-at-z==0 assumption the whole
+    # flat no-op invariant rests on: z*ztop+fz == 0 requires fz == 0. If someone
+    # repositions the floor geom off z==0, this is the canary that trips first.
     assert np.allclose(np.asarray(z), 0.0, atol=1e-9), z
 
 
@@ -231,8 +234,9 @@ def _settle(e, ground_h, n=40):
     signal at the last step is a mere 0.05 — right on the brief's threshold, so
     that form does not reliably go red pre-fix. During the drop the feet actually
     move, and the elevated foot carries a constant +ground_h height offset every
-    one of those steps, so the summed cost diverges cleanly pre-fix (~0.5 gap) and
-    collapses to ~0 post-fix (both drops are relatively identical). Under zero
+    one of those steps, so the summed cost diverges cleanly pre-fix (~11.26 gap:
+    c_flat = -5.10 vs c_high = -16.36) and collapses to a 0.0 gap post-fix (both
+    drops are relatively identical). Under zero
     action the reward never feeds back into the dynamics, so nothing but the
     absolute-z read distinguishes the two runs.
     """
@@ -263,9 +267,10 @@ def test_T5_planted_feet_on_plateau_read_planted():
 def test_T6_clearance_matches_flat_at_elevation():
     # BUG 2, env-level: identical motion at 0 m and 0.18 m must cost the same
     # clearance. Today the elevated case pays ~0.18 more height offset on EVERY
-    # moving foot, every step of the drop — summed over the settle that is ~0.7
-    # vs ~0.4 pre-fix (a clear >0.2 gap). Post-fix foot_h strips the offset and
-    # the two drops trace identically -> the summed costs match to <0.05.
+    # moving foot, every step of the drop — summed over the settle that is
+    # c_flat = -5.10 vs c_high = -16.36 pre-fix (an 11.26 gap). Post-fix foot_h
+    # strips the offset and the two drops trace identically -> the summed costs
+    # match exactly (difference 0.0, well under the 0.05 threshold).
     _, c_flat = _settle(_plateau_env(0.0), 0.0)
     _, c_high = _settle(_plateau_env(0.18), 0.18)
     assert abs(c_flat - c_high) < 0.05, (c_flat, c_high)
