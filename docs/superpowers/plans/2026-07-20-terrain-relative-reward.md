@@ -282,46 +282,54 @@ git commit -m "sim/env tests: mj_ray oracle for the terrain query + obs byte-ide
 - Consumes: `_terrain_ground_z` (Task 2).
 - Produces: `foot_h` (4,) local variable in `step()` — Task 5 reuses `ground_z` for `base_h`; Task 6 reuses `foot_h` + `contact` for `swing_h_per_step`.
 
-- [ ] **Step 1: Write failing tests T5, T6, T9** — append:
+- [ ] **Step 1: Write failing tests T5, T6, T9** — append. These step the REAL env and assert on
+`state.metrics`, so they fail on current code (that is the point — a planted foot on an elevated
+plateau reads airborne today):
 
 ```python
 def _plateau_env(h=0.18):
-    # uniform elevated plateau: a foot resting ON it at foot_z = h + 0.0125
-    # (weight-bearing height, env.py:54) must read PLANTED post-fix.
+    """Uniform elevated plateau. A robot dropped on it is standing on ground at
+    height h — every gait term must behave exactly as it does on flat."""
     e = NovaJoystick(heightmap=True)
     n_r, n_c = _grid(e)
     return _env_with_field(np.full((n_r, n_c), h / 0.20))
 
 
-def test_T5_contact_true_on_elevated_step():
-    # BUG 1 (must FAIL pre-fix): planted foot on a 0.18 m plateau read AIRBORNE.
-    e = _plateau_env(0.18)
-    foot_z = jp.full((4,), 0.18 + 0.0125)
-    foot_xy = jp.zeros((4, 2)) + jp.array([[0.9, 0.0]])   # off the spawn pad
-    ground = e._terrain_ground_z(foot_xy[:, 0], foot_xy[:, 1])
-    foot_h = foot_z - ground
-    contact = (foot_h - FOOT_RADIUS) < CONTACT_EPS
-    assert bool(contact.all()), (foot_h, "planted foot must read planted")
+def _settle(e, n=40):
+    """Reset ON the plateau and let it settle under zero action."""
+    state = e.reset(jax.random.PRNGKey(4))
+    # lift the base onto the plateau so the feet start above it, then settle
+    q = state.pipeline_state.q.at[2].add(0.18)
+    ps = e.pipeline_init(q, state.pipeline_state.qd)
+    state = state.replace(pipeline_state=ps)
+    for _ in range(n):
+        state = e.step(state, jp.zeros(e.action_size))
+    return state
 
 
-def test_T6_clearance_ignores_elevation():
-    # BUG 2 (must FAIL pre-fix): swing cost must depend on LOCAL height only —
-    # same swing at 0 m and at 0.18 m elevation must cost the same.
-    from env import FOOT_TARGET_Z
-    e_flat, e_high = _plateau_env(0.0), _plateau_env(0.18)
-    xy = jp.array([[0.9, 0.0]] * 4)
-    speed = jp.full((4,), 0.75)
-    for e, elev in ((e_flat, 0.0), (e_high, 0.18)):
-        foot_z = jp.full((4,), elev + 0.05)               # swinging AT target
-        fh = foot_z - e._terrain_ground_z(xy[:, 0], xy[:, 1])
-        cost = jp.sum(jp.abs(fh - FOOT_TARGET_Z) * jp.sqrt(speed))
-        assert float(cost) < 1e-3, (elev, cost, "at-target swing must cost ~0")
+def test_T5_planted_feet_on_plateau_read_planted():
+    # BUG 1, env-level: contact/contact_true are absolute-z today, so feet
+    # standing on a 0.18 m plateau read AIRBORNE -> airT_* ~1.0 and slip stops
+    # billing. Post-fix they read planted -> airT_* near 0 for a settled stance.
+    state = _settle(_plateau_env(0.18))
+    airT = [float(state.metrics[f"airT_{f}"]) for f in ("FL", "FR", "RL", "RR")]
+    assert sum(a < 0.5 for a in airT) >= 3, airT   # a settled robot is not flying
+
+
+def test_T6_clearance_matches_flat_at_elevation():
+    # BUG 2, env-level: identical motion at 0 m and 0.18 m must cost the same
+    # clearance. Today the elevated case pays ~2*0.18 more per swinging foot.
+    s_flat = _settle(_plateau_env(0.0))
+    s_high = _settle(_plateau_env(0.18))
+    c_flat = float(s_flat.metrics["w_clearance"])
+    c_high = float(s_high.metrics["w_clearance"])
+    assert abs(c_flat - c_high) < 0.05, (c_flat, c_high)
 
 
 def test_T9_ghost_stays_zero():
-    # contact and contact_true are textually identical TODAY (ghost_* ≡ 0 by
-    # construction). They must move in LOCKSTEP or the ghost diagnostic starts
-    # reporting phantom drift. Step the real env on rough terrain and check.
+    # contact and contact_true are textually identical TODAY (ghost_* is 0 by
+    # construction). They must move in LOCKSTEP or ghost_* starts reporting
+    # phantom drift — the exact silent-divergence those metrics exist to catch.
     from terrain import terrain_field
     e = NovaJoystick(heightmap=True)
     n_r, n_c = _grid(e)
@@ -334,16 +342,13 @@ def test_T9_ghost_stays_zero():
         assert float(state.metrics[f"ghost_{f}"]) == 0.0, f
 ```
 
-- [ ] **Step 2: Run — T5 and T6 FAIL** (they compute what the env WILL compute; to make them fail against current env semantics they are structured as direct expressions — they pass trivially once Task 2 exists. So instead verify the BUG is present in the env itself: run T9 — it passes (tautology today) — then add the real red check: temporarily assert in T5 using the OLD formula `(foot_z - FOOT_RADIUS) < CONTACT_EPS` returns False on the plateau, which documents the bug. Keep that assertion in T5 permanently as the "old formula is wrong here" half.)
+- [ ] **Step 2: Run — T5 and T6 must FAIL, T9 passes**
 
-Add to T5 before the final assert:
-
-```python
-    old_contact = (foot_z - FOOT_RADIUS) < CONTACT_EPS    # the absolute-z bug
-    assert not bool(old_contact.any()), "old formula wrongly reads airborne — documents bug 1"
-```
-
-Run: `JAX_PLATFORMS=cpu ../../.venv/bin/python test_terrain_relative.py` — all green EXCEPT nothing yet exercises the env's own step() wiring; T9 is the env-level check and passes pre- and post-fix (lockstep property).
+Run: `JAX_PLATFORMS=cpu ../../.venv/bin/python test_terrain_relative.py`
+Expected: `test_T5...` fails (airT ~1.0 — feet on the plateau read airborne) and `test_T6...`
+fails (elevated clearance much larger than flat). T9 passes both before and after (lockstep).
+If T5/T6 do NOT fail, the test harness is not reaching the elevated state — fix the harness
+before implementing, or the red-green cycle proves nothing.
 
 - [ ] **Step 3: Wire the env.** In `step()`:
 
@@ -387,34 +392,39 @@ git commit -m "sim/env: contact + clearance + contact_true read local ground —
 - Consumes: `ground_z` (Task 4 — NOTE: `height = x.pos[0, 2]` is computed at env.py:250, BEFORE ground_z at ~259; compute `base_h` after ground_z exists and use it in the height_pen/done expressions further down, which is safe because both are used only later in step()).
 - Produces: `base_h` scalar local in `step()`.
 
-- [ ] **Step 1: Write failing test T7** — append:
+- [ ] **Step 1: Write failing test T7** — append. Env-level, both directions:
 
 ```python
-def test_T7_done_terrain_relative_but_straddle_safe():
-    # BUG 3: a face-plant at elevation never terminated (base_z stays > 0.08
-    # absolute). AND the fix must not over-correct: a healthy robot straddling
-    # two treads (hip span 0.28 m > tread run 0.20 m — the NORMAL climbing
-    # stance) must NOT terminate. Ground ref = min over the four feet.
+def test_T7_faceplant_terminates_and_straddle_survives():
+    # BUG 3, env-level: a collapsed robot on an elevated plateau never
+    # terminated (absolute base_z stays >> 0.08). Post-fix it must.
     e = _plateau_env(0.18)
-    xy = jp.array([[0.9, 0.0]] * 4)
-    ground = e._terrain_ground_z(xy[:, 0], xy[:, 1])      # all 0.18
-    # face-plant ON the plateau: base at 0.18 + 0.03
-    base_h_faceplant = (0.18 + 0.03) - jp.min(ground)
-    assert float(base_h_faceplant) < 0.08, "corpse on a step must now terminate"
-    # old formula: absolute base_z = 0.21 > 0.08 -> never fired (documents bug 3)
-    assert (0.18 + 0.03) > 0.08
-    # healthy straddle: front feet on 0.18 plateau, rear feet on 0.10 ledge,
-    # base at healthy stand height above the LOWER tread
+    state = e.reset(jax.random.PRNGKey(4))
+    # collapse the base onto the plateau: z = plateau + 0.03 (below the 0.08 gate)
+    q = state.pipeline_state.q.at[2].set(0.18 + 0.03)
+    ps = e.pipeline_init(q, state.pipeline_state.qd)
+    state = e.step(state.replace(pipeline_state=ps), jp.zeros(e.action_size))
+    assert float(state.done) == 1.0, "corpse on an elevated step must terminate"
+
+    # AND the fix must not over-correct: a HEALTHY robot straddling two treads
+    # (hip span ~0.28 m > tread run ~0.20 m — the normal climbing stance) must
+    # NOT terminate. Ledge at x >= 0 so front and rear feet sit on different
+    # levels; base at proper stand height above the LOWER tread.
     e2 = NovaJoystick(heightmap=True)
     n_r, n_c = _grid(e2)
     data = np.full((n_r, n_c), 0.10 / 0.20)
-    data[:, n_c // 2:] = 0.18 / 0.20                       # ledge at x >= 0
+    data[:, n_c // 2:] = 0.18 / 0.20
     e2 = _env_with_field(data)
-    fxy = jp.array([[0.35, 0.0], [0.35, -0.1], [-0.35, 0.0], [-0.35, -0.1]])
-    g = e2._terrain_ground_z(fxy[:, 0], fxy[:, 1])
-    base_h = (0.10 + 0.16) - jp.min(g)                     # body over the boundary
-    assert float(base_h) >= 0.08, (base_h, "healthy straddle must survive")
+    s2 = e2.reset(jax.random.PRNGKey(4))
+    q2 = s2.pipeline_state.q.at[2].add(0.10)
+    ps2 = e2.pipeline_init(q2, s2.pipeline_state.qd)
+    s2 = e2.step(s2.replace(pipeline_state=ps2), jp.zeros(e2.action_size))
+    assert float(s2.done) == 0.0, "healthy straddle must survive"
 ```
+
+- [ ] **Step 2: Run — the face-plant half FAILS on current code** (absolute base_z = 0.21 > 0.08
+so `done` never fires). Expected: `AssertionError: corpse on an elevated step must terminate`.
+Then wire it:
 
 - [ ] **Step 2: Run — the test passes as pure math but documents both directions; the env wiring is the deliverable.** Wire it:
 
@@ -589,14 +599,14 @@ and in `state.metrics.update(...)`: `climb=climb_delta, climb_max=peak_delta, sw
 `train.py` `diagnostics()` — extend the returned line:
 
 ```python
-        return (f"    fwd {m('fwd_speed')/L:5.2f}  prog {m('w_progress'):+8.2f}  "
+        return (f"    fwd {m('fwd_speed')/L:5.2f}  prog {m('w_progress')/L:+6.2f}  "
                 f"clear {m('w_clearance')/L:+6.2f}  hgt {m('w_height')/L:+6.3f}  "
                 f"z {m('w_z')/L:+6.3f}  climb {m('climb'):+5.2f}/{m('climb_max'):.2f}  "
                 f"swing {m('swing_h_per_step'):4.2f}  ghost {ghost/L:4.2f}  "
                 f"airT " + "/".join(f"{a/L:.2f}" for a in airT) + f"  len {L:.0f}")
 ```
 
-(match the existing per-step-division pattern already in `diagnostics()` — keep `climb`/`climb_max` as raw episode totals, they're already end-quantities.)
+(ALL reward terms divide by `L` — brax reports episode SUMS, and `probe_rewards.py` prints per-step, so this makes the two directly comparable. `climb`/`climb_max` stay raw: they are already end-quantities, not rates.)
 
 `train.py` `progress()` evalcsv call — widen the filter:
 
