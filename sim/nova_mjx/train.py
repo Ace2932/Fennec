@@ -7,9 +7,11 @@ Resilience:
   * Brax writes a full-state checkpoint (params + normalizer) every eval to
     --ckpt. Put --ckpt on PERSISTENT storage (mounted Google Drive) — Colab's
     /content is wiped on disconnect, so a local checkpoint dies with the run.
-  * On (re)start it finds the LATEST checkpoint under --ckpt (by mtime, robust
-    across many resumes) and CONTINUES from it. So after any dropout you just
-    re-run the same cell — it picks up where the last checkpoint left off.
+  * On (re)start it finds the LATEST checkpoint under --ckpt — via the pointer
+    each training dir records for itself (PROGRESS), not filesystem mtime — and
+    CONTINUES from it. So after any dropout you just re-run the same cell; it
+    picks up where the last checkpoint left off, and a resumed curriculum stage
+    is charged only the steps it still owes.
   * Each run saves to its own subdir (no step-number collisions between runs),
     plus a flat nova_policy.pkl (latest policy, for rollout.py) and a CSV log —
     both survive a dropout.
@@ -18,7 +20,6 @@ Re-run to keep training; watch eval_reward climb. GPU (Colab) for real runs.
 """
 import argparse
 import functools
-import os
 import pickle
 import time
 
@@ -29,21 +30,12 @@ from brax.training.agents.ppo import networks as ppo_networks
 from brax.training.agents.ppo import train as ppo
 
 from env import NovaJoystick, make_domain_randomize
-
-
-def find_latest_checkpoint(ckpt_dir):
-    """Newest Brax checkpoint under ckpt_dir, by mtime — correct even across
-    many resumes (each run writes its own run_*/<step>/ dir; Brax restarts its
-    step counter on restore, so mtime, not step number, is the right key).
-    Brax names each checkpoint dir with the zero-padded step (e.g. 000000006400)
-    and stores orbax data inside — so we match all-digit dir names."""
-    best, best_m = None, -1.0
-    for dirpath, _, _ in os.walk(ckpt_dir):
-        if os.path.basename(dirpath).isdigit():
-            m = os.path.getmtime(dirpath)
-            if m > best_m:
-                best_m, best = m, dirpath
-    return best
+# stdlib-only helpers (importable without JAX, so they're unit-tested on a
+# laptop — see test_resume_budget.py). Re-exported here: callers that already
+# do `from train import find_latest_checkpoint` keep working.
+from ckpt_utils import (EvalMetricsCsv, atomic_write, checkpoint_named,
+                        find_latest_checkpoint, read_progress, record_progress,
+                        stage_done_steps, steps_per_second)
 
 
 def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=0.0):
@@ -99,27 +91,194 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
     print("--------------------------------------------------------------")
 
 
+def plan_curriculum(root, args):
+    """Decide every stage's dir, terrain, seed, budget and skip-or-run, WITHOUT
+    training or touching a thing.
+
+    Split out so `--dry-run` prints the plan the loop will actually execute
+    rather than a hand-written description of it — the same reason
+    print_fingerprint reads live module constants instead of a copy. A plan that
+    can drift from execution is worse than no plan at all.
+
+    Four values here used to be trivial and no longer are: the budget depends on
+    what a prior attempt banked, skip-or-run on a DONE marker, the init on a
+    recorded pointer, the seed on the stage index. Getting the ckpt root wrong
+    now means silently skipping to the last stage and training a quarter of what
+    you asked for. One second of dry-run buys that back.
+    """
+    s = max(1, args.curriculum_stages)
+    lo = min(args.curriculum_start, args.terrain)
+    levels = ([args.terrain] if s == 1 else
+              [lo + (args.terrain - lo) * i / (s - 1) for i in range(s)])
+    per = max(1, args.timesteps // s)
+    plan = []
+    for i, lvl in enumerate(levels):
+        sdir = root / f"stage{i}_t{lvl:.2f}"
+        # Seed: recorded beats formula beats legacy beats fresh.
+        #   - A recorded seed (persisted every eval, see record_progress) is the
+        #     DR draw this stage actually trained under -- resuming it MUST keep
+        #     that exact draw, even across a later --seed typo/change.
+        #   - No recorded seed but the stage already has its own checkpoint:
+        #     LEGACY, written by pre-seed-persistence code, which always used
+        #     plain args.seed (never args.seed+i). Using args.seed (not the
+        #     formula) is what keeps a currently-live half-trained stage on the
+        #     draw it actually has weights for.
+        #   - Otherwise (nothing trained here yet): the formula, so each
+        #     untouched stage gets its own distinct draw.
+        own = find_latest_checkpoint(str(sdir))     # mid-stage dropout resume
+        recorded_seed = read_progress(sdir).get("seed")
+        if isinstance(recorded_seed, int):
+            seed = recorded_seed
+        elif own is not None:
+            seed = args.seed
+        else:
+            seed = args.seed + i
+        st = {"i": i, "n": s, "level": lvl, "dir": sdir, "per": per,
+              "seed": seed, "done": 0, "budget": per, "own": None}
+        if (sdir / "DONE").exists():
+            st["action"], st["why"] = "skip", "DONE"
+            plan.append(st)
+            continue
+        # A resumed stage owes only what it hasn't trained yet. Handing it the
+        # full `per` again is how one 30M stage silently ran 48M steps.
+        done = stage_done_steps(sdir) if own is not None else 0
+        st.update(own=own, done=done, budget=per - done)
+        if own is not None and st["budget"] <= 0:
+            # Finished, but its DONE marker never landed (killed between the last
+            # eval and the marker). Don't retrain the whole budget.
+            st["action"], st["why"] = "mark-done", f"{done:,} of {per:,} steps"
+        else:
+            st["action"] = "run"
+        plan.append(st)
+    return plan
+
+
+def diagnostics(metrics):
+    """The eval line that is actually representative.
+
+    eval_reward is a weighted sum the policy is free to farm — the reason the
+    fingerprint says to judge by a probe, not by reward. But the env already
+    emits the probe's own terms every step (probe_rewards.py reads the same
+    dict), and Brax already averages all of them into eval/episode_*. Reading
+    them here changes NOTHING the policy optimizes: it is a Python callback
+    outside the jit graph, so no retrace, no reward change, no risk to a gait
+    that already works. It was pure waste to compute these and discard them.
+
+    Brax's evaluator SUMS every state.metrics key over the whole episode into
+    eval/episode_<name> — only keys already named *_per_step are divided by
+    episode length for you. Printing those sums as if they were 0-1 per-step
+    fractions was off by roughly the episode length (~1000x). Divide by this
+    eval's own episode length (eval/avg_episode_length, NOT episode-prefixed —
+    it is the episode count/length itself, not a per-episode metric Brax sums)
+    to recover the per-step fractions below.
+
+      fwd    — velocity actually tracked / commanded, PER STEP. 1.0 = on command.
+      prog   — payment for TRAVELLING, the term a farm starves. RAW SUM: compared
+               against historical sums from earlier runs, so dividing it here
+               would break that comparison rather than fix anything.
+      clear  — payment for WAVING FEET, the term a farm feeds. PER STEP.
+      ghost  — fraction where the contact proxy lies (planted, but airborne), PER STEP.
+      airT   — radius-corrected airborne fraction; ~1.0 on a leg = carried, PER STEP.
+      len    — episode length actually survived this eval. THE fall-rate
+               canary: 1000 = ran the full episode, low = falling early — a
+               signal the farmable reward terms above cannot fake.
+    """
+    def m(name):
+        return float(metrics.get(f"eval/episode_{name}", float("nan")))
+    L = max(1.0, float(metrics.get("eval/avg_episode_length", 1.0)))
+    ghost = sum(m(f"ghost_{f}") for f in ("FL", "FR", "RL", "RR")) / 4 / L
+    airT = [m(f"airT_{f}") / L for f in ("FL", "FR", "RL", "RR")]
+    return (f"    fwd {m('fwd_speed')/L:5.2f}  prog {m('w_progress'):+6.2f}  "
+            f"clear {m('w_clearance')/L:+6.2f}  swing {m('swing_xy_speed')/L:4.2f}  "
+            f"ghost {ghost:4.2f}  airT " + "/".join(f"{a:.2f}" for a in airT) +
+            f"  len {L:.0f}")
+
+
+def print_plan(plan, args, rate=None):
+    """The whole curriculum, before any of it burns GPU time."""
+    lo = min(args.curriculum_start, args.terrain)
+    total = sum(p["budget"] for p in plan if p["action"] == "run")
+    print(f"=== CURRICULUM PLAN: {plan[0]['n']} stages x {plan[0]['per']:,} steps, "
+          f"terrain {lo:.2f} -> {args.terrain:.2f}, "
+          f"stair-frac {args.stair_frac:.2f} ===")
+    for p in plan:
+        head = f"  stage {p['i']+1}/{p['n']}  t{p['level']:.2f}  seed {p['seed']}  "
+        if p["action"] == "skip":
+            print(f"{head}SKIP (already DONE)")
+        elif p["action"] == "mark-done":
+            print(f"{head}SKIP (complete: {p['why']}, marking DONE)")
+        else:
+            init = (f"own ckpt +{p['done']:,} banked" if p["own"]
+                    else ("graft/restore" if p["i"] == 0 else
+                          f"stage{p['i']-1} final"))
+            print(f"{head}RUN  {p['budget']:>12,}  init={init}")
+    eta = f"  (~{total / rate / 3600:.1f} h at {rate:,.0f} steps/s observed)" if rate else ""
+    print(f"  TOTAL to train: {total:,} steps{eta}")
+
+
 def run_stage(env, args, terrain, stair_frac, timesteps, ckpt_dir, restore,
-              restore_params, t0, logf):
+              restore_params, t0, logf, evalcsv, done_base=0, stage_label="",
+              seed=None):
     """One PPO training segment at a FIXED difficulty. Brax freezes per-env terrain
     at env construction, so an auto-ramp curriculum = several of these chained, each
     resuming the previous stage's full checkpoint (policy+value+normalizer) at a
     higher `terrain`. Writes the flat nova_policy.pkl every eval so a mid-stage
-    dropout still leaves a usable policy. Returns the final params."""
+    dropout still leaves a usable policy. Returns the final params.
+
+    `timesteps` is what this INVOCATION runs; `done_base` is what the stage
+    already banked in earlier attempts. Their sum is persisted every eval so a
+    resume knows how much of the stage budget is left (Brax's own step counter
+    restarts at 0 on restore, so it can't answer that)."""
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     net = functools.partial(
         ppo_networks.make_ppo_networks,
         policy_hidden_layer_sizes=(128, 128, 128, 128),
         value_hidden_layer_sizes=(256, 256, 256, 256))
 
+    banked = {"step": 0}                     # last step with a checkpoint on disk
+
     def progress(step, metrics):
         r = float(metrics.get("eval/episode_reward", float("nan")))
-        print(f"[{time.time()-t0:6.0f}s] step {step:>11,}  eval_reward {r:8.2f}")
-        logf.write(f"{time.time():.0f},{step},{r}\n"); logf.flush()
+        total = done_base + step
+        tag = f"  (stage total {total:,})" if done_base else ""
+        print(f"[{time.time()-t0:6.0f}s] step {step:>11,}  eval_reward {r:8.2f}{tag}")
+        try:
+            print(diagnostics(metrics))
+            evalcsv.write(stage_label, total,
+                          {k[5:]: v for k, v in metrics.items()
+                           if k.startswith("eval/")})
+        except Exception as e:      # noqa: BLE001 — never kill a run over a log
+            print(f"  ! diagnostics failed: {type(e).__name__}: {e}")
+        logf.write(f"{time.time():.0f},{total},{r}\n"); logf.flush()
+        # Record the PREVIOUS eval's step, not this one: whether Brax writes its
+        # checkpoint before or after this callback is its business, and claiming
+        # steps whose checkpoint may not exist would silently skip training.
+        # Undercounting only costs a redo of at most one eval interval, so it is
+        # the safe direction. The exact total is written on clean stage exit.
+        #
+        # This lag is NOT for write-ordering: verified against pinned brax
+        # 0.14.2 that checkpoint.save is synchronous and completes before
+        # progress_fn fires in the same iteration, so by the time we're here
+        # the checkpoint for THIS step is already on local disk. It is kept as
+        # insurance against Drive FUSE's asynchronous upload — a local write
+        # returning does not mean the bytes are durable in Drive yet, and the
+        # VM can die mid-upload.
+        prev = banked["step"]
+        name = checkpoint_named(ckpt_dir, prev)
+        if name is not None or prev == 0:
+            # prev == 0 is the initial eval: nothing could have a checkpoint
+            # yet, so recording latest=None here is harmless and idempotent.
+            # Any OTHER prev with no checkpoint on disk means the write above
+            # never landed (or never durably will) -- skip the record entirely
+            # rather than let `steps` and `latest` describe different moments;
+            # the previous (still-valid) PROGRESS is left exactly as it was.
+            record_progress(ckpt_dir, done_base + prev, latest=name, seed=seed)
+        banked["step"] = step
 
     def save_policy(step, make_policy, params):
-        with open(args.out, "wb") as f:      # latest policy for rollout.py
-            pickle.dump(params, f)
+        # latest policy for rollout.py — atomically, or a dropout mid-pickle
+        # leaves a truncated .pkl where the run's only usable output should be
+        atomic_write(args.out, pickle.dumps(params), label="policy")
 
     train_fn = functools.partial(
         ppo.train,
@@ -137,12 +296,20 @@ def run_stage(env, args, terrain, stair_frac, timesteps, ckpt_dir, restore,
                                                args.step_frac, stair_frac),
         save_checkpoint_path=str(ckpt_dir),
         restore_checkpoint_path=restore, restore_params=restore_params,
-        seed=args.seed)
+        # Per-STAGE seed. The DR draw (friction, per-body mass, kp, kv — env.py
+        # domain_randomize) is derived from this, so a single seed across the
+        # whole curriculum trains all four stages against the SAME 2048
+        # randomized robots. Varying it per stage quadruples the distinct
+        # hardware the policy has to survive, at zero cost. Constant within a
+        # stage, so a resumed stage keeps its own draw.
+        seed=args.seed if seed is None else seed)
 
     _, params, _ = train_fn(environment=env, progress_fn=progress,
                             policy_params_fn=save_policy)
-    with open(args.out, "wb") as f:
-        pickle.dump(params, f)
+    atomic_write(args.out, pickle.dumps(params), label="policy")
+    final = banked["step"]                                  # exact, no lag
+    record_progress(ckpt_dir, done_base + final,
+                    latest=checkpoint_named(ckpt_dir, final), seed=seed)
     return params
 
 
@@ -197,6 +364,11 @@ def main():
                          "bypassing the checkpoint dir. For the FIRST obs-expansion "
                          "resume (e.g. --heightmap via graft_obs.py); later resumes "
                          "read the fresh larger-obs checkpoints.")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="print the stage plan (dirs, budgets, seeds, what is "
+                         "skipped vs trained, hours estimate) and exit without "
+                         "training. Cheap insurance against pointing a "
+                         "multi-hour curriculum at the wrong --ckpt root.")
     ap.add_argument("--allow-cpu", action="store_true",
                     help="permit a CPU run (smoke-test only; ~100x too slow for real training)")
     args = ap.parse_args()
@@ -226,10 +398,27 @@ def main():
         print(f"GRAFT init from {args.restore_params_pkl} "
               f"(obs {int(restore_params[0].mean.shape[0])}) — checkpoint dir skipped")
     else:
-        restore = find_latest_checkpoint(args.ckpt)
+        # In curriculum mode the stage dirs are OFF LIMITS to this scan: the loop
+        # below walks the stages in order and chains each off the previous one, so
+        # the only question here is "is there a loose earlier run to start stage 0
+        # from". Scanning stage dirs could answer it with stage 3's policy.
+        restore = find_latest_checkpoint(
+            args.ckpt, skip_prefixes=("stage",) if args.curriculum else ())
         print(f"RESUME from {restore}" if restore else "FRESH start (no checkpoint)")
 
+    # Plan first, print it, and let --dry-run stop here. The loop below executes
+    # this exact list, so what you read is what will run.
+    plan = plan_curriculum(root, args) if args.curriculum else None
+    if plan:
+        print_plan(plan, args, steps_per_second(root / "train_log.csv"))
+    if args.dry_run:
+        print("dry run — nothing trained, nothing written.")
+        return
+
     logf = (root / "train_log.csv").open("a")
+    # every eval/episode_* Brax aggregates — the diagnostics were already being
+    # computed each eval and thrown away; this is the plottable record of them
+    evalcsv = EvalMetricsCsv(root / "eval_metrics.csv")
     t0 = time.time()
 
     if args.curriculum:
@@ -238,30 +427,33 @@ def main():
         # stage's full checkpoint. STABLE stage{i}_t{level} dirs + a DONE marker make
         # it resumable: a plain re-run after a dropout skips finished stages and
         # picks up the interrupted one from its own latest checkpoint.
-        s = max(1, args.curriculum_stages)
-        lo = min(args.curriculum_start, args.terrain)
-        levels = ([args.terrain] if s == 1 else
-                  [lo + (args.terrain - lo) * i / (s - 1) for i in range(s)])
-        per = max(1, args.timesteps // s)
-        print(f"=== AUTO-RAMP CURRICULUM: {s} stages x {per:,} steps, terrain "
-              f"{lo:.2f} -> {args.terrain:.2f}, stair-frac {args.stair_frac:.2f} ===")
         prev_ckpt, prev_params = restore, restore_params
-        for i, lvl in enumerate(levels):
-            sdir = root / f"stage{i}_t{lvl:.2f}"
-            if (sdir / "DONE").exists():
-                print(f"--- stage {i+1}/{s} (terrain {lvl:.2f}) already DONE — skip ---")
+        for p in plan:
+            i, sdir, s = p["i"], p["dir"], p["n"]
+            if p["action"] == "skip":
+                print(f"--- stage {i+1}/{s} (terrain {p['level']:.2f}) "
+                      f"already DONE — skip ---")
                 prev_ckpt, prev_params = find_latest_checkpoint(str(sdir)), None
                 continue
-            own = find_latest_checkpoint(str(sdir))       # mid-stage dropout resume
-            if own is not None:
-                r, rp = own, None
+            if p["action"] == "mark-done":
+                print(f"--- stage {i+1}/{s} (terrain {p['level']:.2f}) has "
+                      f"{p['why']} — complete, marking DONE ---")
+                (sdir / "DONE").write_text("done")
+                prev_ckpt, prev_params = p["own"], None
+                continue
+            if p["own"] is not None:
+                r, rp = p["own"], None
             elif i == 0:
                 r, rp = prev_ckpt, prev_params            # initial resume / graft
             else:
                 r, rp = prev_ckpt, None                   # prior stage's checkpoint
-            print(f"--- stage {i+1}/{s}  terrain {lvl:.2f}  ({per:,} steps)  "
-                  f"init={'graft' if rp else (r or 'fresh')} ---")
-            run_stage(env, args, lvl, args.stair_frac, per, sdir, r, rp, t0, logf)
+            budget_note = (f"{p['budget']:,} left of {p['per']:,}" if p["done"]
+                           else f"{p['per']:,} steps")
+            print(f"--- stage {i+1}/{s}  terrain {p['level']:.2f}  ({budget_note})  "
+                  f"seed {p['seed']}  init={'graft' if rp else (r or 'fresh')} ---")
+            run_stage(env, args, p["level"], args.stair_frac, p["budget"], sdir,
+                      r, rp, t0, logf, evalcsv, done_base=p["done"],
+                      stage_label=sdir.name, seed=p["seed"])
             (sdir / "DONE").write_text("done")
             prev_ckpt, prev_params = find_latest_checkpoint(str(sdir)), None
         logf.close()
@@ -270,8 +462,13 @@ def main():
     else:
         # unique per-run save subdir -> no step collisions between resumes
         run_dir = root / f"run_{int(time.time())}"
-        run_stage(env, args, args.terrain, args.stair_frac, args.timesteps,
-                  run_dir, restore, restore_params, t0, logf)
+        # brax's ppo.train returns before any callback/checkpoint when
+        # num_timesteps==0 -- a silent no-op, not an error. Floor it so a
+        # --timesteps 0 (or a bug upstream of here) still does something.
+        timesteps = max(1, args.timesteps)
+        run_stage(env, args, args.terrain, args.stair_frac, timesteps,
+                  run_dir, restore, restore_params, t0, logf, evalcsv,
+                  stage_label=run_dir.name)
         logf.close()
         print(f"done ({time.time()-t0:.0f}s). policy -> {args.out}, "
               f"checkpoints -> {run_dir}")
