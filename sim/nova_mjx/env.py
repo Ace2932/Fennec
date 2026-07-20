@@ -536,6 +536,35 @@ class NovaJoystick(PipelineEnv):
         ])
         return frame + noise
 
+    def _terrain_ground_z(self, wx, wy):
+        """ABSOLUTE terrain z at world (wx, wy) matching MuJoCo's hfield COLLISION
+        surface exactly — per-cell fixed-diagonal (v00-v11) triangulation, NOT
+        bilinear. Bilinear (what the obs uses) diverges from the surface physics
+        stands on by up to ~19 mm inside riser-boundary cells, in BOTH directions
+        — enough to re-open the absolute-z contact bug at exactly the tread edges
+        climbing needs (spec 2026-07-20, empirically measured vs mj_ray). The
+        reward/done consumers therefore read THIS, and the obs keeps bilinear
+        (_sample_heightmap) because the policy was trained on it."""
+        rx, ry, ztop = self._hf_size[0], self._hf_size[1], self._hf_size[2]
+        fx, fy, fz = self._floor_pos[0], self._floor_pos[1], self._floor_pos[2]
+        # world xy -> fractional (row, col), same mapping as _sample_heightmap
+        # (x -> col, y -> row); T3's asymmetric ramp pins the orientation.
+        col = (wx - (fx - rx)) / (2 * rx) * (self._hf_ncol - 1)
+        row = (wy - (fy - ry)) / (2 * ry) * (self._hf_nrow - 1)
+        data = self.sys.hfield_data.reshape(self._hf_nrow, self._hf_ncol)
+        r0 = jp.clip(jp.floor(row).astype(jp.int32), 0, self._hf_nrow - 2)
+        c0 = jp.clip(jp.floor(col).astype(jp.int32), 0, self._hf_ncol - 2)
+        fr = jp.clip(row - r0, 0.0, 1.0)
+        fc = jp.clip(col - c0, 0.0, 1.0)
+        v00 = data[r0, c0]
+        v01 = data[r0, c0 + 1]
+        v10 = data[r0 + 1, c0]
+        v11 = data[r0 + 1, c0 + 1]
+        z = v00 + jp.where(fc >= fr,
+                           fc * (v01 - v00) + fr * (v11 - v01),
+                           fr * (v10 - v00) + fc * (v11 - v10))
+        return z * ztop + fz
+
     def _sample_heightmap(self, pipeline_state):
         """Local terrain elevation grid (HM_N x HM_N), yaw-aligned + base-centred,
         each cell = terrain_height - base_z. Reads self.sys.hfield_data, which the
