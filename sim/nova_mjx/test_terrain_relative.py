@@ -294,16 +294,32 @@ def test_T7_faceplant_terminates_and_straddle_survives():
     # (hip span ~0.28 m > tread run ~0.20 m — the normal climbing stance) must
     # NOT terminate. Ledge at x >= 0 so front and rear feet sit on different
     # levels; base at proper stand height above the LOWER tread.
+    #
+    # This half GUARDS THE MIN-OVER-FEET DECISION (env.py `base_h = height -
+    # jp.min(ground_z)`), not merely "doesn't over-terminate". The straddle puts
+    # two feet on the 0.10 m tread and two on the 0.18 m tread, and the base is
+    # deliberately placed LOW — base_abs_z ~ 0.204 post-step — so the base sits
+    # inside the DISCRIMINATING band: with the four feet reading ground_z
+    # [0.18, 0.18, 0.10, 0.10],
+    #     min  ref 0.10 -> base_h ~0.104  >= 0.08  -> done 0 (min survives)
+    #     mean ref 0.14 -> base_h ~0.064  <  0.08  -> done 1 (mean terminates)
+    #     max  ref 0.18 -> base_h ~0.024  <  0.08  -> done 1 (max terminates)
+    #     CoM  ~ mean   -> base_h ~0.064  <  0.08  -> done 1 (CoM terminates)
+    # A regression from jp.min to jp.mean/jp.max/a-CoM-sample would wrongly kill
+    # this healthy climber, so this assertion goes red on that swap — it is the
+    # test that DEFENDS the min-over-feet choice. (The old +0.10 lift put the
+    # base at ~0.27, where every reduction stayed above 0.08 and the choice was
+    # untested.)  See the min-vs-CoM comment at env.py:266-272.
     n_r, n_c = _grid(e)
     data = np.full((n_r, n_c), 0.10 / 0.20)
     data[:, n_c // 2:] = 0.18 / 0.20
     e2 = _env_with_field(data)
     reset2, pinit2, step2 = jax.jit(e2.reset), jax.jit(e2.pipeline_init), jax.jit(e2.step)
     s2 = reset2(jax.random.PRNGKey(4))
-    q2 = s2.pipeline_state.q.at[2].add(0.10)
+    q2 = s2.pipeline_state.q.at[2].add(0.03)   # -> base_abs_z ~0.204: min survives, mean/max/CoM cross 0.08
     ps2 = pinit2(q2, s2.pipeline_state.qd)
     s2 = step2(s2.replace(pipeline_state=ps2), jp.zeros(e2.action_size))
-    assert float(s2.done) == 0.0, "healthy straddle must survive"
+    assert float(s2.done) == 0.0, "healthy straddle must survive (min-over-feet ground ref)"
 
 
 def test_T9_ghost_stays_zero():
