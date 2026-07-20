@@ -65,6 +65,87 @@ def test_T3_asymmetric_ramp_catches_transpose():
     assert np.allclose(np.asarray(z_c), 0.10, atol=5e-3), z_c   # centre column = 0.5 -> 0.10
 
 
+def test_T8_matches_mujoco_collision_surface_inside_transition_cells():
+    # THE test bilinear fails: sample INTERIOR points of stair-boundary cells and
+    # compare against mj_ray on the real physics model. T1-T3 pin scale, offset
+    # and orientation but are blind to triangulation-vs-bilinear; only a ray cast
+    # against MuJoCo's own collision surface can tell those apart.
+    import mujoco
+    from terrain import terrain_field
+    e = NovaJoystick(heightmap=True)
+    n_r, n_c = _grid(e)
+    field = np.asarray(terrain_field(jax.random.PRNGKey(3), 1.0, 0.0, 1.0))
+    e = _env_with_field(field.reshape(n_r, n_c))
+    m = mujoco.MjModel.from_xml_path("nova.xml")
+    m.hfield_data[:] = field
+    d = mujoco.MjData(m)
+    # Park the robot far off-grid: the rays start at z=1 above the sample points,
+    # several of which land on the spawn pad, and a torso/leg geom in the way
+    # would silently be measured as "terrain".
+    d.qpos[0:3] = 1000.0
+    mujoco.mj_forward(m, d)
+    floor_gid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_GEOM, "floor")
+
+    rng = np.random.default_rng(0)
+    pts = rng.uniform(-1.6, 1.6, size=(300, 2))          # annulus incl. stair band
+    geomid = np.zeros(1, dtype=np.int32)
+    worst = 0.0
+    skipped = 0
+    for x, y in pts:
+        dist = mujoco.mj_ray(m, d, np.array([x, y, 1.0]), np.array([0.0, 0.0, -1.0]),
+                             None, 1, -1, geomid)
+        # mj_ray returns -1 for a miss AND for the degenerate exact-triangle-edge
+        # hit. `1.0 - dist` would silently become 2.0 and read as a huge error, so
+        # drop those points — but count them, and cap the count below so this
+        # guard can never hide a systematically broken oracle.
+        if dist < 0 or geomid[0] != floor_gid:
+            skipped += 1
+            continue
+        true_z = 1.0 - dist
+        ours = float(e._terrain_ground_z(jp.array([x]), jp.array([y]))[0])
+        worst = max(worst, abs(ours - true_z))
+        assert abs(ours - true_z) < 2e-3, (x, y, ours, true_z)
+    assert skipped < 0.05 * len(pts), f"too many degenerate/missed rays: {skipped}"
+    print(f"    T8: max |ours - mj_ray| = {worst:.3e} over "
+          f"{len(pts) - skipped} rays ({skipped} skipped)")
+
+
+def test_T4_obs_heightmap_unchanged():
+    # The 121 trained inputs must not move: _sample_heightmap stays BILINEAR and
+    # keeps its own -base_z. Pin its output on a rough field against a frozen
+    # reference computed via the ORIGINAL formula (map_coordinates order=1).
+    import jax.scipy.ndimage as jnd
+    from terrain import terrain_field
+    e = NovaJoystick(heightmap=True)
+    n_r, n_c = _grid(e)
+    field = np.asarray(terrain_field(jax.random.PRNGKey(7), 0.8, 0.0, 0.6))
+    e = _env_with_field(field.reshape(n_r, n_c))
+    rng = jax.random.PRNGKey(0)
+    state = e.reset(rng)
+    hm = np.asarray(e._sample_heightmap(state.pipeline_state))
+    # reference: original inline computation, reproduced verbatim
+    base = state.pipeline_state.x.pos[0]
+    q = state.pipeline_state.q
+    yaw = np.arctan2(2 * (q[3] * q[6] + q[4] * q[5]),
+                     1 - 2 * (q[5] ** 2 + q[6] ** 2))
+    from env import HM_N, HM_EXTENT
+    g = np.linspace(-HM_EXTENT, HM_EXTENT, HM_N)
+    gx, gy = np.meshgrid(g, g, indexing="ij")
+    c, s = np.cos(yaw), np.sin(yaw)
+    wx = float(base[0]) + c * gx - s * gy
+    wy = float(base[1]) + s * gx + c * gy
+    rx, ry, ztop = [float(v) for v in e._hf_size[:3]]
+    fx, fy, fz = [float(v) for v in e._floor_pos]
+    col = (wx - (fx - rx)) / (2 * rx) * (n_c - 1)
+    row = (wy - (fy - ry)) / (2 * ry) * (n_r - 1)
+    ref = jnd.map_coordinates(jp.asarray(field.reshape(n_r, n_c)),
+                              [jp.asarray(row.ravel()), jp.asarray(col.ravel())],
+                              order=1, mode="nearest")
+    ref = np.asarray(ref) * ztop + fz - float(base[2])
+    assert np.allclose(hm, ref, atol=1e-6), np.abs(hm - ref).max()
+    print(f"    T4: max |obs - bilinear ref| = {np.abs(hm - ref).max():.3e}")
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):
