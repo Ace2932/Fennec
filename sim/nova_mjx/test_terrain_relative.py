@@ -340,6 +340,35 @@ def test_T9_ghost_stays_zero():
         assert float(state.metrics[f"ghost_{f}"]) == 0.0, f
 
 
+def test_flat_frac_forces_level_zero():
+    # 25% of envs must be GENUINELY flat (level==0 -> all-zero field, both
+    # terrain branches provably collapse). Draw many envs, check the fraction
+    # and that flat draws produce all-zero hfields.
+    from env import make_domain_randomize
+    e = NovaJoystick(heightmap=True)
+    fn = make_domain_randomize(1.0, 1.0, 0.0, 0.6, flat_frac=0.25)
+    rngs = jax.random.split(jax.random.PRNGKey(0), 400)
+    sys_v, _ = fn(e.sys, rngs)
+    hf = np.asarray(sys_v.hfield_data)                     # (400, n)
+    flat = (np.abs(hf).max(axis=1) == 0.0)
+    assert 0.15 < flat.mean() < 0.35, flat.mean()
+
+
+def test_flat_frac_zero_forces_no_flat():
+    # flat_frac=0.0 must be a valid no-op: is_flat is always False, so NO env
+    # is force-flattened. A non-flat env could be all-zero only if its level
+    # rounds to ~0 (astronomically unlikely over 400 draws), so assert the
+    # observed flat fraction is negligible.
+    from env import make_domain_randomize
+    e = NovaJoystick(heightmap=True)
+    fn = make_domain_randomize(1.0, 1.0, 0.0, 0.6, flat_frac=0.0)
+    rngs = jax.random.split(jax.random.PRNGKey(1), 400)
+    sys_v, _ = fn(e.sys, rngs)
+    hf = np.asarray(sys_v.hfield_data)
+    flat = (np.abs(hf).max(axis=1) == 0.0)
+    assert flat.mean() < 0.02, flat.mean()
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):

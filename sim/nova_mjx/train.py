@@ -38,7 +38,7 @@ from ckpt_utils import (EvalMetricsCsv, atomic_write, checkpoint_named,
                         stage_done_steps, steps_per_second)
 
 
-def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=0.0):
+def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0):
     """Print WHAT is about to be trained, before a single GPU-hour burns.
 
     A 60M-step run was once launched against a stale checkout: Colab's `git clone`
@@ -80,12 +80,15 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
         import terrain as _terr
         print(f"  STAIRCASE    : {stair_frac:.2f} of envs (rise {_terr.STAIR_RISE}m*level) "
               f"[tier-2 teacher, needs terrain>0 + --heightmap]")
+    if flat_frac > 0:
+        print(f"  FLAT FLOOR   : {flat_frac:.2f} of envs at level 0 (flat-gait retention)")
     if getattr(env, "_heightmap", False):
         import env as _e
         print(f"  HEIGHT MAP   : ON — obs +{_e.HM_N**2} ({_e.HM_N}x{_e.HM_N} grid, +-{_e.HM_EXTENT}m) "
               f"= {env.observation_size}. PRIVILEGED (perfect) teacher map; NOT the "
               f"real D456/L2 view. Needs a grafted init + heightmap runner to deploy.")
-    print("  Sanity: resuming the stage-1 walk evals ~2100-2500. cmd stage 2")
+    print("  Sanity: post terrain-relative reward (2026-07-20) eval levels are NOT")
+    print("  comparable to pre-fix runs. cmd stage 2")
     print("  (reverse+lateral+turn) transiently DIPS reward as it generalizes;")
     print("  judge by a probe, not by eval_reward. A ~2700 start = stale code.")
     print("--------------------------------------------------------------")
@@ -293,7 +296,8 @@ def run_stage(env, args, terrain, stair_frac, timesteps, ckpt_dir, restore,
         num_evals=max(4, timesteps // 2_000_000),
         network_factory=net,
         randomization_fn=make_domain_randomize(terrain, args.dr_scale,
-                                               args.step_frac, stair_frac),
+                                               args.step_frac, stair_frac,
+                                               args.flat_frac),
         save_checkpoint_path=str(ckpt_dir),
         restore_checkpoint_path=restore, restore_params=restore_params,
         # Per-STAGE seed. The DR draw (friction, per-body mass, kp, kv — env.py
@@ -343,6 +347,9 @@ def main():
                     help="fraction of envs that are STAIRCASES (tier-2 teacher). Rise "
                          "sweeps with the terrain level to find the max climbable step. "
                          "Needs --terrain>0 AND --heightmap (blind can't climb stairs).")
+    ap.add_argument("--flat-frac", type=float, default=0.25,
+                    help="fraction of envs forced to LEVEL 0 flat ground (keeps the "
+                         "flat gait trained; full DR still applies)")
     ap.add_argument("--curriculum", action="store_true",
                     help="AUTO-RAMP terrain difficulty in stages within one run. Brax "
                          "bakes per-env terrain at env build, so this CHAINS N stages, "
@@ -375,7 +382,8 @@ def main():
 
     env = NovaJoystick(cmd_stage=args.cmd_stage, heightmap=args.heightmap)
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
-    print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac)
+    print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac,
+                      args.flat_frac)
     if jax.default_backend() == "cpu" and not args.allow_cpu:
         raise SystemExit(
             "✗ JAX is on CPU — real training would take days, not minutes.\n"

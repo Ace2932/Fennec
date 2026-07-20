@@ -653,7 +653,7 @@ class NovaJoystick(PipelineEnv):
         return jp.concatenate(parts)
 
 
-def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_frac=0.0):
+def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0):
     """Build the per-env randomization fn.
 
     terrain_max: rough-ground ceiling (None -> terrain.TERRAIN_MAX = flat). Obs is
@@ -725,8 +725,16 @@ def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_f
             # per-servo torque headroom -> scale the |forcerange| bounds
             tscale = jax.random.uniform(k6, (sys.nu,), minval=T_LO, maxval=T_HI)
             forcerange = sys.actuator_forcerange * tscale[:, None]
-            kt1, kt2 = jax.random.split(kt)
-            level = jax.random.uniform(kt2, (), minval=0.0, maxval=tmax)
+            kt1, kt2, kt3 = jax.random.split(kt, 3)
+            # flat-env floor: force `flat_frac` of envs to level 0 (both terrain
+            # branches provably collapse to zero). Flat was ~5% of stage-4 envs;
+            # a deterministic fall there cost ~2% of batch return — beneath
+            # PPO's notice, which is exactly how the flat gait rotted while the
+            # terrain gait improved. 25% makes flat worth not falling over on,
+            # and matches deployment: NOVA lives mostly on floors.
+            is_flat = jax.random.uniform(kt3, ()) < flat_frac
+            level = jp.where(is_flat, 0.0,
+                             jax.random.uniform(kt2, (), minval=0.0, maxval=tmax))
             hfield = terrain_field(kt1, level, step_frac, stair_frac)
             return geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield
 
