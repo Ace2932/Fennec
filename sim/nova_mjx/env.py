@@ -257,7 +257,17 @@ class NovaJoystick(PipelineEnv):
         # move without stepping. threshold 0.2 s + cap 0.4 s -> rewards real swings,
         # not a held foot; short in-place shuffles pay little.
         foot_z = x.pos[self._foot_ids, 2]
-        # RADIUS-CORRECTED contact (Barkour ref: `(foot_z - foot_radius) < 1e-3`).
+        foot_xy = x.pos[self._foot_ids, :2]
+        # height above the LOCAL collision surface — the quantity every gait
+        # term below actually means. On flat (all-zero hfield) ground_z == 0
+        # and foot_h == foot_z: bit-identical to the pre-terrain-relative code.
+        ground_z = self._terrain_ground_z(foot_xy[:, 0], foot_xy[:, 1])
+        foot_h = foot_z - ground_z
+        # TERRAIN-RELATIVE contact — reads foot_h (height above LOCAL ground; see
+        # _terrain_ground_z), not absolute world z. On the radial staircase an
+        # absolute-z test read a foot PLANTED on an elevated step as airborne, so
+        # slip stopped billing and scraping a foot against a riser was free.
+        # RADIUS-CORRECTED (Barkour ref: `(foot_z - foot_radius) < 1e-3`).
         # Was `foot_z < 0.025` — 12.5mm above the measured weight-bearing height
         # (0.0125), so a foot could float a centimetre up and still score as
         # planted. PROBED on ckpt12: FR/RL were airborne 11.0%/12.2% of the time
@@ -266,7 +276,7 @@ class NovaJoystick(PipelineEnv):
         # invisible (no clearance/air/gait) and PUNISHED (slip bills a swinging
         # foot as sliding, because contact never went false). The policy carried
         # a leg because that was the only motion the reward could see.
-        contact = (foot_z - FOOT_RADIUS) < CONTACT_EPS
+        contact = (foot_h - FOOT_RADIUS) < CONTACT_EPS
         air = info["feet_air"]
         first_contact = (air > 0.0) & contact
         cmd_moving = math.normalize(cmd[:2])[1] > 0.05
@@ -379,7 +389,13 @@ class NovaJoystick(PipelineEnv):
         # penalized, and a foot at the target pays nothing however fast it swings.
         # It also reads NO contact flag, so it cannot be fooled by a bad contact
         # threshold at all.
-        clearance_cost = jp.sum(jp.abs(foot_z - FOOT_TARGET_Z) * jp.sqrt(foot_xy_speed))
+        #
+        # TERRAIN-RELATIVE: the swing target is FOOT_TARGET_Z above the LOCAL
+        # ground (foot_h; see _terrain_ground_z), not absolute world z. Reading
+        # foot_z taxed every swing by how high the terrain sat under it — up to
+        # 2*ztop on a step — penalising exactly the lift needed to climb. foot_h
+        # makes the target the same 0.05 m clearance on a step as on the flat.
+        clearance_cost = jp.sum(jp.abs(foot_h - FOOT_TARGET_Z) * jp.sqrt(foot_xy_speed))
         # splay: the rollout showed the hips abducted WIDE. Penalize haa (hip-
         # abduction, joint idx 0,3,6,9) deviation from the default (0); the hfe/kfe
         # swing joints stay free. (ref: pose regularizer, focused on the splay.)
@@ -483,8 +499,12 @@ class NovaJoystick(PipelineEnv):
         foot_air_f = jp.logical_not(contact).astype(jp.float32)
         # TRUE contact (radius-corrected, Barkour ref) vs the live proxy. `ghost`
         # = the reward believes this foot is planted while it is actually in the
-        # air. Diagnostic only — the reward still uses `contact` above.
-        contact_true = (foot_z - FOOT_RADIUS) < CONTACT_EPS
+        # air. Diagnostic only — the reward still uses `contact` above. Reads the
+        # SAME terrain-relative foot_h (see _terrain_ground_z) as `contact`, so
+        # the two stay in lockstep on terrain and ghost_* keeps meaning what it
+        # did on flat; an absolute-z test here would fire phantom ghosts on every
+        # elevated step (T9 pins the lockstep).
+        contact_true = (foot_h - FOOT_RADIUS) < CONTACT_EPS
         air_true_f = jp.logical_not(contact_true).astype(jp.float32)
         ghost_f = (contact & jp.logical_not(contact_true)).astype(jp.float32)
         # mean |xy| speed over feet that are off the ground (0 if all planted) —

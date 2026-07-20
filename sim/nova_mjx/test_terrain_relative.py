@@ -195,6 +195,100 @@ def test_T4_obs_heightmap_unchanged():
     print(f"    T4: max |obs - bilinear ref| = {np.abs(hm - ref).max():.3e}")
 
 
+def _plateau_env(h=0.18):
+    """Uniform elevated plateau. A robot dropped on it is standing on ground at
+    height h — every gait term must behave exactly as it does on flat."""
+    e = NovaJoystick(heightmap=True)
+    n_r, n_c = _grid(e)
+    return _env_with_field(np.full((n_r, n_c), h / 0.20))
+
+
+_DROP = 0.18   # metres the feet fall before settling — same for flat and plateau
+
+
+def _settle(e, ground_h, n=40):
+    """Reset, lift the base so the feet start _DROP metres above the LOCAL ground
+    (at plateau height `ground_h`), and settle under zero action. Returns the
+    final (settled) state and the SUM of the per-step clearance cost over the
+    whole drop.
+
+    The lift is `ground_h + _DROP`, NOT a fixed constant: reset() spawns the base
+    at a fixed absolute z that ignores terrain, so on a `ground_h` plateau the
+    feet start `ground_h` BELOW the surface. Adding `ground_h` back puts the feet
+    the same _DROP above their own ground in every case — so flat and plateau run
+    the byte-identical drop RELATIVE TO LOCAL GROUND. That equivalence is the
+    whole premise of T6: a fixed lift instead makes the flat robot fall a big
+    _DROP while the plateau robot barely moves, and their clearance sums then
+    differ for a reason that has nothing to do with the bug.
+
+    reset/pipeline_init/step are jitted — eager brax stepping on CPU is minutes
+    per call, and 40 steps of it is untestable. Jitting is a pure speed change:
+    the ops are identical, so it does not touch what the test measures.
+
+    Why SUM the clearance over the trajectory instead of reading the final step
+    (as the brief sketched): the clearance COST scales by sqrt(foot_xy_speed), so
+    a FULLY settled foot (speed ~0) pays ~0 regardless of height, and the bug's
+    signal at the last step is a mere 0.05 — right on the brief's threshold, so
+    that form does not reliably go red pre-fix. During the drop the feet actually
+    move, and the elevated foot carries a constant +ground_h height offset every
+    one of those steps, so the summed cost diverges cleanly pre-fix (~0.5 gap) and
+    collapses to ~0 post-fix (both drops are relatively identical). Under zero
+    action the reward never feeds back into the dynamics, so nothing but the
+    absolute-z read distinguishes the two runs.
+    """
+    reset = jax.jit(e.reset)
+    step = jax.jit(e.step)
+    pinit = jax.jit(e.pipeline_init)
+    state = reset(jax.random.PRNGKey(4))
+    q = state.pipeline_state.q.at[2].add(ground_h + _DROP)
+    ps = pinit(q, state.pipeline_state.qd)
+    state = state.replace(pipeline_state=ps)
+    zero = jp.zeros(e.action_size)
+    clear_sum = 0.0
+    for _ in range(n):
+        state = step(state, zero)
+        clear_sum += float(state.metrics["w_clearance"])
+    return state, clear_sum
+
+
+def test_T5_planted_feet_on_plateau_read_planted():
+    # BUG 1, env-level: contact/contact_true are absolute-z today, so feet
+    # standing on a 0.18 m plateau read AIRBORNE -> airT_* ~1.0 and slip stops
+    # billing. Post-fix they read planted -> airT_* near 0 for a settled stance.
+    state, _ = _settle(_plateau_env(0.18), 0.18)
+    airT = [float(state.metrics[f"airT_{f}"]) for f in ("FL", "FR", "RL", "RR")]
+    assert sum(a < 0.5 for a in airT) >= 3, airT   # a settled robot is not flying
+
+
+def test_T6_clearance_matches_flat_at_elevation():
+    # BUG 2, env-level: identical motion at 0 m and 0.18 m must cost the same
+    # clearance. Today the elevated case pays ~0.18 more height offset on EVERY
+    # moving foot, every step of the drop — summed over the settle that is ~0.7
+    # vs ~0.4 pre-fix (a clear >0.2 gap). Post-fix foot_h strips the offset and
+    # the two drops trace identically -> the summed costs match to <0.05.
+    _, c_flat = _settle(_plateau_env(0.0), 0.0)
+    _, c_high = _settle(_plateau_env(0.18), 0.18)
+    assert abs(c_flat - c_high) < 0.05, (c_flat, c_high)
+
+
+def test_T9_ghost_stays_zero():
+    # contact and contact_true are textually identical TODAY (ghost_* is 0 by
+    # construction). They must move in LOCKSTEP or ghost_* starts reporting
+    # phantom drift — the exact silent-divergence those metrics exist to catch.
+    from terrain import terrain_field
+    e = NovaJoystick(heightmap=True)
+    n_r, n_c = _grid(e)
+    field = np.asarray(terrain_field(jax.random.PRNGKey(5), 1.0, 0.0, 1.0))
+    e = _env_with_field(field.reshape(n_r, n_c))
+    step = jax.jit(e.step)
+    state = jax.jit(e.reset)(jax.random.PRNGKey(1))
+    zero = jp.zeros(e.action_size)
+    for _ in range(20):
+        state = step(state, zero)
+    for f in ("FL", "FR", "RL", "RR"):
+        assert float(state.metrics[f"ghost_{f}"]) == 0.0, f
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):
