@@ -369,6 +369,26 @@ def test_flat_frac_zero_forces_no_flat():
     assert flat.mean() < 0.02, flat.mean()
 
 
+def test_climb_metrics_telescope():
+    # climb sums per-step deltas -> telescopes to (final - spawn) base z.
+    # climb_max emits deltas of the running high-water mark -> telescopes to
+    # max-over-episode. Verified semantics: brax EvalWrapper sums metrics
+    # masked by active_episodes (per-eval), so in-env we just check the
+    # per-step emissions integrate correctly over a short horizon.
+    e = NovaJoystick(heightmap=True)
+    state = e.reset(jax.random.PRNGKey(2))
+    z0 = float(state.pipeline_state.x.pos[0, 2])
+    tot, hi = 0.0, 0.0
+    for _ in range(30):
+        state = e.step(state, jp.zeros(e.action_size))
+        tot += float(state.metrics["climb"])
+        hi += float(state.metrics["climb_max"])
+    zT = float(state.pipeline_state.x.pos[0, 2])
+    assert abs(tot - (zT - z0)) < 1e-4, (tot, zT - z0)
+    assert hi >= tot - 1e-6 and hi >= -1e-6, (hi, tot)     # max >= net, >= 0
+    assert "swing_h_per_step" in state.metrics
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):

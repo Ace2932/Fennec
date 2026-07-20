@@ -176,10 +176,19 @@ def diagnostics(metrics):
     to recover the per-step fractions below.
 
       fwd    — velocity actually tracked / commanded, PER STEP. 1.0 = on command.
-      prog   — payment for TRAVELLING, the term a farm starves. RAW SUM: compared
-               against historical sums from earlier runs, so dividing it here
-               would break that comparison rather than fix anything.
+      prog   — payment for TRAVELLING, the term a farm starves. PER STEP (all
+               reward terms on this line divide by L so they line up with
+               probe_rewards.py's per-step prints; the CSV keeps the RAW sums for
+               historical comparison, so nothing is lost).
       clear  — payment for WAVING FEET, the term a farm feeds. PER STEP.
+      hgt/z  — posture (base-height) + vertical-velocity costs, PER STEP.
+      climb  — net base z climbed this episode / episode peak, in METRES. RAW,
+               not per-step: both are end-quantities brax already telescoped from
+               per-step deltas (see env.step), so dividing would be nonsense. On
+               RADIAL stairs a climb-then-descend nets climb≈0 while climb_max
+               still shows the peak reached — the whole reason both are logged.
+      swing  — mean swing-foot height above local ground, METRES. Already
+               per-step (env names it *_per_step so brax divides it), so RAW here.
       ghost  — fraction where the contact proxy lies (planted, but airborne), PER STEP.
       airT   — radius-corrected airborne fraction; ~1.0 on a leg = carried, PER STEP.
       len    — episode length actually survived this eval. THE fall-rate
@@ -189,12 +198,13 @@ def diagnostics(metrics):
     def m(name):
         return float(metrics.get(f"eval/episode_{name}", float("nan")))
     L = max(1.0, float(metrics.get("eval/avg_episode_length", 1.0)))
-    ghost = sum(m(f"ghost_{f}") for f in ("FL", "FR", "RL", "RR")) / 4 / L
-    airT = [m(f"airT_{f}") / L for f in ("FL", "FR", "RL", "RR")]
-    return (f"    fwd {m('fwd_speed')/L:5.2f}  prog {m('w_progress'):+6.2f}  "
-            f"clear {m('w_clearance')/L:+6.2f}  swing {m('swing_xy_speed')/L:4.2f}  "
-            f"ghost {ghost:4.2f}  airT " + "/".join(f"{a:.2f}" for a in airT) +
-            f"  len {L:.0f}")
+    ghost = sum(m(f"ghost_{f}") for f in ("FL", "FR", "RL", "RR")) / 4
+    airT = [m(f"airT_{f}") for f in ("FL", "FR", "RL", "RR")]
+    return (f"    fwd {m('fwd_speed')/L:5.2f}  prog {m('w_progress')/L:+6.2f}  "
+            f"clear {m('w_clearance')/L:+6.2f}  hgt {m('w_height')/L:+6.3f}  "
+            f"z {m('w_z')/L:+6.3f}  climb {m('climb'):+5.2f}/{m('climb_max'):.2f}  "
+            f"swing {m('swing_h_per_step'):4.2f}  ghost {ghost/L:4.2f}  "
+            f"airT " + "/".join(f"{a/L:.2f}" for a in airT) + f"  len {L:.0f}")
 
 
 def print_plan(plan, args, rate=None):
@@ -247,9 +257,17 @@ def run_stage(env, args, terrain, stair_frac, timesteps, ckpt_dir, restore,
         print(f"[{time.time()-t0:6.0f}s] step {step:>11,}  eval_reward {r:8.2f}{tag}")
         try:
             print(diagnostics(metrics))
+            # Keep every eval/* term (prefix stripped for a clean column), AND
+            # the brax training/* losses the old eval/-only filter dropped.
+            # v_loss especially: it's how the probe tells "policy can't climb"
+            # (flat return, converged critic) from "critic still recalibrating"
+            # (v_loss high, judgement premature) — indistinguishable without it.
             evalcsv.write(stage_label, total,
-                          {k[5:]: v for k, v in metrics.items()
-                           if k.startswith("eval/")})
+                          {(k[5:] if k.startswith("eval/") else k): v
+                           for k, v in metrics.items()
+                           if k.startswith("eval/") or k in
+                           ("training/v_loss", "training/policy_loss",
+                            "training/total_loss")})
         except Exception as e:      # noqa: BLE001 — never kill a run over a log
             print(f"  ! diagnostics failed: {type(e).__name__}: {e}")
         logf.write(f"{time.time():.0f},{total},{r}\n"); logf.flush()

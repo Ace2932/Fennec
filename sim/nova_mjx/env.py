@@ -188,6 +188,12 @@ class NovaJoystick(PipelineEnv):
             "delay": jax.random.randint(kd, (), 0, self._max_delay),
             "prop_hist": jp.zeros((HIST, PROP)),
             "step": 0,
+            # climb telescoping state (see step()): base z at spawn, and the
+            # running high-water mark. The metrics emit per-step DELTAS of these;
+            # brax sums non-_per_step metrics over the episode, so the sums
+            # telescope to (final − spawn) and (episode peak − spawn).
+            "last_base_z": pipeline_state.x.pos[0, 2],
+            "peak_base_z": pipeline_state.x.pos[0, 2],
         }
         frame = self._prop_frame(pipeline_state, info, ko)
         info["prop_hist"] = jp.tile(frame, (HIST, 1))     # fill history with frame 0
@@ -214,6 +220,13 @@ class NovaJoystick(PipelineEnv):
             # mean |xy| speed of feet that are OFF the ground: the number the
             # clearance farm is scaled by (was assumed, never measured)
             "swing_xy_speed", "move_gate", "fwd_speed",
+            # CLIMB (terrain progress, makes the stair teacher measurable). Each
+            # is a per-step delta that brax SUMS over the episode: `climb`
+            # telescopes to net (final − spawn) base z; `climb_max` telescopes to
+            # (episode peak − spawn) — NO _per_step suffix so they stay raw sums.
+            # `swing_h_per_step` DOES carry the suffix, so brax divides it by the
+            # episode length -> the logged value reads in metres per step.
+            "climb", "climb_max", "swing_h_per_step",
         )}
         return State(pipeline_state, obs, jp.zeros(()), jp.zeros(()), metrics, info)
 
@@ -534,6 +547,24 @@ class NovaJoystick(PipelineEnv):
         swing_xy_speed = jp.where(n_swing > 0,
                                   jp.sum(foot_xy_speed * foot_air_f) / jp.maximum(n_swing, 1.0),
                                   0.0)
+        # climb: per-step delta of base z — brax SUMS metrics over the episode
+        # (masked at done), so the logged value telescopes exactly to
+        # (z at first done − z at spawn). climb_max: delta of the running peak,
+        # telescoping to the episode high-water mark — commands resample every
+        # 250 steps with random heading on RADIAL stairs, so climbed-then-
+        # commanded-back-down nets climb≈0; the peak still shows it happened.
+        base_z_now = x.pos[0, 2]
+        climb_delta = base_z_now - info["last_base_z"]
+        new_peak = jp.maximum(info["peak_base_z"], base_z_now)
+        peak_delta = new_peak - info["peak_base_z"]
+        info["last_base_z"] = base_z_now
+        info["peak_base_z"] = new_peak
+        # swing height: mean foot_h over the feet NOT in contact (a real swing
+        # lifts; a planted foot sits at ~0). Guard the all-planted step against a
+        # divide-by-zero (contributes 0). The _per_step suffix has brax divide
+        # this by the episode length, so eval/episode_swing_h_per_step is metres.
+        n_swing_h = jp.sum(foot_h * (1.0 - contact.astype(jp.float32)))
+        n_air = jp.maximum(jp.sum(1.0 - contact.astype(jp.float32)), 1.0)
         state.metrics.update(
             track=track, air=air_rew, height=height, energy=energy,
             w_track=w_track, w_yaw=w_yaw, w_progress=w_progress, w_air=w_air,
@@ -549,7 +580,9 @@ class NovaJoystick(PipelineEnv):
             ghost_FL=ghost_f[0], ghost_FR=ghost_f[1],
             ghost_RL=ghost_f[2], ghost_RR=ghost_f[3],
             swing_xy_speed=swing_xy_speed, move_gate=move_gate,
-            fwd_speed=jp.dot(cmd_xy, lin_vel[:2]) / cmd_speed)
+            fwd_speed=jp.dot(cmd_xy, lin_vel[:2]) / cmd_speed,
+            climb=climb_delta, climb_max=peak_delta,
+            swing_h_per_step=n_swing_h / n_air)
         return state.replace(pipeline_state=pipeline_state, obs=obs,
                              reward=reward, done=done, info=info)
 

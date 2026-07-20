@@ -27,6 +27,14 @@ SEEDS = []                # seed each stage was trained with
 # fractions these used to (wrongly) look like.
 EVAL_METRICS = {"eval/episode_fwd_speed": 820.0, "eval/episode_w_progress": 1400.0,
                 "eval/episode_w_clearance": -300.0, "eval/episode_swing_xy_speed": 210.0,
+                "eval/episode_w_height": -50.0, "eval/episode_w_z": -20.0,
+                # climb/climb_max telescope to end-quantities (metres), NOT sums
+                # to divide; swing_h_per_step is already per-step (brax divides
+                # the _per_step suffix in place).
+                "eval/episode_climb": 0.35, "eval/episode_climb_max": 0.42,
+                "eval/episode_swing_h_per_step": 0.06,
+                # brax emits training/* alongside eval/*; v_loss must reach the csv
+                "training/v_loss": 0.5, "training/policy_loss": -0.1,
                 "eval/avg_episode_length": 1000.0, "eval/walltime": 12.0}
 EVAL_METRICS.update({f"eval/episode_{p}_{f}": 250.0
                      for p in ("air", "airT", "ghost")
@@ -132,16 +140,29 @@ def _seed_dead_attempt(ckpt, stage="stage0_t0.25", upto=16_056_320):
 def test_diagnostics_prints_per_step_not_raw_episode_sums():
     # Brax SUMS each metric over the whole episode into eval/episode_<name> --
     # printing those raw sums as if they were 0-1 per-step fractions was off by
-    # roughly the episode length (~1000x). The printed line must show the
-    # per-step value (episode-sum / episode length) for fwd/clear/swing/ghost/
-    # airT, while prog and eval_reward (not diagnostics' job) stay raw sums.
+    # roughly the episode length (~1000x). ALL reward terms on the line are
+    # per-step (episode-sum / episode length) so they compare directly to
+    # probe_rewards.py; the CSV keeps the raw sums for historical plots. climb/
+    # climb_max/swing_h_per_step are end-quantities (metres), printed RAW.
     line = train.diagnostics(dict(EVAL_METRICS))
     assert "fwd  0.82" in line, line          # 820.0 / avg_episode_length 1000.0
+    assert "prog  +1.40" in line, line        # 1400.0 / 1000.0 (per-step; raw in csv)
     assert "clear  -0.30" in line, line       # -300.0 / 1000.0
-    assert "swing 0.21" in line, line         # 210.0 / 1000.0
+    assert "hgt -0.050" in line, line         # -50.0 / 1000.0
+    assert "z -0.020" in line, line           # -20.0 / 1000.0
+    assert "climb +0.35/0.42" in line, line   # RAW: net climbed / episode peak (m)
+    assert "swing 0.06" in line, line         # RAW: brax already per-step'd the suffix
     assert "ghost 0.25" in line, line         # 250.0 / 1000.0, averaged over 4 legs
     assert "len 1000" in line, line           # the fall-rate canary
-    assert "prog +1400.00" in line, line      # RAW sum on purpose (historical compare)
+
+
+def test_v_loss_reaches_the_csv():
+    # brax computes training/v_loss and the old eval/-prefix filter dropped it.
+    # Without it, "can't climb" and "critic still recalibrating" look identical.
+    with tempfile.TemporaryDirectory() as tmp:
+        _run(tmp)
+        head = (Path(tmp) / "eval_metrics.csv").read_text().split("\n", 1)[0]
+        assert "training/v_loss" in head, head
 
 
 def test_resumed_stage_is_charged_only_what_it_owes():
