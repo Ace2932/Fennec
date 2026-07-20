@@ -122,12 +122,31 @@ def test_T4_obs_heightmap_unchanged():
     e = _env_with_field(field.reshape(n_r, n_c))
     rng = jax.random.PRNGKey(0)
     state = e.reset(rng)
-    hm = np.asarray(e._sample_heightmap(state.pipeline_state))
+    # reset() rebuilds q from sys.qpos0 and only overwrites q[7:], so the base
+    # pose is EXACTLY xy=(0,0), quat=[1,0,0,0] -> yaw=0. With yaw=0 the rotation
+    # `wx = bx + c*gx - s*gy` collapses to wx=gx on BOTH the live path and this
+    # reference, so a sign flip / s-c swap / bx-by swap would all pass. Rebuild
+    # the pipeline state with a non-zero translation and a yaw that is not a
+    # multiple of 90 deg, so the rotation and translation terms are constrained.
+    yaw_set = 0.7
+    q_mod = state.pipeline_state.q
+    q_mod = q_mod.at[0:3].set(jp.array([0.37, -0.52, float(q_mod[2])]))
+    q_mod = q_mod.at[3:7].set(jp.array([np.cos(yaw_set / 2), 0.0, 0.0,
+                                        np.sin(yaw_set / 2)]))
+    ps = e.pipeline_init(q_mod, jp.zeros(e.sys.nv))
+    hm = np.asarray(e._sample_heightmap(ps))
     # reference: original inline computation, reproduced verbatim
-    base = state.pipeline_state.x.pos[0]
-    q = state.pipeline_state.q
+    base = ps.x.pos[0]
+    q = ps.q
     yaw = np.arctan2(2 * (q[3] * q[6] + q[4] * q[5]),
                      1 - 2 * (q[5] ** 2 + q[6] ** 2))
+    # guard: this test must actually exercise the rotation + translation path
+    assert abs(float(yaw)) > 0.1, f"degenerate yaw, rotation untested: {yaw}"
+    assert abs(np.sin(float(yaw))) > 0.1, f"sin(yaw) ~ 0, rotation untested: {yaw}"
+    assert abs(float(base[0])) > 0.1 and abs(float(base[1])) > 0.1, \
+        f"degenerate base xy, translation untested: {base}"
+    assert abs(float(base[0])) != abs(float(base[1])), \
+        f"|bx| == |by| hides a bx/by swap: {base}"
     from env import HM_N, HM_EXTENT
     g = np.linspace(-HM_EXTENT, HM_EXTENT, HM_N)
     gx, gy = np.meshgrid(g, g, indexing="ij")
