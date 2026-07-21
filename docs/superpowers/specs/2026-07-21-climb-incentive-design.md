@@ -1,65 +1,102 @@
-# Climb incentive — design (post-adversarial-review)
+# Climb incentive — ascent-mode design (v2, post-2-reviews + Aiden's direction)
 
 **Date:** 2026-07-21
-**Status:** DRAFT for Aiden's decision. Two adversarial reviews (RL-reward + sim/terrain lens) redirected the first draft — this is the corrected design. Real task-design decisions remain (marked ⟐); do not build until chosen.
-**Context:** PR #130 (terrain-relative reward) merged + validated. The clean 4-stage re-run (`nova_climb_v1`, ~104M) does NOT climb: `climb_max` flat 0.02 all stages; stair-level-1.0 rollout frames show the robot parked on the flat pad, orbiting, never stepping up. `len ~990` — survives by not engaging.
+**Status:** DRAFT — architecture chosen (ascent-mode-as-task, Aiden's call). Undergoing a 3rd adversarial review before an implementation plan. Two open decisions marked ⟐.
+**Context:** #130 (terrain-relative reward) merged + validated. Clean 4-stage re-run (`nova_climb_v1`, ~104M) does NOT climb — parks on the flat pad, orbits, never ascends. #130 removed the climb *penalties* but nothing made ascending the task.
 
-## Finding
+## The decision: ascent is a MODE whose OBJECTIVE is climbing (not a bonus)
 
-#130 was **necessary but not sufficient**. It removed the *penalties* for climbing (contact/clearance/done/height_pen terrain-relative — correct, flat gait preserved). To actually climb, two things must both be true, and neither is:
+The robot walks autonomously (normal velocity command). When its own stair-detector / nav recognizes stairs in the path, it enters **ascend mode**: a distinct commanded mode whose *task* is to climb. This is set by a flag in the observation — during training on stair envs, at deploy by perception ("recognizes stairs, tells itself").
 
-- **(PAY)** A non-farmable reward for the ascent. `progress` reads *horizontal* velocity only (`lin_vel[:2]`); surmounting a 58° riser is mostly vertical, so the ascent stride *loses* ~0.30/step of progress. Nothing pays it back.
-- **(FORCE)** The task must require ascending. A **body-frame velocity command is position-invariant** — no velocity command's satisfaction can require being higher, because velocity is a rate; there is always a flat contour that satisfies it. On radial stairs the robot orbits the center at constant radius, collecting full `progress` with zero climb.
+### Why a MODE dissolves the knot the first two reviews hit
 
-## Two rejected fixes (one naive, one mine)
+- A *non-farmable* climb reward is potential-based → policy-invariant → cannot make climbing optimal if orbiting already is.
+- A climb reward that *does* force climbing is a farmable level (rear-up/pogo).
+- **Escape:** make climbing the *objective in ascend mode*, not shaping on top. Then climbing is optimal *because it is the task*, and it stays non-farmable because the objective is real terrain traversal.
 
-**Naive positive bonus `+w·clip(base_z − spawn_z)` — REJECTED (farmable).** `base_z` moves with posture: rear up / stand tall / pogo all bank height with no locomotion. This is the "run 13" additive-proxy trap the reward's 12-run history documents (env.py:438-465).
+### The ascend-mode objective
 
-**First-draft Approach A+B — REJECTED by review:**
-- *A (shrink pad, lean on existing progress)* does **not** force climbing. On radial stairs the refuge is every contour, not the pad; the robot orbits. "Bias the command outward" is not a body-frame velocity — it's a world-frame/goal command, the change the draft deferred.
-- *B (3D velocity-projection progress)* is **worse than run 13**: the vertical axis is untracked by `track` and `progress` clips the downstroke at 0, so vertical bouncing pays ~+0.7/step for zero locomotion — a bigger farm than the clearance farm the whole reward was rebuilt to kill.
+`reward_ascend = w_climb · Δ(min over feet of ground_z)` where `ground_z` = per-foot `_terrain_ground_z(foot_xy)` (#130's terrain-height-under-foot).
 
-## The corrected design — PAY with a potential, FORCE with the command
+- Telescopes over the episode to (terrain under the lowest foot at end − at spawn) = net ascent.
+- **Non-farmable:** rear-up / stand-tall / pogo / lift-one-foot leave terrain-under-foot unchanged → Δ=0. To bank it the *lowest* foot must step onto a higher tread — a real climbing stride, un-postureable, un-bounceable.
+- **Direction-free:** "gain terrain height" is intrinsically uphill; the policy reads which way is up from the heightmap. No command-hack needed.
 
-### PAY — potential-based climb shaping (the clean positive the rule's dichotomy misses)
+### This SUPERSEDES the F1/F2 terrain/command hacks
 
-The "no positive shaper" rule is true for additive proxies on a *level/rate*; it is **false for potential-based reward shaping** (Ng et al. 1999): `r_shape = w·(Φ_t − Φ_{t−1})` is provably policy-invariant — it cannot create a new optimum, so it cannot be farmed by any closed posture loop (every loop telescopes to 0). Every farm in the history (clearance+, gait+, air+) was an additive proxy; **none was potential-based.**
+The prior draft needed to *force* climbing (shrink the pad, outward-radial command) because a velocity command lets the robot orbit a flat contour. The ascend objective kills that directly: **orbiting a stair contour stays at constant height → Δ min(ground_z) = 0.** Sitting on the pad → 0. Only ascending pays. So:
+- **No `FLAT_R_STAIR`, no outward-radial / heading-lock command needed.** Keep the existing terrain + pad.
+- Sitting still in ascend mode earns only the alive bonus (+0.1); climbing earns `w_climb·gain − energy`. As long as `w_climb·gain > energy cost`, climbing dominates sitting — a tuning question, not a topology problem.
 
-- **Φ = `jp.min(ground_z)`** — terrain height under the *lowest* foot (`ground_z` is the per-foot `_terrain_ground_z` array #130 already computes). To raise the minimum, the lowest foot must physically step onto a higher tread — a climbing stride. Un-leanable (posture doesn't move terrain-under-foot), un-bounceable (vertical hops don't change which tread you're over), un-postureable.
-- Reward `w_climb · (Φ_t − Φ_{t−1})`. Telescopes over the episode to (terrain under feet at end − at spawn) = net ascent. ~0 on flat (Φ constant). Pays exactly the ascent stride that `progress` currently drops.
-- Plumbing exists: `climb_delta = base_z_now − last_base_z` (env.py:557) — re-point `last_base_z`/`peak_base_z` from `base_z` to `min(ground_z)`, add the weighted delta to the reward sum. The `climb`/`climb_max` **metrics** should stay base_z-based (they measure body ascent for judging); the **reward** uses the ground_z potential.
-- ⟐ **`w_climb`**: must outweigh the ~0.05/step energy/jerk headwind but not swamp `track`/`progress`. Start small (e.g. match progress's effective scale) and treat as the one tuning knob. Do NOT cut `w_energy`/`w_jerk` instead — the headwind is 6× smaller than the progress hole and those terms guard the nose-dive/thrash farms.
+### Modes
 
-### FORCE — make the command require ascending
+| | Normal mode (flag 0) | Ascend mode (flag 1) |
+|---|---|---|
+| trigger | default | robot's stair-detector / nav (training: stair envs) |
+| objective | track velocity command (`progress`/`track`/`yaw`) | `w_climb·Δ min(ground_z)` |
+| stability costs | all active | all active (pose/upright/slip/energy/jerk/done — climb without falling) |
+| flat gait | unchanged — **#130 flat no-op holds** | n/a |
 
-Potential shaping *pays* for climbing but is policy-invariant — it speeds learning toward the optimum, it does not change what the optimum is. If the optimum is still "orbit the flat contour" the robot won't climb. So the command must make ascending the way to satisfy the task. Two ways ⟐ (Aiden's call — this is the real decision):
+Normal mode is byte-identical to today (flag 0 gates the ascend term to 0). The flat gait cannot be corrupted by the climb behavior and vice-versa; the modes are distinguished by the flag.
 
-- **Option F1 — outward-radial progress on stair envs.** Replace/augment the body-frame `cmd_xy` projection with the **world-frame outward-radial** direction `r̂ = (bx,by)/‖(bx,by)‖`: reward `dot(r̂, vel_xy)`. Non-farmable exactly like progress (requires real outward displacement), and on radial stairs outward = up. Keeps the existing radial terrain. **Deployment note:** this changes what the robot is rewarded for on stair envs (go outward, not follow the joystick), so the deployed policy would need a "climb/ascend" command mode distinct from free joystick — think about how the nav layer would drive it.
-- **Option F2 — directed course + heading lock.** Switch stair terrain to **unidirectional** stairs (rise monotonic in +x) and lock the command heading uphill (yaw task facing +x, vy≈0). Progress then rewards climbing directly. Cleaner reward semantics, bigger terrain change, and closer to the standard Rudin-style stair curriculum (promotion tied to along-course distance, which on stairs can't grow without climbing).
+## Mechanism / plumbing
 
-**Complement (either option):** shrink the stair-env flat pad so "forward soon means up." Sim review verified: use a **stair-only `FLAT_R_STAIR ≈ 3-4 cells`** (flat to ~0.35-0.40 m, feet clear the first riser with margin) — **never** zero it (div-by-zero in the smooth-pad formula) and **never** touch the global `FLAT_R=12` (would spawn smooth/step envs into geometry). This is a complement, not the fix; F1/F2 is what forces climbing.
+- **Obs:** add the ascend flag (obs 226→227). Graftable with zeroed weight, exactly like the heightmap graft.
+- **Reward:** `reward = (1−flag)·[track+yaw+progress] + flag·[w_climb·Δ min(ground_z)] + alive + (all costs)`. The costs (pose/upright/slip/energy/jerk/actrate/splay/z + terrain-relative done) stay active in BOTH modes so the robot climbs stably.
+- **State:** re-point the existing `last_base_z`/`climb_delta` plumbing (env.py:557) to track `min(ground_z)` for the reward; keep the base_z-based `climb`/`climb_max` METRICS for judging.
+- **Command in ascend mode ⟐:** likely ignore vx/vy/wz for the objective (climb what's in front); nav aims the robot in normal mode then flips ascend on. Optionally a mild heading-hold so it doesn't drift sideways off the stairs.
 
-## Feasibility (sim review, verified against the model)
+## Training
 
-- Spawn always at pad center (0,0,0.17); with any `FLAT_R_STAIR>0` the center stays flat, spawn clearance preserved — no keyframe change.
-- Graft easy-start degraded but not broken: only the `stair_frac` slice loses the pad; smooth/flat envs still soft-land the flat walker. Stage-1 riser is 2 cm (within swing clearance) — it stubs, not faceplants.
-- Heightmap obs is fine — the changed spawn view is invisible until the zeroed heightmap weights learn, which is the point.
-- `is_stair` gating clean; `flat_frac` envs (level 0) stay flat regardless of pad. **No nova.xml rebuild** (terrain is runtime-generated).
-- `done`'s min-over-feet `base_h` won't spurious-fire on a straddled spawn.
+- **Flag correlates with terrain:** ascend on for the stair-env slice, off for flat/rough. So the policy learns "flag on + heightmap-shows-stairs → climb," "flag off → track velocity." Enough ascend data (stair_frac 0.6) to learn climbing; flat-frac (0.25) retains the flat gait in normal mode.
+- **Curriculum handles the sparsity:** min(ground_z) pays once per completed stride; stage-1 2cm risers make strides complete fast → dense early signal → the climbing gait forms, then scales up 0.25→1.0. Reuse the existing 4-stage curriculum, graft the flat walker.
+- Build ON #130 (terrain-relative done/contact/clearance) — the prerequisite that makes climbing un-penalized.
 
-## Decisions for Aiden ⟐
+## Deployment
 
-1. **F1 (outward-radial reward, keep radial stairs) vs F2 (directed course + heading lock).** F1 is the smaller change and reuses the terrain; F2 has cleaner reward semantics and matches the literature but is a bigger terrain rewrite. This is the load-bearing choice.
-2. **Deployment intent:** should stair-climbing be a distinct commanded mode (ascend) vs free joystick? F1 implies a mode; affects the nav layer.
-3. **`w_climb`** starting value and whether the PBRS potential is base_z or (recommended) min-over-feet ground_z.
-4. Accept "climbs directed stairs" as the target, or hold out for "climbs radial stairs under free joystick" (harder — needs F1's world-frame command).
+Walk (flag 0) → perception/nav recognizes a staircase in the path → flag 1 → climb → flag 0 at the top. Nav keeps the choice to go around (flag 0, route around) vs climb (flag 1). Matches the autonomous-with-ascent-mode intent exactly.
+**Unchanged gap:** obs 227 still includes the PRIVILEGED perfect heightmap — a teacher, not Jetson-deployable until distilled onto the real D456/L2 elevation view. The flat 105-d policy remains the only deployable one.
+
+## 3rd review — 2 blockers + farm traps found and RESOLVED
+
+**BLOCKER A (plumbing): the flag can't reach the obs as written.** `is_stair` is a local in the vmapped `rand()` (terrain.py:88), used then discarded — never in `info`/`_get_obs`. **Fix:** write `is_stair` into a sentinel hfield corner cell (`hfield_data` IS per-env) in `domain_randomize`; read `flag = sys.hfield_data[sentinel]` in `_get_obs`. Sentinel cell outside the ±0.4 m heightmap window and unreachable by feet. **Unit-test flag==is_stair across a vmapped batch before writing the plan.**
+
+**BLOCKER B (cold-start bootstrap): do NOT ignore the command in ascend mode.** The ascend objective deletes the velocity reward; the graft's zeroed flag-weight makes the robot ignore the flag at step 0; `min(ground_z)` only pays once the trailing foot climbs. With no command drive the flat walker never leaves the pad → re-parks, now with no reward to escape. **Fix:** keep `progress`/`track` partly active in ascend mode (annealed as climbing takes over) so the command drives the robot onto the stairs — this also KEEPS nav steering (resolves the old ⟐2). Plus a policy-invariant **PBRS density potential on `mean(ground_z)`** to thicken the sparse early gradient.
+
+**Farm traps (all fixed in the corrected objective below):**
+- **Signed delta, NEVER clip≥0** — a positive-clipped delta is an *unbounded* climb-descend/thrash farm. Signed telescopes → oscillation nets 0. (Re-point `climb_delta` to `min(ground_z)` and keep its existing unsigned discipline.)
+- **`w_climb ≈ 25-60, not ~1e4`** — sizing it to match the velocity mode's ~2200 episode return spikes the shared value head and ROTS the flat gait (the original failure). Tune for comparable advantage *variance*, not return; watch `training/v_loss`; budget 2-3 `w_climb` tuning runs. Handle the value-scale gap with a PBRS densifier / per-mode advantage-norm, NOT by inflating `w_climb`.
+- **Non-farmability leans on an EXISTING coupling:** `base_h = height − min(ground_z)` (env.py:285) ties the reward's `min` to `height_pen` + `done`. The one real exploit (swing a foot's xy over higher terrain without climbing) is bounded (~one riser, one-time) AND self-limited — inflating `min` drives `base_h` down → `height_pen` up → death. **KEEP `height_pen`/`done` active on the SAME `min` — that coupling is the lock.**
+- **Aggregate:** use **`softmin` over feet** (non-farmable like min, denser gradient, less identity-switch noise) OR **min over CONTACTING feet** (closes the airborne channel outright). NOT mean/sum as the objective (farmable); `mean` is fine as the PBRS *potential*.
+- **Rebase `last_min` at the flag 0→1 edge** so the first ascend Δ is 0 (no double-count spike).
+- **Decouple `is_flat`/`is_stair` draws** so ascend envs always have a real riser (15% were degenerate flat-with-flag → diluted the climb signal).
+- Append flag as the **LAST** obs dim (`graft_obs.py --add-dims 1`; NOT in `_prop_frame` or it ×HIST → 229). Add an obs-size assert on the restore pkl.
+
+### Corrected ascend-mode reward
+
+```
+last_min := min_i ground_z_i        # maintained EVERY step, both modes
+on flag 0→1: last_min := min_i ground_z_i          # rebase, first Δ = 0
+reward_ascend = w_climb · (softmin_i ground_z_i − last_min)     # SIGNED, never clip
+
+reward = (1−flag)·[track+yaw+progress]
+       + flag·[ reward_ascend + α·(track+progress) ]   # α anneals 1→~0 as climbing forms (bootstrap drive)
+       + β·PBRS(mean ground_z)                          # policy-invariant density
+       + 0.1 alive + ALL costs                          # height_pen + terrain-relative done on the SAME min = the lock
+```
+`w_climb ≈ 25-60`, verify `w_climb·STAIR_RISE·level > per-stride cost` at each curriculum level before scaling level up.
+
+## Open decisions ⟐ (only these remain)
+
+1. **Radial stairs vs unidirectional** — real staircases are unidirectional; radial allows any-angle approach and (verified) has no cheap-edge farm. Unidirectional would need the edge/flat-corridor farm re-checked. Sim2real-realism call.
+2. **`α` anneal schedule and `w_climb`/`β` starting values** — tuning, 2-3 runs; not blocking the plan.
+
+## Still-open feasibility notes
+
+- 120M is a reasonable first attempt ONLY with the bootstrap drive (annealed command) + PBRS density present; without them it parks (the 104M non-climber says nothing — it had no objective).
+- Flat-gait forgetting is well-protected: flag=0 gets ~40% of the batch (8× the ~5% that caused the original rot), byte-identical to today.
+- Still a privileged-heightmap teacher → distillation gap unchanged.
 
 ## Retracted / out of scope
 
-- The naive `+base_z` bonus (farmable) and the first-draft A+B (A can't force climbing on radial stairs; B is a pogo farm).
-- `TZ`→0.32 and stair-frac ramp — separate backlog.
-- The deployed flat 105-d policy and #130's geometry fix — both validated, untouched.
-
-## Credits to the review
-
-RL lens: PBRS is the non-farmable positive the "no positive shaper" dichotomy can't see; Φ must be min-over-feet ground_z not base_z; 3D-velocity progress is a pogo farm. Sim lens: radial+body-frame command topologically can't force climbing (the crux); `FLAT_R_STAIR` shrink-not-zero, stair-only; graft/obs/spawn all feasible; no MJCF rebuild.
+- Naive `+base_z` bonus (farmable); first-draft A+B (A can't force on radial, B is a pogo farm); the F1/F2 terrain/command hacks (superseded — the ascend objective removes the need). `TZ`→0.32 and stair-frac ramp are separate backlog. Descent is a future mode. #130 geometry + the flat 105-d policy untouched.
