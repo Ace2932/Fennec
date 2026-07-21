@@ -1,4 +1,4 @@
-# Colab — NOVA terrain-relative reward PROBE
+# Colab — Fennec terrain-relative reward PROBE
 
 `fennec_train.ipynb` runs the probe for the terrain-relative reward fix (PR #130): resume the
 stairs teacher under the corrected reward and check whether it steps *up* stairs (instead of
