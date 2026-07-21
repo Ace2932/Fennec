@@ -107,8 +107,9 @@ W_CLIMB = 40.0   # climb-reward weight (signed Δ min terrain-height-under-foot)
 
 class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
-                 cmd_stage=2, heightmap=False, **kwargs):
+                 cmd_stage=2, heightmap=False, w_climb=W_CLIMB, **kwargs):
         self._heightmap = heightmap
+        self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         path = epath.Path(__file__).parent / xml
         mj = mujoco.MjModel.from_xml_path(str(path))
         sys = mjcf.load_model(mj)
@@ -304,7 +305,7 @@ class NovaJoystick(PipelineEnv):
         # constraint, so the one lean/airborne exploit self-limits into death
         # pressure. NEVER clip ≥0 (an unbounded climb-descend-thrash farm).
         min_gz = jp.min(ground_z)
-        w_climb = W_CLIMB * (min_gz - info["last_min_gz"])
+        w_climb = self._w_climb * (min_gz - info["last_min_gz"])
         # TERRAIN-RELATIVE contact — reads foot_h (height above LOCAL ground; see
         # _terrain_ground_z), not absolute world z. On the radial staircase an
         # absolute-z test read a foot PLANTED on an elevated step as airborne, so

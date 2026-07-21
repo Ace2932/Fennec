@@ -38,7 +38,8 @@ from ckpt_utils import (EvalMetricsCsv, atomic_write, checkpoint_named,
                         stage_done_steps, steps_per_second)
 
 
-def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0):
+def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0,
+                      w_climb=40.0):
     """Print WHAT is about to be trained, before a single GPU-hour burns.
 
     A 60M-step run was once launched against a stale checkout: Colab's `git clone`
@@ -82,6 +83,7 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
               f"[tier-2 teacher, needs terrain>0 + --heightmap]")
     if flat_frac > 0:
         print(f"  FLAT FLOOR   : {flat_frac:.2f} of envs at level 0 (flat-gait retention)")
+    print(f"  climb reward : w_climb {w_climb:.0f} (signed Δ min ground_z, 0 on flat)")
     if getattr(env, "_heightmap", False):
         import env as _e
         print(f"  HEIGHT MAP   : ON — obs +{_e.HM_N**2} ({_e.HM_N}x{_e.HM_N} grid, +-{_e.HM_EXTENT}m) "
@@ -203,6 +205,7 @@ def diagnostics(metrics):
     return (f"    fwd {m('fwd_speed')/L:5.2f}  prog {m('w_progress')/L:+6.2f}  "
             f"clear {m('w_clearance')/L:+6.2f}  hgt {m('w_height')/L:+6.3f}  "
             f"z {m('w_z')/L:+6.3f}  climb {m('climb'):+5.2f}/{m('climb_max'):.2f}  "
+            f"wclimb {m('w_climb')/L:+.3f}  "
             f"swing {m('swing_h_per_step'):4.2f}  ghost {ghost/L:4.2f}  "
             f"airT " + "/".join(f"{a/L:.2f}" for a in airT) + f"  len {L:.0f}")
 
@@ -368,6 +371,8 @@ def main():
     ap.add_argument("--flat-frac", type=float, default=0.25,
                     help="fraction of envs forced to LEVEL 0 flat ground (keeps the "
                          "flat gait trained; full DR still applies)")
+    ap.add_argument("--w-climb", type=float, default=40.0,
+                    help="climb-reward weight (signed Δ min ground_z; 0 on flat). Tune 25-60.")
     ap.add_argument("--curriculum", action="store_true",
                     help="AUTO-RAMP terrain difficulty in stages within one run. Brax "
                          "bakes per-env terrain at env build, so this CHAINS N stages, "
@@ -398,10 +403,11 @@ def main():
                     help="permit a CPU run (smoke-test only; ~100x too slow for real training)")
     args = ap.parse_args()
 
-    env = NovaJoystick(cmd_stage=args.cmd_stage, heightmap=args.heightmap)
+    env = NovaJoystick(cmd_stage=args.cmd_stage, heightmap=args.heightmap,
+                       w_climb=args.w_climb)
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
     print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac,
-                      args.flat_frac)
+                      args.flat_frac, args.w_climb)
     if jax.default_backend() == "cpu" and not args.allow_cpu:
         raise SystemExit(
             "✗ JAX is on CPU — real training would take days, not minutes.\n"
