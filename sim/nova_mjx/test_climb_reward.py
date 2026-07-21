@@ -110,21 +110,21 @@ def test_T3_climb_reward_not_farmable_by_posture():
     assert abs(float(s2.metrics["w_climb"])) < 0.05, ("posture must not pay", s2.metrics["w_climb"])
 
 
-def test_T4_climb_reward_telescopes():
-    # sum of per-step w_climb over an episode = W_CLIMB · (min_gz_end − min_gz_spawn).
-    # Drive the baseline manually to simulate a monotonic climb of 0.16 m.
-    from env import W_CLIMB
+def test_T4_climb_reward_signed_accumulation():
+    # SIGNED-ACCUMULATION smoke test (NOT a true telescope — a zeros action keeps
+    # the feet in the flat spawn zone so min_gz stays 0; we drive the baseline by
+    # hand). The real (final − spawn) telescoping is a property of brax's episode
+    # metric-sum, verified for `climb` in test_terrain_relative. Here we only
+    # confirm w_climb is SIGNED and accumulates + when min_gz sits above the
+    # baseline: drive the baseline DOWN below the (constant 0) min_gz, so each
+    # step pays w_climb·(0 − baseline) > 0 (see test_T3_..._signed_on_ascent).
     e = _stair_env(1.0)
     s = e.reset(jax.random.PRNGKey(4))
     total, last = 0.0, float(s.info["last_min_gz"])
     for gz in np.linspace(last, last + 0.16, 8)[1:]:
-        # feet stay in the flat spawn zone (min_gz ~= last), so DRIVE the baseline
-        # DOWN below it — a monotonic ascent whose signed bits pay +, per the
-        # reward's min_now - last_min sign (see test_T3_..._signed_on_ascent).
-        s = s.replace(info={**s.info, "last_min_gz": jp.asarray(last - (gz - last))})  # baseline just below
+        s = s.replace(info={**s.info, "last_min_gz": jp.asarray(last - (gz - last))})  # baseline below min_gz
         s = e.step(s, jp.zeros(e.action_size))
         total += float(s.metrics["w_climb"])
-    # signed deltas telescope; total is finite and positive for net ascent
     assert total > 0.0, total
 
 

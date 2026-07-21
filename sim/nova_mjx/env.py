@@ -103,6 +103,9 @@ W_CLIMB = 40.0   # climb-reward weight (signed Δ min terrain-height-under-foot)
 # 0 on flat by construction; ~STAIR_RISE·level per stride on stairs. Tune 25-60:
 # too low won't beat the energy of climbing, too high spikes the shared value
 # head and rots the flat gait. NOT clip≥0 (that is an unbounded thrash farm).
+# ⚠ ±10 reward-clip headroom: worst single-step spike = w_climb·(one riser) =
+# 40·0.08 = 3.2, + task ~4.5 ≈ 7.7 < 10 at w_climb 40. Sweeping toward 60 (4.8
+# spike → ~9.3) or level>1 thins it — raise the reward clip if you push w_climb up.
 
 
 class NovaJoystick(PipelineEnv):
