@@ -99,11 +99,25 @@ AIR_CARRY_CAP = 0.6    # s — max penalized excess per foot (bounds a held leg)
 HM_N = 11                 # grid is HM_N x HM_N cells
 HM_EXTENT = 0.4           # metres: grid spans +-HM_EXTENT around the base (8cm cells)
 
+W_CLIMB = 40.0   # climb-reward weight (signed Δ min terrain-height-under-foot).
+# 0 on flat by construction; ~STAIR_RISE·level per stride on stairs. Tune 25-60:
+# too low won't beat the energy of climbing, too high spikes the shared value
+# head and rots the flat gait. NOT clip≥0 (that is an unbounded thrash farm).
+# ⚠ ±10 reward-clip headroom: worst single-step spike = w_climb·(one riser) =
+# 40·0.08 = 3.2, + task ~4.5 ≈ 7.7 < 10 at w_climb 40. Sweeping toward 60 (4.8
+# spike → ~9.3) or level>1 thins it — raise the reward clip if you push w_climb up.
+# SCOPE: this is ungated (flagless), so it also fires on smooth-slope/rough envs
+# (any sustained ascent), not just stairs — bounded there by BUMP_M (40·0.12 ≈
+# 4.8/episode, ~0.2% of return), non-farmable. truly-flat flat_frac envs stay 0.
+# If it distorts the rough-terrain gait, gate it on is_stair (the deferred flag).
+
 
 class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
-                 cmd_stage=2, heightmap=False, **kwargs):
+                 cmd_stage=2, heightmap=False, w_climb=W_CLIMB, beta_climb=0.0, **kwargs):
         self._heightmap = heightmap
+        self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
+        self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
         path = epath.Path(__file__).parent / xml
         mj = mujoco.MjModel.from_xml_path(str(path))
         sys = mjcf.load_model(mj)
@@ -194,6 +208,20 @@ class NovaJoystick(PipelineEnv):
             # telescope to (final − spawn) and (episode peak − spawn).
             "last_base_z": pipeline_state.x.pos[0, 2],
             "peak_base_z": pipeline_state.x.pos[0, 2],
+            # climb-reward telescoping baseline: min terrain-height-under-foot at
+            # spawn. The reward pays W_CLIMB·(min_now − last_min_gz) each step
+            # (signed), which telescopes to net ascent. Seeded here so the first
+            # step's Δ is ~0 (spawn is flat).
+            "last_min_gz": jp.min(self._terrain_ground_z(
+                pipeline_state.x.pos[self._foot_ids, 0],
+                pipeline_state.x.pos[self._foot_ids, 1])),
+            # PBRS density baseline (--beta-climb): MEAN terrain-height-under-foot
+            # at spawn, over the SAME 4 feet as last_min_gz. The density term pays
+            # beta·(mean_now − last_mean_gz) each step, a policy-invariant potential
+            # that telescopes to net mean-ascent. Seeded so the first step's Δ is ~0.
+            "last_mean_gz": jp.mean(self._terrain_ground_z(
+                pipeline_state.x.pos[self._foot_ids, 0],
+                pipeline_state.x.pos[self._foot_ids, 1])),
         }
         frame = self._prop_frame(pipeline_state, info, ko)
         info["prop_hist"] = jp.tile(frame, (HIST, 1))     # fill history with frame 0
@@ -210,6 +238,7 @@ class NovaJoystick(PipelineEnv):
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_carry",
             "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand",
+            "w_climb", "w_beta_climb",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
             # carried leg reads ~1.0 here while the others cycle
             "air_FL", "air_FR", "air_RL", "air_RR",
@@ -283,6 +312,21 @@ class NovaJoystick(PipelineEnv):
         # spuriously terminating a healthy climb. min() errs toward survival
         # and is identical on flat (all zeros).
         base_h = height - jp.min(ground_z)
+        # CLIMB REWARD — the ascent objective. Signed Δ of min terrain-height-
+        # under-foot: pays for the trailing (lowest) foot stepping onto a higher
+        # tread (real climbing), 0 on flat (Δ0), negative on descent. Non-farmable
+        # — rearing/pogo/standing-tall don't move terrain-under-foot; and base_h
+        # (= height − this same min) couples it to the done/height_pen survival
+        # constraint, so the one lean/airborne exploit self-limits into death
+        # pressure. NEVER clip ≥0 (an unbounded climb-descend-thrash farm).
+        min_gz = jp.min(ground_z)
+        w_climb = self._w_climb * (min_gz - info["last_min_gz"])
+        # PBRS DENSITY (--beta-climb, default 0 = off): signed Δ of MEAN terrain-height-
+        # under-foot. Policy-invariant shaping to thicken the sparse min-only gradient for
+        # cold-start bootstrap — ANY foot advancing up pays, not just the trailing (min)
+        # one. 0 on flat (Δ0). Small beta only; the min term is the real objective.
+        mean_gz = jp.mean(ground_z)
+        beta_climb = self._beta_climb * (mean_gz - info["last_mean_gz"])
         # TERRAIN-RELATIVE contact — reads foot_h (height above LOCAL ground; see
         # _terrain_ground_z), not absolute world z. On the radial staircase an
         # absolute-z test read a foot PLANTED on an elevated step as airborne, so
@@ -500,11 +544,21 @@ class NovaJoystick(PipelineEnv):
         w_jerk = -0.01 * jerk
         w_stand = -5e-4 * stand
         reward = (w_track + w_yaw + w_progress + w_air + w_clearance
-                  + w_pose + 0.1
+                  + w_pose + 0.1 + w_climb + beta_climb
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_carry
                   + w_actrate + w_energy + w_jerk + w_stand)
-        reward = jp.clip(reward, -10.0, 10.0)
+        # w_climb-aware clip — UPPER bound only. The climb reward can legitimately
+        # spike to w_climb·(one riser) = w_climb·STAIR_RISE·level ≤ w_climb·0.08 (the
+        # curriculum caps level at tmax=1) on top of the task; the flat +10 ceiling
+        # would silently eat it when --w-climb is swept high. Lift the CEILING by that
+        # headroom (no-op at the default 40 — reward tops ~7.7 < 10). The FLOOR stays
+        # −10, byte-identical to #130/#131: descent (−w_climb·0.08 ≈ −3.2) never nears
+        # −10, and a crash step should still saturate there (more penalty isn't wanted,
+        # and it terminates anyway). So the default reward is bit-identical, not just
+        # on the positive band but everywhere.
+        _clip_hi = 10.0 + self._w_climb * 0.08
+        reward = jp.clip(reward, -10.0, _clip_hi)
         # TERRAIN-RELATIVE termination — the low-height gate reads base_h (height
         # above LOCAL ground; see the min-over-feet note above), not absolute
         # world z. With absolute z a face-planted robot on an elevated step never
@@ -559,6 +613,8 @@ class NovaJoystick(PipelineEnv):
         peak_delta = new_peak - info["peak_base_z"]
         info["last_base_z"] = base_z_now
         info["peak_base_z"] = new_peak
+        info["last_min_gz"] = min_gz
+        info["last_mean_gz"] = mean_gz
         # swing height: mean foot_h over the feet NOT in contact (a real swing
         # lifts; a planted foot sits at ~0). Guard the all-planted step against a
         # divide-by-zero (contributes 0). The _per_step suffix has brax divide
@@ -573,6 +629,7 @@ class NovaJoystick(PipelineEnv):
             w_slip=w_slip, w_splay=w_splay, w_carry=w_carry,
             w_actrate=w_actrate,
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand,
+            w_climb=w_climb, w_beta_climb=beta_climb,
             air_FL=foot_air_f[0], air_FR=foot_air_f[1],
             air_RL=foot_air_f[2], air_RR=foot_air_f[3],
             airT_FL=air_true_f[0], airT_FR=air_true_f[1],
