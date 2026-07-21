@@ -128,6 +128,59 @@ def test_T4_climb_reward_signed_accumulation():
     assert total > 0.0, total
 
 
+def _stair_env_beta(beta, level=1.0):
+    # a staircase env with a nonzero PBRS density weight (--beta-climb)
+    e = NovaJoystick(heightmap=True, beta_climb=beta)
+    field = np.asarray(terrain_field(jax.random.PRNGKey(0), level, 0.0, 1.0))
+    e.sys = e.sys.tree_replace({"hfield_data": jp.asarray(field)})
+    return e
+
+
+def test_beta_climb_default_is_zero():
+    # THE no-op guarantee: with the default beta_climb (0.0) the density term is
+    # 0·anything ≡ 0.0 EXACTLY, even on a stair env with a live mean_gz Δ. This is
+    # what keeps a --beta-climb-0 run bit-identical to the #131 min-only reward.
+    e = _stair_env(1.0)                       # default beta_climb=0
+    s = _step_settle(e, 1)
+    assert s.metrics["w_beta_climb"] == 0.0, s.metrics["w_beta_climb"]
+
+
+def test_beta_climb_zero_on_flat():
+    # On flat terrain the mean terrain-height-under-foot never changes (Δ0), so the
+    # density term is 0 even with beta ON — mirrors the min-term flat no-op (T3).
+    e = NovaJoystick(heightmap=True, beta_climb=10.0)   # default hfield = flat
+    s = _step_settle(e, 1)
+    assert abs(float(s.metrics["w_beta_climb"])) < 1e-6, s.metrics["w_beta_climb"]
+
+
+def test_beta_climb_signed():
+    # SIGNED (mirrors the T3 min test): drive last_mean_gz DOWN below the current
+    # mean -> density pays + (feet advanced up); drive it UP -> pays - (descent).
+    e = _stair_env_beta(10.0, 1.0)
+    s = e.reset(jax.random.PRNGKey(2))
+    s_up = s.replace(info={**s.info, "last_mean_gz": s.info["last_mean_gz"] - 0.05})
+    s_up = e.step(s_up, jp.zeros(e.action_size))
+    assert float(s_up.metrics["w_beta_climb"]) > 0.0, "mean above baseline must pay +"
+    s_dn = s.replace(info={**s.info, "last_mean_gz": s.info["last_mean_gz"] + 0.05})
+    s_dn = e.step(s_dn, jp.zeros(e.action_size))
+    assert float(s_dn.metrics["w_beta_climb"]) < 0.0, "mean below baseline must pay -"
+
+
+def test_clip_scales_with_w_climb():
+    # The reward clip must LIFT with w_climb: manufacture a big ascent (raw climb
+    # term ≈ w_climb·0.3 = 30) that would be silently truncated to 10 under #131's
+    # fixed ±10 clip; confirm the reward exceeds 10 (clip lifted) yet stays bounded
+    # by the new CLIP = 10 + w_climb·0.08.
+    e = _stair_env(1.0)
+    e._w_climb = 100.0
+    s = e.reset(jax.random.PRNGKey(5))
+    s_up = s.replace(info={**s.info, "last_min_gz": s.info["last_min_gz"] - 0.3})
+    s_up = e.step(s_up, jp.zeros(e.action_size))
+    r = float(s_up.reward)
+    assert r > 10.0, ("clip must lift above the old fixed 10 bound", r)
+    assert r <= 10.0 + 100.0 * 0.08 + 1e-3, ("clip must still bound at 10+w_climb·0.08", r)
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):

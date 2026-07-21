@@ -84,6 +84,9 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
     if flat_frac > 0:
         print(f"  FLAT FLOOR   : {flat_frac:.2f} of envs at level 0 (flat-gait retention)")
     print(f"  climb reward : w_climb {w_climb:.0f} (signed Δ min ground_z, 0 on flat)")
+    _beta = float(getattr(env, "_beta_climb", 0.0))
+    print(f"  climb density: beta_climb {_beta:.1f} (PBRS signed Δ mean ground_z; "
+          f"{'OFF — min-only' if _beta == 0.0 else 'ON — density aid'})")
     if getattr(env, "_heightmap", False):
         import env as _e
         print(f"  HEIGHT MAP   : ON — obs +{_e.HM_N**2} ({_e.HM_N}x{_e.HM_N} grid, +-{_e.HM_EXTENT}m) "
@@ -373,6 +376,9 @@ def main():
                          "flat gait trained; full DR still applies)")
     ap.add_argument("--w-climb", type=float, default=40.0,
                     help="climb-reward weight (signed Δ min ground_z; 0 on flat). Tune 25-60.")
+    ap.add_argument("--beta-climb", type=float, default=0.0,
+                    help="PBRS climb-density weight (signed Δ mean ground_z; policy-invariant; "
+                         "0=off; flip on if the min-only climb reward doesn't bootstrap by ~5M)")
     ap.add_argument("--curriculum", action="store_true",
                     help="AUTO-RAMP terrain difficulty in stages within one run. Brax "
                          "bakes per-env terrain at env build, so this CHAINS N stages, "
@@ -404,7 +410,7 @@ def main():
     args = ap.parse_args()
 
     env = NovaJoystick(cmd_stage=args.cmd_stage, heightmap=args.heightmap,
-                       w_climb=args.w_climb)
+                       w_climb=args.w_climb, beta_climb=args.beta_climb)
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
     print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac,
                       args.flat_frac, args.w_climb)
