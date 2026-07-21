@@ -548,12 +548,17 @@ class NovaJoystick(PipelineEnv):
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_carry
                   + w_actrate + w_energy + w_jerk + w_stand)
-        # w_climb-aware clip: the climb reward can legitimately spike to
-        # w_climb·(one riser) = w_climb·0.08 on top of the task; the flat ±10 clip
-        # would silently eat it when --w-climb is swept high. Lift the bound by that
-        # headroom (no-op at the default 40, where the reward never reaches 10 anyway).
-        _clip = 10.0 + self._w_climb * 0.08          # 0.08 = STAIR_RISE (max single-step riser)
-        reward = jp.clip(reward, -_clip, _clip)
+        # w_climb-aware clip — UPPER bound only. The climb reward can legitimately
+        # spike to w_climb·(one riser) = w_climb·STAIR_RISE·level ≤ w_climb·0.08 (the
+        # curriculum caps level at tmax=1) on top of the task; the flat +10 ceiling
+        # would silently eat it when --w-climb is swept high. Lift the CEILING by that
+        # headroom (no-op at the default 40 — reward tops ~7.7 < 10). The FLOOR stays
+        # −10, byte-identical to #130/#131: descent (−w_climb·0.08 ≈ −3.2) never nears
+        # −10, and a crash step should still saturate there (more penalty isn't wanted,
+        # and it terminates anyway). So the default reward is bit-identical, not just
+        # on the positive band but everywhere.
+        _clip_hi = 10.0 + self._w_climb * 0.08
+        reward = jp.clip(reward, -10.0, _clip_hi)
         # TERRAIN-RELATIVE termination — the low-height gate reads base_h (height
         # above LOCAL ground; see the min-over-feet note above), not absolute
         # world z. With absolute z a face-planted robot on an elevated step never
