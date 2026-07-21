@@ -68,6 +68,48 @@ def test_T2_reset_seeds_last_min_gz_to_spawn():
     assert abs(float(state.info["last_min_gz"])) < 1e-3, state.info["last_min_gz"]
 
 
+def _step_settle(e, key, n=1):
+    state = e.reset(jax.random.PRNGKey(key))
+    for _ in range(n):
+        state = e.step(state, jp.zeros(e.action_size))
+    return state
+
+
+def test_T3_climb_reward_zero_on_flat():
+    # flat env (default all-zero hfield): Δ min(ground_z) ≡ 0 → w_climb metric 0
+    # → reward bit-identical to pre-change. THE flat no-op invariant.
+    e = NovaJoystick(heightmap=True)          # default hfield = flat
+    s = _step_settle(e, 1)
+    assert abs(float(s.metrics["w_climb"])) < 1e-6, s.metrics["w_climb"]
+
+
+def test_T3_climb_reward_signed_on_ascent():
+    # Manufacture a min-ground-z increase: move last_min_gz DOWN by hand, step,
+    # and confirm w_climb > 0 (min_now > last_min). Then set last_min ABOVE
+    # min_now and confirm w_climb < 0 (descent penalised, not clipped).
+    e = _stair_env(1.0)
+    s = e.reset(jax.random.PRNGKey(2))
+    s_up = s.replace(info={**s.info, "last_min_gz": s.info["last_min_gz"] - 0.05})
+    s_up = e.step(s_up, jp.zeros(e.action_size))
+    assert float(s_up.metrics["w_climb"]) > 0.0, "min above baseline must pay +"
+    s_dn = s.replace(info={**s.info, "last_min_gz": s.info["last_min_gz"] + 0.05})
+    s_dn = e.step(s_dn, jp.zeros(e.action_size))
+    assert float(s_dn.metrics["w_climb"]) < 0.0, "descent must be signed-negative (never clipped ≥0)"
+
+
+def test_T3_climb_reward_not_farmable_by_posture():
+    # Rearing/standing tall changes base_z but NOT foot xy -> ground_z unchanged
+    # -> Δ min = 0 -> w_climb 0. Non-farmable by posture.
+    e = _stair_env(1.0)
+    s = e.reset(jax.random.PRNGKey(3))
+    # lift the base straight up (posture, feet xy unchanged), step
+    q = s.pipeline_state.q.at[2].add(0.05)
+    ps = e.pipeline_init(q, s.pipeline_state.qd)
+    s2 = e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
+    # base rose but feet xy ~same -> min(ground_z) ~same -> w_climb ~0
+    assert abs(float(s2.metrics["w_climb"])) < 0.05, ("posture must not pay", s2.metrics["w_climb"])
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):

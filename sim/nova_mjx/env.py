@@ -99,6 +99,11 @@ AIR_CARRY_CAP = 0.6    # s — max penalized excess per foot (bounds a held leg)
 HM_N = 11                 # grid is HM_N x HM_N cells
 HM_EXTENT = 0.4           # metres: grid spans +-HM_EXTENT around the base (8cm cells)
 
+W_CLIMB = 40.0   # climb-reward weight (signed Δ min terrain-height-under-foot).
+# 0 on flat by construction; ~STAIR_RISE·level per stride on stairs. Tune 25-60:
+# too low won't beat the energy of climbing, too high spikes the shared value
+# head and rots the flat gait. NOT clip≥0 (that is an unbounded thrash farm).
+
 
 class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
@@ -217,6 +222,7 @@ class NovaJoystick(PipelineEnv):
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_carry",
             "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand",
+            "w_climb",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
             # carried leg reads ~1.0 here while the others cycle
             "air_FL", "air_FR", "air_RL", "air_RR",
@@ -290,6 +296,15 @@ class NovaJoystick(PipelineEnv):
         # spuriously terminating a healthy climb. min() errs toward survival
         # and is identical on flat (all zeros).
         base_h = height - jp.min(ground_z)
+        # CLIMB REWARD — the ascent objective. Signed Δ of min terrain-height-
+        # under-foot: pays for the trailing (lowest) foot stepping onto a higher
+        # tread (real climbing), 0 on flat (Δ0), negative on descent. Non-farmable
+        # — rearing/pogo/standing-tall don't move terrain-under-foot; and base_h
+        # (= height − this same min) couples it to the done/height_pen survival
+        # constraint, so the one lean/airborne exploit self-limits into death
+        # pressure. NEVER clip ≥0 (an unbounded climb-descend-thrash farm).
+        min_gz = jp.min(ground_z)
+        w_climb = W_CLIMB * (min_gz - info["last_min_gz"])
         # TERRAIN-RELATIVE contact — reads foot_h (height above LOCAL ground; see
         # _terrain_ground_z), not absolute world z. On the radial staircase an
         # absolute-z test read a foot PLANTED on an elevated step as airborne, so
@@ -507,7 +522,7 @@ class NovaJoystick(PipelineEnv):
         w_jerk = -0.01 * jerk
         w_stand = -5e-4 * stand
         reward = (w_track + w_yaw + w_progress + w_air + w_clearance
-                  + w_pose + 0.1
+                  + w_pose + 0.1 + w_climb
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_carry
                   + w_actrate + w_energy + w_jerk + w_stand)
@@ -566,6 +581,7 @@ class NovaJoystick(PipelineEnv):
         peak_delta = new_peak - info["peak_base_z"]
         info["last_base_z"] = base_z_now
         info["peak_base_z"] = new_peak
+        info["last_min_gz"] = min_gz
         # swing height: mean foot_h over the feet NOT in contact (a real swing
         # lifts; a planted foot sits at ~0). Guard the all-planted step against a
         # divide-by-zero (contributes 0). The _per_step suffix has brax divide
@@ -580,6 +596,7 @@ class NovaJoystick(PipelineEnv):
             w_slip=w_slip, w_splay=w_splay, w_carry=w_carry,
             w_actrate=w_actrate,
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand,
+            w_climb=w_climb,
             air_FL=foot_air_f[0], air_FR=foot_air_f[1],
             air_RL=foot_air_f[2], air_RR=foot_air_f[3],
             airT_FL=air_true_f[0], airT_FR=air_true_f[1],
