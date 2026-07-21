@@ -1,11 +1,11 @@
 # Colab — NOVA terrain-relative reward PROBE
 
-`NOVA_train.ipynb` runs the probe for the terrain-relative reward fix (PR #130): resume the
+`fennec_train.ipynb` runs the probe for the terrain-relative reward fix (PR #130): resume the
 stairs teacher under the corrected reward and check whether it steps *up* stairs (instead of
 scraping the riser) without losing the flat-ground gait.
 
 ## Use
-1. Open `NOVA_train.ipynb` in Colab (github.com → the notebook → "Open in Colab").
+1. Open `fennec_train.ipynb` in Colab (github.com → the notebook → "Open in Colab").
 2. **`Runtime → Change runtime type → GPU`** (T4 is enough).
 3. Run top to bottom. **Cell 1 is the only place you edit paths/knobs** — everything else reads
    from it. `BRANCH` defaults to `main`; set it to `sim/terrain-relative-reward` to test before
