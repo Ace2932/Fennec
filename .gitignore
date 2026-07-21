@@ -121,3 +121,6 @@ hardware/cad/chassis/jetson_case_ref.stl.orig
 
 # graphify knowledge-graph tooling output (scratch)
 graphify-out/
+
+# SDD controller scratch (subagent-driven-development ledger) — not repo content
+.superpowers/
