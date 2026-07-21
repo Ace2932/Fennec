@@ -81,9 +81,15 @@ def terrain_field(rng, level, step_frac=0.0, stair_frac=0.0, n=TN):
     is_step = jax.random.uniform(kstep, ()) < step_frac
     height_m = jp.where(is_step, stepped, height_m)
 
-    # STAIRCASE (tier-2): radial concentric steps rising outward from the pad edge,
-    # rise = STAIR_RISE*level per step. floor(0)=0 keeps the pad flat.
-    step_idx = jp.floor(jp.clip((r - FLAT_R) / STAIR_RUN_CELLS, 0.0, None))
+    # STAIRCASE (tier-2, UNIDIRECTIONAL): steps rising in +x (world) from the pad
+    # edge, full-width in y, so a FORWARD command climbs them and the ONLY high
+    # ground is up the stairs (no bypass — height depends only on x). The
+    # yaw-aligned heightmap obs makes the policy heading-invariant, so fixed +x
+    # generalises to any-direction approach at deploy. (Radial rose outward in
+    # every direction, which let a velocity-commanded policy orbit a flat
+    # constant-radius contour and never climb — see the 2026-07-21 design.)
+    d = xx - c                                             # signed +x distance (cells) from center
+    step_idx = jp.floor(jp.clip((d - FLAT_R) / STAIR_RUN_CELLS, 0.0, None))
     stair_m = step_idx * (STAIR_RISE * level)
     is_stair = jax.random.uniform(kstair, ()) < stair_frac
     height_m = jp.where(is_stair, stair_m, height_m)
