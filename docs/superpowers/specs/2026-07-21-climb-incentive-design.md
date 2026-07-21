@@ -86,10 +86,26 @@ reward = (1−flag)·[track+yaw+progress]
 ```
 `w_climb ≈ 25-60`, verify `w_climb·STAIR_RISE·level > per-stride cost` at each curriculum level before scaling level up.
 
-## Open decisions ⟐ (only these remain)
+## DECIDED: unidirectional (real) staircases — and it's strictly better
 
-1. **Radial stairs vs unidirectional** — real staircases are unidirectional; radial allows any-angle approach and (verified) has no cheap-edge farm. Unidirectional would need the edge/flat-corridor farm re-checked. Sim2real-realism call.
-2. **`α` anneal schedule and `w_climb`/`β` starting values** — tuning, 2-3 runs; not blocking the plan.
+Re-checked the farm both prior reviews flagged for the switch: on stairs rising in +x, `min(ground_z)` = terrain under the lowest-x foot; raising it requires that foot to step to higher x = climb. Lateral (+y) = same height = Δ0 (earns nothing, correct); backward = negative Δ. **No bypass to high ground** — height depends only on x, so high x is reachable only by traversing the stairs; the TZ-cap edge is reached by climbing; the airborne-foot exploit stays bounded + `base_h`-locked. **Farm-safe.**
+
+Why unidirectional beats radial here:
+- **Better bootstrap:** spawned facing uphill, a forward-biased command drives +x = straight up. Radial let "forward" (body-frame) rotate → orbit (Blocker B's root). The annealed-command bootstrap now works *with* the geometry.
+- **Heading-invariant for free:** the obs is a *yaw-aligned* heightmap + body-frame proprioception — no world-frame info — so fixed-+x terrain teaches "rising terrain ahead → climb," which generalizes to any-direction approach at deploy. **No need to randomize stair direction.**
+- Cleaner perception (stairs "ahead" not "all around"); real-staircase sim2real.
+
+**Terrain change (localized to the `is_stair` branch of terrain.py):**
+- Radial `r = |cell − center|` → directional `d = (cell − center)·x̂` in `step_idx`. Flat for `d < FLAT_R`, risers for `d > FLAT_R`, plateau at TZ.
+- Full-width in y (height depends only on x → no side cliffs).
+- Spawn UNCHANGED — center (0,0,0.17) is in the flat bottom zone facing +x. No spawn-position plumbing.
+- smooth/step/flat envs keep the radial pad; only stair envs go directional.
+- All v3 fixes (flag-sentinel, signed δ, w_climb 25-60, softmin, base_h lock, last_min rebase, decoupled draws) are geometry-independent and hold. Blocker B gets *easier*.
+- **Verify in TDD (like #130):** no div-by-zero, no spawn-into-geometry, no bypass corridor to high terrain, min(ground_z) rises only by forward climbing.
+
+## Open decisions ⟐ (only tuning remains)
+
+1. **`α` anneal schedule and `w_climb`/`β` starting values** — tuning, 2-3 runs; not blocking the plan.
 
 ## Still-open feasibility notes
 
