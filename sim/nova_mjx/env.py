@@ -188,6 +188,12 @@ class NovaJoystick(PipelineEnv):
             "delay": jax.random.randint(kd, (), 0, self._max_delay),
             "prop_hist": jp.zeros((HIST, PROP)),
             "step": 0,
+            # climb telescoping state (see step()): base z at spawn, and the
+            # running high-water mark. The metrics emit per-step DELTAS of these;
+            # brax sums non-_per_step metrics over the episode, so the sums
+            # telescope to (final − spawn) and (episode peak − spawn).
+            "last_base_z": pipeline_state.x.pos[0, 2],
+            "peak_base_z": pipeline_state.x.pos[0, 2],
         }
         frame = self._prop_frame(pipeline_state, info, ko)
         info["prop_hist"] = jp.tile(frame, (HIST, 1))     # fill history with frame 0
@@ -214,6 +220,13 @@ class NovaJoystick(PipelineEnv):
             # mean |xy| speed of feet that are OFF the ground: the number the
             # clearance farm is scaled by (was assumed, never measured)
             "swing_xy_speed", "move_gate", "fwd_speed",
+            # CLIMB (terrain progress, makes the stair teacher measurable). Each
+            # is a per-step delta that brax SUMS over the episode: `climb`
+            # telescopes to net (final − spawn) base z; `climb_max` telescopes to
+            # (episode peak − spawn) — NO _per_step suffix so they stay raw sums.
+            # `swing_h_per_step` DOES carry the suffix, so brax divides it by the
+            # episode length -> the logged value reads in metres per step.
+            "climb", "climb_max", "swing_h_per_step",
         )}
         return State(pipeline_state, obs, jp.zeros(()), jp.zeros(()), metrics, info)
 
@@ -257,7 +270,24 @@ class NovaJoystick(PipelineEnv):
         # move without stepping. threshold 0.2 s + cap 0.4 s -> rewards real swings,
         # not a held foot; short in-place shuffles pay little.
         foot_z = x.pos[self._foot_ids, 2]
-        # RADIUS-CORRECTED contact (Barkour ref: `(foot_z - foot_radius) < 1e-3`).
+        foot_xy = x.pos[self._foot_ids, :2]
+        # height above the LOCAL collision surface — the quantity every gait
+        # term below actually means. On flat (all-zero hfield) ground_z == 0
+        # and foot_h == foot_z: bit-identical to the pre-terrain-relative code.
+        ground_z = self._terrain_ground_z(foot_xy[:, 0], foot_xy[:, 1])
+        foot_h = foot_z - ground_z
+        # done/height ground reference: MIN over the four feet, NOT a CoM point
+        # sample — hip span (~0.28 m) exceeds a tread run (~0.20 m), so a
+        # climbing robot NORMALLY straddles two treads; a CoM sample past the
+        # riser reads the upper tread and can under-read base_h by ~0.10 m,
+        # spuriously terminating a healthy climb. min() errs toward survival
+        # and is identical on flat (all zeros).
+        base_h = height - jp.min(ground_z)
+        # TERRAIN-RELATIVE contact — reads foot_h (height above LOCAL ground; see
+        # _terrain_ground_z), not absolute world z. On the radial staircase an
+        # absolute-z test read a foot PLANTED on an elevated step as airborne, so
+        # slip stopped billing and scraping a foot against a riser was free.
+        # RADIUS-CORRECTED (Barkour ref: `(foot_z - foot_radius) < 1e-3`).
         # Was `foot_z < 0.025` — 12.5mm above the measured weight-bearing height
         # (0.0125), so a foot could float a centimetre up and still score as
         # planted. PROBED on ckpt12: FR/RL were airborne 11.0%/12.2% of the time
@@ -266,7 +296,7 @@ class NovaJoystick(PipelineEnv):
         # invisible (no clearance/air/gait) and PUNISHED (slip bills a swinging
         # foot as sliding, because contact never went false). The policy carried
         # a leg because that was the only motion the reward could see.
-        contact = (foot_z - FOOT_RADIUS) < CONTACT_EPS
+        contact = (foot_h - FOOT_RADIUS) < CONTACT_EPS
         air = info["feet_air"]
         first_contact = (air > 0.0) & contact
         cmd_moving = math.normalize(cmd[:2])[1] > 0.05
@@ -334,7 +364,14 @@ class NovaJoystick(PipelineEnv):
         # fell (rollout: fell at 1.3 s). This + a stronger upright weight give it
         # the pitch stability to support a dynamic gait. (ref: ang_vel_xy.)
         ang_vel_xy = jp.sum(ang_vel[:2] ** 2)
-        height_pen = (height - STAND_HEIGHT) ** 2
+        # TERRAIN-RELATIVE posture cost — reads base_h (base height above LOCAL
+        # ground; see the min-over-feet note above), not absolute world z. With
+        # absolute z this quadratic penalized the robot for being elevated at
+        # all: on the radial staircase every step climbed added (step_h)^2 of
+        # cost, a direct anti-climb gradient. base_h strips the terrain offset so
+        # the target posture costs the same at every elevation; on flat (all-zero
+        # hfield) base_h == height and this is bit-identical to the old code.
+        height_pen = (base_h - STAND_HEIGHT) ** 2
         z_pen = xd.vel[0, 2] ** 2
         act_rate = jp.sum((action - info["last_act"]) ** 2)
         # jerk: 2nd difference of actions -> smoother motion, less servo wear
@@ -379,7 +416,13 @@ class NovaJoystick(PipelineEnv):
         # penalized, and a foot at the target pays nothing however fast it swings.
         # It also reads NO contact flag, so it cannot be fooled by a bad contact
         # threshold at all.
-        clearance_cost = jp.sum(jp.abs(foot_z - FOOT_TARGET_Z) * jp.sqrt(foot_xy_speed))
+        #
+        # TERRAIN-RELATIVE: the swing target is FOOT_TARGET_Z above the LOCAL
+        # ground (foot_h; see _terrain_ground_z), not absolute world z. Reading
+        # foot_z taxed every swing by how high the terrain sat under it — up to
+        # 2*ztop on a step — penalising exactly the lift needed to climb. foot_h
+        # makes the target the same 0.05 m clearance on a step as on the flat.
+        clearance_cost = jp.sum(jp.abs(foot_h - FOOT_TARGET_Z) * jp.sqrt(foot_xy_speed))
         # splay: the rollout showed the hips abducted WIDE. Penalize haa (hip-
         # abduction, joint idx 0,3,6,9) deviation from the default (0); the hfe/kfe
         # swing joints stay free. (ref: pose regularizer, focused on the splay.)
@@ -462,7 +505,14 @@ class NovaJoystick(PipelineEnv):
                   + w_slip + w_splay + w_carry
                   + w_actrate + w_energy + w_jerk + w_stand)
         reward = jp.clip(reward, -10.0, 10.0)
-        done = jp.where((height < 0.08) | (up[2] < 0.4), 1.0, 0.0)
+        # TERRAIN-RELATIVE termination — the low-height gate reads base_h (height
+        # above LOCAL ground; see the min-over-feet note above), not absolute
+        # world z. With absolute z a face-planted robot on an elevated step never
+        # tripped the 0.08 floor (its base_z stays well above it), so corpses
+        # kept accruing reward and polluting metrics. min-over-feet errs toward
+        # survival (a straddling climber reads the LOWER tread), so a healthy
+        # climb is never spuriously killed. On flat base_h == height: identical.
+        done = jp.where((base_h < 0.08) | (up[2] < 0.4), 1.0, 0.0)
 
         # push the new proprioceptive frame into the history buffer (newest first)
         frame = self._prop_frame(pipeline_state, info, ko)
@@ -483,8 +533,12 @@ class NovaJoystick(PipelineEnv):
         foot_air_f = jp.logical_not(contact).astype(jp.float32)
         # TRUE contact (radius-corrected, Barkour ref) vs the live proxy. `ghost`
         # = the reward believes this foot is planted while it is actually in the
-        # air. Diagnostic only — the reward still uses `contact` above.
-        contact_true = (foot_z - FOOT_RADIUS) < CONTACT_EPS
+        # air. Diagnostic only — the reward still uses `contact` above. Reads the
+        # SAME terrain-relative foot_h (see _terrain_ground_z) as `contact`, so
+        # the two stay in lockstep on terrain and ghost_* keeps meaning what it
+        # did on flat; an absolute-z test here would fire phantom ghosts on every
+        # elevated step (T9 pins the lockstep).
+        contact_true = (foot_h - FOOT_RADIUS) < CONTACT_EPS
         air_true_f = jp.logical_not(contact_true).astype(jp.float32)
         ghost_f = (contact & jp.logical_not(contact_true)).astype(jp.float32)
         # mean |xy| speed over feet that are off the ground (0 if all planted) —
@@ -493,6 +547,24 @@ class NovaJoystick(PipelineEnv):
         swing_xy_speed = jp.where(n_swing > 0,
                                   jp.sum(foot_xy_speed * foot_air_f) / jp.maximum(n_swing, 1.0),
                                   0.0)
+        # climb: per-step delta of base z — brax SUMS metrics over the episode
+        # (masked at done), so the logged value telescopes exactly to
+        # (z at first done − z at spawn). climb_max: delta of the running peak,
+        # telescoping to the episode high-water mark — commands resample every
+        # 250 steps with random heading on RADIAL stairs, so climbed-then-
+        # commanded-back-down nets climb≈0; the peak still shows it happened.
+        base_z_now = x.pos[0, 2]
+        climb_delta = base_z_now - info["last_base_z"]
+        new_peak = jp.maximum(info["peak_base_z"], base_z_now)
+        peak_delta = new_peak - info["peak_base_z"]
+        info["last_base_z"] = base_z_now
+        info["peak_base_z"] = new_peak
+        # swing height: mean foot_h over the feet NOT in contact (a real swing
+        # lifts; a planted foot sits at ~0). Guard the all-planted step against a
+        # divide-by-zero (contributes 0). The _per_step suffix has brax divide
+        # this by the episode length, so eval/episode_swing_h_per_step is metres.
+        n_swing_h = jp.sum(foot_h * (1.0 - contact.astype(jp.float32)))
+        n_air = jp.maximum(jp.sum(1.0 - contact.astype(jp.float32)), 1.0)
         state.metrics.update(
             track=track, air=air_rew, height=height, energy=energy,
             w_track=w_track, w_yaw=w_yaw, w_progress=w_progress, w_air=w_air,
@@ -508,7 +580,9 @@ class NovaJoystick(PipelineEnv):
             ghost_FL=ghost_f[0], ghost_FR=ghost_f[1],
             ghost_RL=ghost_f[2], ghost_RR=ghost_f[3],
             swing_xy_speed=swing_xy_speed, move_gate=move_gate,
-            fwd_speed=jp.dot(cmd_xy, lin_vel[:2]) / cmd_speed)
+            fwd_speed=jp.dot(cmd_xy, lin_vel[:2]) / cmd_speed,
+            climb=climb_delta, climb_max=peak_delta,
+            swing_h_per_step=n_swing_h / n_air)
         return state.replace(pipeline_state=pipeline_state, obs=obs,
                              reward=reward, done=done, info=info)
 
@@ -535,6 +609,40 @@ class NovaJoystick(PipelineEnv):
             jax.random.normal(k4, (12,)) * N_JVEL * 0.05,
         ])
         return frame + noise
+
+    def _terrain_ground_z(self, wx, wy):
+        """ABSOLUTE terrain z at world (wx, wy) matching MuJoCo's hfield COLLISION
+        surface exactly — per-cell fixed-diagonal (v00-v11) triangulation, NOT
+        bilinear. Bilinear (what the obs uses) diverges from the surface physics
+        stands on by up to ~19 mm inside riser-boundary cells, in BOTH directions
+        — enough to re-open the absolute-z contact bug at exactly the tread edges
+        climbing needs (spec 2026-07-20, empirically measured vs mj_ray). The
+        reward/done consumers therefore read THIS, and the obs keeps bilinear
+        (_sample_heightmap) because the policy was trained on it.
+
+        Flat no-op invariant (foot_h == foot_z on flat) is bit-exact only because
+        fz == 0: nova.xml's floor geom sits at z == 0, so `z*ztop + fz` collapses
+        to `z*ztop` and a zero field returns EXACTLY 0. Reposition the floor and
+        that identity breaks (test_T1 is the canary)."""
+        rx, ry, ztop = self._hf_size[0], self._hf_size[1], self._hf_size[2]
+        fx, fy, fz = self._floor_pos[0], self._floor_pos[1], self._floor_pos[2]
+        # world xy -> fractional (row, col), same mapping as _sample_heightmap
+        # (x -> col, y -> row); T3's asymmetric ramp pins the orientation.
+        col = (wx - (fx - rx)) / (2 * rx) * (self._hf_ncol - 1)
+        row = (wy - (fy - ry)) / (2 * ry) * (self._hf_nrow - 1)
+        data = self.sys.hfield_data.reshape(self._hf_nrow, self._hf_ncol)
+        r0 = jp.clip(jp.floor(row).astype(jp.int32), 0, self._hf_nrow - 2)
+        c0 = jp.clip(jp.floor(col).astype(jp.int32), 0, self._hf_ncol - 2)
+        fr = jp.clip(row - r0, 0.0, 1.0)
+        fc = jp.clip(col - c0, 0.0, 1.0)
+        v00 = data[r0, c0]
+        v01 = data[r0, c0 + 1]
+        v10 = data[r0 + 1, c0]
+        v11 = data[r0 + 1, c0 + 1]
+        z = v00 + jp.where(fc >= fr,
+                           fc * (v01 - v00) + fr * (v11 - v01),
+                           fr * (v10 - v00) + fc * (v11 - v10))
+        return z * ztop + fz
 
     def _sample_heightmap(self, pipeline_state):
         """Local terrain elevation grid (HM_N x HM_N), yaw-aligned + base-centred,
@@ -578,7 +686,7 @@ class NovaJoystick(PipelineEnv):
         return jp.concatenate(parts)
 
 
-def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_frac=0.0):
+def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0):
     """Build the per-env randomization fn.
 
     terrain_max: rough-ground ceiling (None -> terrain.TERRAIN_MAX = flat). Obs is
@@ -650,8 +758,16 @@ def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_f
             # per-servo torque headroom -> scale the |forcerange| bounds
             tscale = jax.random.uniform(k6, (sys.nu,), minval=T_LO, maxval=T_HI)
             forcerange = sys.actuator_forcerange * tscale[:, None]
-            kt1, kt2 = jax.random.split(kt)
-            level = jax.random.uniform(kt2, (), minval=0.0, maxval=tmax)
+            kt1, kt2, kt3 = jax.random.split(kt, 3)
+            # flat-env floor: force `flat_frac` of envs to level 0 (both terrain
+            # branches provably collapse to zero). Flat was ~5% of stage-4 envs;
+            # a deterministic fall there cost ~2% of batch return — beneath
+            # PPO's notice, which is exactly how the flat gait rotted while the
+            # terrain gait improved. 25% makes flat worth not falling over on,
+            # and matches deployment: NOVA lives mostly on floors.
+            is_flat = jax.random.uniform(kt3, ()) < flat_frac
+            level = jp.where(is_flat, 0.0,
+                             jax.random.uniform(kt2, (), minval=0.0, maxval=tmax))
             hfield = terrain_field(kt1, level, step_frac, stair_frac)
             return geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield
 

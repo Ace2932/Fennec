@@ -85,6 +85,10 @@ def main():
     state = jit_reset(rng)
     state = state.replace(info={**state.info, "cmd": cmd})
 
+    # base z at spawn, to report net climb (world z) alongside x travel — the
+    # eyeball check that a stair teacher actually gained elevation, not just
+    # translated across a flat.
+    z0 = float(state.pipeline_state.x.pos[0, 2])
     qpos = [np.array(state.pipeline_state.q)]
     for _ in range(args.steps):
         rng, k = jax.random.split(rng)
@@ -121,8 +125,9 @@ def main():
     else:
         imageio.mimsave(args.out, frames, fps=fps, macro_block_size=None)
     x_travel = qpos[-1][0] - qpos[0][0]
+    climbed = float(state.pipeline_state.x.pos[0, 2]) - z0
     print(f"wrote {args.out}  ({len(frames)} frames, {len(frames)/fps:.1f}s, "
-          f"traveled {x_travel:+.2f} m in x)")
+          f"traveled {x_travel:+.2f} m in x, climbed {climbed:+.2f} m in z)")
 
 
 if __name__ == "__main__":

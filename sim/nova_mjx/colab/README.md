@@ -1,41 +1,50 @@
-# Colab training — NOVA walking policy
+# Colab — NOVA terrain-relative reward PROBE
 
-`NOVA_train.ipynb` runs the full Tier-1 training loop on a free Colab GPU.
+`NOVA_train.ipynb` runs the probe for the terrain-relative reward fix (PR #130): resume the
+stairs teacher under the corrected reward and check whether it steps *up* stairs (instead of
+scraping the riser) without losing the flat-ground gait.
 
 ## Use
-1. Open `NOVA_train.ipynb` in Colab (github.com → the notebook → "Open in Colab",
-   or upload it).
+1. Open `NOVA_train.ipynb` in Colab (github.com → the notebook → "Open in Colab").
 2. **`Runtime → Change runtime type → GPU`** (T4 is enough).
-3. Run the cells top to bottom. You'll paste a GitHub PAT (fine-grained, read
-   access to `Ace2932/LE_NOVA`) at cell 2 — it's read via `getpass`, not saved.
-4. Training (cell 6) writes checkpoints to `Drive/MyDrive/nova_ckpt`.
+3. Run top to bottom. **Cell 1 is the only place you edit paths/knobs** — everything else reads
+   from it. `BRANCH` defaults to `main`; set it to `sim/terrain-relative-reward` to test before
+   PR #130 merges.
+4. Cell 3 prints the git SHA and **asserts the fix is present** — it refuses to run the probe
+   against pre-fix code (the "Already up to date → ran stale code" trap that has cost GPU-hours).
 
 ## Resumable
-Colab disconnects don't lose progress — checkpoints are on Drive. Just **re-run
-the Train cell**; `train.py` finds the latest checkpoint (by mtime) and continues.
-Re-run again to train longer than one invocation's `--timesteps`.
+Checkpoints are on Drive, so a disconnect loses nothing. The probe cell (8) detects its own
+checkpoint on re-run and **resumes** it — it does not re-graft from the teacher, so no progress is
+thrown away. Checkpoint choice is by recorded pointer / step number, not mtime (Drive mtimes lie).
 
-## What each stage produces
-- **Train** → `nova_ckpt/run_*/…` checkpoints + `nova_policy.pkl` (latest policy)
-  + `train_log.csv` (step, eval_reward).
-- **Rollout** → `walk.mp4`, shown inline — eyeball the gait.
-- **Export** → `nova_policy.npz` (framework-free, what the Jetson `policy_runner`
-  /`policy_node` load) + `nova_policy.onnx`, copied to Drive.
+## What the cells produce
+- **Probe (8)** → `nova_stairs_fix/…` checkpoints + `nova_policy_stairs_fix.pkl` (written
+  atomically every eval) + `eval_metrics.csv` (every `eval/*` term + `training/v_loss`).
+- **Judge (10)** → `probe_stairs.mp4` / `probe_flat.mp4` **on Drive**. Read the printed
+  `traveled +X m in x, climbed +X.XX m in z` line — `climbed` is the verdict.
+- **Export (11)** → 226-input `.npz` — a privileged *teacher*, NOT Jetson-deployable (see below).
+
+## Acceptance bar
+- **Stairs** (`--stair-level 1.0`): `climbed ≥ +0.16 m` (two real 8 cm risers — the terrain's
+  `TZ=0.20` ceiling caps relief there; raising `TZ` + a stair-frac ramp are in the next-run
+  backlog) and a full 601-frame episode.
+- **Flat** (`--stair-level 0.0 --vx 0.35`): survives all 601 frames (today's teacher falls at
+  step 470 here — that regression is the reason for the flat-frac floor).
+- **5M kill-switch:** if `swing_h_per_step` hasn't risen on stair envs and `w_slip` hasn't engaged
+  by ~5M steps (with `v_loss` plateaued), the probe is doomed — stop and restart clean.
+
+Full design + adjudicated review findings: `../../../docs/superpowers/specs/2026-07-20-terrain-relative-reward-design.md`.
+
+## ⚠ Teacher, not deployable
+Obs 226 includes the *perfect* simulated heightmap. The real D456/L2 cannot supply it, so the
+exported `.npz` cannot run on the Jetson as-is. Hardware needs real elevation mapping or student
+distillation onto proprioception-only obs. The deployable policy remains the flat 105-d one.
 
 ## Deps
-Pinned in `../requirements.txt` — `brax 0.14.2` + `jax 0.6.0` is the only window
-with both `device_put_replicated` (brax needs it) and `orbax ≥ 0.11.22` support.
-The notebook installs the CUDA build. If the sanity cell reports `backend cpu`
-after install: `Runtime → Restart session`, then re-run from the install cell
-(the clone persists).
+Pinned in `../requirements.txt` — `brax 0.14.2` + `jax 0.6.0`. The notebook installs the CUDA
+build; if the sanity cell reports `backend cpu`, `Runtime → Restart session` and re-run from the
+install cell (the clone persists).
 
-## Tuning knobs (in the notebook / files)
-- `--timesteps` (cell 6) — more steps = better gait; re-run to add more.
-- `--num_envs 2048` — lower if the T4 OOMs.
-- rewards / gait shaping — `env.py`.
-- terrain difficulty — `terrain.py` `TERRAIN_MAX` (flat first; ramp up once flat
-  ground walks).
-
-The actuator model the policy trains against is the measured STS3215 (velocity
-cap 2.8/4.71 rad/s, 0.88° deadband, 0.87° backlash, ~75 ms latency) — see
-`../../../docs/bench/README.md` and PR #91.
+The actuator model is the measured STS3215 (velocity cap 2.8/4.71 rad/s, 0.88° deadband, 0.87°
+backlash, ~75 ms latency) — see `../../../docs/bench/README.md` and PR #91.
