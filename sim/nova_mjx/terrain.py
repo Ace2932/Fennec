@@ -25,9 +25,11 @@ BUMP_M = 0.12      # max bump height (m) at level 1
 # finer hfield (higher TN + build_mjcf sync). Blind reactive climbing tops out
 # ~3-5cm on this robot; full 17cm building stairs need perception (Phase 3).
 STEP_M = 0.05
-# STAIRCASE (tier-2 teacher): radial concentric steps rising OUTWARD from the pad,
-# so any forward command climbs them (the policy is velocity-commanded, not goal-
-# directed). Rise per step = STAIR_RISE * level, so `level` sweeps the step height
+# STAIRCASE (tier-2 teacher): UNIDIRECTIONAL steps rising in +x from the pad edge,
+# full-width in y (see the is_stair branch below) — so a FORWARD command climbs
+# and the only high ground is up the stairs (radial rose outward in every
+# direction, which let a velocity-commanded policy orbit a flat contour and never
+# climb; 2026-07-21). Rise per step = STAIR_RISE * level, so `level` sweeps step height
 # ACROSS envs — that's how the privileged teacher finds NOVA's max climbable step
 # (it succeeds up to some rise, fails above). STAIR_RUN_CELLS = tread depth.
 # At 100cell/5m a riser spans ~1 cell (5cm) -> ~58deg risers (step-like, not a
@@ -49,8 +51,8 @@ TERRAIN_MAX = 0.0
 def terrain_field(rng, level, step_frac=0.0, stair_frac=0.0, n=TN):
     """Per-env hfield data, shape (n*n,) in [0,1]. Smooth rough bumps rising from
     a flat center pad, amplitude scaled by difficulty `level`. Per-env terrain TYPE
-    (mutually exclusive, by probability): `stair_frac` -> a STAIRCASE (radial steps
-    rising outward, rise STAIR_RISE*level — tier-2 teacher), else `step_frac` -> a
+    (mutually exclusive, by probability): `stair_frac` -> a STAIRCASE (unidirectional
+    steps rising in +x, rise STAIR_RISE*level — tier-2 teacher), else `step_frac` -> a
     QUANTIZED terrace (tier-1 curb/step), else smooth rough. Flat spawn pad stays
     flat in every case (0 quantizes/floors to 0)."""
     k1, ksl, kstep, kstair = jax.random.split(rng, 4)
