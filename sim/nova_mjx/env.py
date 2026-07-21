@@ -106,6 +106,10 @@ W_CLIMB = 40.0   # climb-reward weight (signed Δ min terrain-height-under-foot)
 # ⚠ ±10 reward-clip headroom: worst single-step spike = w_climb·(one riser) =
 # 40·0.08 = 3.2, + task ~4.5 ≈ 7.7 < 10 at w_climb 40. Sweeping toward 60 (4.8
 # spike → ~9.3) or level>1 thins it — raise the reward clip if you push w_climb up.
+# SCOPE: this is ungated (flagless), so it also fires on smooth-slope/rough envs
+# (any sustained ascent), not just stairs — bounded there by BUMP_M (40·0.12 ≈
+# 4.8/episode, ~0.2% of return), non-farmable. truly-flat flat_frac envs stay 0.
+# If it distorts the rough-terrain gait, gate it on is_stair (the deferred flag).
 
 
 class NovaJoystick(PipelineEnv):
