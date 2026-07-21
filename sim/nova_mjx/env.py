@@ -194,6 +194,13 @@ class NovaJoystick(PipelineEnv):
             # telescope to (final − spawn) and (episode peak − spawn).
             "last_base_z": pipeline_state.x.pos[0, 2],
             "peak_base_z": pipeline_state.x.pos[0, 2],
+            # climb-reward telescoping baseline: min terrain-height-under-foot at
+            # spawn. The reward pays W_CLIMB·(min_now − last_min_gz) each step
+            # (signed), which telescopes to net ascent. Seeded here so the first
+            # step's Δ is ~0 (spawn is flat).
+            "last_min_gz": jp.min(self._terrain_ground_z(
+                pipeline_state.x.pos[self._foot_ids, 0],
+                pipeline_state.x.pos[self._foot_ids, 1])),
         }
         frame = self._prop_frame(pipeline_state, info, ko)
         info["prop_hist"] = jp.tile(frame, (HIST, 1))     # fill history with frame 0

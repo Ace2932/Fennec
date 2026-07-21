@@ -52,6 +52,22 @@ def test_T1c_no_bypass_high_ground_only_by_climbing():
     assert high_x_max > 0.1, ("stairs reach real height", high_x_max)
 
 
+def _stair_env(level=1.0):
+    e = NovaJoystick(heightmap=True)
+    n = e._hf_nrow
+    field = np.asarray(terrain_field(jax.random.PRNGKey(0), level, 0.0, 1.0))
+    e.sys = e.sys.tree_replace({"hfield_data": jp.asarray(field)})
+    return e
+
+
+def test_T2_reset_seeds_last_min_gz_to_spawn():
+    e = _stair_env(1.0)
+    state = e.reset(jax.random.PRNGKey(1))
+    assert "last_min_gz" in state.info
+    # spawn is in the flat zone -> min ground under feet is ~0
+    assert abs(float(state.info["last_min_gz"])) < 1e-3, state.info["last_min_gz"]
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):
