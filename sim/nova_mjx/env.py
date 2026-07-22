@@ -594,8 +594,9 @@ class NovaJoystick(PipelineEnv):
         # headroom (no-op at the default 40 — reward tops ~7.7 < 10). The FLOOR stays
         # −10, byte-identical to #130/#131: descent (−w_climb·0.08 ≈ −3.2) never nears
         # −10, and a crash step should still saturate there (more penalty isn't wanted,
-        # and it terminates anyway). So the default reward is bit-identical, not just
-        # on the positive band but everywhere.
+        # and it terminates anyway). So the clip MAPPING is bit-identical to
+        # #130/#131 at the default w_climb, and the flat-env reward is unchanged
+        # outright (w_pbrs_climb ≡ 0 on flat).
         _clip_hi = 10.0 + self._w_climb * 0.08
         reward = jp.clip(reward, -10.0, _clip_hi)
         # TERRAIN-RELATIVE termination — the low-height gate reads base_h (height
