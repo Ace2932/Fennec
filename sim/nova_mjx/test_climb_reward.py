@@ -208,6 +208,84 @@ def test_T1e_level1_geometry_unchanged():
     assert np.allclose(f, ref, atol=1e-6), "level-1.0 stair geometry must be unchanged"
 
 
+def test_pbrs_zero_on_flat():
+    # flat hfield: Φ ≡ 0 -> delta exactly 0 even with w_pbrs ON. Flat no-op invariant.
+    e = NovaJoystick(heightmap=True, w_pbrs=30.0)
+    s = _step_settle(e, 1)
+    assert abs(float(s.metrics["w_pbrs_climb"])) < 1e-6, s.metrics["w_pbrs_climb"]
+
+
+def test_pbrs_reset_seeds_last_phi():
+    e = _stair_env(1.0)
+    s = e.reset(jax.random.PRNGKey(1))
+    assert "last_phi" in s.info
+    # spawn Φ ~ 0 at EVERY level: the first elevated cell sits past the ground-
+    # level tread (≥0.4 m out) — beyond the 0.35 m lookahead — at all levels, not
+    # just level 1 (see task-2 report 2026-07-22, test_pbrs_phi_positive_within_short_advance).
+    assert abs(float(s.info["last_phi"])) < 1e-3, s.info["last_phi"]
+
+
+def test_pbrs_phi_positive_within_short_advance():
+    # Spawn Φ is 0 (first ELEVATED cell sits past the ground-level tread, ≥0.4 m
+    # out — outside the 0.35 m lookahead; see task-2 report 2026-07-22). The
+    # requirement that matters: after a SHORT forward advance under the velocity
+    # command (~0.2 m, a second of walking), the lookahead sweeps onto risers and
+    # the PBRS gradient goes live. Level 0.125, STAIR_PAD_MIN=4: pad 5 cells
+    # (0.25 m) + 4-cell tread -> first elevated cell ~0.45 m; base at 0.20 m puts
+    # lookahead points at 0.35/0.45/0.55 m -> two elevated -> Φ > 0.
+    e = _stair_env(0.125)
+    s = e.reset(jax.random.PRNGKey(4))
+    q = s.pipeline_state.q.at[0].add(0.20)          # advance base 0.20 m in +x
+    ps = e.pipeline_init(q, s.pipeline_state.qd)
+    assert float(e._lookahead_phi(ps)) > 0.0
+
+
+def test_pbrs_signed():
+    # mirrors test_T3_climb_reward_signed_on_ascent: drive last_phi by hand
+    e = _stair_env(1.0)
+    s = e.reset(jax.random.PRNGKey(2))
+    s_up = s.replace(info={**s.info, "last_phi": s.info["last_phi"] - 0.05})
+    s_up = e.step(s_up, jp.zeros(e.action_size))
+    assert float(s_up.metrics["w_pbrs_climb"]) > 0.0, "Φ above baseline must pay +"
+    s_dn = s.replace(info={**s.info, "last_phi": s.info["last_phi"] + 0.05})
+    s_dn = e.step(s_dn, jp.zeros(e.action_size))
+    assert float(s_dn.metrics["w_pbrs_climb"]) < 0.0, "retreat must pay − (signed, never clipped)"
+
+
+def test_pbrs_telescopes():
+    # structural farm-proof: Σ per-step deltas == w_pbrs·(Φ_N − Φ_0), any path
+    e = _stair_env(1.0)
+    s = e.reset(jax.random.PRNGKey(3))
+    phi0 = float(s.info["last_phi"])
+    tot = 0.0
+    for _ in range(5):
+        s = e.step(s, jp.zeros(e.action_size))
+        tot += float(s.metrics["w_pbrs_climb"])
+    assert abs(tot - 30.0 * (float(s.info["last_phi"]) - phi0)) < 1e-4, tot
+
+
+def test_spawn_feet_fit_min_pad():
+    # spawn stance must fit the tightest pad (STAIR_PAD_MIN cells = 15 cm) with 2 cm
+    # margin, else the joint curriculum spawns feet onto risers. If this FAILS:
+    # escalate to the controller — the fix is STAIR_PAD_MIN = 4, a spec change.
+    from terrain import STAIR_PAD_MIN
+    e = NovaJoystick(heightmap=True)
+    s = e.reset(jax.random.PRNGKey(0))
+    foot_x = np.asarray(s.pipeline_state.x.pos[np.asarray(e._foot_ids), 0])
+    assert foot_x.max() < STAIR_PAD_MIN * 0.05 - 0.02, foot_x
+
+
+def test_gz_max_metric_tracks_engagement():
+    # gz_max telescopes to the running peak of max(ground_z): flat env -> 0
+    e = NovaJoystick(heightmap=True)
+    s = _step_settle(e, 1, n=3)
+    assert abs(float(s.metrics["gz_max"])) < 1e-6
+    # stair env, feet in the flat pad -> still 0 (not reaching == 0, the v1 blind spot)
+    e2 = _stair_env(1.0)
+    s2 = _step_settle(e2, 2, n=3)
+    assert abs(float(s2.metrics["gz_max"])) < 1e-6
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):
