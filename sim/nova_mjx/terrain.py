@@ -40,7 +40,12 @@ STEP_M = 0.05
 # to be climbable (blind can't see the step edge coming).
 STAIR_RISE = 0.08          # m per step at level 1 (brackets the ~8-12cm expected max)
 STAIR_RUN_CELLS = 4        # tread depth in cells (4 = 20cm @ 5cm cells)
-STAIR_PAD_MIN = 3          # stair-env pad floor (cells) at level 0 — joint pad+riser curriculum
+STAIR_PAD_MIN = 4          # stair-env pad floor (cells) at level 0 — joint pad+riser curriculum
+# 3->4 (2026-07-22): the MEASURED spawn stance reaches +0.166 m in +x (front foot), so a
+# 3-cell (15 cm) tightest pad minus the 2 cm fit margin (0.13 m) spawns feet onto risers.
+# A 4-cell (20 cm) floor clears the front foot with ~14 mm margin (0.18 m threshold vs
+# 0.166 m). Lerp is now 4 + (FLAT_R-4)*level = 4 + 8*level, still == FLAT_R (12) exactly
+# at level 1.0, so the level-1 stair geometry (T1e) is unchanged.
 # curriculum knob: per-env difficulty is sampled in [0, TERRAIN_MAX].
 # STAGE 1 = FLAT (0.0) to get basic forward walking — this is what the reference
 # MuJoCo Playground Go1 JoystickFlatTerrain env trains on, and every legged-RL
