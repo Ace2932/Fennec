@@ -2,11 +2,11 @@
 
 > **Fennec** is an autonomous quadruped I'm building on the [NovaSM3](https://github.com/cguweb-com/Arduino-Projects/tree/main/Nova-SM3) platform (by Chris Locke / [novaspotmicro.com](https://novaspotmicro.com/)) — rebuilt around a unified Feetech STS3215 TTL servo bus, NVIDIA Jetson Orin Nano Super compute, and ROS 2 Humble, as a platform for Vision-Language-Action (VLA) model deployment, 3D SLAM, and autonomous mobile manipulation.
 
-**Status:** 🔧 Phase 1 — hardware bring-up. Firmware critical-path green. PCB split into 2 boards: **logic board fab-ready** (routed, DRC/ERC clean); **power board** has the Phase-4 arm rail added (J14 + arm INA226 U12 + EN re-gate, F8'd) and needs placement+routing of those parts. URDF (`nova_description`) + Phase-2 leg IK/gait (`nova_locomotion`) scaffolded. **See [`STATUS.md`](./STATUS.md) for the live blockers / next-actions board.**
+**Status:** 🔧 Phase 1 — hardware bring-up + sim training. **Both PCBs ordered 2026-07-01 (JLCPCB)** — power board v2 (Pattern B bus master, INA226 rail telemetry, Phase-4 arm rail provisioned) + logic board. Firmware critical-path green (safety FSM, watchdogs, servo limits, joint-map loader; rostest suites in CI). Legs (**leg_v6**) printing; chassis-integration + CAD fit-gate audits closed; measured leg geometry → URDF + IK green. **🎉 RL locomotion walks in sim** (MuJoCo MJX + Brax PPO, 2026-07-16) — stair-climb curriculum in progress. **See [`STATUS.md`](./STATUS.md) for the live blockers / next-actions board.**
 **Platform:** Quadruped (12 DOF) — arm (6-DOF, Phase 4 future) on shelf
 **Compute:** NVIDIA Jetson Orin Nano Super 8GB
 **Middleware:** ROS 2 Humble
-**Last updated:** June 6, 2026 (BOM v3.4)
+**Last updated:** July 22, 2026
 
 ---
 
@@ -45,6 +45,7 @@ The arm is carried over from a prior SO-ARM101 build, also Feetech-based. **v1 b
 
 - ✅ Unified TTL servo bus across locomotion (12 servos v1; future-ready for 18 with arm)
 - 🔧 ROS 2 locomotion via micro-ROS bridge to Teensy 4.1 (Teensy owns the Feetech bus in Pattern B; FE-URT-1 retained as bench fallback)
+- 🔧 RL locomotion policy trained in simulation (`sim/nova_mjx`, MuJoCo MJX + Brax PPO) — ✅ walks in sim (2026-07-16); terrain curriculum + stair climbing + sim2real transfer in progress
 - 📋 3D SLAM using LiDAR + visual-inertial fusion (POINT-LIO baseline, RTAB-Map comparison)
 - 📋 Autonomous navigation (Nav2) on legged platform with stair climbing
 - 📋 VLA fine-tuning and deployment for mobile manipulation tasks
@@ -214,6 +215,7 @@ If (1) misses → debug Teensy firmware (DMA vs ISR, UART config). If (2) misses
 | robot_localization | EKF sensor fusion | 📋 Phase 2 |
 | micro-ROS (Teensy) | Embedded ROS 2 | 📋 Phase 2 |
 | SCServo SDK (Teensy port) | Feetech bus driver running on Teensy in Pattern B | ⚠️ Already familiar from SO-ARM101 — port to TeensyDuino in Phase 1 |
+| MJX/Brax sim (`sim/nova_mjx`) | RL locomotion training — MuJoCo MJX physics, Brax PPO, procedural terrain curriculum (rough / steps / stairs), domain randomization | 🔧 Walks in sim (flat trot, 2026-07-16); stair-climb curriculum active |
 
 ---
 
@@ -366,6 +368,11 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] Stand / sit test on hardware (no walk yet)
 
 ### Phase 2 — Locomotion (weeks 5-8)
+
+> Two parallel tracks: the classical IK/gait stack below, and an **RL policy trained in
+> simulation** (`sim/nova_mjx` — MuJoCo MJX + Brax PPO, procedural terrain curriculum,
+> domain randomization bracketing measured servo behavior). The RL track walks in sim as
+> of 2026-07-16; its deployment path is ONNX/TFLite-class policy export to the Jetson.
 
 - [ ] Implement 3-DOF-per-leg IK solver (reference mogar/spot_micro)
 - [ ] 8-phase walk gait controller on Jetson — publishes `/joint_commands` to Teensy via micro-ROS
@@ -521,8 +528,16 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-24 | **Forward-looking feature notes committed** (PR #1, merge `8cb8b1e`): [`docs/notes-qol-features.md`](./docs/notes-qol-features.md) (preflight check, always-on MCAP dashcam with incident freeze, per-joint safety envelope, `nova bringup` launcher with profiles, `make deploy` for Teensy, bag replay harness, telemetry → CSV/Grafana, RGB status LED, battery SoC widget, Gazebo digital twin) and [`docs/notes-virtual-view-autocal.md`](./docs/notes-virtual-view-autocal.md) (Foxglove bridge over Tailscale, IMU bias zero on boot, servo zero-position auto-detect, camera/LiDAR/IMU extrinsic auto-cal). Notes only — opportunistic pickup during Phase 1/2 idle time. New packages proposed: `nova_ops` + `nova_calibration`. |
 | 2026-05-26 | **Leg CAD done — V5 OpenSCAD original-shell-carve** ([`hardware/cad/leg_v5/`](./hardware/cad/leg_v5/README.md)). Reuses the original NovaSM3 STLs and carves an STS3215 cavity inside via boolean `difference()` — keeps the original shape, resizes the servo pocket. 9 STLs (shoulder + coax_L/R + femur_shell_L/R + femur_cover_L/R + tibia_L/R); femur prints as shell+cover sharing one cavity; tibia passive. Beat the from-scratch OnShape (V4) + CadQuery (V3.1) brackets → those archived. Pending: first-article print (coax X-bbox tight). |
 | 2026-05-30 | **CAD docs reorganized:** V2/V3/V4 leg attempts moved to `hardware/cad/archive/`; `hardware/cad/README.md` + `docs/cad-tooling.md` reframed to the three-track model (V5 OpenSCAD = leg links, CadQuery = utility, OnShape = chassis). |
+| 2026-06 | Cross-domain **system audit** (firmware / PCB / software / docs alignment) opened; PCB v6 split into power + logic boards, layout + DRC iterations. Leg CAD moved to **leg_v6** (Onshape, STS3215-exact reference frame, load-path + fit-gate doctrine). |
+| 2026-07-01 | **Both PCBs ordered via JLCPCB** (~$203 all-in): power board v2 (Pattern B bus master, 74HC125 driver, INA226 rail telemetry, Phase-4 arm rail provisioned) + logic board. v7 backlog captured. |
+| 2026-07-06 | **System audit fully closed:** servo firmware-limits lane, limp mode, watchdogs, joint-map loader. rostest suites (firmware limits, watchdog, joint-map, liveness, locomotion) wired into CI. |
+| 2026-07-10 | **leg_v6 caliper session:** 25T horn disc-to-disc measured 35.5 mm, yoke fixed, servo insertion proven; battery mount redesigned (top-flange); chassis-integration audit closed. Measured femur 106.9 / tibia 129.0 mm → URDF + IK green. |
+| 2026-07-13 | **CAD fit-gate audit closed:** every leg + chassis screw joint gated on both sides (bolted-joint gate pattern — probe STL first, solid-ring guard, blind-pocket proof, negative control). Legs printing. |
+| 2026-07-16 | 🎉 **First walk — in simulation.** RL policy (MuJoCo MJX + Brax PPO, proprioceptive obs) trots on flat ground in `sim/nova_mjx`. Curriculum + DR bracket measured servo behavior (2.8 rad/s joint cap, ~75 ms latency). |
+| 2026-07-20 | **Terrain-relative reward rework** (#129/#130): resume-safe curriculum accounting; collision-exact terrain height under each foot — done/height/contact all terrain-relative, flat behavior bit-identical. |
+| 2026-07-21 | **Climb objective** (#131) + unidirectional staircases: privileged-heightmap teacher policy, signed non-farmable ascent reward. Project renamed **Fennec**. Stair-climb bootstrap iteration continues (climb-v2: PBRS approach density + joint pad curriculum). |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |
-| TBD | First successful walk gait |
+| TBD | First successful walk gait — on hardware |
 
 ---
 
