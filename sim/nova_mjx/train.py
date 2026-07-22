@@ -29,7 +29,8 @@ from etils import epath
 from brax.training.agents.ppo import networks as ppo_networks
 from brax.training.agents.ppo import train as ppo
 
-from env import NovaJoystick, make_domain_randomize
+from env import (NovaJoystick, make_domain_randomize, W_PBRS,
+                 PBRS_LOOKAHEAD)
 # stdlib-only helpers (importable without JAX, so they're unit-tested on a
 # laptop — see test_resume_budget.py). Re-exported here: callers that already
 # do `from train import find_latest_checkpoint` keep working.
@@ -39,7 +40,7 @@ from ckpt_utils import (EvalMetricsCsv, atomic_write, checkpoint_named,
 
 
 def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0,
-                      w_climb=40.0):
+                      w_climb=40.0, w_pbrs=W_PBRS):
     """Print WHAT is about to be trained, before a single GPU-hour burns.
 
     A 60M-step run was once launched against a stale checkout: Colab's `git clone`
@@ -87,6 +88,7 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
     _beta = float(getattr(env, "_beta_climb", 0.0))
     print(f"  climb density: beta_climb {_beta:.1f} (PBRS signed Δ mean ground_z; "
           f"{'OFF — min-only' if _beta == 0.0 else 'ON — density aid'})")
+    print(f"  approach Φ   : w_pbrs {w_pbrs:g} (PBRS lookahead {PBRS_LOOKAHEAD} m — climb-v2)")
     if getattr(env, "_heightmap", False):
         import env as _e
         print(f"  HEIGHT MAP   : ON — obs +{_e.HM_N**2} ({_e.HM_N}x{_e.HM_N} grid, +-{_e.HM_EXTENT}m) "
@@ -208,7 +210,8 @@ def diagnostics(metrics):
     return (f"    fwd {m('fwd_speed')/L:5.2f}  prog {m('w_progress')/L:+6.2f}  "
             f"clear {m('w_clearance')/L:+6.2f}  hgt {m('w_height')/L:+6.3f}  "
             f"z {m('w_z')/L:+6.3f}  climb {m('climb'):+5.2f}/{m('climb_max'):.2f}  "
-            f"wclimb {m('w_climb')/L:+.3f}  "
+            f"wclimb {m('w_climb')/L:+.4f}  wpbrs {m('w_pbrs_climb')/L:+.4f}  "
+            f"gzmax {m('gz_max'):.3f}  "
             f"swing {m('swing_h_per_step'):4.2f}  ghost {ghost/L:4.2f}  "
             f"airT " + "/".join(f"{a/L:.2f}" for a in airT) + f"  len {L:.0f}")
 
@@ -379,6 +382,9 @@ def main():
     ap.add_argument("--beta-climb", type=float, default=0.0,
                     help="PBRS climb-density weight (signed Δ mean ground_z; policy-invariant; "
                          "0=off; flip on if the min-only climb reward doesn't bootstrap by ~5M)")
+    ap.add_argument("--w-pbrs", type=float, default=W_PBRS,
+                    help="approach-density PBRS weight (Φ lookahead; 0 disables; default env "
+                         "W_PBRS). keep <=60: the reward-clip ceiling is not w_pbrs-aware")
     ap.add_argument("--curriculum", action="store_true",
                     help="AUTO-RAMP terrain difficulty in stages within one run. Brax "
                          "bakes per-env terrain at env build, so this CHAINS N stages, "
@@ -410,10 +416,11 @@ def main():
     args = ap.parse_args()
 
     env = NovaJoystick(cmd_stage=args.cmd_stage, heightmap=args.heightmap,
-                       w_climb=args.w_climb, beta_climb=args.beta_climb)
+                       w_climb=args.w_climb, beta_climb=args.beta_climb,
+                       w_pbrs=args.w_pbrs)
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
     print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac,
-                      args.flat_frac, args.w_climb)
+                      args.flat_frac, args.w_climb, args.w_pbrs)
     if jax.default_backend() == "cpu" and not args.allow_cpu:
         raise SystemExit(
             "✗ JAX is on CPU — real training would take days, not minutes.\n"

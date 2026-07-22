@@ -7,7 +7,7 @@ into uneven terrain. Smooth rough (slopes/bumps) + optional DISCRETE STEPS
 (quantized terraces — tier-1 curb/step robustness, still BLIND). Foot-precise
 real STAIRCASES need the LiDAR height-map perception in the obs (Phase 3), not
 just this — see [[project-sim-roadmap-perception-nav]]. Stair-env approach pad is
-level-lerped (STAIR_PAD_MIN=3 cells at level 0 -> FLAT_R at level 1.0), so easy
+level-lerped (STAIR_PAD_MIN=4 cells at level 0 -> FLAT_R at level 1.0), so easy
 envs put the first riser right at the robot's feet.
 
 Keep TN / TZ in sync with build_mjcf.py.

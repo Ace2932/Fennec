@@ -91,6 +91,7 @@ def _install_stubs():
     env = types.ModuleType("env")
     env.FOOT_RADIUS, env.CONTACT_EPS, env.FOOT_TARGET_Z = 0.014, 0.001, 0.05
     env.HM_N, env.HM_EXTENT = 11, 0.4
+    env.W_PBRS, env.PBRS_LOOKAHEAD = 30.0, (0.15, 0.25, 0.35)
 
     class NovaJoystick:
         _cmd_lo, _cmd_hi, _cmd_stage = (-0.15, -0.15, -0.5), (0.35, 0.15, 0.5), 2
