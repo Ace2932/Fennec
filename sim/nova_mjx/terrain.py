@@ -6,7 +6,9 @@ foundation. Each parallel env gets its own terrain via env.domain_randomize.
 into uneven terrain. Smooth rough (slopes/bumps) + optional DISCRETE STEPS
 (quantized terraces — tier-1 curb/step robustness, still BLIND). Foot-precise
 real STAIRCASES need the LiDAR height-map perception in the obs (Phase 3), not
-just this — see [[project-sim-roadmap-perception-nav]].
+just this — see [[project-sim-roadmap-perception-nav]]. Stair-env approach pad is
+level-lerped (STAIR_PAD_MIN=3 cells at level 0 -> FLAT_R at level 1.0), so easy
+envs put the first riser right at the robot's feet.
 
 Keep TN / TZ in sync with build_mjcf.py.
 """
@@ -38,6 +40,7 @@ STEP_M = 0.05
 # to be climbable (blind can't see the step edge coming).
 STAIR_RISE = 0.08          # m per step at level 1 (brackets the ~8-12cm expected max)
 STAIR_RUN_CELLS = 4        # tread depth in cells (4 = 20cm @ 5cm cells)
+STAIR_PAD_MIN = 3          # stair-env pad floor (cells) at level 0 — joint pad+riser curriculum
 # curriculum knob: per-env difficulty is sampled in [0, TERRAIN_MAX].
 # STAGE 1 = FLAT (0.0) to get basic forward walking — this is what the reference
 # MuJoCo Playground Go1 JoystickFlatTerrain env trains on, and every legged-RL
@@ -91,7 +94,15 @@ def terrain_field(rng, level, step_frac=0.0, stair_frac=0.0, n=TN):
     # every direction, which let a velocity-commanded policy orbit a flat
     # constant-radius contour and never climb — see the 2026-07-21 design.)
     d = xx - c                                             # signed +x distance (cells) from center
-    step_idx = jp.floor(jp.clip((d - FLAT_R) / STAIR_RUN_CELLS, 0.0, None))
+    # JOINT pad+riser curriculum (2026-07-22): the stair approach pad SHRINKS with
+    # level — flat_r_stair = STAIR_PAD_MIN + (FLAT_R - STAIR_PAD_MIN)*level — so
+    # low-level envs (which per-env U[0, tmax] sampling ALWAYS provides) put tiny
+    # risers ~15-20 cm from spawn: a first climb the flat gait can discover by
+    # walking forward, with the PBRS lookahead (env.W_PBRS) live from step 0.
+    # Hits FLAT_R exactly at level 1.0 -> top-difficulty geometry unchanged.
+    # Stair branch ONLY; rough/step/flat keep the FLAT_R pad.
+    flat_r_stair = STAIR_PAD_MIN + (FLAT_R - STAIR_PAD_MIN) * level
+    step_idx = jp.floor(jp.clip((d - flat_r_stair) / STAIR_RUN_CELLS, 0.0, None))
     stair_m = step_idx * (STAIR_RISE * level)
     is_stair = jax.random.uniform(kstair, ()) < stair_frac
     height_m = jp.where(is_stair, stair_m, height_m)

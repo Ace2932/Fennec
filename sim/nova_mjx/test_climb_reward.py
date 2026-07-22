@@ -181,6 +181,33 @@ def test_clip_scales_with_w_climb():
     assert r <= 10.0 + 100.0 * 0.08 + 1e-3, ("clip must still bound at 10+w_climb·0.08", r)
 
 
+def test_T1d_pad_shrinks_with_level():
+    # low-level stair envs put the first riser ~STAIR_PAD_MIN cells out, not FLAT_R
+    from terrain import STAIR_PAD_MIN
+    f = _stair_field(0.125)
+    c = (TN - 1) // 2
+    row = f[c]
+    pad = STAIR_PAD_MIN + (FLAT_R - STAIR_PAD_MIN) * 0.125          # 4.125 cells
+    assert np.allclose(row[: c + int(np.floor(pad))], 0.0, atol=1e-6), "flat inside the lerped pad"
+    assert row[c + int(np.ceil(pad)) + STAIR_RUN_CELLS + 1] > 1e-4, \
+        "must rise just past the SHORT pad (long before FLAT_R)"
+
+
+def test_T1e_level1_geometry_unchanged():
+    # flat_r_stair(1.0) == FLAT_R -> level-1 stair field identical to pre-change formula
+    f = _stair_field(1.0)
+    # terrain.py centers on the true (even-N) grid center (n-1)/2.0 = 49.5, not the
+    # integer cell 49; the reference must use the SAME center or it shears by one
+    # column at the stair transition (the invariant is about the geometry, not the
+    # rounding of the center). All other T1 tests slice loosely so 49 suffices there.
+    c = (TN - 1) / 2.0
+    yy, xx = np.mgrid[0:TN, 0:TN]
+    d = xx - c
+    step_idx = np.floor(np.clip((d - FLAT_R) / STAIR_RUN_CELLS, 0.0, None))
+    ref = np.clip(step_idx * STAIR_RISE / TZ, 0.0, 1.0)
+    assert np.allclose(f, ref, atol=1e-6), "level-1.0 stair geometry must be unchanged"
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):
