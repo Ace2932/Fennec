@@ -46,14 +46,20 @@ info seeded at reset (rebase — no cross-episode delta).
 
 ### 2. Joint pad+riser curriculum (terrain.py)
 
-`flat_r_stair = STAIR_PAD_MIN + (FLAT_R − STAIR_PAD_MIN)·level`, `STAIR_PAD_MIN = 3` cells.
-Stair branch only; rough/step/flat keep `FLAT_R = 12`.
+`flat_r_stair = STAIR_PAD_MIN + (FLAT_R − STAIR_PAD_MIN)·level`, `STAIR_PAD_MIN = 4` cells
+(**amended from 3, 2026-07-22**: measured spawn stance — front foot 0.166 m — exceeds a
+15 cm pad; 20 cm clears with ~14 mm margin). Stair branch only; rough/step/flat keep
+`FLAT_R = 12`.
 
-- Low-level envs (always present via U[0,tmax]) get tiny risers ~15-20 cm from spawn — a
-  first climb the flat gait's 2 cm swing can discover by walking forward. Lookahead Φ > 0
-  **at spawn** there (0.35 m > pad) — density from step 0.
+- Low-level envs (always present via U[0,tmax]) get tiny risers ~25-45 cm from spawn — a
+  first climb the flat gait's 2 cm swing can discover by walking forward.
+- **Amended (2026-07-22, implementer geometry catch):** spawn Φ is 0 at every level — the
+  first `STAIR_RUN_CELLS` past the pad are a ground-level tread (`step_idx = 0`), so the
+  first ELEVATED cell sits ≥0.4 m out, beyond the 0.35 m lookahead. The requirement is
+  gradient-WITHIN-REACH, not gradient-at-step-0: after ~0.2 m of commanded forward walking
+  the lookahead sweeps onto risers and PBRS goes live. Lookahead/obs window unchanged.
 - `flat_r_stair(1.0) = FLAT_R` exactly → **top-difficulty geometry unchanged**.
-- Spawn-fit gate (TDD): stance must fit the 3-cell pad with margin; if not, STAIR_PAD_MIN→4.
+- Spawn-fit gate (TDD): stance must fit the STAIR_PAD_MIN pad with 2 cm margin.
 
 ### 3. Observability (env.py + train.py) — never fly blind again
 
@@ -77,6 +83,7 @@ unaffected; resumes from the flat graft as before.
 - Flat no-op: `w_pbrs_climb ≡ 0` on flat env with w_pbrs ON (exact).
 - Telescope: Σ per-step `w_pbrs_climb` == `w_pbrs·(Φ_N − Φ_0)` (structural, ~1e-4).
 - Level-1.0 stair field bit-identical to pre-change formula.
-- Spawn Φ > 0 on a level-0.125 stair env (density live from step 0).
+- Φ > 0 on a level-0.125 stair env after a 0.2 m forward advance (density within one
+  second of walking; spawn Φ = 0 by geometry — see amendment above).
 - Run success bar (Colab, later): `gzmax` lifts off 0 within stage 1 (reaching), then
   `wclimb` > 0 sustained (climbing). Judged at 4-decimal precision, stage-matched rollouts.

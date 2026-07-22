@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Run tests from `proj/sim/nova_mjx/`: `JAX_PLATFORMS=cpu ../../.venv/bin/python test_climb_reward.py` (and the other suite files in Task 3).
-- `STAIR_PAD_MIN = 3` (cells); `flat_r_stair = STAIR_PAD_MIN + (FLAT_R - STAIR_PAD_MIN) * level`; MUST equal `FLAT_R` (12) exactly at level 1.0.
+- `STAIR_PAD_MIN = 4` (cells — amended from 3 on 2026-07-22: measured spawn stance 0.166 m exceeds a 15 cm pad); `flat_r_stair = STAIR_PAD_MIN + (FLAT_R - STAIR_PAD_MIN) * level`; MUST equal `FLAT_R` (12) exactly at level 1.0.
 - `W_PBRS = 30.0` default ON; `PBRS_LOOKAHEAD = (0.15, 0.25, 0.35)` m — all inside the ±0.4 m heightmap obs window. Never change these without spec change.
 - PBRS delta is SIGNED and NEVER clipped ≥0. γ=1 delta form (matches `beta_climb`).
 - Flat no-op is sacred: on an all-zero hfield every new term must be exactly 0.
@@ -135,11 +135,12 @@ def test_pbrs_reset_seeds_last_phi():
 
 
 def test_pbrs_spawn_phi_positive_on_low_level():
-    # THE v2 bootstrap claim: at level 0.125 the pad (~20 cm) is shorter than the
-    # 0.35 m lookahead, so Φ > 0 AT SPAWN — approach density live from step 0.
-    e = _stair_env(0.125)
-    s = e.reset(jax.random.PRNGKey(4))
-    assert float(s.info["last_phi"]) > 0.0, s.info["last_phi"]
+    # SUPERSEDED 2026-07-22 (implementer geometry catch): the first STAIR_RUN_CELLS
+    # past the pad are a GROUND-LEVEL tread (step_idx=0), so the first elevated cell
+    # is ≥0.4 m from spawn at every level — spawn Φ is 0. Replaced during execution
+    # by test_pbrs_phi_positive_within_short_advance (Φ > 0 after a 0.2 m forward
+    # advance — gradient within reach, not at step 0). See task-2 report.
+    ...
 
 
 def test_pbrs_signed():
