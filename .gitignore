@@ -124,3 +124,6 @@ graphify-out/
 
 # SDD controller scratch (subagent-driven-development ledger) — not repo content
 .superpowers/
+
+# stderr-redirect scratch files from sim training/eval runs
+sim/nova_mjx/*.err

@@ -185,6 +185,9 @@ def test_T1d_pad_shrinks_with_level():
     # low-level stair envs put the first riser ~STAIR_PAD_MIN cells out, not FLAT_R
     from terrain import STAIR_PAD_MIN
     f = _stair_field(0.125)
+    # rows are y and the stairs are y-invariant, so any int row index is valid;
+    # the x-boundaries below slice loosely (floor/ceil around the pad) which
+    # absorbs the 0.5-cell offset vs terrain's float center 49.5 (see T1e).
     c = (TN - 1) // 2
     row = f[c]
     pad = STAIR_PAD_MIN + (FLAT_R - STAIR_PAD_MIN) * 0.125          # 4.125 cells
@@ -284,6 +287,21 @@ def test_gz_max_metric_tracks_engagement():
     e2 = _stair_env(1.0)
     s2 = _step_settle(e2, 2, n=3)
     assert abs(float(s2.metrics["gz_max"])) < 1e-6
+
+
+def test_gz_max_positive_when_foot_on_riser():
+    # the REACHING half of the engagement split: advance the base far enough
+    # in +x that at least one foot stands on elevated stairs -> the running
+    # peak of max(ground_z) rises -> the gz_max (peak-delta) metric pays > 0
+    # on the first step. Level 1.0: pad 12 cells (0.60 m) + 4-cell tread ->
+    # first elevated cell ~0.80 m; front foot sits ~0.17 m ahead of base, so
+    # advancing the base 0.75 m puts the front feet past 0.9 m — on risers.
+    e = _stair_env(1.0)
+    s = e.reset(jax.random.PRNGKey(6))
+    q = s.pipeline_state.q.at[0].add(0.75)
+    ps = e.pipeline_init(q, s.pipeline_state.qd)
+    s2 = e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
+    assert float(s2.metrics["gz_max"]) > 0.0, s2.metrics["gz_max"]
 
 
 if __name__ == "__main__":
