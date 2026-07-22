@@ -68,7 +68,7 @@ The arm is carried over from a prior SO-ARM101 build, also Feetech-based. **v1 b
 | Print materials | PLA / PETG | PA6-CF (structural) / PETG-CF (secondary) / TPU 95A (foot pads + strain relief) |
 | Print feed | Direct from spool | **Creality SpacePi X4 dryer → 4 mm PTFE Bowden → P1S** (AMS HF bypassed for PA6-CF — re-absorbs moisture in AMS chamber, defeats pre-drying) |
 
-### Why we're redesigning the PCB (v5.2b → v6)
+### Why redesign the PCB (v5.2b → v6)
 
 After the v3.2 architecture audit, the stock Nova PCB v5.2b can't host the upgraded power tree (Pololu modules, INA226 telemetry, hard-cutoff MOSFET, E-stop chain) or the Pattern A/B bus master selector. The redesign retains the spirit of the stock board (Arduino Nano aux slot, battery input geometry) and adds the new safety + power architecture. Full feature set in [`hardware/pcb-mods/README.md`](./hardware/pcb-mods/README.md).
 
