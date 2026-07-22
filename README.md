@@ -1,6 +1,6 @@
-# NovaSM3 — Modified Quadruped Robot with VLA Integration
+# Fennec — Autonomous Quadruped
 
-> A modified [NovaSM3](https://github.com/cguweb-com/Arduino-Projects/tree/main/Nova-SM3) quadruped platform (by Chris Locke / [novaspotmicro.com](https://novaspotmicro.com/)) rebuilt around a unified Feetech STS3215 TTL servo bus, NVIDIA Jetson Orin Nano Super compute, and ROS 2 Humble — designed as a platform for Vision-Language-Action (VLA) model deployment, 3D SLAM, and autonomous mobile manipulation.
+> **Fennec** is an autonomous quadruped I'm building on the [NovaSM3](https://github.com/cguweb-com/Arduino-Projects/tree/main/Nova-SM3) platform (by Chris Locke / [novaspotmicro.com](https://novaspotmicro.com/)) — rebuilt around a unified Feetech STS3215 TTL servo bus, NVIDIA Jetson Orin Nano Super compute, and ROS 2 Humble, as a platform for Vision-Language-Action (VLA) model deployment, 3D SLAM, and autonomous mobile manipulation.
 
 **Status:** 🔧 Phase 1 — hardware bring-up. Firmware critical-path green. PCB split into 2 boards: **logic board fab-ready** (routed, DRC/ERC clean); **power board** has the Phase-4 arm rail added (J14 + arm INA226 U12 + EN re-gate, F8'd) and needs placement+routing of those parts. URDF (`nova_description`) + Phase-2 leg IK/gait (`nova_locomotion`) scaffolded. **See [`STATUS.md`](./STATUS.md) for the live blockers / next-actions board.**
 **Platform:** Quadruped (12 DOF) — arm (6-DOF, Phase 4 future) on shelf
