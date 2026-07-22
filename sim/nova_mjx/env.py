@@ -111,13 +111,30 @@ W_CLIMB = 40.0   # climb-reward weight (signed Δ min terrain-height-under-foot)
 # 4.8/episode, ~0.2% of return), non-farmable. truly-flat flat_frac envs stay 0.
 # If it distorts the rough-terrain gait, gate it on is_stair (the deferred flag).
 
+W_PBRS = 30.0
+# Approach-density weight (signed Δ of the lookahead potential Φ). Φ = mean
+# terrain height at PBRS_LOOKAHEAD points ahead of the base along the body +x
+# heading. PBRS: the per-step delta telescopes to Φ(end) − Φ(start), so ANY
+# cycle (heading wiggle, advance-retreat) nets exactly 0 — non-farmable by
+# construction, the provable form of "positive shaper" (precedent: beta_climb).
+# Pays for TURNING TOWARD + CLOSING ON rising terrain BEFORE any foot touches
+# it — the pad-crossing gradient climb-v1 lacked (frames 2026-07-22: robot
+# wandered the flat beside the stairs; min/mean ground_z are 0 until a foot is
+# ON a riser, so nothing paid for approach). 0 on flat (Φ ≡ 0). All lookahead
+# points sit inside the ±0.4 m heightmap obs window: the policy SEES what the
+# reward reads. On rough envs Φ > 0 exists (bumps ahead) — telescoping bounds
+# the episode net to ~0; accepted, same scope note as the ungated climb term.
+PBRS_LOOKAHEAD = (0.15, 0.25, 0.35)      # m ahead of base, body-frame +x
+
 
 class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
-                 cmd_stage=2, heightmap=False, w_climb=W_CLIMB, beta_climb=0.0, **kwargs):
+                 cmd_stage=2, heightmap=False, w_climb=W_CLIMB, beta_climb=0.0,
+                 w_pbrs=W_PBRS, **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
+        self._w_pbrs = float(w_pbrs)     # approach-density weight; --w-pbrs (0=off)
         path = epath.Path(__file__).parent / xml
         mj = mujoco.MjModel.from_xml_path(str(path))
         sys = mjcf.load_model(mj)
@@ -222,6 +239,18 @@ class NovaJoystick(PipelineEnv):
             "last_mean_gz": jp.mean(self._terrain_ground_z(
                 pipeline_state.x.pos[self._foot_ids, 0],
                 pipeline_state.x.pos[self._foot_ids, 1])),
+            # PBRS lookahead baseline (--w-pbrs): the approach potential Φ (mean
+            # terrain height at PBRS_LOOKAHEAD points ahead of the base) at spawn.
+            # The reward pays w_pbrs·(Φ_now − last_phi) each step (signed), which
+            # telescopes to Φ(end) − Φ(start). Seeded so the first step's Δ is ~0.
+            "last_phi": self._lookahead_phi(pipeline_state),
+            # engagement peak baseline: MAX terrain-height-under-foot at spawn (same
+            # feet as last_min_gz, jp.max instead of jp.min). gz_max emits the
+            # per-step Δ of the running peak, telescoping to (episode peak − spawn) —
+            # 0 while feet never leave the flat pad (the v1 not-reaching blind spot).
+            "gz_peak": jp.max(self._terrain_ground_z(
+                pipeline_state.x.pos[self._foot_ids, 0],
+                pipeline_state.x.pos[self._foot_ids, 1])),
         }
         frame = self._prop_frame(pipeline_state, info, ko)
         info["prop_hist"] = jp.tile(frame, (HIST, 1))     # fill history with frame 0
@@ -256,6 +285,12 @@ class NovaJoystick(PipelineEnv):
             # `swing_h_per_step` DOES carry the suffix, so brax divides it by the
             # episode length -> the logged value reads in metres per step.
             "climb", "climb_max", "swing_h_per_step",
+            # APPROACH (PBRS): w_pbrs_climb = weighted signed Δ of the lookahead
+            # potential Φ (episode sum telescopes to w_pbrs·(Φ_final − Φ_spawn));
+            # phi = raw Φ this step (engagement level, not a delta); gz_max =
+            # per-step Δ of the peak max-terrain-under-foot (sum telescopes to
+            # episode peak − spawn, 0 until a foot reaches a riser).
+            "w_pbrs_climb", "phi", "gz_max",
         )}
         return State(pipeline_state, obs, jp.zeros(()), jp.zeros(()), metrics, info)
 
@@ -327,6 +362,10 @@ class NovaJoystick(PipelineEnv):
         # one. 0 on flat (Δ0). Small beta only; the min term is the real objective.
         mean_gz = jp.mean(ground_z)
         beta_climb = self._beta_climb * (mean_gz - info["last_mean_gz"])
+        # APPROACH DENSITY (PBRS, --w-pbrs, default W_PBRS ON): signed Δ of the
+        # lookahead potential Φ (see W_PBRS above). SIGNED, never clipped ≥0.
+        phi = self._lookahead_phi(pipeline_state)
+        w_pbrs_climb = self._w_pbrs * (phi - info["last_phi"])
         # TERRAIN-RELATIVE contact — reads foot_h (height above LOCAL ground; see
         # _terrain_ground_z), not absolute world z. On the radial staircase an
         # absolute-z test read a foot PLANTED on an elevated step as airborne, so
@@ -544,7 +583,7 @@ class NovaJoystick(PipelineEnv):
         w_jerk = -0.01 * jerk
         w_stand = -5e-4 * stand
         reward = (w_track + w_yaw + w_progress + w_air + w_clearance
-                  + w_pose + 0.1 + w_climb + beta_climb
+                  + w_pose + 0.1 + w_climb + beta_climb + w_pbrs_climb
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_carry
                   + w_actrate + w_energy + w_jerk + w_stand)
@@ -615,6 +654,14 @@ class NovaJoystick(PipelineEnv):
         info["peak_base_z"] = new_peak
         info["last_min_gz"] = min_gz
         info["last_mean_gz"] = mean_gz
+        info["last_phi"] = phi
+        # ENGAGEMENT peak — mirrors climb_max: per-step Δ of the running peak of
+        # max terrain-height-under-foot, so the episode SUM telescopes to
+        # (final-peak − spawn-peak). 0 while feet stay in the flat pad (the v1
+        # not-reaching blind spot); rises only once a foot lands on a riser.
+        gz_new_peak = jp.maximum(info["gz_peak"], jp.max(ground_z))
+        gz_peak_delta = gz_new_peak - info["gz_peak"]
+        info["gz_peak"] = gz_new_peak
         # swing height: mean foot_h over the feet NOT in contact (a real swing
         # lifts; a planted foot sits at ~0). Guard the all-planted step against a
         # divide-by-zero (contributes 0). The _per_step suffix has brax divide
@@ -639,7 +686,8 @@ class NovaJoystick(PipelineEnv):
             swing_xy_speed=swing_xy_speed, move_gate=move_gate,
             fwd_speed=jp.dot(cmd_xy, lin_vel[:2]) / cmd_speed,
             climb=climb_delta, climb_max=peak_delta,
-            swing_h_per_step=n_swing_h / n_air)
+            swing_h_per_step=n_swing_h / n_air,
+            w_pbrs_climb=w_pbrs_climb, phi=phi, gz_max=gz_peak_delta)
         return state.replace(pipeline_state=pipeline_state, obs=obs,
                              reward=reward, done=done, info=info)
 
@@ -666,6 +714,17 @@ class NovaJoystick(PipelineEnv):
             jax.random.normal(k4, (12,)) * N_JVEL * 0.05,
         ])
         return frame + noise
+
+    def _lookahead_phi(self, pipeline_state):
+        """Approach potential Φ: mean terrain height at PBRS_LOOKAHEAD points
+        projected ahead of the base along the body +x heading (xy-projected,
+        normalized; degenerate only if the base is vertical, which is dead)."""
+        x = pipeline_state.x
+        fwd = math.rotate(jp.array([1.0, 0.0, 0.0]), x.rot[0])
+        hd = fwd[:2] / (jp.linalg.norm(fwd[:2]) + 1e-6)
+        d = jp.array(PBRS_LOOKAHEAD)
+        return jp.mean(self._terrain_ground_z(x.pos[0, 0] + d * hd[0],
+                                              x.pos[0, 1] + d * hd[1]))
 
     def _terrain_ground_z(self, wx, wy):
         """ABSOLUTE terrain z at world (wx, wy) matching MuJoCo's hfield COLLISION
