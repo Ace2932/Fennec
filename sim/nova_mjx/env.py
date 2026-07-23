@@ -400,9 +400,11 @@ class NovaJoystick(PipelineEnv):
         # track + progress, so the 4th is dead weight the reward was indifferent
         # to (probe after the contact/clearance fix: RR still carried 0.970,
         # PINNED at ckpt12's value — zero gradient, not slow). The clearance cost
-        # is |z - 0.05|, so a foot PARKED at the 0.05 target costs nothing; the
-        # target height just became the carry height. This makes the carry itself
-        # expensive, regardless of how cleverly it's held.
+        # is now one-sided max(target - z, 0) (target 0.07), so it charges ONLY
+        # for staying below the swing target — a foot held at ANY height >= target
+        # costs nothing there. That makes carry cost the SOLE guard against a
+        # parked-high foot: it charges the hold itself, regardless of how cleverly
+        # it's held, which the one-sided clearance no longer catches.
         #
         # A real swing tops out ~0.2-0.3s, so AIR_MAX 0.4 leaves normal stepping
         # free; only a HELD foot crosses it. Capped so one parked leg can't swamp
