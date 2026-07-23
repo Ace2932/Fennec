@@ -29,6 +29,29 @@ from etils import epath
 DEFAULT_POSE = jp.array([0.0, 0.6, -1.2] * 4)          # stand keyframe joints
 ACTION_SCALE = 0.4                                     # rad, target = default + a*scale
 STAND_HEIGHT = 0.17
+# Upright-penalty deadzone (lift-v5). tilt_sq = up_x²+up_y² = sin²θ; the penalty
+# is max(0, tilt_sq − UPRIGHT_DEADZONE), so tilts up to θ=25° cost NOTHING and
+# only excess beyond bills (quadratic-ish). sin²(25°) = 0.1786. The 15° zone was
+# insufficient for stride dynamics — the open-loop probe read w_upright −0.19 at
+# working lift because a climb stride swings pitch through ~15-25° and the old
+# deadzone taxed the whole upper band. The alive envelope [25°, 66°] is still
+# monotone (done fires at up_z<0.4 = θ>66°), and closed-loop policies stabilize
+# below what the open-loop probe wobbles to. Precedent: ANYmal-rough ZEROES the
+# orientation penalty on rough terrain — we merely SOFTEN it, keeping the tipping
+# guards (done at up_z<0.4, ang_vel_xy damping unchanged). No flag (YAGNI).
+UPRIGHT_DEADZONE = 0.179                               # sin²(25°)
+# Pose-Gaussian temperature (lift-v5). pose_rew = exp(-POSE_SHARPNESS * gated_sum).
+# Was 2.0 — a Go1-scaled coefficient that was never rescaled to Fennec's joint-
+# angle-per-lift ratio (Fennec's short legs need 2-3× the joint angle per cm of
+# lift, so at our working deviations the exp collapses and the pose term reads a
+# hard veto: probe showed w_pose −0.30, with hfe at weight 1.0 dominating even
+# after the knee deweight). This is the recurring unscaled-reference-import bug
+# class (a Go1 constant carried over without a units check). 0.5 keeps a soft
+# prior rather than deleting it. Anti-buckle duty is carried by height_pen + the
+# done floor + the hfe weight (1.0), NOT by this temperature; and legged_gym's
+# ANYmal-rough config ships NO default-pose term at all yet climbs stairs, so a
+# softened prior is well within precedent.
+POSE_SHARPNESS = 0.5
 HIST = 3                                               # proprioceptive frames stacked
 PROP = 30                                              # per-frame: gyro3+grav3+jpos12+jvel12
 # Command scale applied in the OBSERVATION (vx, vy, wz). SINGLE SOURCE OF TRUTH:
@@ -36,6 +59,13 @@ PROP = 30                                              # per-frame: gyro3+grav3+
 # reads it back FROM the .npz — so the deploy side can never drift from training
 # (this exact triple-hardcode is the drift the weight pipeline now closes).
 CMD_OBS_SCALE = jp.array([2.0, 2.0, 0.25])
+# Obs scale for the COMMANDED footswing height `c` (teacher-only, lift-v5). Mirrors
+# CMD_OBS_SCALE's role: brings c in [FOOTSWING_MIN, FOOTSWING_MAX] = [0.015, 0.06]
+# into the same ~O(1) range the scaled velocity commands occupy (c*scale in
+# [0.30, 1.20], centred like the scaled vx). SINGLE SOURCE OF TRUTH for the last
+# teacher obs dim; the blind 105-d deploy obs never carries c, so this never
+# reaches the deploy pipeline.
+CMD_C_OBS_SCALE = 20.0
 
 # observation noise (1-sigma) per group — matches real STS3215/IMU order of mag
 N_GYRO, N_GRAV, N_JPOS, N_JVEL = 0.2, 0.05, 0.02, 1.5
@@ -65,30 +95,27 @@ LEG_NAMES = ["FL", "FR", "RL", "RR"]
 FOOT_RADIUS = 0.014
 CONTACT_EPS = 1e-3
 
-# Target swing height for the feet_clearance COST. The reference (Playground Go1)
-# uses max_foot_height = 0.1, but that is GO1-SCALED: a 0.1m lift on a robot whose
-# body sits at ~0.3m. NOVA stands at STAND_HEIGHT 0.17 with a ~0.21m hip-to-foot
-# leg, so 0.1 would demand a lift of 59% of body height every stride — servo-
-# punishing and nothing like a real trot. Scaled to NOVA's geometry: 0.1 * 0.17/0.3
-# ~= 0.057, and by leg length 0.1 * 0.21/0.35 = 0.06 -> take 0.05 (a lift of ~32%
-# of the foot's 157mm vertical range).
+# COMMANDED footswing clearance target `c` (lift-v5, walk-these-ways pattern).
+# v3/v4 used a single FIXED target (FOOT_TARGET_Z 0.07); 240M steps pinned swing at
+# 0.02 because a fixed high target is a wall PPO's unstabilized exploration can't
+# scale. v5 makes the target a per-env COMMAND sampled into info["cmd_c"] and
+# OBSERVED by the teacher (obs 227), so the policy learns c->lift obedience from the
+# clearance cost everywhere and climbing develops in the (high-c x stair) niche.
+#   * TEACHER (heightmap=True): c ~ U(FOOTSWING_MIN, footswing_max), resampled
+#     alongside cmd (250-step cadence); appended as the LAST obs dim (teacher-only).
+#   * BLIND (heightmap=False): c FIXED at BLIND_FOOTSWING, UNOBSERVED — the 105-d
+#     deploy obs is byte-unchanged; behaves like the pre-v3 static-target env.
+# The clearance cost reads info["cmd_c"] directly (read-only, no telescoping state).
 #
-# ⚠ This is the class of bug that keeps biting: an imported reference constant
-# that was never rescaled to NOVA. `track`'s sigma is the other live one — 0.0625
-# was correct for a 0.5 m/s command, but 170f072 lowered commands to 0.15-0.35 and
-# never rescaled it, so a STANDING robot now scores 0.55 there (measured stand:
-# 1.357/step total). Left alone deliberately: the robot walks, so the stand basin
-# is not the active failure. Fix it when the evidence says to, not before.
-#
-# LIFT-V3 (2026-07-22): raised 0.05 -> 0.07 and the cost is now ONE-SIDED (see
-# the clearance term). climb-v2 proved engagement caps at swing height (gzmax
-# saturated == swing 0.02 for 120M steps) and 2 cm risers get climbed
-# INCIDENTALLY by a 2 cm swing — so raise the base swing and 4-6 cm risers
-# become walkable the same way. 0.07: geometry-scaled reference was 0.057-0.06,
-# and the servo envelope (2.8 rad/s x ~0.2 s swing) caps gait-speed lift at
-# ~6-7 cm — 0.07 is the reachable max; 0.08+ chases the envelope. Sweep with
-# --foot-target-z. DELIBERATE flat-gait retrain (higher-stepping trot).
-FOOT_TARGET_Z = 0.07
+# Range rationale (geometry-scaled, the class of bug that keeps biting is an
+# imported constant never rescaled to NOVA): NOVA stands at STAND_HEIGHT 0.17 with a
+# ~0.21 m leg; the servo envelope (2.8 rad/s x ~0.2 s swing) caps gait-speed lift at
+# ~6-7 cm, so FOOTSWING_MAX 0.06 is the reachable ceiling and 0.015 a shuffle floor.
+# BLIND_FOOTSWING 0.05 is the classic geometry-scaled target (0.1*0.17/0.3 ~= 0.057,
+# 0.1*0.21/0.35 = 0.06 -> 0.05).
+FOOTSWING_MIN = 0.015     # m — min commanded clearance target (shuffle floor)
+FOOTSWING_MAX = 0.06      # m — max commanded clearance target; default footswing_max
+BLIND_FOOTSWING = 0.05    # m — FIXED clearance target on the blind deploy path
 
 W_CLEARANCE = 6.0
 # Clearance-cost weight (was hardcoded -2.0). Raised 2 -> 6 with lift-v4: at 2 the
@@ -152,13 +179,13 @@ PBRS_LOOKAHEAD = (0.15, 0.25, 0.35)      # m ahead of base, body-frame +x
 class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
                  cmd_stage=2, heightmap=False, w_climb=W_CLIMB, beta_climb=0.0,
-                 w_pbrs=W_PBRS, foot_target_z=FOOT_TARGET_Z, air_max=AIR_MAX,
+                 w_pbrs=W_PBRS, footswing_max=FOOTSWING_MAX, air_max=AIR_MAX,
                  w_clearance=W_CLEARANCE, **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
         self._w_pbrs = float(w_pbrs)     # approach-density weight; --w-pbrs (0=off)
-        self._foot_target_z = float(foot_target_z)   # swing target; --foot-target-z
+        self._footswing_max = float(footswing_max)   # teacher cmd_c upper bound; --footswing-max
         self._air_max = float(air_max)             # carry-cost onset (s); --air-max
         self._w_clearance = float(w_clearance)     # clearance weight; --w-clearance
         path = epath.Path(__file__).parent / xml
@@ -232,6 +259,14 @@ class NovaJoystick(PipelineEnv):
         pipeline_state = self.pipeline_init(q, qd)
         info = {
             "rng": rng, "cmd": self.sample_command(kc),
+            # COMMANDED footswing clearance target (lift-v5). Teacher samples it
+            # per-episode (observed, obs 227); blind holds it FIXED (unobserved,
+            # obs 105 byte-unchanged). fold_in derives a fresh key from kc WITHOUT
+            # disturbing sample_command(kc), so every other spawn RNG stream stays
+            # byte-identical to pre-v5. The clearance cost reads this read-only.
+            "cmd_c": (jax.random.uniform(jax.random.fold_in(kc, 1), (),
+                                         minval=FOOTSWING_MIN, maxval=self._footswing_max)
+                      if self._heightmap else jp.asarray(BLIND_FOOTSWING)),
             "last_act": jp.zeros(self._nu), "last_act2": jp.zeros(self._nu),
             "last_ctrl": self._default_pose,   # effective servo target (deadband)
             "feet_air": jp.zeros(4),
@@ -416,7 +451,7 @@ class NovaJoystick(PipelineEnv):
         # track + progress, so the 4th is dead weight the reward was indifferent
         # to (probe after the contact/clearance fix: RR still carried 0.970,
         # PINNED at ckpt12's value — zero gradient, not slow). The clearance cost
-        # is now one-sided max(target - z, 0) (target 0.07), so it charges ONLY
+        # is now one-sided max(cmd_c - z, 0) (commanded target), so it charges ONLY
         # for staying below the swing target — a foot held at ANY height >= target
         # costs nothing there. That makes carry cost the SOLE guard against a
         # parked-high foot: it charges the hold itself, regardless of how cleverly
@@ -470,7 +505,16 @@ class NovaJoystick(PipelineEnv):
         # scores exp(-4)=0.02, near zero, vs the old exp(-8*.25)=0.14 floor.
         track = jp.exp(-jp.sum((cmd_xy - lin_vel[:2]) ** 2) / 0.0625)
         yaw_track = jp.exp(-(cmd[2] - ang_vel[2]) ** 2 / 0.0625)
-        upright = jp.sum((up - jp.array([0.0, 0.0, 1.0])) ** 2)
+        # UPRIGHT PENALTY with a DEADZONE (lift-v5). up = world-z in the body
+        # frame, so up_x²+up_y² = sin²θ (θ = tilt off vertical); up_z drops out.
+        # The old form jp.sum((up − ẑ)²) = 2(1−cosθ) ≈ θ² small-angle; the new
+        # form is sin²θ − dz ≈ θ² − dz — same small-angle units family, so the
+        # −2.5 weight line is UNCHANGED. Deadzone frees tilts ≤25° (trot wobble +
+        # climb pitch; 15° left −0.19 on the probe, widened in the fix wave)
+        # instead of taxing every degree off vertical, which was
+        # a valley wall the landscape probe measured (w_upright −0.36). Guards
+        # intact: done at up_z<0.4 and the ang_vel_xy damping still stop tipping.
+        upright = jp.maximum(0.0, up[0] ** 2 + up[1] ** 2 - UPRIGHT_DEADZONE)
         # roll/pitch angular-velocity penalty — damps the tipping motion. With
         # bigger/faster steps (feet_clearance) the robot NOSE-DIVED forward and
         # fell (rollout: fell at 1.3 s). This + a stronger upright weight give it
@@ -531,11 +575,15 @@ class NovaJoystick(PipelineEnv):
         # 2026-07-22: now one-sided — see the LIFT-V3 note at the term; the
         # both-sides framing described the pre-lift-v3 form.
         #
-        # TERRAIN-RELATIVE: the swing target is self._foot_target_z above the LOCAL
+        # TERRAIN-RELATIVE: the swing target is info["cmd_c"] above the LOCAL
         # ground (foot_h; see _terrain_ground_z), not absolute world z. Reading
         # foot_z taxed every swing by how high the terrain sat under it — up to
         # 2*ztop on a step — penalising exactly the lift needed to climb. foot_h
-        # makes the target the same foot_target_z clearance on a step as on the flat.
+        # makes the target the same cmd_c clearance on a step as on the flat.
+        # LIFT-V5 (2026-07-23): the target is COMMANDED (info["cmd_c"]) not a fixed
+        # const — teacher samples it per-env (obs 227), blind holds BLIND_FOOTSWING
+        # (0.05). Read-only here (resample happens after this in step); the deficit
+        # (cmd_c − foot_h) scales the bill, so a high c demands a higher lift.
         # LIFT-V3 ONE-SIDED (2026-07-22): punish UNDER-lift only. The two-sided
         # |foot_h - target| form was the held-foot-farm fix, but it also made
         # every above-target swing pay — a CEILING that a 6-8 cm riser stride
@@ -545,7 +593,7 @@ class NovaJoystick(PipelineEnv):
         # w_carry) bills holds directly — watch airT_*/ghost_* for a reopened
         # hold pattern. Below target this is |·|-identical, so the under-lift
         # gradient is unchanged.
-        clearance_cost = jp.sum(jp.maximum(self._foot_target_z - foot_h, 0.0)
+        clearance_cost = jp.sum(jp.maximum(info["cmd_c"] - foot_h, 0.0)
                                 * jp.sqrt(foot_xy_speed))
         # splay: the rollout showed the hips abducted WIDE. Penalize haa (hip-
         # abduction, joint idx 0,3,6,9) deviation from the default (0); the hfe/kfe
@@ -565,10 +613,19 @@ class NovaJoystick(PipelineEnv):
         # caps at exp(0), and airborne-leg antics are policed by carry/air-cap/
         # move_gate, not here. Leg rows of _leg_hk are in LEG_NAMES order
         # (FL,FR,RL,RR) — same order as `contact`/_foot_ids (verified).
+        # PER-JOINT WEIGHTS (lift-v5): hfe dev ×1.0, kfe dev ×0.1. kfe (the KNEE)
+        # flexion IS the lift dof — v4 pinned it at full weight while the
+        # reference (MuJoCo Playground Go1) de-weights the knee 10× in its pose
+        # regularizer (per-joint [haa, hfe, kfe] = [1, 1, 0.1]). Full-weight kfe
+        # regularization fought the swing lift directly. hfe stays fully
+        # regularized so the buckle-guard (front-leg collapse) is untouched;
+        # height_pen/done are also unchanged. Broadcast over the (4,2) dev BEFORE
+        # the contact gate so it only reshapes the per-joint cost, not the gate.
+        _pose_jw = jp.array([1.0, 0.1])                          # (hfe, kfe) weights
         _leg_hk = jp.array([[1, 2], [4, 5], [7, 8], [10, 11]])   # (hfe,kfe) per leg
         _dev = (pipeline_state.q[7:][_leg_hk] - self._default_pose[_leg_hk]) ** 2
-        pose_rew = jp.exp(-2.0 * jp.sum(jp.sum(_dev, axis=1)
-                                        * contact.astype(jp.float32)))
+        pose_rew = jp.exp(-POSE_SHARPNESS * jp.sum(jp.sum(_dev * _pose_jw, axis=1)
+                                                   * contact.astype(jp.float32)))
 
         # ---- REWARD ARCHITECTURE (read this before adding a term) ----
         # Twelve runs of shaping history are in git; the pattern across all of
@@ -613,7 +670,13 @@ class NovaJoystick(PipelineEnv):
         # a slow drift the tracking term is happy to ignore.
         w_yaw = 0.75 * yaw_track
         w_progress = 3.0 * progress
-        w_air = move_gate * 0.5 * air_rew
+        # w_air 0.5 → 1.0 (lift-v5). Reference stacks run feet_air_time at 1.0-2.0;
+        # an underweighted air-time reward is a documented shuffle cause (short,
+        # low steps score too little to beat the energy of a committed swing).
+        # Still landing-gated (first_contact), move-gated (cmd_moving + move_gate),
+        # and window-capped (clip air−0.2 to 0.4) — the gates that killed the
+        # ckpt12 hold-a-foot farm all stand; this only ×2's a bounded positive.
+        w_air = move_gate * 1.0 * air_rew
         # NOT gated by move_gate: gating a COST by forward speed would let the
         # robot dodge it by standing still. Ungated is also the reference's form,
         # and it needs no gate — a planted foot has ~zero xy speed, so it pays
@@ -674,6 +737,17 @@ class NovaJoystick(PipelineEnv):
         info["step"] += 1
         info["cmd"] = jp.where(info["step"] % 250 == 0,
                                self.sample_command(ka), cmd)
+        # resample the COMMANDED footswing target on the SAME 250-step cadence —
+        # TEACHER ONLY. fold_in(ka, 1) derives a fresh key without disturbing
+        # sample_command(ka), keeping the command RNG stream byte-identical. Blind
+        # holds cmd_c at BLIND_FOOTSWING (untouched here), so its stream and its
+        # 105-d obs are unchanged.
+        if self._heightmap:
+            info["cmd_c"] = jp.where(
+                info["step"] % 250 == 0,
+                jax.random.uniform(jax.random.fold_in(ka, 1), (),
+                                   minval=FOOTSWING_MIN, maxval=self._footswing_max),
+                info["cmd_c"])
         obs = self._get_obs(info, pipeline_state)
         # airborne fraction per foot — averaged over an episode, a CARRIED leg
         # reads ~1.0 while a stepping leg reads ~0.3-0.5 (its swing duty).
@@ -843,9 +917,11 @@ class NovaJoystick(PipelineEnv):
 
     def _get_obs(self, info, pipeline_state=None):
         """Full obs = HIST proprioceptive frames + command + last action
-        (= HIST*PROP + 3 + nu), plus the height-map grid (HM_N^2) LAST when the
-        teacher's heightmap is enabled. History lets the policy infer velocity/
-        contact/latency from real-only sensors."""
+        (= HIST*PROP + 3 + nu = 105), plus, when the teacher's heightmap is
+        enabled, the height-map grid (HM_N^2) then the commanded footswing height
+        `c` as the LAST dim -> 105 + 121 + 1 = 227. Blind (heightmap=False) stays
+        105 with NO c dim (deploy artifact protected). History lets the policy
+        infer velocity/contact/latency from real-only sensors."""
         parts = [
             info["prop_hist"].reshape(-1),
             info["cmd"] * CMD_OBS_SCALE,
@@ -853,6 +929,10 @@ class NovaJoystick(PipelineEnv):
         ]
         if self._heightmap:
             parts.append(self._sample_heightmap(pipeline_state))
+            # commanded footswing height, LAST dim, scaled like the cmd convention
+            # (CMD_C_OBS_SCALE). Teacher-only: the heightmap block stays contiguous
+            # and the blind obs never reaches this branch.
+            parts.append((info["cmd_c"] * CMD_C_OBS_SCALE)[None])
         return jp.concatenate(parts)
 
 
