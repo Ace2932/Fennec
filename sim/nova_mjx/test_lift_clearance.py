@@ -1,5 +1,7 @@
-"""Lift-v3: one-sided clearance cost + raised swing target. Design:
-docs/superpowers/specs/2026-07-22-lift-v3-clearance-design.md
+"""Lift-v5: COMMANDED footswing clearance target (cmd_c). The one-sided clearance
+cost's target is now info["cmd_c"] — teacher samples it (observed, obs 227), blind
+holds BLIND_FOOTSWING (unobserved, obs 105). Design:
+docs/superpowers/specs/2026-07-23-lift-v5-design.md
 
   JAX_PLATFORMS=cpu python test_lift_clearance.py
 """
@@ -7,7 +9,7 @@ import jax
 import jax.numpy as jp
 import numpy as np
 
-from env import NovaJoystick, FOOT_TARGET_Z
+from env import NovaJoystick, FOOTSWING_MIN, FOOTSWING_MAX, BLIND_FOOTSWING
 
 
 def _moving_state(e, base_lift, key=7):
@@ -22,15 +24,63 @@ def _moving_state(e, base_lift, key=7):
     return e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
 
 
-def test_default_target_is_007():
-    assert abs(FOOT_TARGET_Z - 0.07) < 1e-9
-    e = NovaJoystick()
-    assert abs(e._foot_target_z - 0.07) < 1e-9
+def _moving_state_with_c(e, base_lift, c, key=7):
+    # _moving_state + an info override of the COMMANDED target cmd_c before the
+    # step, so the clearance cost bills against `c`. (The resample fires only at
+    # step % 250 == 0; a fresh reset steps to step 1, so the override survives the
+    # step and drives the clearance term.)
+    s = e.reset(jax.random.PRNGKey(key))
+    q = s.pipeline_state.q.at[2].add(base_lift)
+    qd = s.pipeline_state.qd.at[6:].set(2.0)
+    ps = e.pipeline_init(q, qd)
+    s = s.replace(pipeline_state=ps, info={**s.info, "cmd_c": jp.asarray(c)})
+    return e.step(s, jp.zeros(e.action_size))
 
 
-def test_kwarg_overrides_target():
-    e = NovaJoystick(foot_target_z=0.05)
-    assert abs(e._foot_target_z - 0.05) < 1e-9
+def test_cmd_c_in_info_and_range():
+    e = NovaJoystick(heightmap=True)
+    s = e.reset(jax.random.PRNGKey(21))
+    c = float(s.info["cmd_c"])
+    assert FOOTSWING_MIN - 1e-6 <= c <= FOOTSWING_MAX + 1e-6, c
+
+
+def test_obs_227_teacher_last_dim_is_c():
+    e = NovaJoystick(heightmap=True)
+    s = e.reset(jax.random.PRNGKey(22))
+    assert s.obs.shape[-1] == 227, s.obs.shape
+    # last dim carries the (scaled) commanded footswing c — assert correlation,
+    # not raw equality: override cmd_c, rebuild obs, confirm the last dim tracks
+    # c monotonically and shares the cmd scaling's positive sign.
+    lasts = [float(e._get_obs({**s.info, "cmd_c": jp.asarray(c)}, s.pipeline_state)[-1])
+             for c in (0.02, 0.04, 0.06)]
+    assert lasts[0] < lasts[1] < lasts[2], lasts
+    assert all(v > 0 for v in lasts), lasts
+
+
+def test_obs_105_blind_unchanged_c_fixed():
+    e = NovaJoystick()                       # heightmap=False
+    s = e.reset(jax.random.PRNGKey(23))
+    assert s.obs.shape[-1] == 105, s.obs.shape
+    assert abs(float(s.info["cmd_c"]) - BLIND_FOOTSWING) < 1e-9
+    assert abs(BLIND_FOOTSWING - 0.05) < 1e-9
+
+
+def test_clearance_targets_cmd_c():
+    # same manufactured below-target state, two c values via info override:
+    # a bigger deficit (c - foot_h) scales the bill more negative.
+    e = NovaJoystick(heightmap=True)
+    lo = _moving_state_with_c(e, 0.0, c=0.03, key=24)
+    hi = _moving_state_with_c(e, 0.0, c=0.06, key=24)
+    assert float(hi.metrics["w_clearance"]) < float(lo.metrics["w_clearance"]) < -0.01
+
+
+def test_footswing_max_kwarg():
+    # FOOTSWING_MAX default + kwarg narrows the teacher sample range.
+    assert abs(FOOTSWING_MAX - 0.06) < 1e-9
+    e = NovaJoystick(heightmap=True, footswing_max=0.04)
+    for k in range(5):
+        c = float(e.reset(jax.random.PRNGKey(k)).info["cmd_c"])
+        assert FOOTSWING_MIN - 1e-6 <= c <= 0.04 + 1e-6, c
 
 
 def test_above_target_lift_is_free():
@@ -51,17 +101,19 @@ def test_below_target_still_bills():
 
 
 def test_below_target_matches_abs_form():
-    # max(t-h, 0) == |h-t| for h<t: recompute the old form from state and
-    # confirm the billed cost matches it (below target only).
+    # max(t-h, 0) == |h-t| for h<t: recompute the old form from state and confirm
+    # the billed cost matches it (below target only). Blind env -> target is the
+    # fixed BLIND_FOOTSWING (the |·|-equality invariant is target-agnostic).
     e = NovaJoystick()
     s = _moving_state(e, 0.0)
     ps = s.pipeline_state
+    target = BLIND_FOOTSWING                          # blind env cmd_c is fixed here
     foot_ids = np.asarray(e._foot_ids)
     foot_h = np.asarray(ps.x.pos[foot_ids, 2])        # flat env: ground_z = 0
     v = np.linalg.norm(np.asarray(ps.xd.vel[foot_ids, :2]), axis=-1)
-    mask = foot_h < e._foot_target_z
-    expected = -e._w_clearance * float(np.sum(np.abs(foot_h - e._foot_target_z) * np.sqrt(v) * mask)
-                            + np.sum(np.maximum(e._foot_target_z - foot_h, 0.0) * np.sqrt(v) * (~mask)))
+    mask = foot_h < target
+    expected = -e._w_clearance * float(np.sum(np.abs(foot_h - target) * np.sqrt(v) * mask)
+                            + np.sum(np.maximum(target - foot_h, 0.0) * np.sqrt(v) * (~mask)))
     assert abs(float(s.metrics["w_clearance"]) - expected) < 0.02, \
         (s.metrics["w_clearance"], expected)
 
