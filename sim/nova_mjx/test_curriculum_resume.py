@@ -89,7 +89,8 @@ def _install_stubs():
         sys.modules[name] = mod
 
     env = types.ModuleType("env")
-    env.FOOT_RADIUS, env.CONTACT_EPS, env.FOOT_TARGET_Z = 0.014, 0.001, 0.05
+    env.FOOT_RADIUS, env.CONTACT_EPS = 0.014, 0.001
+    env.FOOTSWING_MIN, env.FOOTSWING_MAX, env.BLIND_FOOTSWING = 0.015, 0.06, 0.05
     env.HM_N, env.HM_EXTENT = 11, 0.4
     env.W_PBRS, env.PBRS_LOOKAHEAD = 30.0, (0.15, 0.25, 0.35)
     env.AIR_MAX, env.W_CLEARANCE = 0.6, 6.0
