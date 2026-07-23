@@ -80,8 +80,8 @@ def test_pose_gate_all_planted_identical():
     ps = s2.pipeline_state
     foot_ids = np.asarray(e._foot_ids)
     foot_h = np.asarray(ps.x.pos[foot_ids, 2])
-    if (foot_h - 0.014 < 1e-3).all():
-        assert abs(float(s2.metrics["w_pose"]) - old) < 1e-5, (s2.metrics["w_pose"], old)
+    assert (foot_h - 0.014 < 1e-3).all(), ("all-planted precondition broken", foot_h)
+    assert abs(float(s2.metrics["w_pose"]) - old) < 1e-5, (s2.metrics["w_pose"], old)
 
 
 def test_pose_gate_airborne_leg_flexes_free():

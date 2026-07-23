@@ -30,7 +30,7 @@ from brax.training.agents.ppo import networks as ppo_networks
 from brax.training.agents.ppo import train as ppo
 
 from env import (NovaJoystick, make_domain_randomize, W_PBRS,
-                 FOOT_TARGET_Z, PBRS_LOOKAHEAD)
+                 FOOT_TARGET_Z, PBRS_LOOKAHEAD, AIR_MAX, W_CLEARANCE)
 # stdlib-only helpers (importable without JAX, so they're unit-tested on a
 # laptop — see test_resume_budget.py). Re-exported here: callers that already
 # do `from train import find_latest_checkpoint` keep working.
@@ -40,7 +40,8 @@ from ckpt_utils import (EvalMetricsCsv, atomic_write, checkpoint_named,
 
 
 def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0,
-                      w_climb=40.0, w_pbrs=W_PBRS, foot_target_z=FOOT_TARGET_Z):
+                      w_climb=40.0, w_pbrs=W_PBRS, foot_target_z=FOOT_TARGET_Z,
+                      air_max=AIR_MAX, w_clearance=W_CLEARANCE):
     """Print WHAT is about to be trained, before a single GPU-hour burns.
 
     A 60M-step run was once launched against a stale checkout: Colab's `git clone`
@@ -68,7 +69,8 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
     print(f"  code         : {sha}")
     print(f"  contact      : (foot_z - {_env.FOOT_RADIUS}) < {_env.CONTACT_EPS}"
           "   [radius-corrected]")
-    print(f"  clearance    : ONE-SIDED COST (lift-v3), target foot z = {foot_target_z:g}")
+    print(f"  clearance    : ONE-SIDED COST w={w_clearance:g}, target foot z = {foot_target_z:g} (lift-v3/v4)")
+    print(f"  stride       : air_max {air_max:g}s carry onset, pose STANCE-GATED (lift-v4)")
     print(f"  cmd stage {env._cmd_stage}  : vx[{lo[0]:+.2f},{hi[0]:+.2f}] "
           f"vy[{lo[1]:+.2f},{hi[1]:+.2f}] wz[{lo[2]:+.2f},{hi[2]:+.2f}]")
     print(f"  terrain      : {terrain:.2f}   ({'FLAT' if terrain == 0 else 'rough — sim2real robustness'})")
@@ -388,6 +390,12 @@ def main():
     ap.add_argument("--foot-target-z", type=float, default=FOOT_TARGET_Z,
                     help="swing-height target (m) for the one-sided clearance cost "
                          "(lift-v3; default env FOOT_TARGET_Z)")
+    ap.add_argument("--air-max", type=float, default=AIR_MAX,
+                    help="seconds of air a normal stride is allowed penalty-free "
+                         "before the carry cost bites (lift-v4; default env AIR_MAX)")
+    ap.add_argument("--w-clearance", type=float, default=W_CLEARANCE,
+                    help="weight of the one-sided swing-clearance cost "
+                         "(lift-v4; default env W_CLEARANCE)")
     ap.add_argument("--curriculum", action="store_true",
                     help="AUTO-RAMP terrain difficulty in stages within one run. Brax "
                          "bakes per-env terrain at env build, so this CHAINS N stages, "
@@ -420,10 +428,12 @@ def main():
 
     env = NovaJoystick(cmd_stage=args.cmd_stage, heightmap=args.heightmap,
                        w_climb=args.w_climb, beta_climb=args.beta_climb,
-                       w_pbrs=args.w_pbrs, foot_target_z=args.foot_target_z)
+                       w_pbrs=args.w_pbrs, foot_target_z=args.foot_target_z,
+                       air_max=args.air_max, w_clearance=args.w_clearance)
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
     print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac,
-                      args.flat_frac, args.w_climb, args.w_pbrs, args.foot_target_z)
+                      args.flat_frac, args.w_climb, args.w_pbrs, args.foot_target_z,
+                      args.air_max, args.w_clearance)
     if jax.default_backend() == "cpu" and not args.allow_cpu:
         raise SystemExit(
             "✗ JAX is on CPU — real training would take days, not minutes.\n"
