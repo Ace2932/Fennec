@@ -79,7 +79,16 @@ CONTACT_EPS = 1e-3
 # never rescaled it, so a STANDING robot now scores 0.55 there (measured stand:
 # 1.357/step total). Left alone deliberately: the robot walks, so the stand basin
 # is not the active failure. Fix it when the evidence says to, not before.
-FOOT_TARGET_Z = 0.05
+#
+# LIFT-V3 (2026-07-22): raised 0.05 -> 0.07 and the cost is now ONE-SIDED (see
+# the clearance term). climb-v2 proved engagement caps at swing height (gzmax
+# saturated == swing 0.02 for 120M steps) and 2 cm risers get climbed
+# INCIDENTALLY by a 2 cm swing — so raise the base swing and 4-6 cm risers
+# become walkable the same way. 0.07: geometry-scaled reference was 0.057-0.06,
+# and the servo envelope (2.8 rad/s x ~0.2 s swing) caps gait-speed lift at
+# ~6-7 cm — 0.07 is the reachable max; 0.08+ chases the envelope. Sweep with
+# --foot-target-z. DELIBERATE flat-gait retrain (higher-stepping trot).
+FOOT_TARGET_Z = 0.07
 
 # Carry cost: a foot airborne longer than AIR_MAX seconds is being HELD, not
 # stepping (a real swing tops out ~0.2-0.3s). Penalize the excess, capped so one
@@ -130,11 +139,12 @@ PBRS_LOOKAHEAD = (0.15, 0.25, 0.35)      # m ahead of base, body-frame +x
 class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
                  cmd_stage=2, heightmap=False, w_climb=W_CLIMB, beta_climb=0.0,
-                 w_pbrs=W_PBRS, **kwargs):
+                 w_pbrs=W_PBRS, foot_target_z=FOOT_TARGET_Z, **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
         self._w_pbrs = float(w_pbrs)     # approach-density weight; --w-pbrs (0=off)
+        self._foot_target_z = float(foot_target_z)   # swing target; --foot-target-z
         path = epath.Path(__file__).parent / xml
         mj = mujoco.MjModel.from_xml_path(str(path))
         sys = mjcf.load_model(mj)
@@ -499,13 +509,25 @@ class NovaJoystick(PipelineEnv):
         # penalized, and a foot at the target pays nothing however fast it swings.
         # It also reads NO contact flag, so it cannot be fooled by a bad contact
         # threshold at all.
+        # 2026-07-22: now one-sided — see the LIFT-V3 note at the term; the
+        # both-sides framing described the pre-lift-v3 form.
         #
-        # TERRAIN-RELATIVE: the swing target is FOOT_TARGET_Z above the LOCAL
+        # TERRAIN-RELATIVE: the swing target is self._foot_target_z above the LOCAL
         # ground (foot_h; see _terrain_ground_z), not absolute world z. Reading
         # foot_z taxed every swing by how high the terrain sat under it — up to
         # 2*ztop on a step — penalising exactly the lift needed to climb. foot_h
-        # makes the target the same 0.05 m clearance on a step as on the flat.
-        clearance_cost = jp.sum(jp.abs(foot_h - FOOT_TARGET_Z) * jp.sqrt(foot_xy_speed))
+        # makes the target the same foot_target_z clearance on a step as on the flat.
+        # LIFT-V3 ONE-SIDED (2026-07-22): punish UNDER-lift only. The two-sided
+        # |foot_h - target| form was the held-foot-farm fix, but it also made
+        # every above-target swing pay — a CEILING that a 6-8 cm riser stride
+        # must break (the climb-v2 binding constraint: gzmax saturated at swing
+        # 0.02 for 120M steps). One-sided is farm-safe: a cost maxes out at 0,
+        # a held-high foot EARNS nothing here, and the carry cost (AIR_MAX 0.4 s,
+        # w_carry) bills holds directly — watch airT_*/ghost_* for a reopened
+        # hold pattern. Below target this is |·|-identical, so the under-lift
+        # gradient is unchanged.
+        clearance_cost = jp.sum(jp.maximum(self._foot_target_z - foot_h, 0.0)
+                                * jp.sqrt(foot_xy_speed))
         # splay: the rollout showed the hips abducted WIDE. Penalize haa (hip-
         # abduction, joint idx 0,3,6,9) deviation from the default (0); the hfe/kfe
         # swing joints stay free. (ref: pose regularizer, focused on the splay.)
