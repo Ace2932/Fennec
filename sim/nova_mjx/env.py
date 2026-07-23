@@ -30,12 +30,28 @@ DEFAULT_POSE = jp.array([0.0, 0.6, -1.2] * 4)          # stand keyframe joints
 ACTION_SCALE = 0.4                                     # rad, target = default + a*scale
 STAND_HEIGHT = 0.17
 # Upright-penalty deadzone (lift-v5). tilt_sq = up_x²+up_y² = sin²θ; the penalty
-# is max(0, tilt_sq − UPRIGHT_DEADZONE), so tilts up to θ=15° cost NOTHING and
-# only excess beyond bills (quadratic-ish). sin²(15°) = 0.0670. Frees trot wobble
-# (~5-10°) and the lower band of climb pitch (~15-25°). Precedent: ANYmal-rough
-# ZEROES the orientation penalty on rough terrain — we merely SOFTEN it, keeping
-# the tipping guards (done at up_z<0.4, ang_vel_xy damping). No flag (YAGNI).
-UPRIGHT_DEADZONE = 0.067                               # sin²(15°)
+# is max(0, tilt_sq − UPRIGHT_DEADZONE), so tilts up to θ=25° cost NOTHING and
+# only excess beyond bills (quadratic-ish). sin²(25°) = 0.1786. The 15° zone was
+# insufficient for stride dynamics — the open-loop probe read w_upright −0.19 at
+# working lift because a climb stride swings pitch through ~15-25° and the old
+# deadzone taxed the whole upper band. The alive envelope [25°, 66°] is still
+# monotone (done fires at up_z<0.4 = θ>66°), and closed-loop policies stabilize
+# below what the open-loop probe wobbles to. Precedent: ANYmal-rough ZEROES the
+# orientation penalty on rough terrain — we merely SOFTEN it, keeping the tipping
+# guards (done at up_z<0.4, ang_vel_xy damping unchanged). No flag (YAGNI).
+UPRIGHT_DEADZONE = 0.179                               # sin²(25°)
+# Pose-Gaussian temperature (lift-v5). pose_rew = exp(-POSE_SHARPNESS * gated_sum).
+# Was 2.0 — a Go1-scaled coefficient that was never rescaled to Fennec's joint-
+# angle-per-lift ratio (Fennec's short legs need 2-3× the joint angle per cm of
+# lift, so at our working deviations the exp collapses and the pose term reads a
+# hard veto: probe showed w_pose −0.30, with hfe at weight 1.0 dominating even
+# after the knee deweight). This is the recurring unscaled-reference-import bug
+# class (a Go1 constant carried over without a units check). 0.5 keeps a soft
+# prior rather than deleting it. Anti-buckle duty is carried by height_pen + the
+# done floor + the hfe weight (1.0), NOT by this temperature; and legged_gym's
+# ANYmal-rough config ships NO default-pose term at all yet climbs stairs, so a
+# softened prior is well within precedent.
+POSE_SHARPNESS = 0.5
 HIST = 3                                               # proprioceptive frames stacked
 PROP = 30                                              # per-frame: gyro3+grav3+jpos12+jvel12
 # Command scale applied in the OBSERVATION (vx, vy, wz). SINGLE SOURCE OF TRUTH:
@@ -607,8 +623,8 @@ class NovaJoystick(PipelineEnv):
         _pose_jw = jp.array([1.0, 0.1])                          # (hfe, kfe) weights
         _leg_hk = jp.array([[1, 2], [4, 5], [7, 8], [10, 11]])   # (hfe,kfe) per leg
         _dev = (pipeline_state.q[7:][_leg_hk] - self._default_pose[_leg_hk]) ** 2
-        pose_rew = jp.exp(-2.0 * jp.sum(jp.sum(_dev * _pose_jw, axis=1)
-                                        * contact.astype(jp.float32)))
+        pose_rew = jp.exp(-POSE_SHARPNESS * jp.sum(jp.sum(_dev * _pose_jw, axis=1)
+                                                   * contact.astype(jp.float32)))
 
         # ---- REWARD ARCHITECTURE (read this before adding a term) ----
         # Twelve runs of shaping history are in git; the pattern across all of

@@ -9,7 +9,8 @@ import jax
 import jax.numpy as jp
 import numpy as np
 
-from env import NovaJoystick, FOOTSWING_MIN, FOOTSWING_MAX, BLIND_FOOTSWING
+from env import (NovaJoystick, FOOTSWING_MIN, FOOTSWING_MAX, BLIND_FOOTSWING,
+                 POSE_SHARPNESS)
 
 
 def _moving_state(e, base_lift, key=7):
@@ -130,7 +131,7 @@ def test_pose_gate_all_planted_identical():
     default = np.asarray(e._default_pose)
     hk = np.array([1, 2, 4, 5, 7, 8, 10, 11])
     jw = np.array([1.0, 0.1] * 4)                     # (hfe,kfe) per leg, hk order
-    old = 0.5 * np.exp(-2.0 * np.sum((q[hk] - default[hk]) ** 2 * jw))
+    old = 0.5 * np.exp(-POSE_SHARPNESS * np.sum((q[hk] - default[hk]) ** 2 * jw))
     # only valid if all feet actually in contact this step — check, else settle more
     ps = s2.pipeline_state
     foot_ids = np.asarray(e._foot_ids)
@@ -217,9 +218,13 @@ def test_pose_knee_deweighted():
     assert hfe_wp < base_wp and kfe_wp < base_wp, (base_wp, hfe_wp, kfe_wp)
     # knee de-weight -> kfe flexion is much less penalized -> closer to baseline
     assert kfe_wp > hfe_wp, (hfe_wp, kfe_wp)
-    # log-space penalty (pose_rew = exp(-2*sum), so log(income) is linear in the
-    # weighted dev sum) -> the ratio isolates the per-joint dev weight (10x),
-    # softened by the one-step servo pull-back; assert the rough 10x, not exact.
+    # log-space penalty (pose_rew = exp(-POSE_SHARPNESS*sum), so log(income) is
+    # linear in the weighted dev sum) -> the ratio isolates the per-joint dev
+    # weight (10x), softened by the one-step servo pull-back. NOTE the ratio ph/pk
+    # is INVARIANT to POSE_SHARPNESS: both penalties carry the same POSE_SHARPNESS
+    # factor, which cancels in the ratio (log-space isolates the dev-weight, not
+    # the temperature). So the softer 0.5 exp compresses the raw incomes toward 1
+    # but leaves this log-ratio band unchanged; assert the rough 10x, not exact.
     ph = np.log(base_wp) - np.log(hfe_wp)      # hfe penalty (weight 1.0)
     pk = np.log(base_wp) - np.log(kfe_wp)      # kfe penalty (weight 0.1)
     assert pk > 0.0, ("kfe flex must still bill something", pk)
@@ -245,14 +250,16 @@ def _upright_metric_at_tilt(e, theta_deg, key=31):
 
 
 def test_upright_deadzone():
-    # Deadzone frees tilts up to 15 deg (sin^2(15) = 0.067). A 10 deg tilt
-    # (sin^2 = 0.030 < 0.067) costs EXACTLY 0 where the old 2(1-cos) form billed
-    # it; a 25 deg tilt (sin^2 = 0.179 > 0.067) still bills.
+    # Deadzone (lift-v5) frees tilts up to 25 deg (sin^2(25) = 0.179). A 10 deg
+    # tilt (sin^2 = 0.030 < 0.179) still costs EXACTLY 0 where the old 2(1-cos)
+    # form billed it; the billed case must now sit BEYOND the widened zone, so
+    # use 35 deg (sin^2(35) = 0.329 > 0.179) — 25 deg is now the deadzone edge
+    # (free), not a billed tilt.
     e = NovaJoystick()
     u10 = _upright_metric_at_tilt(e, 10.0)
-    u25 = _upright_metric_at_tilt(e, 25.0)
+    u35 = _upright_metric_at_tilt(e, 35.0)
     assert u10 == 0.0, ("10deg tilt must be inside the deadzone (0)", u10)
-    assert u25 > 0.0, ("25deg tilt must bill beyond the deadzone", u25)
+    assert u35 > 0.0, ("35deg tilt must bill beyond the 25deg deadzone", u35)
 
 
 def test_w_air_weight():
