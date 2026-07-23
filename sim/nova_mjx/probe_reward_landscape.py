@@ -104,6 +104,14 @@ def run_pass(env, jit_step, extract, settled, actions, cmd_override=None):
     """
     n = MEASURE_STEPS
     state = settled
+    # LIFT-V5: pin the COMMANDED footswing target cmd_c to the acceptance-gate
+    # value (0.05) in BOTH passes, immediately after the (settled) reset —
+    # mirroring the cmd override below. On the blind flat env cmd_c is already
+    # fixed at BLIND_FOOTSWING (0.05); pinning it makes the landscape gate
+    # explicit and survives the 250-step resample on any heightmap env. Re-pinned
+    # each step like cmd (below).
+    cmd_c_j = jp.asarray(np.float32(0.05))
+    state = state.replace(info={**state.info, "cmd_c": cmd_c_j})
     if cmd_override is not None:
         cmd_j = jp.asarray(np.asarray(cmd_override, dtype=np.float32))
         state = state.replace(info={**state.info, "cmd": cmd_j})
@@ -119,6 +127,8 @@ def run_pass(env, jit_step, extract, settled, actions, cmd_override=None):
     fell, steps_done = False, 0
     for i in range(n):
         state = jit_step(state, jp.asarray(actions[i]))
+        # re-pin cmd_c in BOTH passes (survives the env's 250-step resample).
+        state = state.replace(info={**state.info, "cmd_c": cmd_c_j})
         if collect:
             # re-pin the command; the env may have just resampled it at step%250==0.
             state = state.replace(info={**state.info, "cmd": cmd_j})

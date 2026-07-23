@@ -29,6 +29,13 @@ from etils import epath
 DEFAULT_POSE = jp.array([0.0, 0.6, -1.2] * 4)          # stand keyframe joints
 ACTION_SCALE = 0.4                                     # rad, target = default + a*scale
 STAND_HEIGHT = 0.17
+# Upright-penalty deadzone (lift-v5). tilt_sq = up_x²+up_y² = sin²θ; the penalty
+# is max(0, tilt_sq − UPRIGHT_DEADZONE), so tilts up to θ=15° cost NOTHING and
+# only excess beyond bills (quadratic-ish). sin²(15°) = 0.0670. Frees trot wobble
+# (~5-10°) and the lower band of climb pitch (~15-25°). Precedent: ANYmal-rough
+# ZEROES the orientation penalty on rough terrain — we merely SOFTEN it, keeping
+# the tipping guards (done at up_z<0.4, ang_vel_xy damping). No flag (YAGNI).
+UPRIGHT_DEADZONE = 0.067                               # sin²(15°)
 HIST = 3                                               # proprioceptive frames stacked
 PROP = 30                                              # per-frame: gyro3+grav3+jpos12+jvel12
 # Command scale applied in the OBSERVATION (vx, vy, wz). SINGLE SOURCE OF TRUTH:
@@ -482,7 +489,15 @@ class NovaJoystick(PipelineEnv):
         # scores exp(-4)=0.02, near zero, vs the old exp(-8*.25)=0.14 floor.
         track = jp.exp(-jp.sum((cmd_xy - lin_vel[:2]) ** 2) / 0.0625)
         yaw_track = jp.exp(-(cmd[2] - ang_vel[2]) ** 2 / 0.0625)
-        upright = jp.sum((up - jp.array([0.0, 0.0, 1.0])) ** 2)
+        # UPRIGHT PENALTY with a DEADZONE (lift-v5). up = world-z in the body
+        # frame, so up_x²+up_y² = sin²θ (θ = tilt off vertical); up_z drops out.
+        # The old form jp.sum((up − ẑ)²) = 2(1−cosθ) ≈ θ² small-angle; the new
+        # form is sin²θ − dz ≈ θ² − dz — same small-angle units family, so the
+        # −2.5 weight line is UNCHANGED. Deadzone frees tilts ≤15° (trot wobble +
+        # low climb pitch) instead of taxing every degree off vertical, which was
+        # a valley wall the landscape probe measured (w_upright −0.36). Guards
+        # intact: done at up_z<0.4 and the ang_vel_xy damping still stop tipping.
+        upright = jp.maximum(0.0, up[0] ** 2 + up[1] ** 2 - UPRIGHT_DEADZONE)
         # roll/pitch angular-velocity penalty — damps the tipping motion. With
         # bigger/faster steps (feet_clearance) the robot NOSE-DIVED forward and
         # fell (rollout: fell at 1.3 s). This + a stronger upright weight give it
@@ -581,9 +596,18 @@ class NovaJoystick(PipelineEnv):
         # caps at exp(0), and airborne-leg antics are policed by carry/air-cap/
         # move_gate, not here. Leg rows of _leg_hk are in LEG_NAMES order
         # (FL,FR,RL,RR) — same order as `contact`/_foot_ids (verified).
+        # PER-JOINT WEIGHTS (lift-v5): hfe dev ×1.0, kfe dev ×0.1. kfe (the KNEE)
+        # flexion IS the lift dof — v4 pinned it at full weight while the
+        # reference (MuJoCo Playground Go1) de-weights the knee 10× in its pose
+        # regularizer (per-joint [haa, hfe, kfe] = [1, 1, 0.1]). Full-weight kfe
+        # regularization fought the swing lift directly. hfe stays fully
+        # regularized so the buckle-guard (front-leg collapse) is untouched;
+        # height_pen/done are also unchanged. Broadcast over the (4,2) dev BEFORE
+        # the contact gate so it only reshapes the per-joint cost, not the gate.
+        _pose_jw = jp.array([1.0, 0.1])                          # (hfe, kfe) weights
         _leg_hk = jp.array([[1, 2], [4, 5], [7, 8], [10, 11]])   # (hfe,kfe) per leg
         _dev = (pipeline_state.q[7:][_leg_hk] - self._default_pose[_leg_hk]) ** 2
-        pose_rew = jp.exp(-2.0 * jp.sum(jp.sum(_dev, axis=1)
+        pose_rew = jp.exp(-2.0 * jp.sum(jp.sum(_dev * _pose_jw, axis=1)
                                         * contact.astype(jp.float32)))
 
         # ---- REWARD ARCHITECTURE (read this before adding a term) ----
@@ -629,7 +653,13 @@ class NovaJoystick(PipelineEnv):
         # a slow drift the tracking term is happy to ignore.
         w_yaw = 0.75 * yaw_track
         w_progress = 3.0 * progress
-        w_air = move_gate * 0.5 * air_rew
+        # w_air 0.5 → 1.0 (lift-v5). Reference stacks run feet_air_time at 1.0-2.0;
+        # an underweighted air-time reward is a documented shuffle cause (short,
+        # low steps score too little to beat the energy of a committed swing).
+        # Still landing-gated (first_contact), move-gated (cmd_moving + move_gate),
+        # and window-capped (clip air−0.2 to 0.4) — the gates that killed the
+        # ckpt12 hold-a-foot farm all stand; this only ×2's a bounded positive.
+        w_air = move_gate * 1.0 * air_rew
         # NOT gated by move_gate: gating a COST by forward speed would let the
         # robot dodge it by standing still. Ungated is also the reference's form,
         # and it needs no gate — a planted foot has ~zero xy speed, so it pays
