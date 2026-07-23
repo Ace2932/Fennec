@@ -90,10 +90,23 @@ CONTACT_EPS = 1e-3
 # --foot-target-z. DELIBERATE flat-gait retrain (higher-stepping trot).
 FOOT_TARGET_Z = 0.07
 
+W_CLEARANCE = 6.0
+# Clearance-cost weight (was hardcoded -2.0). Raised 2 -> 6 with lift-v4: at 2 the
+# lift saving (~0.08/step) lost to the pose veto (~0.26/step, now stance-gated) —
+# the policy was net-PAID to stay low for 120M steps. 6 makes under-lift ~20% of
+# return: undodgeable, and a compliant gait pays 0. Shuffle-escape (cutting the
+# sqrt(v) factor instead of lifting) stays dominated by track/progress — watch fwd.
+# Sweep --w-clearance.
+
 # Carry cost: a foot airborne longer than AIR_MAX seconds is being HELD, not
 # stepping (a real swing tops out ~0.2-0.3s). Penalize the excess, capped so one
 # parked leg can't swamp the reward. See the derivation at the term itself.
-AIR_MAX = 0.4          # s of air a normal stride is allowed, penalty-free
+# LIFT-V4 (2026-07-23): 0.4 -> 0.6. Kinematic probe: lift ∝ swing duration, and
+# T≈0.5-0.6 s strides are the CLIMB mechanism — 0.4 was the flat-trot value and
+# billed the very swings a 4-6 cm riser stride needs. Onset delayed 0.2 s; the
+# asymptote (AIR_CARRY_CAP) is unchanged, so a truly parked leg still bleeds.
+# Sweep --air-max.
+AIR_MAX = 0.6          # s of air a normal stride is allowed, penalty-free
 AIR_CARRY_CAP = 0.6    # s — max penalized excess per foot (bounds a held leg)
 
 # ---- HEIGHT MAP (tier-2 PRIVILEGED teacher, opt-in NovaJoystick(heightmap=True)) ----
@@ -139,12 +152,15 @@ PBRS_LOOKAHEAD = (0.15, 0.25, 0.35)      # m ahead of base, body-frame +x
 class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
                  cmd_stage=2, heightmap=False, w_climb=W_CLIMB, beta_climb=0.0,
-                 w_pbrs=W_PBRS, foot_target_z=FOOT_TARGET_Z, **kwargs):
+                 w_pbrs=W_PBRS, foot_target_z=FOOT_TARGET_Z, air_max=AIR_MAX,
+                 w_clearance=W_CLEARANCE, **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
         self._w_pbrs = float(w_pbrs)     # approach-density weight; --w-pbrs (0=off)
         self._foot_target_z = float(foot_target_z)   # swing target; --foot-target-z
+        self._air_max = float(air_max)             # carry-cost onset (s); --air-max
+        self._w_clearance = float(w_clearance)     # clearance weight; --w-clearance
         path = epath.Path(__file__).parent / xml
         mj = mujoco.MjModel.from_xml_path(str(path))
         sys = mjcf.load_model(mj)
@@ -406,12 +422,13 @@ class NovaJoystick(PipelineEnv):
         # parked-high foot: it charges the hold itself, regardless of how cleverly
         # it's held, which the one-sided clearance no longer catches.
         #
-        # A real swing tops out ~0.2-0.3s, so AIR_MAX 0.4 leaves normal stepping
-        # free; only a HELD foot crosses it. Capped so one parked leg can't swamp
-        # the whole reward (a foot airborne the full episode would otherwise dwarf
-        # everything). It is a COST — it shapes HOW, so it is not positive. This
-        # does not reopen a farm: there is no way to earn by triggering it.
-        carry_cost = jp.sum(jp.clip(air - AIR_MAX, 0.0, AIR_CARRY_CAP))
+        # A real swing tops out ~0.2-0.3s, and a climb stride runs ~0.5-0.6s, so
+        # AIR_MAX 0.6 (lift-v4) leaves normal AND climbing steps free; only a HELD
+        # foot crosses it. Capped so one parked leg can't swamp the whole reward (a
+        # foot airborne the full episode would otherwise dwarf everything). It is a
+        # COST — it shapes HOW, so it is not positive. This does not reopen a farm:
+        # there is no way to earn by triggering it.
+        carry_cost = jp.sum(jp.clip(air - self._air_max, 0.0, AIR_CARRY_CAP))
 
         # ---- gait reward: DELETED ----
         # Was: `|(FL+RR) - (FR+RL)|/2` — instantaneous diagonal asymmetry, with NO
@@ -524,7 +541,7 @@ class NovaJoystick(PipelineEnv):
         # every above-target swing pay — a CEILING that a 6-8 cm riser stride
         # must break (the climb-v2 binding constraint: gzmax saturated at swing
         # 0.02 for 120M steps). One-sided is farm-safe: a cost maxes out at 0,
-        # a held-high foot EARNS nothing here, and the carry cost (AIR_MAX 0.4 s,
+        # a held-high foot EARNS nothing here, and the carry cost (AIR_MAX 0.6 s,
         # w_carry) bills holds directly — watch airT_*/ghost_* for a reopened
         # hold pattern. Below target this is |·|-identical, so the under-lift
         # gradient is unchanged.
@@ -538,8 +555,20 @@ class NovaJoystick(PipelineEnv):
         # (0.6 / -1.2). The video showed the FRONT LEGS BUCKLED/COLLAPSED into a
         # hunched crouch; this pulls the legs back to a normal extended stance.
         # exp -> mild, so they can still swing for the gait. (ref: pose regularizer.)
-        _hk = jp.array([1, 2, 4, 5, 7, 8, 10, 11])   # hfe,kfe of each leg
-        pose_rew = jp.exp(-2.0 * jp.sum((pipeline_state.q[7:][_hk] - self._default_pose[_hk]) ** 2))
+        # STANCE LEGS ONLY (lift-v4, 2026-07-23). The ungated 8-joint form paid
+        # ~0.26/step MORE for keeping swing legs unflexed than the clearance cost
+        # charged for staying low — a net bribe to never lift, and the dominant
+        # reason 120M steps ignored the clearance bill. Gating by contact keeps
+        # the buckle-guard exactly where the pathology lives (front-leg collapse
+        # is a STANCE failure) and frees the swing flexion a 4-6 cm climb stride
+        # needs. All-planted: bit-identical to the old sum. Non-farmable: pose_rew
+        # caps at exp(0), and airborne-leg antics are policed by carry/air-cap/
+        # move_gate, not here. Leg rows of _leg_hk are in LEG_NAMES order
+        # (FL,FR,RL,RR) — same order as `contact`/_foot_ids (verified).
+        _leg_hk = jp.array([[1, 2], [4, 5], [7, 8], [10, 11]])   # (hfe,kfe) per leg
+        _dev = (pipeline_state.q[7:][_leg_hk] - self._default_pose[_leg_hk]) ** 2
+        pose_rew = jp.exp(-2.0 * jp.sum(jp.sum(_dev, axis=1)
+                                        * contact.astype(jp.float32)))
 
         # ---- REWARD ARCHITECTURE (read this before adding a term) ----
         # Twelve runs of shaping history are in git; the pattern across all of
@@ -589,7 +618,7 @@ class NovaJoystick(PipelineEnv):
         # robot dodge it by standing still. Ungated is also the reference's form,
         # and it needs no gate — a planted foot has ~zero xy speed, so it pays
         # ~zero regardless.
-        w_clearance = -2.0 * clearance_cost
+        w_clearance = -self._w_clearance * clearance_cost
         w_pose = 0.5 * pose_rew
         w_upright = -2.5 * upright
         w_angvel = -0.2 * ang_vel_xy
