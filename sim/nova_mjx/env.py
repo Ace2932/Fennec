@@ -509,8 +509,9 @@ class NovaJoystick(PipelineEnv):
         # frame, so up_x²+up_y² = sin²θ (θ = tilt off vertical); up_z drops out.
         # The old form jp.sum((up − ẑ)²) = 2(1−cosθ) ≈ θ² small-angle; the new
         # form is sin²θ − dz ≈ θ² − dz — same small-angle units family, so the
-        # −2.5 weight line is UNCHANGED. Deadzone frees tilts ≤15° (trot wobble +
-        # low climb pitch) instead of taxing every degree off vertical, which was
+        # −2.5 weight line is UNCHANGED. Deadzone frees tilts ≤25° (trot wobble +
+        # climb pitch; 15° left −0.19 on the probe, widened in the fix wave)
+        # instead of taxing every degree off vertical, which was
         # a valley wall the landscape probe measured (w_upright −0.36). Guards
         # intact: done at up_z<0.4 and the ang_vel_xy damping still stop tipping.
         upright = jp.maximum(0.0, up[0] ** 2 + up[1] ** 2 - UPRIGHT_DEADZONE)

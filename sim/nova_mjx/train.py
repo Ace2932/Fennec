@@ -70,7 +70,7 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
     print(f"  contact      : (foot_z - {_env.FOOT_RADIUS}) < {_env.CONTACT_EPS}"
           "   [radius-corrected]")
     print(f"  clearance    : ONE-SIDED COST w={w_clearance:g}, footswing cmd c∈[0.015,{footswing_max:g}] (lift-v5)")
-    print(f"  stride       : air_max {air_max:g}s carry onset, pose STANCE-GATED, upright deadzone 15°, w_air 1.0 (lift-v4)")
+    print(f"  stride       : air_max {air_max:g}s carry onset, pose STANCE-GATED, upright deadzone 25°, w_air 1.0 (lift-v4/v5)")
     print(f"  cmd stage {env._cmd_stage}  : vx[{lo[0]:+.2f},{hi[0]:+.2f}] "
           f"vy[{lo[1]:+.2f},{hi[1]:+.2f}] wz[{lo[2]:+.2f},{hi[2]:+.2f}]")
     print(f"  terrain      : {terrain:.2f}   ({'FLAT' if terrain == 0 else 'rough — sim2real robustness'})")

@@ -67,6 +67,11 @@ shuffle cause. Hardcoded change + comment.
 - **Probe gate (before ANY training run)**: probe_reward_landscape with `cmd_c=0.05`
   overridden: pose+upright deltas ≥ −0.1 at a=0.8-1.0 (walls lowered ~3×), d(total)/d(a)
   reported. The run is a NO-GO until the probe passes.
+  **OUTCOME (2026-07-23, gate iteration):** initial FAIL (pose −0.30 — hfe dominates,
+  Go1-scaled temperature; upright −0.19). Fix wave (POSE_SHARPNESS 2.0→0.5,
+  deadzone 15°→25°): upright PASS (~0.00), pose **−0.11 accepted with deviation**
+  (controller ruling: heuristic bar; residual = open-loop stance-drift artifact that
+  closed-loop control suppresses; walls −0.35/−0.36 → −0.11/0.00 across the campaign).
 - Regraft: `graft_obs.py --add-dims 1` (226→227) on the Colab pkl; obs-size assert catches
   mismatch.
 
