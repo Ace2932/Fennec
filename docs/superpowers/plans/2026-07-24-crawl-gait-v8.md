@@ -53,6 +53,8 @@ Steps:
 - Full suite one file per call (test_gait_clock, test_lift_clearance, test_heightmap, test_climb_reward, test_curriculum_resume, test_resume_budget, test_terrain_relative).
 - Commit: `sim: v8 crawl fingerprint + IK crawl-reward gate`.
 
-## Run (GATED — after v7 confirms tracking lifts swing)
+## Run — THE single decisive run (v7 separate-run SKIPPED, subsumed here)
 
-Regraft flat-walker → 234, resume from v7's policy, fresh 4-stage. Do NOT run until v7's run shows the tracking reward moves swing off 0.02 (else amplitude × gait-type confound). Success: crawl swing lifts to 4-6cm on stair envs, gzmax scales, climbs 4-6cm risers. 8cm = stretch (learned CoM-shift).
+v8 subsumes v7: flat/rough envs → trot + tracking reward (= exactly v7's amplitude test), stair envs → crawl + tracking (the goal). The isolation is INTERNAL — read the flat-env `swing` metric (amplitude-alone: does dense tracking lift the trot swing) vs stair-env `swing`/`gzmax`/`wclimb` (amplitude + crawl). One run answers both; no separate v7 run needed (it would test the mechanism in its HARDEST setting — the sagging 2-leg trot — risking a false negative where the stable crawl works).
+
+Regraft flat-walker (or v6-policy) → 234 (`--add-dims 4` from 230, or full add-dims from the 226 flat walker), fresh 4-stage. Self-gated: the v8 crawl reward-probe (Task 2) + 10M early-kill. WATCH: flat-env swing lifts off 0.02 (tracking works at all — the amplitude mechanism); stair-env swing → 4-6cm crawl reference, gzmax scales to risers, wclimb grows, wgait locks the crawl schedule. Success: climbs 4-6cm risers via the crawl. 8cm = stretch (learned CoM-shift). KILL: flat-env swing dead 0.02 → tracking not followed even in the easy amplitude window → deepest falsification; stair swing caps at trot ~3cm despite crawl schedule → crawl doesn't deliver closed-loop.
