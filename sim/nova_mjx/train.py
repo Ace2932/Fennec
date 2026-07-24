@@ -31,7 +31,7 @@ from brax.training.agents.ppo import train as ppo
 
 from env import (NovaJoystick, make_domain_randomize, W_PBRS,
                  FOOTSWING_MAX, PBRS_LOOKAHEAD, AIR_MAX, W_CLEARANCE,
-                 W_GAIT, F_MIN, F_MAX)
+                 W_GAIT, F_MIN, F_MAX, GAIT_DUTY)
 # stdlib-only helpers (importable without JAX, so they're unit-tested on a
 # laptop — see test_resume_budget.py). Re-exported here: callers that already
 # do `from train import find_latest_checkpoint` keep working.
@@ -71,7 +71,7 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
     print(f"  contact      : (foot_z - {_env.FOOT_RADIUS}) < {_env.CONTACT_EPS}"
           "   [radius-corrected]")
     print(f"  clearance    : ONE-SIDED COST w={w_clearance:g}, footswing cmd c∈[0.015,{footswing_max:g}] (lift-v5, phase-native)")
-    print(f"  gait clock   : trot f∈[{F_MIN:g},{F_MAX:g}]Hz duty 0.5, w_gait {w_gait:g} (v6 schedule cost)")
+    print(f"  gait clock   : trot f∈[{F_MIN:g},{F_MAX:g}]Hz duty {GAIT_DUTY:g}, w_gait {w_gait:g} (v6 schedule cost)")
     print(f"  stride       : air_max {air_max:g}s carry onset, pose STANCE-GATED, upright deadzone 25°, w_air 1.0 (lift-v4/v5)")
     print(f"  cmd stage {env._cmd_stage}  : vx[{lo[0]:+.2f},{hi[0]:+.2f}] "
           f"vy[{lo[1]:+.2f},{hi[1]:+.2f}] wz[{lo[2]:+.2f},{hi[2]:+.2f}]")
