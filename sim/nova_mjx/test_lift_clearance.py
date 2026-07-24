@@ -25,16 +25,25 @@ def _moving_state(e, base_lift, key=7):
     return e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
 
 
-def _moving_state_with_c(e, base_lift, c, key=7):
+def _moving_state_with_c(e, base_lift, c, key=7, theta=0.25):
     # _moving_state + an info override of the COMMANDED target cmd_c before the
     # step, so the clearance cost bills against `c`. (The resample fires only at
     # step % 250 == 0; a fresh reset steps to step 1, so the override survives the
     # step and drives the clearance term.)
+    # GAIT-CLOCK-V6 RECONCILE: the TEACHER clearance is now phase-native
+    # (enveloped + swing-masked), so it only bills feet in their scheduled swing
+    # window. Pin the clock phase θ=0.25 (FR,RL mid-swing, envelope 1) + a moving
+    # command so the below-target billing is guaranteed and the cmd_c-scaling test
+    # below still exercises a real deficit. (Blind clearance is unaffected — this
+    # helper is teacher-only.)
     s = e.reset(jax.random.PRNGKey(key))
     q = s.pipeline_state.q.at[2].add(base_lift)
     qd = s.pipeline_state.qd.at[6:].set(2.0)
     ps = e.pipeline_init(q, qd)
-    s = s.replace(pipeline_state=ps, info={**s.info, "cmd_c": jp.asarray(c)})
+    s = s.replace(pipeline_state=ps,
+                  info={**s.info, "cmd_c": jp.asarray(c),
+                        "gait_phase": jp.asarray(theta),
+                        "cmd": jp.array([0.3, 0.0, 0.0])})
     return e.step(s, jp.zeros(e.action_size))
 
 

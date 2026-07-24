@@ -110,6 +110,12 @@ def test_schedule_edges_smooth():
     assert max_step < 0.15, max_step
     # and it actually reaches both rails (a real boxcar, not a constant)
     assert st[:, 0].max() > 0.99 and st[:, 0].min() < 0.01, (st[:, 0].max(), st[:, 0].min())
+    # M-1 WRAP SEAM: the schedule is built on circular distance, so it must be
+    # continuous ACROSS θ=0 too (the diff grid above never straddles the seam).
+    # stance(θ=0) ≈ stance(θ=1⁻) per foot — no discontinuity at the wrap.
+    st0 = np.asarray(e._gait_schedule(jp.asarray(0.0))[0])
+    st1 = np.asarray(e._gait_schedule(jp.asarray(1.0 - 1e-6))[0])
+    assert np.abs(st0 - st1).max() < 1e-3, (st0, st1)
 
 
 def test_gait_cost_zero_when_compliant():
@@ -172,6 +178,141 @@ def test_obs_230_teacher_105_blind():
     r9, g9 = blind_reward(50.0)
     assert r0 == r9, ("blind reward must ignore --w-gait", r0, r9)
     assert g0 == 0.0 and g9 == 0.0, ("blind gait cost must be OFF", g0, g9)
+
+
+# ---------------------------------------------------------------------------
+# Task 2: phase-native clearance (teacher enveloped + swing-masked) + the I-1
+# numeric blind-reward pin. The teacher clearance now bills a below-target foot
+# ONLY in its scheduled swing window, against target = cmd_c·sin(π·swing_frac)
+# (0 at swing edges, cmd_c mid-swing). Blind keeps the v5 always-on flat-target
+# form EXACTLY. Design: spec §4 + Audit amendments.
+# ---------------------------------------------------------------------------
+
+def _teacher_clear_state(theta, c, base_lift=0.0, cmd=(0.3, 0.0, 0.0), key=24):
+    """Manufacture a TEACHER step with feet moving (joint qd 2.0) at a controlled
+    height, with cmd_c and the clock phase θ pinned before the step (resample
+    fires only at step%250, so a fresh reset's first step preserves the override).
+    Returns (env, stepped_state)."""
+    e = NovaJoystick(heightmap=True)
+    s = e.reset(jax.random.PRNGKey(key))
+    q = s.pipeline_state.q.at[2].add(base_lift)
+    qd = s.pipeline_state.qd.at[6:].set(2.0)
+    ps = e.pipeline_init(q, qd)
+    s = s.replace(pipeline_state=ps,
+                  info={**s.info, "cmd_c": jp.asarray(c),
+                        "gait_phase": jp.asarray(theta),
+                        "cmd": jp.asarray(cmd, dtype=jp.float32)})
+    return e, e.step(s, jp.zeros(e.action_size))
+
+
+def _foot_h_and_v(e, ps):
+    """Per-foot (foot_h above local ground, |xy| foot speed) as the reward reads
+    them, from the POST-step pipeline_state. (4,) each, LEG_NAMES order."""
+    fid = np.asarray(e._foot_ids)
+    foot_xy = ps.x.pos[e._foot_ids, :2]
+    ground_z = np.asarray(e._terrain_ground_z(foot_xy[:, 0], foot_xy[:, 1]))
+    foot_h = np.asarray(ps.x.pos[fid, 2]) - ground_z
+    v = np.linalg.norm(np.asarray(ps.xd.vel[fid, :2]), axis=-1)
+    return foot_h, v
+
+
+def test_teacher_clearance_matches_enveloped_form():
+    # EXACT reconstruction: the billed teacher clearance equals the enveloped,
+    # swing-masked one-sided cost recomputed from state — covers envelope AND mask
+    # in one shot. θ=0.25 puts FR,RL mid-swing (envelope 1) and FL,RR in stance.
+    theta, c = 0.25, 0.06
+    e, s = _teacher_clear_state(theta, c)
+    foot_h, v = _foot_h_and_v(e, s.pipeline_state)
+    st, sw, sf = (np.asarray(x) for x in e._gait_schedule(jp.asarray(theta)))
+    env = np.sin(np.pi * sf)
+    expected = -e._w_clearance * float(
+        np.sum(np.maximum(c * env - foot_h, 0.0) * np.sqrt(v) * sw))
+    assert abs(float(s.metrics["w_clearance"]) - expected) < 1e-4, \
+        (s.metrics["w_clearance"], expected)
+
+
+def test_stance_foot_below_target_masked():
+    # A STANCE-scheduled foot below target bills 0 (swing_sched mask). At θ=0.25
+    # FL,RR are stance; all four feet sit near spawn height (foot_h ≪ c), so every
+    # foot IS below target — yet the billed cost equals the swing-feet-only (FR,RL)
+    # sum, i.e. the stance feet contribute exactly nothing.
+    theta, c = 0.25, 0.06
+    e, s = _teacher_clear_state(theta, c)
+    foot_h, v = _foot_h_and_v(e, s.pipeline_state)
+    assert (foot_h < c).all(), ("precondition: all feet below target", foot_h, c)
+    st, sw, sf = (np.asarray(x) for x in e._gait_schedule(jp.asarray(theta)))
+    env = np.sin(np.pi * sf)
+    per_foot = np.maximum(c * env - foot_h, 0.0) * np.sqrt(v) * sw
+    swing = np.array([1, 2])                       # FR,RL scheduled swing at θ=0.25
+    stance = np.array([0, 3])                      # FL,RR scheduled stance
+    assert (sw[stance] < 1e-3).all(), sw           # stance feet masked
+    assert per_foot[stance].sum() < 1e-9, per_foot # ...so they bill 0
+    expected = -e._w_clearance * float(per_foot[swing].sum())
+    assert abs(float(s.metrics["w_clearance"]) - expected) < 1e-4, \
+        (s.metrics["w_clearance"], expected)
+
+
+def test_envelope_peak_mid_swing():
+    # ENVELOPE PEAK: at swing_frac 0.5 the target equals cmd_c (sin(π·0.5)=1). θ=0.25
+    # puts FR,RL at swing_frac 0.5 -> envelope 1 -> target == cmd_c.
+    e = NovaJoystick(heightmap=True)
+    _, _, sf = e._gait_schedule(jp.asarray(0.25))
+    sf = np.asarray(sf)
+    env = np.sin(np.pi * sf)
+    assert abs(sf[1] - 0.5) < 1e-6 and abs(sf[2] - 0.5) < 1e-6, sf
+    assert abs(env[1] - 1.0) < 1e-6 and abs(env[2] - 1.0) < 1e-6, env
+    # target = cmd_c · envelope == cmd_c at the peak
+    c = 0.05
+    assert abs(c * env[1] - c) < 1e-9
+
+
+def test_envelope_zero_at_swing_edges():
+    # ENVELOPE 0 at both swing edges (liftoff swing_frac 0, touchdown swing_frac 1):
+    # target -> 0, so no clearance is billed there regardless of foot height. FL
+    # is at the liftoff edge at θ=0.5 (swing_frac 0) and the touchdown edge at
+    # θ=1⁻ (swing_frac 1).
+    e = NovaJoystick(heightmap=True)
+    _, _, sf_lift = e._gait_schedule(jp.asarray(0.5))
+    _, _, sf_land = e._gait_schedule(jp.asarray(1.0 - 1e-6))
+    env_lift = np.sin(np.pi * np.asarray(sf_lift))
+    env_land = np.sin(np.pi * np.asarray(sf_land))
+    assert env_lift[0] < 1e-6, (sf_lift[0], env_lift[0])   # liftoff edge
+    assert env_land[0] < 1e-5, (sf_land[0], env_land[0])   # touchdown edge
+
+
+def test_teacher_clearance_le_v5_form():
+    # The enveloped+masked teacher cost is STRICTLY ≤ the v5 always-on form on the
+    # SAME state (envelope only lowers the target ≤ cmd_c; the mask only removes
+    # terms) — v6 never bills MORE than v5 anywhere.
+    theta, c = 0.25, 0.06
+    e, s = _teacher_clear_state(theta, c)
+    foot_h, v = _foot_h_and_v(e, s.pipeline_state)
+    v5_cost = float(np.sum(np.maximum(c - foot_h, 0.0) * np.sqrt(v)))   # always-on
+    v5_billed = -e._w_clearance * v5_cost
+    teacher_billed = float(s.metrics["w_clearance"])
+    # both are ≤ 0 costs; |teacher| ≤ |v5| means teacher is the LESS negative one.
+    assert teacher_billed >= v5_billed - 1e-6, (teacher_billed, v5_billed)
+    # and here it is strictly lower-magnitude (stance feet dropped + edge taper)
+    assert teacher_billed > v5_billed + 1e-3, (teacher_billed, v5_billed)
+
+
+def test_blind_reward_numeric_pin_I1():
+    # I-1: ABSOLUTE numeric pin of the BLIND stepped-env reward on a deterministic
+    # manufactured moving case (key=7, base +0.02, all joints qd=2.0). Captured on
+    # commit 4aee167 (Task-1 HEAD, pre-Task-2): reward = 0.892089664936. The blind
+    # path is untouched by BOTH Task-1 (clock/schedule/gait cost teacher-only) and
+    # Task-2 (phase-native clearance teacher-only), so this must hold to 1e-6 after
+    # both — the deploy-artifact reward is byte-frozen.
+    BLIND_REWARD_PIN = 0.892089664936
+    e = NovaJoystick()                             # blind (heightmap=False)
+    s = e.reset(jax.random.PRNGKey(7))
+    q = s.pipeline_state.q.at[2].add(0.02)
+    qd = s.pipeline_state.qd.at[6:].set(2.0)
+    ps = e.pipeline_init(q, qd)
+    s2 = e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
+    assert abs(float(s2.reward) - BLIND_REWARD_PIN) < 1e-6, \
+        (float(s2.reward), BLIND_REWARD_PIN)
+    assert float(s2.metrics["w_gait"]) == 0.0, s2.metrics["w_gait"]
 
 
 if __name__ == "__main__":

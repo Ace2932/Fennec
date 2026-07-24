@@ -655,8 +655,45 @@ class NovaJoystick(PipelineEnv):
         # w_carry) bills holds directly — watch airT_*/ghost_* for a reopened
         # hold pattern. Below target this is |·|-identical, so the under-lift
         # gradient is unchanged.
-        clearance_cost = jp.sum(jp.maximum(info["cmd_c"] - foot_h, 0.0)
-                                * jp.sqrt(foot_xy_speed))
+        #
+        # v6 PHASE-NATIVE (teacher) vs v5 ALWAYS-ON (blind) — a static
+        # `if self._heightmap` split, reusing the Task-1 schedule indicators
+        # (swing_sched, swing_frac from _gait_schedule at info["gait_phase"]).
+        # DIVISION OF LABOR: the trot CLOCK owns swing TIMING (when a foot lifts);
+        # cmd_c owns swing HEIGHT (how high). So the teacher clearance bills a
+        # below-target foot ONLY inside its SCHEDULED swing window, against an
+        # envelope target that tapers to 0 at the swing edges (touchdown/liftoff)
+        # and peaks at cmd_c mid-swing:
+        #     envelope_i = sin(π · swing_frac_i)   # 0 at swing_frac 0/1, 1 at 0.5
+        #     target_i   = cmd_c · envelope_i
+        #     cost       = Σ max(target_i − foot_h_i, 0)·√v_i · swing_sched_i
+        # swing_sched masks stance feet out entirely — a planted foot below target
+        # is BY DESIGN free (the clock, not this cost, decides it should be down).
+        # NON-FARMABILITY: still a one-sided cost (maxes at 0), no new positive.
+        # It is strictly ≤ the v5 always-on form on identical states — envelope
+        # only LOWERS the target (≤ cmd_c), the mask only REMOVES terms — so v6
+        # never bills MORE than v5 anywhere (test: teacher clearance ≤ v5 form).
+        #
+        # AUDIT AMENDMENT (2026-07-24, F3): 75 ms servo latency = 0.1-0.15 phase
+        # at f 1-2 Hz, so a purely REACTIVE tracker lifts LATE and eats an
+        # unavoidable edge-of-window bill (both here and in the gait cost); the
+        # clock obs (sin/cos 2πθ) lets the policy ANTICIPATE — lead the schedule
+        # by the latency, feedforward, learnable. The enveloped target also LOWERS
+        # the unadapted watch baseline: v6 `clear` ≈ −0.06, NOT v5's −0.17 — so
+        # `clear`→0 is the SECONDARY, subtle run signal; `w_gait` −0.2→~0
+        # (phase-lock) is primary. See spec §4 + Audit amendments.
+        #
+        # BLIND (heightmap=False): NO clock, NO schedule — keeps the v5 always-on
+        # flat-target form (info["cmd_c"] ≡ BLIND_FOOTSWING) EXACTLY, so the 105-d
+        # deploy reward is byte-identical (regression-pinned).
+        if self._heightmap:
+            envelope = jp.sin(jp.pi * swing_frac)             # (4,) 0 at edges, 1 mid-swing
+            clearance_cost = jp.sum(
+                jp.maximum(info["cmd_c"] * envelope - foot_h, 0.0)
+                * jp.sqrt(foot_xy_speed) * swing_sched)
+        else:
+            clearance_cost = jp.sum(jp.maximum(info["cmd_c"] - foot_h, 0.0)
+                                    * jp.sqrt(foot_xy_speed))
         # splay: the rollout showed the hips abducted WIDE. Penalize haa (hip-
         # abduction, joint idx 0,3,6,9) deviation from the default (0); the hfe/kfe
         # swing joints stay free. (ref: pose regularizer, focused on the splay.)
