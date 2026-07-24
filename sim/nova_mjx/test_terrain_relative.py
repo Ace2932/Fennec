@@ -212,8 +212,8 @@ _DROP = 0.18   # metres the feet fall before settling — same for flat and plat
 def _settle(e, ground_h, n=40):
     """Reset, lift the base so the feet start _DROP metres above the LOCAL ground
     (at plateau height `ground_h`), and settle under zero action. Returns the
-    final (settled) state and the SUM of the per-step clearance cost over the
-    whole drop.
+    final (settled) state and the SUM of the per-step swing-reference cost over
+    the whole drop.
 
     The lift is `ground_h + _DROP`, NOT a fixed constant: reset() spawns the base
     at a fixed absolute z that ignores terrain, so on a `ground_h` plateau the
@@ -228,17 +228,24 @@ def _settle(e, ground_h, n=40):
     per call, and 40 steps of it is untestable. Jitting is a pure speed change:
     the ops are identical, so it does not touch what the test measures.
 
-    Why SUM the clearance over the trajectory instead of reading the final step
-    (as the brief sketched): the clearance COST scales by sqrt(foot_xy_speed), so
-    a FULLY settled foot (speed ~0) pays ~0 regardless of height, and the bug's
-    signal at the last step is a mere 0.05 — right on the brief's threshold, so
-    that form does not reliably go red pre-fix. During the drop the feet actually
-    move, and the elevated foot carries a constant +ground_h height offset every
-    one of those steps, so the summed cost diverges cleanly pre-fix (~11.26 gap:
-    c_flat = -5.10 vs c_high = -16.36) and collapses to a 0.0 gap post-fix (both
-    drops are relatively identical). Under zero
-    action the reward never feeds back into the dynamics, so nothing but the
-    absolute-z read distinguishes the two runs.
+    v7: this sums the ACTIVE teacher term w_swingref (two-sided squared tracking
+    of foot_h to z_ref = cmd_c·sin(π·swing_frac), swing_sched-masked). The v6
+    teacher clearance is now identically 0 on the teacher env, so summing
+    w_clearance here would be VACUOUS — the invariant must ride the live term.
+
+    Why SUM over the trajectory instead of reading the final step: w_swingref is
+    swing_sched-masked, so a foot that settles in a scheduled-STANCE window pays 0
+    at the last step regardless of height — reading the final step alone can be
+    vacuous by phase. Summing over the drop captures every step a foot is in its
+    swing window, where the cost is live and the terrain-relative foot_h read is
+    exercised. If foot_h regressed to ABSOLUTE z, the elevated foot would carry a
+    constant +ground_h offset inside (foot_h - z_ref)² on every swing-window step,
+    diverging the two sums; with the correct terrain-relative foot_h the flat and
+    plateau drops trace identically (feet start the same _DROP above LOCAL ground,
+    the whole system is translated up by ground_h, so foot_h matches step for
+    step), and the summed costs coincide to float32 noise. Under zero action the
+    reward never feeds back into the dynamics, so nothing but the absolute-vs-
+    relative z read distinguishes the two runs.
     """
     reset = jax.jit(e.reset)
     step = jax.jit(e.step)
@@ -251,7 +258,7 @@ def _settle(e, ground_h, n=40):
     clear_sum = 0.0
     for _ in range(n):
         state = step(state, zero)
-        clear_sum += float(state.metrics["w_clearance"])
+        clear_sum += float(state.metrics["w_swingref"])
     return state, clear_sum
 
 
@@ -264,13 +271,19 @@ def test_T5_planted_feet_on_plateau_read_planted():
     assert sum(a < 0.5 for a in airT) >= 3, airT   # a settled robot is not flying
 
 
-def test_T6_clearance_matches_flat_at_elevation():
+def test_T6_swingref_matches_flat_at_elevation():
     # BUG 2, env-level: identical motion at 0 m and 0.18 m must cost the same
-    # clearance. Today the elevated case pays ~0.18 more height offset on EVERY
-    # moving foot, every step of the drop — summed over the settle that is
-    # c_flat = -5.10 vs c_high = -16.36 pre-fix (an 11.26 gap). Post-fix foot_h
-    # strips the offset and the two drops trace identically -> the summed costs
-    # match exactly (difference 0.0, well under the 0.05 threshold).
+    # swing-reference tracking. w_swingref = -W·Σ(foot_h - cmd_c·sin(π·swing_frac))²
+    # ·swing_sched rides the SAME terrain-relative foot_h the v6 clearance did, so
+    # the same invariant holds: if foot_h regressed to absolute z, the elevated
+    # foot would carry a +0.18 offset inside the squared tracking error on every
+    # swing-window step and the summed costs would diverge. With correct foot_h the
+    # two drops trace identically and the sums coincide to float32 noise (both are
+    # nonzero — feet pass through their swing windows during the drop, so this is
+    # NOT vacuous, unlike summing the now-dead w_clearance term). Threshold kept at
+    # 0.05: the difference is ~0 (relatively identical drops), and w_swingref's
+    # per-step magnitude is comparable-or-larger than the old clearance, so any
+    # absolute-z regression blows well past 0.05.
     _, c_flat = _settle(_plateau_env(0.0), 0.0)
     _, c_high = _settle(_plateau_env(0.18), 0.18)
     assert abs(c_flat - c_high) < 0.05, (c_flat, c_high)

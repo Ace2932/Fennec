@@ -87,6 +87,15 @@ GATE_ANTI_WGAIT = -0.20        # half-cycle-shifted trot must bill ≤ this
 GATE_POSE_DELTA = -0.11        # w_pose must not FALL by more than this vs a=0.2
 GATE_UPRIGHT_DELTA = -0.15     # w_upright must not FALL by more than this vs a=0.2
 
+# ---- v7 SWING-REFERENCE GATE (spec §PROBE GATE) ----
+# The decisive pre-run test: with the swing-ref tracking term LIVE, the total
+# per-step reward vs amplitude must peak at (or near) the REFERENCE amplitude —
+# the scripted amplitude whose peak foot_h reaches ~cmd_c (0.05 m) — NOT at the
+# lowest ~2 cm amplitude. PASS means the landscape now pulls the foot UP to the
+# reference: argmax_a(total) has peak foot_h >= GATE_REF_PEAK_H and w_swingref is
+# minimized (least-negative cost) there. FAIL => raise --w-swingref, re-probe.
+GATE_REF_PEAK_H = 0.045        # m; ~cmd_c 0.05 minus tracking slack
+
 
 def make_env():
     """TEACHER env (heightmap=True): the trot CLOCK, schedule indicators, gait
@@ -112,10 +121,13 @@ def script_phase(i, cmd_f, phase_off):
     scheduled stance on an airborne one → ANTI-PHASE (all four feet violate)."""
     return float((i * DT * cmd_f + phase_off) % 1.0)
 
-# the 17 weighted reward terms that are LIVE on the flat env (climb terms are
-# identically 0 on flat, so they are omitted). Order = task-spec order.
+# the weighted reward terms that are LIVE on the flat env (climb terms are
+# identically 0 on flat, so they are omitted). Order = task-spec order. v7:
+# w_swingref is the ACTIVE teacher term (two-sided squared foot_h -> cmd_c·sin(phase));
+# w_clearance is now identically 0 on the teacher env (BLIND path only) but kept in
+# the table so a nonzero value would flag a regression.
 TERMS = [
-    "w_track", "w_yaw", "w_progress", "w_air", "w_clearance",
+    "w_track", "w_yaw", "w_progress", "w_air", "w_clearance", "w_swingref",
     "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
     "w_splay", "w_carry", "w_actrate", "w_energy", "w_jerk", "w_stand",
 ]
@@ -459,6 +471,46 @@ def main():
     print("PROBE GATE VERDICT: "
           + ("PASS — all criteria hold at every (T, a)" if gate_pass
              else "FAIL — see the FAILs above; touch nothing on FAIL"))
+    print("=" * 78)
+
+    # ------------------------------------------------------ G. SWING-REF GATE
+    print("\n" + "=" * 78)
+    print("G. SWING-REFERENCE GATE (v7 spec §PROBE GATE) — the decisive pre-run test.")
+    print("   Per swing-duration T: total per-step reward, peak foot_h and w_swingref")
+    print("   at each swept amplitude. PASS = the amplitude that MAXIMIZES total")
+    print(f"   reward has peak foot_h >= {GATE_REF_PEAK_H*100:.1f}cm (near cmd_c 0.05, NOT the")
+    print("   lowest ~2cm amp) AND w_swingref is minimized (least-negative cost) there.")
+    print("   'the landscape now pulls the foot UP to the reference.'")
+    print("=" * 78)
+    swingref_gate_pass = True
+    for T in PERIODS:
+        rows = [(a, results[(a, T)]) for a in AMPLITUDES]
+        # amplitude that maximizes total per-step reward
+        a_max, r_max = max(rows, key=lambda kv: kv[1]["total"])
+        # amplitude with the least-negative (minimized) swingref cost
+        a_srmax, _ = max(rows, key=lambda kv: kv[1]["terms"]["w_swingref"])
+        peak_at_max = r_max["peak_h"]
+        c1 = peak_at_max >= GATE_REF_PEAK_H          # max-reward amp lifts to the ref
+        c2 = a_srmax == a_max                          # w_swingref minimized at that amp
+        ok = c1 and c2
+        swingref_gate_pass = swingref_gate_pass and ok
+        print(f"\n--- T={T:.2f}s ---   (amplitude-of-max-total = a={a_max:.1f})")
+        head = f"{'a':>5}{'total':>10}{'peak_h_cm':>11}{'w_swingref':>12}"
+        print(head)
+        for a, r in rows:
+            mark_max = "  <= MAX total" if a == a_max else ""
+            mark_sr = "  (w_swingref min)" if a == a_srmax else ""
+            print(f"{a:>5.1f}{r['total']:>10.3f}{r['peak_h']*100:>11.2f}"
+                  f"{r['terms']['w_swingref']:>12.4f}{mark_max}{mark_sr}")
+        print(f"  amplitude-of-max-total a={a_max:.1f}: peak foot_h={peak_at_max*100:.2f}cm "
+              f">= {GATE_REF_PEAK_H*100:.1f}cm [{mark(c1)}]  "
+              f"w_swingref minimized here [{mark(c2)}]  => {mark(ok)}")
+
+    print("\n" + "=" * 78)
+    print("SWING-REFERENCE GATE VERDICT: "
+          + ("PASS — total reward peaks at the reference amplitude (foot pulled UP)"
+             if swingref_gate_pass
+             else "FAIL — max total still at low amplitude; RAISE --w-swingref, touch nothing else"))
     print("=" * 78)
 
     print(f"\ntotal runtime: {time.time()-t0:.0f}s")
