@@ -12,7 +12,46 @@ import jax.numpy as jp
 import numpy as np
 
 from env import (NovaJoystick, F_MIN, F_MAX, BLIND_CMD_F, GAIT_DUTY, GAIT_SMOOTH,
-                 GAIT_OFFSETS, W_GAIT, F_OBS_SCALE)
+                 GAIT_OFFSETS, W_GAIT, F_OBS_SCALE,
+                 CRAWL_OFFSETS, CRAWL_DUTY, CRAWL_F_MIN, CRAWL_F_MAX,
+                 TROT_F_MIN, TROT_F_MAX)
+from terrain import terrain_field
+
+_LEG_ORDER = ["FL", "FR", "RL", "RR"]                # LEG_NAMES order
+
+
+def _v6_trot_schedule(theta):
+    """VERBATIM v6 trot-schedule body (GAIT_OFFSETS + GAIT_DUTY=0.5 inlined) — the
+    byte-identity reference the parameterized _gait_schedule must still reproduce."""
+    phase = np.mod(theta + np.array([0.0, 0.5, 0.5, 0.0]), 1.0)
+    center = 0.5 / 2.0
+    halfwin = 0.5 / 2.0
+    d = np.abs(np.mod(phase - center + 0.5, 1.0) - 0.5)
+    t = np.clip((d - (halfwin - GAIT_SMOOTH)) / (2.0 * GAIT_SMOOTH), 0.0, 1.0)
+    stance = 0.5 * (1.0 + np.cos(np.pi * t))
+    swing = 1.0 - stance
+    sf = np.clip((phase - 0.5) / (1.0 - 0.5), 0.0, 1.0)
+    return stance, swing, sf
+
+
+def _crawl_env(seed=0, level=1.0):
+    """An env whose terrain is a pure staircase (terrain_field stair_frac=1 — the
+    domain_randomize is_stair output), which reset() must select the CRAWL gait on."""
+    e = NovaJoystick(heightmap=True)
+    stair = np.asarray(terrain_field(jax.random.PRNGKey(seed), level, 0.0, 1.0))
+    e.sys = e.sys.tree_replace({"hfield_data": jp.asarray(stair)})
+    return e
+
+
+def _swing_order(sw):
+    """Dedup'd sequence of the solo-swinging leg (swing_sched>0.9) as θ advances."""
+    order, prev = [], None
+    for i in range(sw.shape[0]):
+        j = int(np.argmax(sw[i]))
+        if sw[i, j] > 0.9 and _LEG_ORDER[j] != prev:
+            prev = _LEG_ORDER[j]
+            order.append(prev)
+    return order
 
 # leg base offsets into q[7:] in LEG_NAMES order (FL,FR,RL,RR): [haa,hfe,kfe] each
 _LEG_BASE = {"FL": 0, "FR": 3, "RL": 6, "RR": 9}
@@ -148,19 +187,20 @@ def test_gait_cost_idle_gated():
     assert float(s.metrics["w_gait"]) == 0.0, s.metrics["w_gait"]
 
 
-def test_obs_230_teacher_105_blind():
-    # teacher obs 230, last 3 = [sin 2πθ, cos 2πθ, cmd_f·F_OBS_SCALE]; blind obs 105
-    # and its reward is byte-unchanged by the gait term (the --w-gait kwarg is
-    # ignored on the blind path — regression pin for the deploy artifact).
+def test_obs_234_teacher_105_blind():
+    # v8 teacher obs 234: the v6 clock dims [sin 2πθ, cos 2πθ, cmd_f·F_OBS_SCALE]
+    # now sit at obs[-7:-4] (the 4 v8 swing_sched dims append AFTER them at obs[-4:]);
+    # blind obs 105 and its reward is byte-unchanged by the gait term (the --w-gait
+    # kwarg is ignored on the blind path — regression pin for the deploy artifact).
     te = NovaJoystick(heightmap=True)
     s = te.reset(jax.random.PRNGKey(5))
-    assert s.obs.shape[-1] == 230, s.obs.shape
+    assert s.obs.shape[-1] == 234, s.obs.shape
     th, f = float(s.info["gait_phase"]), float(s.info["cmd_f"])
-    last3 = np.asarray(s.obs[-3:])
-    assert abs(last3[0] - np.sin(2 * np.pi * th)) < 1e-5, last3
-    assert abs(last3[1] - np.cos(2 * np.pi * th)) < 1e-5, last3
-    assert abs(last3[2] - f * F_OBS_SCALE) < 1e-5, last3
-    # blind: 105-d obs, no clock dims
+    clock3 = np.asarray(s.obs[-7:-4])
+    assert abs(clock3[0] - np.sin(2 * np.pi * th)) < 1e-5, clock3
+    assert abs(clock3[1] - np.cos(2 * np.pi * th)) < 1e-5, clock3
+    assert abs(clock3[2] - f * F_OBS_SCALE) < 1e-5, clock3
+    # blind: 105-d obs, no clock/swing_sched dims
     be = NovaJoystick()
     assert be.reset(jax.random.PRNGKey(5)).obs.shape[-1] == 105
 
@@ -383,6 +423,148 @@ def test_swingref_w_swingref_kwarg_scales():
     assert float(s100.metrics["w_swingref"]) < -0.001, s100.metrics["w_swingref"]
     assert abs(float(s100.metrics["w_swingref"]) / float(s50.metrics["w_swingref"]) - 2.0) < 0.02, \
         (s100.metrics["w_swingref"], s50.metrics["w_swingref"])
+
+
+# ---------------------------------------------------------------------------
+# v8 CRAWL GAIT — parameterized schedule, terrain-selected trot/crawl, F_MIN 0.3,
+# obs 234. Crawl = one foot swings at a time on 3-leg static support (the tall-
+# stairs gait; crawl-ceiling probe e6888d5 reached 6.7cm stable, ~2x the trot).
+# Reuses the v7 tracking reward + v6 gait cost UNCHANGED — both read the schedule,
+# which becomes gait-parameterized. Design:
+# docs/superpowers/specs/2026-07-24-crawl-gait-v8-design.md
+# ---------------------------------------------------------------------------
+
+def test_gait_schedule_trot_unchanged():
+    # REGRESSION PIN: _gait_schedule(θ, GAIT_OFFSETS, 0.5) reproduces the v6 trot
+    # schedule bit-for-bit (the whole v7 tracking chain depends on it). Two checks:
+    # (a) the explicit-args call == the numpy v6 reference (functional identity),
+    # (b) the DEFAULT-args call == the explicit-args call EXACTLY (parameterization
+    # is a no-op for trot — the defaults are the old module consts).
+    e = NovaJoystick(heightmap=True)
+    grid = jp.linspace(0.0, 1.0, 257)
+    st_e, sw_e, sf_e = (np.asarray(x) for x in
+                        jax.vmap(lambda th: e._gait_schedule(th, GAIT_OFFSETS, 0.5))(grid))
+    for i, th in enumerate(np.asarray(grid)):
+        rst, rsw, rsf = _v6_trot_schedule(float(th))
+        assert np.allclose(st_e[i], rst, atol=1e-6), (th, st_e[i], rst)
+        assert np.allclose(sw_e[i], rsw, atol=1e-6), (th, sw_e[i], rsw)
+        assert np.allclose(sf_e[i], rsf, atol=1e-6), (th, sf_e[i], rsf)
+    # default-args == explicit trot args, EXACTLY (both float32)
+    st_d, sw_d, sf_d = (np.asarray(x) for x in jax.vmap(e._gait_schedule)(grid))
+    assert np.array_equal(st_d, st_e) and np.array_equal(sw_d, sw_e) \
+        and np.array_equal(sf_d, sf_e), "default trot args must be a byte no-op"
+
+
+def test_crawl_one_foot_at_a_time():
+    # crawl schedule: exactly one foot swings at a time -> stance_sched sums to ~3
+    # (3-leg static support) at EVERY θ, and each foot gets its solo swing.
+    e = NovaJoystick(heightmap=True)
+    grid = jp.linspace(0.0, 1.0, 2001)[:-1]
+    st, sw, _ = (np.asarray(x) for x in
+                 jax.vmap(lambda th: e._gait_schedule(th, CRAWL_OFFSETS, CRAWL_DUTY))(grid))
+    tot = st.sum(axis=1)
+    assert np.allclose(tot, 3.0, atol=1e-4), ("3-leg support at every θ", tot.min(), tot.max())
+    # total swing == exactly ONE foot's worth at every θ (= 4 - stance_sum = 1): the
+    # crawl never has two feet swinging at once. At the smooth handoff two feet are
+    # momentarily mid-edge (each ~0.5, one landing as the next lifts) but their swing
+    # SUMS to 1, so no more than one foot is ever in DEEP swing (>0.6).
+    assert np.allclose(sw.sum(axis=1), 1.0, atol=1e-4), (sw.sum(axis=1).min(), sw.sum(axis=1).max())
+    n_deep = (sw > 0.6).sum(axis=1)
+    assert int(n_deep.max()) <= 1, ("at most ONE foot in deep swing", n_deep.max())
+    assert (sw.max(axis=0) > 0.99).all(), ("each foot gets a solo swing", sw.max(axis=0))
+
+
+def test_crawl_duty_075():
+    # duty 0.75: each foot swing-scheduled ~25% of the cycle (mean swing_sched
+    # ~0.25, mean stance ~0.75), and the swing ORDER is the probe's VALIDATED stable
+    # creep RL->FL->RR->FR (probe_crawl_ceiling.py SWING_ORDER — a wrong order is a
+    # silently unstable gait).
+    e = NovaJoystick(heightmap=True)
+    grid = jp.linspace(0.0, 1.0, 2001)[:-1]
+    st, sw, _ = (np.asarray(x) for x in
+                 jax.vmap(lambda th: e._gait_schedule(th, CRAWL_OFFSETS, CRAWL_DUTY))(grid))
+    assert np.allclose(sw.mean(axis=0), 1.0 - CRAWL_DUTY, atol=0.01), sw.mean(axis=0)
+    assert np.allclose(st.mean(axis=0), CRAWL_DUTY, atol=0.01), st.mean(axis=0)
+    order = _swing_order(sw)
+    assert order[:4] == ["RL", "FL", "RR", "FR"], ("stable creep sequence", order[:4])
+
+
+def test_terrain_selects_gait():
+    # terrain SELECTS the gait (reset reads the per-env hfield): STAIR -> crawl,
+    # FLAT + ROUGH -> trot. Blind always trots (checked elsewhere).
+    ec = _crawl_env(seed=0, level=1.0)
+    sc = ec.reset(jax.random.PRNGKey(1))
+    assert float(sc.info["is_crawl"]) == 1.0, "stair env must select crawl"
+    assert np.allclose(np.asarray(sc.info["gait_offsets"]), np.asarray(CRAWL_OFFSETS)), \
+        sc.info["gait_offsets"]
+    assert abs(float(sc.info["gait_duty"]) - CRAWL_DUTY) < 1e-9, sc.info["gait_duty"]
+    # FLAT (nominal terrain, peak 0) -> trot
+    ef = NovaJoystick(heightmap=True)
+    sf = ef.reset(jax.random.PRNGKey(1))
+    assert float(sf.info["is_crawl"]) == 0.0, "flat env must select trot"
+    assert np.allclose(np.asarray(sf.info["gait_offsets"]), np.asarray(GAIT_OFFSETS)), \
+        sf.info["gait_offsets"]
+    assert abs(float(sf.info["gait_duty"]) - GAIT_DUTY) < 1e-9, sf.info["gait_duty"]
+    # ROUGH (2D bumps, stair_frac=0) -> trot (row-std > 0, not a staircase)
+    er = NovaJoystick(heightmap=True)
+    rough = np.asarray(terrain_field(jax.random.PRNGKey(3), 1.0, 0.0, 0.0))
+    er.sys = er.sys.tree_replace({"hfield_data": jp.asarray(rough)})
+    sr = er.reset(jax.random.PRNGKey(1))
+    assert float(sr.info["is_crawl"]) == 0.0, ("rough env must trot", sr.info["is_crawl"])
+
+
+def test_f_min_extended():
+    # F_MIN extended to 0.3; crawl envs sample cmd_f in the slow band [0.3,0.6],
+    # trot envs keep the fast band [1,2] (byte-unchanged).
+    assert abs(F_MIN - 0.3) < 1e-9, F_MIN
+    ec = _crawl_env(seed=0, level=1.0)
+    cfs = [float(ec.reset(jax.random.PRNGKey(k)).info["cmd_f"]) for k in range(16)]
+    for f in cfs:
+        assert CRAWL_F_MIN - 1e-6 <= f <= CRAWL_F_MAX + 1e-6, ("crawl cmd_f band", f)
+    assert max(cfs) - min(cfs) > 0.05, ("crawl cmd_f should vary across resets", cfs)
+    ef = NovaJoystick(heightmap=True)                 # flat -> trot band
+    tfs = [float(ef.reset(jax.random.PRNGKey(k)).info["cmd_f"]) for k in range(16)]
+    for f in tfs:
+        assert TROT_F_MIN - 1e-6 <= f <= TROT_F_MAX + 1e-6, ("trot cmd_f band", f)
+
+
+def test_obs_234_teacher_last4_swingsched():
+    # teacher obs 234, the LAST 4 dims == this env's per-foot swing_sched; blind 105.
+    e = NovaJoystick(heightmap=True)
+    s = e.reset(jax.random.PRNGKey(5))
+    assert s.obs.shape[-1] == 234, s.obs.shape
+    _, sw, _ = e._gait_schedule(s.info["gait_phase"], s.info["gait_offsets"],
+                                s.info["gait_duty"])
+    assert np.allclose(np.asarray(s.obs[-4:]), np.asarray(sw), atol=1e-6), \
+        (np.asarray(s.obs[-4:]), np.asarray(sw))
+    # on a CRAWL env the last-4 carry the crawl (one-foot-swing) schedule
+    ec = _crawl_env(seed=0, level=1.0)
+    sc = ec.reset(jax.random.PRNGKey(5))
+    _, sw_c, _ = ec._gait_schedule(sc.info["gait_phase"], CRAWL_OFFSETS, CRAWL_DUTY)
+    assert np.allclose(np.asarray(sc.obs[-4:]), np.asarray(sw_c), atol=1e-6), \
+        (np.asarray(sc.obs[-4:]), np.asarray(sw_c))
+    be = NovaJoystick()                               # blind
+    assert be.reset(jax.random.PRNGKey(5)).obs.shape[-1] == 105
+
+
+def test_blind_reward_pin_holds():
+    # v8 is TEACHER-ONLY (terrain-gait, swing_sched obs, F_MIN band) — the blind
+    # 105-d deploy reward must be byte-frozen. Same manufactured moving state as
+    # test_blind_clearance_unchanged_numeric (key=7, base +0.02, all joints qd=2.0);
+    # pin captured on commit 4aee167.
+    BLIND_REWARD_PIN = 0.892089664936
+    e = NovaJoystick()                                # blind (heightmap=False)
+    s = e.reset(jax.random.PRNGKey(7))
+    q = s.pipeline_state.q.at[2].add(0.02)
+    qd = s.pipeline_state.qd.at[6:].set(2.0)
+    ps = e.pipeline_init(q, qd)
+    s2 = e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
+    assert abs(float(s2.reward) - BLIND_REWARD_PIN) < 1e-6, \
+        (float(s2.reward), BLIND_REWARD_PIN)
+    # blind gait is trot (schedule unused in the 105-d reward)
+    assert np.allclose(np.asarray(s.info["gait_offsets"]), np.asarray(GAIT_OFFSETS)), \
+        s.info["gait_offsets"]
+    assert float(s.info["is_crawl"]) == 0.0, s.info["is_crawl"]
 
 
 if __name__ == "__main__":

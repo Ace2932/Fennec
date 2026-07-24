@@ -52,13 +52,14 @@ def test_flat_reads_negative_base():
     assert np.allclose(hm, -0.17, atol=0.01), "flat ground should read -base_z everywhere"
 
 
-def test_teacher_obs_is_230():
+def test_teacher_obs_is_234():
     # teacher obs = 105 (proprio+cmd+act) + 121 (11x11 heightmap) + 1 (commanded
-    # footswing c) + 3 (v6 gait clock: sin/cos 2πθ, cmd_f scaled) = 230. lift-v5
-    # raised 226->227 (c); gait-clock-v6 raises 227->230 (clock).
+    # footswing c) + 3 (v6 gait clock: sin/cos 2πθ, cmd_f scaled) + 4 (v8 per-foot
+    # swing_sched) = 234. lift-v5 raised 226->227 (c); gait-clock-v6 227->230
+    # (clock); crawl-gait-v8 230->234 (swing_sched).
     e = NovaJoystick(heightmap=True)
     s = jax.jit(e.reset)(jax.random.PRNGKey(0))
-    assert s.obs.shape[-1] == 230, s.obs.shape
+    assert s.obs.shape[-1] == 234, s.obs.shape
 
 
 def test_yaw_rotates_the_view():
@@ -74,6 +75,6 @@ def test_yaw_rotates_the_view():
 
 if __name__ == "__main__":
     for fn in [test_orientation_and_relative_height, test_flat_reads_negative_base,
-               test_teacher_obs_is_230, test_yaw_rotates_the_view]:
+               test_teacher_obs_is_234, test_yaw_rotates_the_view]:
         fn(); print("OK", fn.__name__)
     print("ALL HEIGHT-MAP SAMPLER CHECKS PASSED")

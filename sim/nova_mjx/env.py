@@ -84,15 +84,44 @@ CMD_C_OBS_SCALE = 20.0
 # phase; FR,RL antiphase), duty GAIT_DUTY. 1-2 Hz at duty 0.5 spans 0.25-0.5 s
 # swings = the probe's climb band, with the current ~1.4 Hz gait interior → easy
 # lock. Phase is continuous across an f-resample (rate changes, no jump).
-F_MIN = 1.0               # Hz — min commanded trot frequency (teacher cmd_f)
-F_MAX = 2.0               # Hz — max commanded trot frequency
+# v8: F_MIN extended 1.0 -> 0.3 to admit the slow CRAWL swing band. A crawl lifts
+# ONE foot at a time on 3-leg support and needs a SLOW swing (~0.7-1.0 s) for the
+# tall single-foot lift (crawl-ceiling probe e6888d5: 6.7 cm stable @ duty 0.75,
+# ~0.3-0.5 Hz), while the trot stays fast (1-2 Hz). F_MIN/F_MAX are the OVERALL
+# gait-frequency envelope; the per-gait bands (TROT_* / CRAWL_*) select the actual
+# cmd_f range per env by terrain (stair->crawl, flat/rough->trot). The TROT band
+# is exactly the old [F_MIN,F_MAX]=[1,2], so trot cmd_f is byte-unchanged.
+F_MIN = 0.3               # Hz — overall min commanded gait frequency (crawl floor)
+F_MAX = 2.0               # Hz — overall max commanded gait frequency (trot ceiling)
+TROT_F_MIN = 1.0          # Hz — trot cmd_f band low (== old F_MIN; regression-pinned)
+TROT_F_MAX = 2.0          # Hz — trot cmd_f band high (== old F_MAX)
+CRAWL_F_MIN = 0.3         # Hz — crawl cmd_f band low (slow swing -> high lift)
+CRAWL_F_MAX = 0.6         # Hz — crawl cmd_f band high
 BLIND_CMD_F = 1.4         # Hz — FIXED, UNUSED cmd_f on the blind deploy path (no clock)
-GAIT_DUTY = 0.5           # stance fraction of the cycle (fixed; no commanded gait zoo)
+GAIT_DUTY = 0.5           # trot stance fraction of the cycle (fixed; no commanded gait zoo)
 GAIT_SMOOTH = 0.05        # phase-unit half-width of each raised-cosine schedule edge
 W_GAIT = 0.15             # schedule-violation COST weight (--w-gait); a cost, maxes at 0
 # Fixed trot phase offsets in LEG_NAMES order (FL,FR,RL,RR): FL+RR in phase (0.0),
 # FR+RL antiphase (0.5) — the two diagonal pairs. Rows MUST match _foot_ids/contact.
 GAIT_OFFSETS = jp.array([0.0, 0.5, 0.5, 0.0])
+# ---- v8 CRAWL schedule (teacher, stair envs) — the tall-stairs gait ----
+# One foot swings at a time on a 3-leg static-support triangle (each stance leg
+# bears ~1/3 body weight, the swinging leg is UNLOADED and reaches high freely) —
+# the crawl-ceiling probe (probe_crawl_ceiling.py e6888d5) hit 6.7 cm STABLE, ~2×
+# the trot's ~3 cm, because a trot's 2-leg diagonal support sags under load. v8
+# reuses the v7 tracking reward + v6 gait cost UNCHANGED (both read this schedule).
+#
+# Offsets in LEG_NAMES order (FL,FR,RL,RR). Duty 0.75 -> each foot swings 0.25 of
+# the cycle; the four swing windows are spaced 0.25 apart so they TILE [0,1) with
+# no overlap -> stance_sched sums to EXACTLY 3 at every θ (always 3 feet planted).
+# The offsets place the swing windows in the probe's VALIDATED no-fall creep/wave
+# sequence RL -> FL -> RR -> FR (probe SWING_ORDER; a WRONG order is a silently
+# unstable gait). Derivation: a foot swings when frac(θ+off) ∈ [duty,1); to put
+# leg L's swing start at θ = S_L, off_L = (duty - S_L) mod 1. Probe slots put
+# RL@0.00, FL@0.25, RR@0.50, FR@0.75 -> offsets below (verified: one-foot-at-a-
+# time, stance-sum 3.0, order RL,FL,RR,FR).
+CRAWL_OFFSETS = jp.array([0.5, 0.0, 0.75, 0.25])
+CRAWL_DUTY = 0.75         # crawl stance fraction (3-leg support); trot uses GAIT_DUTY
 # Obs scale for cmd_f (teacher-only), mirroring CMD_OBS_SCALE / CMD_C_OBS_SCALE:
 # maps 1-2 Hz into the ~O(1) band the scaled commands occupy (cmd_f*scale in
 # [0.5, 1.0]). SINGLE SOURCE OF TRUTH for the last teacher obs dim; blind never
@@ -314,6 +343,30 @@ class NovaJoystick(PipelineEnv):
         # stays byte-identical (same discipline as cmd_c, third time).
         kg = jax.random.fold_in(kc, 2)
         kf_gait, kph_gait = jax.random.split(kg)
+        # v8 TERRAIN-SELECTED GAIT (teacher-only): a STAIR env crawls, flat/rough
+        # trots. The per-env randomized terrain IS self.sys.hfield_data here (brax's
+        # DomainRandomizationVmapWrapper swaps sys per env inside reset), so we read
+        # the gait straight off the terrain — deterministic, so it needs NO rng draw
+        # (fold_in(kc,3) is reserved for a future stair-trot mix; cmd_c=1, clock=2).
+        # A staircase is the ONLY terrain that varies in +x but is CONSTANT along y
+        # (terrain.terrain_field is_stair branch: height depends only on x), so its
+        # per-column std down the rows (y) is EXACTLY 0 with a nonzero peak. Flat
+        # (peak 0) and rough (2D structure, row-std > 0) both -> trot. Blind always
+        # trots — the schedule is unused in the 105-d deploy reward (byte-frozen).
+        if self._heightmap:
+            _hf = self.sys.hfield_data.reshape(self._hf_nrow, self._hf_ncol)
+            is_crawl = jp.where((jp.max(_hf) > 1e-6)
+                                & (jp.mean(jp.std(_hf, axis=0)) < 1e-6), 1.0, 0.0)
+        else:
+            is_crawl = jp.asarray(0.0)
+        _c = is_crawl > 0.5
+        gait_offsets = jp.where(_c, CRAWL_OFFSETS, GAIT_OFFSETS)   # (4,)
+        gait_duty = jp.where(_c, CRAWL_DUTY, GAIT_DUTY)
+        # gait-dependent cmd_f band: crawl slow (0.3-0.6), trot fast (1-2). The trot
+        # band is the old [F_MIN,F_MAX]=[1,2] on the SAME kf_gait key, so trot cmd_f
+        # is byte-identical to v6/v7.
+        f_lo = jp.where(_c, CRAWL_F_MIN, TROT_F_MIN)
+        f_hi = jp.where(_c, CRAWL_F_MAX, TROT_F_MAX)
         info = {
             "rng": rng, "cmd": self.sample_command(kc),
             # COMMANDED footswing clearance target (lift-v5). Teacher samples it
@@ -331,8 +384,14 @@ class NovaJoystick(PipelineEnv):
             # path is byte-unchanged. Advanced + resampled in step().
             "gait_phase": (jax.random.uniform(kph_gait, (), minval=0.0, maxval=1.0)
                            if self._heightmap else jp.asarray(0.0)),
-            "cmd_f": (jax.random.uniform(kf_gait, (), minval=F_MIN, maxval=F_MAX)
+            "cmd_f": (jax.random.uniform(kf_gait, (), minval=f_lo, maxval=f_hi)
                       if self._heightmap else jp.asarray(BLIND_CMD_F)),
+            # v8 per-env gait (terrain-selected above): offsets+duty feed the
+            # gait-parameterized _gait_schedule; is_crawl re-selects the cmd_f band
+            # on the step() resample. Trot values on flat/rough/blind -> the schedule
+            # + reward are byte-identical to v7.
+            "gait_offsets": gait_offsets, "gait_duty": gait_duty,
+            "is_crawl": is_crawl,
             "last_act": jp.zeros(self._nu), "last_act2": jp.zeros(self._nu),
             "last_ctrl": self._default_pose,   # effective servo target (deadband)
             "feet_air": jp.zeros(4),
@@ -540,7 +599,8 @@ class NovaJoystick(PipelineEnv):
         # no cost ever did). A standing robot bills ~2·W_GAIT/step (two feet always
         # scheduled-swing) → rhythm is mandatory. swing_frac feeds Task-2 clearance.
         # Schedule read at the phase that governed THIS step (advanced after).
-        stance_sched, swing_sched, swing_frac = self._gait_schedule(info["gait_phase"])
+        stance_sched, swing_sched, swing_frac = self._gait_schedule(
+            info["gait_phase"], info["gait_offsets"], info["gait_duty"])
         contact_f = contact.astype(jp.float32)
         gait_cost = jp.sum(contact_f * swing_sched + (1.0 - contact_f) * stance_sched)
 
@@ -890,10 +950,14 @@ class NovaJoystick(PipelineEnv):
         # step % 250 cadence and jp.where pattern as cmd.
         info["gait_phase"] = jp.mod(info["gait_phase"] + info["cmd_f"] * self._dt, 1.0)
         if self._heightmap:
+            # resample within THIS env's gait band (crawl 0.3-0.6, trot 1-2). Trot
+            # band == old [F_MIN,F_MAX] on the SAME fold_in(ka,2) key -> byte-identical.
+            _c = info["is_crawl"] > 0.5
             info["cmd_f"] = jp.where(
                 info["step"] % 250 == 0,
                 jax.random.uniform(jax.random.fold_in(ka, 2), (),
-                                   minval=F_MIN, maxval=F_MAX),
+                                   minval=jp.where(_c, CRAWL_F_MIN, TROT_F_MIN),
+                                   maxval=jp.where(_c, CRAWL_F_MAX, TROT_F_MAX)),
                 info["cmd_f"])
         obs = self._get_obs(info, pipeline_state)
         # airborne fraction per foot — averaged over an episode, a CARRIED leg
@@ -990,22 +1054,30 @@ class NovaJoystick(PipelineEnv):
         ])
         return frame + noise
 
-    def _gait_schedule(self, theta):
-        """Trot schedule from the clock phase θ. Per foot i (LEG_NAMES order):
-        phase_i = frac(θ + GAIT_OFFSETS_i); stance_sched_i = raised-cosine smoothed
-        indicator of (phase_i < GAIT_DUTY), transition half-width GAIT_SMOOTH per
-        edge (no reward cliffs); swing_sched_i = 1 − stance_sched_i; swing_frac_i =
-        position within the swing window [GAIT_DUTY, 1) in [0, 1] (Task-2 clearance
-        envelope). Returns three (4,) arrays.
+    def _gait_schedule(self, theta, offsets=GAIT_OFFSETS, duty=GAIT_DUTY):
+        """Gait schedule from the clock phase θ, GAIT-PARAMETERIZED (v8). Per foot i
+        (LEG_NAMES order): phase_i = frac(θ + offsets_i); stance_sched_i =
+        raised-cosine smoothed indicator of (phase_i < duty), transition half-width
+        GAIT_SMOOTH per edge (no reward cliffs); swing_sched_i = 1 − stance_sched_i;
+        swing_frac_i = position within the swing window [duty, 1) in [0, 1] (v7
+        clearance envelope). Returns three (4,) arrays.
 
-        Duty 0.5 + antiphase pairs → stance_sched sums to EXACTLY 2 for every θ (a
-        foot at φ and its pair at φ+0.5 sum to 1), so any UNIFORM contact pattern
-        bills cost 2; the compliant/anti diagonal-split patterns reach 0 / 4. The
-        smoothing is built on circular distance to the stance-window centre, so it
-        wraps cleanly at θ=0 (no discontinuity)."""
-        phase = jp.mod(theta + GAIT_OFFSETS, 1.0)              # (4,)
-        center = GAIT_DUTY / 2.0                               # stance window centre
-        halfwin = GAIT_DUTY / 2.0                              # stance window half-extent
+        `offsets`/`duty` were the module consts GAIT_OFFSETS/GAIT_DUTY; v8 threads
+        them per-env from info so ONE body serves both gaits (the raised-cosine
+        circular-distance machinery is unchanged). Defaults reproduce the trot, so
+        `_gait_schedule(θ)` == the v6/v7 call BYTE-IDENTICALLY (regression pin — the
+        whole v7 tracking chain depends on it), and the internal callers pass the
+        per-env info["gait_offsets"]/["gait_duty"] explicitly.
+
+        TROT (offsets [0,.5,.5,0], duty 0.5): antiphase pairs → stance_sched sums to
+        EXACTLY 2 for every θ (a foot at φ and its pair at φ+0.5 sum to 1).
+        CRAWL (CRAWL_OFFSETS, duty 0.75): the four swing windows (each 1−duty=0.25
+        wide) tile [0,1) → exactly ONE foot swings at a time and stance_sched sums to
+        EXACTLY 3 (3-leg static support). The smoothing is built on circular distance
+        to the stance-window centre, so it wraps cleanly at θ=0 (no discontinuity)."""
+        phase = jp.mod(theta + offsets, 1.0)                   # (4,)
+        center = duty / 2.0                                    # stance window centre
+        halfwin = duty / 2.0                                   # stance window half-extent
         # |signed circular distance| from phase to the stance-window centre
         d = jp.abs(jp.mod(phase - center + 0.5, 1.0) - 0.5)
         # raised cosine: 1 for d < halfwin−GAIT_SMOOTH, 0 for d > halfwin+GAIT_SMOOTH,
@@ -1013,7 +1085,7 @@ class NovaJoystick(PipelineEnv):
         t = jp.clip((d - (halfwin - GAIT_SMOOTH)) / (2.0 * GAIT_SMOOTH), 0.0, 1.0)
         stance_sched = 0.5 * (1.0 + jp.cos(jp.pi * t))
         swing_sched = 1.0 - stance_sched
-        swing_frac = jp.clip((phase - GAIT_DUTY) / (1.0 - GAIT_DUTY), 0.0, 1.0)
+        swing_frac = jp.clip((phase - duty) / (1.0 - duty), 0.0, 1.0)
         return stance_sched, swing_sched, swing_frac
 
     def _lookahead_phi(self, pipeline_state):
@@ -1092,10 +1164,11 @@ class NovaJoystick(PipelineEnv):
         """Full obs = HIST proprioceptive frames + command + last action
         (= HIST*PROP + 3 + nu = 105), plus, when the teacher's heightmap is
         enabled, the height-map grid (HM_N^2), then the commanded footswing height
-        `c`, then the v6 GAIT CLOCK dims [sin 2πθ, cos 2πθ, cmd_f·F_OBS_SCALE] ->
-        105 + 121 + 1 + 3 = 230. Blind (heightmap=False) stays 105 with NO c or
-        clock dims (deploy artifact protected). History lets the policy infer
-        velocity/contact/latency from real-only sensors."""
+        `c`, then the v6 GAIT CLOCK dims [sin 2πθ, cos 2πθ, cmd_f·F_OBS_SCALE], then
+        the v8 per-foot swing_sched (4) -> 105 + 121 + 1 + 3 + 4 = 234. Blind
+        (heightmap=False) stays 105 with NO c / clock / swing_sched dims (deploy
+        artifact protected). History lets the policy infer velocity/contact/latency
+        from real-only sensors."""
         parts = [
             info["prop_hist"].reshape(-1),
             info["cmd"] * CMD_OBS_SCALE,
@@ -1114,6 +1187,16 @@ class NovaJoystick(PipelineEnv):
             parts.append(jp.array([jp.sin(2.0 * jp.pi * theta),
                                    jp.cos(2.0 * jp.pi * theta),
                                    info["cmd_f"] * F_OBS_SCALE]))
+            # v8 PER-FOOT swing_sched (4 dims), appended LAST (after the v6 clock
+            # dims) -> obs 230 -> 234. The crawl's per-foot phases aren't simple
+            # diagonal pairs, so global phase alone UNDERDETERMINES the gait-varying
+            # schedule; giving the policy the explicit "which feet swing now, how
+            # much" (per LEG_NAMES, this env's gait) removes the guesswork. Heightmap
+            # /cmd_c/clock dims are UNMOVED so the v7 regraft stays valid; blind never
+            # reaches this branch (obs 105 byte-frozen).
+            _, swing_sched, _ = self._gait_schedule(
+                info["gait_phase"], info["gait_offsets"], info["gait_duty"])
+            parts.append(swing_sched)
         return jp.concatenate(parts)
 
 
