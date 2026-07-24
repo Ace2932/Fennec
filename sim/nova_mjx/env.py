@@ -67,6 +67,38 @@ CMD_OBS_SCALE = jp.array([2.0, 2.0, 0.25])
 # reaches the deploy pipeline.
 CMD_C_OBS_SCALE = 20.0
 
+# ---- GAIT CLOCK (v6, teacher-only) — COMMANDED trot timing ----
+# Root cause (2026-07-24, in-distribution σ probe): white per-step PPO noise
+# through the actuation lowpass cannot produce the ~15-step correlated 2-joint
+# sequences a lift requires, at ANY σ — five runs of stasis explained. v5's
+# cmd_c footswing command is inert without its partner: the clock that SCHEDULES
+# swings. v6 COMMANDS swing TIMING as a trot clock, so nothing is left to
+# discover by noise — the policy phase-locks its existing ~1.4 Hz rhythm to the
+# clock (timing drift is low-frequency, within white-noise reach), then cmd_c
+# shapes swing amplitude at the known scheduled times. See
+# docs/superpowers/specs/2026-07-24-gait-clock-v6-design.md.
+#
+# One trot clock per env: info["gait_phase"] θ∈[0,1) advances θ += cmd_f·dt each
+# step (wraps); info["cmd_f"] ~ U(F_MIN,F_MAX) Hz (teacher), resampled on the cmd
+# cadence (step % 250). Foot phases are θ+GAIT_OFFSETS (fixed trot: FL,RR in
+# phase; FR,RL antiphase), duty GAIT_DUTY. 1-2 Hz at duty 0.5 spans 0.25-0.5 s
+# swings = the probe's climb band, with the current ~1.4 Hz gait interior → easy
+# lock. Phase is continuous across an f-resample (rate changes, no jump).
+F_MIN = 1.0               # Hz — min commanded trot frequency (teacher cmd_f)
+F_MAX = 2.0               # Hz — max commanded trot frequency
+BLIND_CMD_F = 1.4         # Hz — FIXED, UNUSED cmd_f on the blind deploy path (no clock)
+GAIT_DUTY = 0.5           # stance fraction of the cycle (fixed; no commanded gait zoo)
+GAIT_SMOOTH = 0.05        # phase-unit half-width of each raised-cosine schedule edge
+W_GAIT = 0.15             # schedule-violation COST weight (--w-gait); a cost, maxes at 0
+# Fixed trot phase offsets in LEG_NAMES order (FL,FR,RL,RR): FL+RR in phase (0.0),
+# FR+RL antiphase (0.5) — the two diagonal pairs. Rows MUST match _foot_ids/contact.
+GAIT_OFFSETS = jp.array([0.0, 0.5, 0.5, 0.0])
+# Obs scale for cmd_f (teacher-only), mirroring CMD_OBS_SCALE / CMD_C_OBS_SCALE:
+# maps 1-2 Hz into the ~O(1) band the scaled commands occupy (cmd_f*scale in
+# [0.5, 1.0]). SINGLE SOURCE OF TRUTH for the last teacher obs dim; blind never
+# carries the clock, so this never reaches the deploy pipeline.
+F_OBS_SCALE = 0.5
+
 # observation noise (1-sigma) per group — matches real STS3215/IMU order of mag
 N_GYRO, N_GRAV, N_JPOS, N_JVEL = 0.2, 0.05, 0.02, 1.5
 GYRO_BIAS = 0.05                                       # per-episode constant IMU bias (rad/s)
@@ -180,7 +212,7 @@ class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
                  cmd_stage=2, heightmap=False, w_climb=W_CLIMB, beta_climb=0.0,
                  w_pbrs=W_PBRS, footswing_max=FOOTSWING_MAX, air_max=AIR_MAX,
-                 w_clearance=W_CLEARANCE, **kwargs):
+                 w_clearance=W_CLEARANCE, w_gait=W_GAIT, **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
@@ -188,6 +220,7 @@ class NovaJoystick(PipelineEnv):
         self._footswing_max = float(footswing_max)   # teacher cmd_c upper bound; --footswing-max
         self._air_max = float(air_max)             # carry-cost onset (s); --air-max
         self._w_clearance = float(w_clearance)     # clearance weight; --w-clearance
+        self._w_gait = float(w_gait)               # v6 schedule-violation cost weight; --w-gait
         path = epath.Path(__file__).parent / xml
         mj = mujoco.MjModel.from_xml_path(str(path))
         sys = mjcf.load_model(mj)
@@ -257,6 +290,13 @@ class NovaJoystick(PipelineEnv):
         # start with a small random base shove -> learn to recover from odd states
         qd = qd.at[0:2].set(jax.random.uniform(kv, (2,), minval=-0.3, maxval=0.3))
         pipeline_state = self.pipeline_init(q, qd)
+        # v6 gait-clock RNG: fold_in(kc, 2) is a fresh stream DISJOINT from cmd_c's
+        # fold_in(kc, 1) and from every reset split key (kc..kjb) — no collision.
+        # Split the DERIVED key locally (NOT the reset split(rng, 8)) into phase +
+        # frequency seeds, so no existing RNG stream shifts and the blind reward
+        # stays byte-identical (same discipline as cmd_c, third time).
+        kg = jax.random.fold_in(kc, 2)
+        kf_gait, kph_gait = jax.random.split(kg)
         info = {
             "rng": rng, "cmd": self.sample_command(kc),
             # COMMANDED footswing clearance target (lift-v5). Teacher samples it
@@ -267,6 +307,15 @@ class NovaJoystick(PipelineEnv):
             "cmd_c": (jax.random.uniform(jax.random.fold_in(kc, 1), (),
                                          minval=FOOTSWING_MIN, maxval=self._footswing_max)
                       if self._heightmap else jp.asarray(BLIND_FOOTSWING)),
+            # v6 TROT CLOCK (teacher-only). gait_phase θ∈[0,1) seeded RANDOM at
+            # reset (decorrelates envs); cmd_f ~ U(F_MIN,F_MAX) Hz. Blind carries a
+            # fixed cmd_f (1.4, UNUSED — no clock) and a deterministic phase; the
+            # gait cost is OFF and the 105-d obs never reads them, so the deploy
+            # path is byte-unchanged. Advanced + resampled in step().
+            "gait_phase": (jax.random.uniform(kph_gait, (), minval=0.0, maxval=1.0)
+                           if self._heightmap else jp.asarray(0.0)),
+            "cmd_f": (jax.random.uniform(kf_gait, (), minval=F_MIN, maxval=F_MAX)
+                      if self._heightmap else jp.asarray(BLIND_CMD_F)),
             "last_act": jp.zeros(self._nu), "last_act2": jp.zeros(self._nu),
             "last_ctrl": self._default_pose,   # effective servo target (deadband)
             "feet_air": jp.zeros(4),
@@ -326,7 +375,7 @@ class NovaJoystick(PipelineEnv):
             # weighted contributions (what actually competes for the policy)
             "w_track", "w_yaw", "w_progress", "w_air", "w_clearance",
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
-            "w_carry",
+            "w_carry", "w_gait",
             "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand",
             "w_climb", "w_beta_climb",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
@@ -465,6 +514,19 @@ class NovaJoystick(PipelineEnv):
         # there is no way to earn by triggering it.
         carry_cost = jp.sum(jp.clip(air - self._air_max, 0.0, AIR_CARRY_CAP))
 
+        # ---- v6 GAIT SCHEDULE + violation COST (teacher-only) ----
+        # The trot clock (info["gait_phase"], advanced at the end of step) drives a
+        # smoothed per-foot stance/swing schedule; the cost bills a foot planted
+        # when scheduled to SWING, or airborne when scheduled to PLANT. COST form
+        # (a deliberate deviation from WTW's positive shaped-force/vel pair): a cost
+        # maxes at 0 → unfarmable (farm doctrine — every positive shaper got farmed,
+        # no cost ever did). A standing robot bills ~2·W_GAIT/step (two feet always
+        # scheduled-swing) → rhythm is mandatory. swing_frac feeds Task-2 clearance.
+        # Schedule read at the phase that governed THIS step (advanced after).
+        stance_sched, swing_sched, swing_frac = self._gait_schedule(info["gait_phase"])
+        contact_f = contact.astype(jp.float32)
+        gait_cost = jp.sum(contact_f * swing_sched + (1.0 - contact_f) * stance_sched)
+
         # ---- gait reward: DELETED ----
         # Was: `|(FL+RR) - (FR+RL)|/2` — instantaneous diagonal asymmetry, with NO
         # temporal component, so a FROZEN half-trot scores exactly like a real one.
@@ -593,8 +655,45 @@ class NovaJoystick(PipelineEnv):
         # w_carry) bills holds directly — watch airT_*/ghost_* for a reopened
         # hold pattern. Below target this is |·|-identical, so the under-lift
         # gradient is unchanged.
-        clearance_cost = jp.sum(jp.maximum(info["cmd_c"] - foot_h, 0.0)
-                                * jp.sqrt(foot_xy_speed))
+        #
+        # v6 PHASE-NATIVE (teacher) vs v5 ALWAYS-ON (blind) — a static
+        # `if self._heightmap` split, reusing the Task-1 schedule indicators
+        # (swing_sched, swing_frac from _gait_schedule at info["gait_phase"]).
+        # DIVISION OF LABOR: the trot CLOCK owns swing TIMING (when a foot lifts);
+        # cmd_c owns swing HEIGHT (how high). So the teacher clearance bills a
+        # below-target foot ONLY inside its SCHEDULED swing window, against an
+        # envelope target that tapers to 0 at the swing edges (touchdown/liftoff)
+        # and peaks at cmd_c mid-swing:
+        #     envelope_i = sin(π · swing_frac_i)   # 0 at swing_frac 0/1, 1 at 0.5
+        #     target_i   = cmd_c · envelope_i
+        #     cost       = Σ max(target_i − foot_h_i, 0)·√v_i · swing_sched_i
+        # swing_sched masks stance feet out entirely — a planted foot below target
+        # is BY DESIGN free (the clock, not this cost, decides it should be down).
+        # NON-FARMABILITY: still a one-sided cost (maxes at 0), no new positive.
+        # It is strictly ≤ the v5 always-on form on identical states — envelope
+        # only LOWERS the target (≤ cmd_c), the mask only REMOVES terms — so v6
+        # never bills MORE than v5 anywhere (test: teacher clearance ≤ v5 form).
+        #
+        # AUDIT AMENDMENT (2026-07-24, F3): 75 ms servo latency = 0.1-0.15 phase
+        # at f 1-2 Hz, so a purely REACTIVE tracker lifts LATE and eats an
+        # unavoidable edge-of-window bill (both here and in the gait cost); the
+        # clock obs (sin/cos 2πθ) lets the policy ANTICIPATE — lead the schedule
+        # by the latency, feedforward, learnable. The enveloped target also LOWERS
+        # the unadapted watch baseline: v6 `clear` ≈ −0.06, NOT v5's −0.17 — so
+        # `clear`→0 is the SECONDARY, subtle run signal; `w_gait` −0.2→~0
+        # (phase-lock) is primary. See spec §4 + Audit amendments.
+        #
+        # BLIND (heightmap=False): NO clock, NO schedule — keeps the v5 always-on
+        # flat-target form (info["cmd_c"] ≡ BLIND_FOOTSWING) EXACTLY, so the 105-d
+        # deploy reward is byte-identical (regression-pinned).
+        if self._heightmap:
+            envelope = jp.sin(jp.pi * swing_frac)             # (4,) 0 at edges, 1 mid-swing
+            clearance_cost = jp.sum(
+                jp.maximum(info["cmd_c"] * envelope - foot_h, 0.0)
+                * jp.sqrt(foot_xy_speed) * swing_sched)
+        else:
+            clearance_cost = jp.sum(jp.maximum(info["cmd_c"] - foot_h, 0.0)
+                                    * jp.sqrt(foot_xy_speed))
         # splay: the rollout showed the hips abducted WIDE. Penalize haa (hip-
         # abduction, joint idx 0,3,6,9) deviation from the default (0); the hfe/kfe
         # swing joints stay free. (ref: pose regularizer, focused on the splay.)
@@ -682,6 +781,15 @@ class NovaJoystick(PipelineEnv):
         # and it needs no gate — a planted foot has ~zero xy speed, so it pays
         # ~zero regardless.
         w_clearance = -self._w_clearance * clearance_cost
+        # v6 SCHEDULE-VIOLATION cost (teacher-only). cmd_moving-gated (as float) so
+        # an IDLE command bills 0 — idle still means STAND, no step-in-place forcing
+        # (the stand cost keeps its job). Blind forces w_gait ≡ 0.0, so `+ w_gait`
+        # is an exact float-identity there and the blind reward is byte-unchanged
+        # (pinned: the blind path ignores the --w-gait kwarg entirely).
+        if self._heightmap:
+            w_gait = -self._w_gait * gait_cost * cmd_moving.astype(jp.float32)
+        else:
+            w_gait = jp.zeros(())
         w_pose = 0.5 * pose_rew
         w_upright = -2.5 * upright
         w_angvel = -0.2 * ang_vel_xy
@@ -698,7 +806,7 @@ class NovaJoystick(PipelineEnv):
         w_energy = -2e-3 * energy
         w_jerk = -0.01 * jerk
         w_stand = -5e-4 * stand
-        reward = (w_track + w_yaw + w_progress + w_air + w_clearance
+        reward = (w_track + w_yaw + w_progress + w_air + w_clearance + w_gait
                   + w_pose + 0.1 + w_climb + beta_climb + w_pbrs_climb
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_carry
@@ -748,6 +856,19 @@ class NovaJoystick(PipelineEnv):
                 jax.random.uniform(jax.random.fold_in(ka, 1), (),
                                    minval=FOOTSWING_MIN, maxval=self._footswing_max),
                 info["cmd_c"])
+        # advance the trot clock: θ += cmd_f·dt (wraps at 1). Uses the cmd_f that
+        # governed THIS step; the resample below changes only the RATE, so the
+        # phase is continuous across a resample (no jump). Both paths advance —
+        # blind's fixed-1.4 phase is inert (gait cost off, obs 105). fold_in(ka, 2)
+        # is disjoint from cmd_c's fold_in(ka, 1); TEACHER-only resample, same
+        # step % 250 cadence and jp.where pattern as cmd.
+        info["gait_phase"] = jp.mod(info["gait_phase"] + info["cmd_f"] * self._dt, 1.0)
+        if self._heightmap:
+            info["cmd_f"] = jp.where(
+                info["step"] % 250 == 0,
+                jax.random.uniform(jax.random.fold_in(ka, 2), (),
+                                   minval=F_MIN, maxval=F_MAX),
+                info["cmd_f"])
         obs = self._get_obs(info, pipeline_state)
         # airborne fraction per foot — averaged over an episode, a CARRIED leg
         # reads ~1.0 while a stepping leg reads ~0.3-0.5 (its swing duty).
@@ -801,7 +922,7 @@ class NovaJoystick(PipelineEnv):
             w_track=w_track, w_yaw=w_yaw, w_progress=w_progress, w_air=w_air,
             w_clearance=w_clearance, w_pose=w_pose,
             w_upright=w_upright, w_angvel=w_angvel, w_height=w_height, w_z=w_z,
-            w_slip=w_slip, w_splay=w_splay, w_carry=w_carry,
+            w_slip=w_slip, w_splay=w_splay, w_carry=w_carry, w_gait=w_gait,
             w_actrate=w_actrate,
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand,
             w_climb=w_climb, w_beta_climb=beta_climb,
@@ -842,6 +963,32 @@ class NovaJoystick(PipelineEnv):
             jax.random.normal(k4, (12,)) * N_JVEL * 0.05,
         ])
         return frame + noise
+
+    def _gait_schedule(self, theta):
+        """Trot schedule from the clock phase θ. Per foot i (LEG_NAMES order):
+        phase_i = frac(θ + GAIT_OFFSETS_i); stance_sched_i = raised-cosine smoothed
+        indicator of (phase_i < GAIT_DUTY), transition half-width GAIT_SMOOTH per
+        edge (no reward cliffs); swing_sched_i = 1 − stance_sched_i; swing_frac_i =
+        position within the swing window [GAIT_DUTY, 1) in [0, 1] (Task-2 clearance
+        envelope). Returns three (4,) arrays.
+
+        Duty 0.5 + antiphase pairs → stance_sched sums to EXACTLY 2 for every θ (a
+        foot at φ and its pair at φ+0.5 sum to 1), so any UNIFORM contact pattern
+        bills cost 2; the compliant/anti diagonal-split patterns reach 0 / 4. The
+        smoothing is built on circular distance to the stance-window centre, so it
+        wraps cleanly at θ=0 (no discontinuity)."""
+        phase = jp.mod(theta + GAIT_OFFSETS, 1.0)              # (4,)
+        center = GAIT_DUTY / 2.0                               # stance window centre
+        halfwin = GAIT_DUTY / 2.0                              # stance window half-extent
+        # |signed circular distance| from phase to the stance-window centre
+        d = jp.abs(jp.mod(phase - center + 0.5, 1.0) - 0.5)
+        # raised cosine: 1 for d < halfwin−GAIT_SMOOTH, 0 for d > halfwin+GAIT_SMOOTH,
+        # smooth (zero-slope endpoints) across the GAIT_SMOOTH-wide edge between.
+        t = jp.clip((d - (halfwin - GAIT_SMOOTH)) / (2.0 * GAIT_SMOOTH), 0.0, 1.0)
+        stance_sched = 0.5 * (1.0 + jp.cos(jp.pi * t))
+        swing_sched = 1.0 - stance_sched
+        swing_frac = jp.clip((phase - GAIT_DUTY) / (1.0 - GAIT_DUTY), 0.0, 1.0)
+        return stance_sched, swing_sched, swing_frac
 
     def _lookahead_phi(self, pipeline_state):
         """Approach potential Φ: mean terrain height at PBRS_LOOKAHEAD points
@@ -918,10 +1065,11 @@ class NovaJoystick(PipelineEnv):
     def _get_obs(self, info, pipeline_state=None):
         """Full obs = HIST proprioceptive frames + command + last action
         (= HIST*PROP + 3 + nu = 105), plus, when the teacher's heightmap is
-        enabled, the height-map grid (HM_N^2) then the commanded footswing height
-        `c` as the LAST dim -> 105 + 121 + 1 = 227. Blind (heightmap=False) stays
-        105 with NO c dim (deploy artifact protected). History lets the policy
-        infer velocity/contact/latency from real-only sensors."""
+        enabled, the height-map grid (HM_N^2), then the commanded footswing height
+        `c`, then the v6 GAIT CLOCK dims [sin 2πθ, cos 2πθ, cmd_f·F_OBS_SCALE] ->
+        105 + 121 + 1 + 3 = 230. Blind (heightmap=False) stays 105 with NO c or
+        clock dims (deploy artifact protected). History lets the policy infer
+        velocity/contact/latency from real-only sensors."""
         parts = [
             info["prop_hist"].reshape(-1),
             info["cmd"] * CMD_OBS_SCALE,
@@ -933,6 +1081,13 @@ class NovaJoystick(PipelineEnv):
             # (CMD_C_OBS_SCALE). Teacher-only: the heightmap block stays contiguous
             # and the blind obs never reaches this branch.
             parts.append((info["cmd_c"] * CMD_C_OBS_SCALE)[None])
+            # v6 GAIT CLOCK (teacher-only), appended AFTER cmd_c → obs 230. sin/cos
+            # of 2πθ give the policy a continuous, wrap-free phase encoding; cmd_f
+            # scaled to O(1) tells it the commanded rate. Blind never reaches here.
+            theta = info["gait_phase"]
+            parts.append(jp.array([jp.sin(2.0 * jp.pi * theta),
+                                   jp.cos(2.0 * jp.pi * theta),
+                                   info["cmd_f"] * F_OBS_SCALE]))
         return jp.concatenate(parts)
 
 

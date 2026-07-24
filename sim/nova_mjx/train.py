@@ -30,7 +30,8 @@ from brax.training.agents.ppo import networks as ppo_networks
 from brax.training.agents.ppo import train as ppo
 
 from env import (NovaJoystick, make_domain_randomize, W_PBRS,
-                 FOOTSWING_MAX, PBRS_LOOKAHEAD, AIR_MAX, W_CLEARANCE)
+                 FOOTSWING_MAX, PBRS_LOOKAHEAD, AIR_MAX, W_CLEARANCE,
+                 W_GAIT, F_MIN, F_MAX, GAIT_DUTY)
 # stdlib-only helpers (importable without JAX, so they're unit-tested on a
 # laptop — see test_resume_budget.py). Re-exported here: callers that already
 # do `from train import find_latest_checkpoint` keep working.
@@ -41,7 +42,7 @@ from ckpt_utils import (EvalMetricsCsv, atomic_write, checkpoint_named,
 
 def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0,
                       w_climb=40.0, w_pbrs=W_PBRS, footswing_max=FOOTSWING_MAX,
-                      air_max=AIR_MAX, w_clearance=W_CLEARANCE):
+                      air_max=AIR_MAX, w_clearance=W_CLEARANCE, w_gait=W_GAIT):
     """Print WHAT is about to be trained, before a single GPU-hour burns.
 
     A 60M-step run was once launched against a stale checkout: Colab's `git clone`
@@ -69,7 +70,8 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
     print(f"  code         : {sha}")
     print(f"  contact      : (foot_z - {_env.FOOT_RADIUS}) < {_env.CONTACT_EPS}"
           "   [radius-corrected]")
-    print(f"  clearance    : ONE-SIDED COST w={w_clearance:g}, footswing cmd c∈[0.015,{footswing_max:g}] (lift-v5)")
+    print(f"  clearance    : ONE-SIDED COST w={w_clearance:g}, footswing cmd c∈[0.015,{footswing_max:g}] (lift-v5, phase-native)")
+    print(f"  gait clock   : trot f∈[{F_MIN:g},{F_MAX:g}]Hz duty {GAIT_DUTY:g}, w_gait {w_gait:g} (v6 schedule cost)")
     print(f"  stride       : air_max {air_max:g}s carry onset, pose STANCE-GATED, upright deadzone 25°, w_air 1.0 (lift-v4/v5)")
     print(f"  cmd stage {env._cmd_stage}  : vx[{lo[0]:+.2f},{hi[0]:+.2f}] "
           f"vy[{lo[1]:+.2f},{hi[1]:+.2f}] wz[{lo[2]:+.2f},{hi[2]:+.2f}]")
@@ -190,6 +192,8 @@ def diagnostics(metrics):
                probe_rewards.py's per-step prints; the CSV keeps the RAW sums for
                historical comparison, so nothing is lost).
       clear  — payment for WAVING FEET, the term a farm feeds. PER STEP.
+      wgait  — v6 trot schedule-violation COST, the run's PRIMARY signal:
+               ~-0.2 unadapted -> ~0 once the gait phase-locks the clock. PER STEP.
       hgt/z  — posture (base-height) + vertical-velocity costs, PER STEP.
       climb  — net base z climbed this episode / episode peak, in METRES. RAW,
                not per-step: both are end-quantities brax already telescoped from
@@ -210,7 +214,8 @@ def diagnostics(metrics):
     ghost = sum(m(f"ghost_{f}") for f in ("FL", "FR", "RL", "RR")) / 4
     airT = [m(f"airT_{f}") for f in ("FL", "FR", "RL", "RR")]
     return (f"    fwd {m('fwd_speed')/L:5.2f}  prog {m('w_progress')/L:+6.2f}  "
-            f"clear {m('w_clearance')/L:+6.2f}  hgt {m('w_height')/L:+6.3f}  "
+            f"clear {m('w_clearance')/L:+6.2f}  wgait {m('w_gait')/L:+.3f}  "
+            f"hgt {m('w_height')/L:+6.3f}  "
             f"z {m('w_z')/L:+6.3f}  climb {m('climb'):+5.2f}/{m('climb_max'):.2f}  "
             f"wclimb {m('w_climb')/L:+.4f}  wpbrs {m('w_pbrs_climb')/L:+.4f}  "
             f"gzmax {m('gz_max'):.3f}  "
@@ -397,6 +402,9 @@ def main():
     ap.add_argument("--w-clearance", type=float, default=W_CLEARANCE,
                     help="weight of the one-sided swing-clearance cost "
                          "(lift-v4; default env W_CLEARANCE)")
+    ap.add_argument("--w-gait", type=float, default=W_GAIT,
+                    help="weight of the v6 trot schedule-violation cost "
+                         "(teacher-only; default env W_GAIT)")
     ap.add_argument("--curriculum", action="store_true",
                     help="AUTO-RAMP terrain difficulty in stages within one run. Brax "
                          "bakes per-env terrain at env build, so this CHAINS N stages, "
@@ -430,11 +438,12 @@ def main():
     env = NovaJoystick(cmd_stage=args.cmd_stage, heightmap=args.heightmap,
                        w_climb=args.w_climb, beta_climb=args.beta_climb,
                        w_pbrs=args.w_pbrs, footswing_max=args.footswing_max,
-                       air_max=args.air_max, w_clearance=args.w_clearance)
+                       air_max=args.air_max, w_clearance=args.w_clearance,
+                       w_gait=args.w_gait)
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
     print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac,
                       args.flat_frac, args.w_climb, args.w_pbrs, args.footswing_max,
-                      args.air_max, args.w_clearance)
+                      args.air_max, args.w_clearance, args.w_gait)
     if jax.default_backend() == "cpu" and not args.allow_cpu:
         raise SystemExit(
             "✗ JAX is on CPU — real training would take days, not minutes.\n"

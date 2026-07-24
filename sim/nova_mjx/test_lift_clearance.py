@@ -25,16 +25,25 @@ def _moving_state(e, base_lift, key=7):
     return e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
 
 
-def _moving_state_with_c(e, base_lift, c, key=7):
+def _moving_state_with_c(e, base_lift, c, key=7, theta=0.25):
     # _moving_state + an info override of the COMMANDED target cmd_c before the
     # step, so the clearance cost bills against `c`. (The resample fires only at
     # step % 250 == 0; a fresh reset steps to step 1, so the override survives the
     # step and drives the clearance term.)
+    # GAIT-CLOCK-V6 RECONCILE: the TEACHER clearance is now phase-native
+    # (enveloped + swing-masked), so it only bills feet in their scheduled swing
+    # window. Pin the clock phase θ=0.25 (FR,RL mid-swing, envelope 1) + a moving
+    # command so the below-target billing is guaranteed and the cmd_c-scaling test
+    # below still exercises a real deficit. (Blind clearance is unaffected — this
+    # helper is teacher-only.)
     s = e.reset(jax.random.PRNGKey(key))
     q = s.pipeline_state.q.at[2].add(base_lift)
     qd = s.pipeline_state.qd.at[6:].set(2.0)
     ps = e.pipeline_init(q, qd)
-    s = s.replace(pipeline_state=ps, info={**s.info, "cmd_c": jp.asarray(c)})
+    s = s.replace(pipeline_state=ps,
+                  info={**s.info, "cmd_c": jp.asarray(c),
+                        "gait_phase": jp.asarray(theta),
+                        "cmd": jp.array([0.3, 0.0, 0.0])})
     return e.step(s, jp.zeros(e.action_size))
 
 
@@ -45,14 +54,16 @@ def test_cmd_c_in_info_and_range():
     assert FOOTSWING_MIN - 1e-6 <= c <= FOOTSWING_MAX + 1e-6, c
 
 
-def test_obs_227_teacher_last_dim_is_c():
+def test_obs_230_teacher_c_at_dim_226():
+    # gait-clock-v6: obs is 230 and c is no longer the LAST dim — the 3 clock dims
+    # (sin/cos 2πθ, cmd_f scaled) append AFTER it, so c sits at index 226 (obs[-4]).
     e = NovaJoystick(heightmap=True)
     s = e.reset(jax.random.PRNGKey(22))
-    assert s.obs.shape[-1] == 227, s.obs.shape
-    # last dim carries the (scaled) commanded footswing c — assert correlation,
-    # not raw equality: override cmd_c, rebuild obs, confirm the last dim tracks
-    # c monotonically and shares the cmd scaling's positive sign.
-    lasts = [float(e._get_obs({**s.info, "cmd_c": jp.asarray(c)}, s.pipeline_state)[-1])
+    assert s.obs.shape[-1] == 230, s.obs.shape
+    # dim 226 carries the (scaled) commanded footswing c — assert correlation, not
+    # raw equality: override cmd_c, rebuild obs, confirm that dim tracks c
+    # monotonically and shares the cmd scaling's positive sign.
+    lasts = [float(e._get_obs({**s.info, "cmd_c": jp.asarray(c)}, s.pipeline_state)[-4])
              for c in (0.02, 0.04, 0.06)]
     assert lasts[0] < lasts[1] < lasts[2], lasts
     assert all(v > 0 for v in lasts), lasts
@@ -69,6 +80,11 @@ def test_obs_105_blind_unchanged_c_fixed():
 def test_clearance_targets_cmd_c():
     # same manufactured below-target state, two c values via info override:
     # a bigger deficit (c - foot_h) scales the bill more negative.
+    # SCOPE (gait-clock-v6): _moving_state_with_c pins θ=0.25, so this exercises the
+    # ENVELOPE PEAK only (FR,RL mid-swing, sin(π·0.5)=1 -> target == cmd_c). The
+    # cmd_c-scaling monotonicity is envelope-independent (envelope factors out of
+    # both sides), so peak-only coverage is sufficient here; the transition-zone
+    # envelope+mask behaviour is pinned in test_gait_clock.py.
     e = NovaJoystick(heightmap=True)
     lo = _moving_state_with_c(e, 0.0, c=0.03, key=24)
     hi = _moving_state_with_c(e, 0.0, c=0.06, key=24)
