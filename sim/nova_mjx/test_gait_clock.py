@@ -181,23 +181,31 @@ def test_obs_230_teacher_105_blind():
 
 
 # ---------------------------------------------------------------------------
-# Task 2: phase-native clearance (teacher enveloped + swing-masked) + the I-1
-# numeric blind-reward pin. The teacher clearance now bills a below-target foot
-# ONLY in its scheduled swing window, against target = cmd_c·sin(π·swing_frac)
-# (0 at swing edges, cmd_c mid-swing). Blind keeps the v5 always-on flat-target
-# form EXACTLY. Design: spec §4 + Audit amendments.
+# v7 SWING-REFERENCE TRACKING (teacher) + the I-1 numeric blind-reward pin.
+# v7 REPLACES the v5/v6 one-sided √v teacher clearance with WTW's REAL form:
+# two-sided squared TRACKING of each swing foot to a phase-varying reference
+#     z_ref = cmd_c·sin(π·swing_frac)   (0 at swing edges, cmd_c mid-swing),
+#     swingref_cost = Σ (foot_h − z_ref)² · swing_sched,
+# billed as a separate metric `w_swingref` (the teacher's active term). Blind
+# keeps the v5 always-on one-sided flat-target form EXACTLY (w_clearance), and
+# its reward is byte-frozen. Design:
+# docs/superpowers/specs/2026-07-24-swingref-v7-design.md
 # ---------------------------------------------------------------------------
 
-def _teacher_clear_state(theta, c, base_lift=0.0, cmd=(0.3, 0.0, 0.0), key=24):
-    """Manufacture a TEACHER step with feet moving (joint qd 2.0) at a controlled
-    height, with cmd_c and the clock phase θ pinned before the step (resample
-    fires only at step%250, so a fresh reset's first step preserves the override).
+def _swingref_state(theta, c, base_lift=0.03, cmd=(0.3, 0.0, 0.0), key=24):
+    """Manufacture a TEACHER step at the EXACT default pose (reset jitter removed)
+    with qd=0, so all four feet sit at one controlled height above local ground —
+    the two diagonal swing feet are then symmetric. cmd_c and the clock phase θ
+    are pinned before the step (the resample fires only at step%250, so a fresh
+    reset's first step preserves the overrides). v7 swingref reads foot_h + the
+    clock schedule only (NO foot speed), so static feet are exactly what it bills;
+    and cmd_c never enters the physics, so foot_h is identical across cmd_c values.
     Returns (env, stepped_state)."""
     e = NovaJoystick(heightmap=True)
     s = e.reset(jax.random.PRNGKey(key))
-    q = s.pipeline_state.q.at[2].add(base_lift)
-    qd = s.pipeline_state.qd.at[6:].set(2.0)
-    ps = e.pipeline_init(q, qd)
+    q = s.pipeline_state.q.at[7:].set(e._default_pose)   # drop reset jitter -> symmetric feet
+    q = q.at[2].add(base_lift)
+    ps = e.pipeline_init(q, jp.zeros(e.sys.nv))          # qd=0 (v7 uses no foot speed)
     s = s.replace(pipeline_state=ps,
                   info={**s.info, "cmd_c": jp.asarray(c),
                         "gait_phase": jp.asarray(theta),
@@ -216,63 +224,98 @@ def _foot_h_and_v(e, ps):
     return foot_h, v
 
 
-def test_teacher_clearance_matches_enveloped_form():
-    # EXACT reconstruction: the billed teacher clearance equals the enveloped,
-    # swing-masked one-sided cost recomputed from state — covers envelope AND mask
-    # in one shot. θ=0.25 puts FR,RL mid-swing (envelope 1) and FL,RR in stance.
+def test_swingref_matches_reference_form():
+    # EXACT reconstruction (the correctness anchor): the billed w_swingref equals
+    # -w_swingref·Σ(foot_h − cmd_c·sin(π·swing_frac))²·swing_sched recomputed from
+    # state — covers the phase-varying reference AND the swing mask in one shot.
+    # θ=0.25 puts FR,RL mid-swing (z_ref=cmd_c) and FL,RR in stance.
+    theta, c = 0.25, 0.05
+    e, s = _swingref_state(theta, c, base_lift=0.03)
+    foot_h, _ = _foot_h_and_v(e, s.pipeline_state)
+    _, sw, sf = (np.asarray(x) for x in e._gait_schedule(jp.asarray(theta)))
+    z_ref = c * np.sin(np.pi * sf)
+    expected = -e._w_swingref * float(np.sum((foot_h - z_ref) ** 2 * sw))
+    assert abs(float(s.metrics["w_swingref"]) - expected) < 1e-4, \
+        (s.metrics["w_swingref"], expected)
+    # the teacher's blind-form w_clearance metric is INERT (0) — no double-bill.
+    assert float(s.metrics["w_clearance"]) == 0.0, s.metrics["w_clearance"]
+
+
+def test_swingref_zero_when_tracking():
+    # place the swing feet AT the reference: at θ=0.25 FR,RL sit at swing_frac 0.5
+    # -> z_ref=cmd_c. Read the (symmetric) swing-foot height, set cmd_c to it, and
+    # the tracked term is ≈0 (the stance feet FL,RR are masked out). foot_h does
+    # not depend on cmd_c (physics is cmd_c-free), so this is a clean placement.
+    theta = 0.25
+    e0, s0 = _swingref_state(theta, c=0.05, base_lift=0.03)
+    foot_h, _ = _foot_h_and_v(e0, s0.pipeline_state)
+    assert abs(foot_h[1] - foot_h[2]) < 2e-3, ("swing feet must be symmetric", foot_h)
+    c_track = float((foot_h[1] + foot_h[2]) / 2.0)
+    _, s = _swingref_state(theta, c=c_track, base_lift=0.03)
+    assert abs(float(s.metrics["w_swingref"])) < 5e-3, \
+        ("tracking the reference bills ~0", s.metrics["w_swingref"])
+
+
+def test_swingref_bills_below_and_above():
+    # TWO-SIDED: the SAME swing feet at height H, billed when the reference sits
+    # ABOVE H (foot below ref) AND when it sits BELOW H (foot above ref). The old
+    # one-sided form billed only the below-ref case; the squared form bills both.
+    theta = 0.25
+    e0, s0 = _swingref_state(theta, c=0.05, base_lift=0.03)
+    foot_h, _ = _foot_h_and_v(e0, s0.pipeline_state)
+    H = float((foot_h[1] + foot_h[2]) / 2.0)
+    assert H - 0.02 > 0.0, ("need a positive below-H reference", H)
+    _, s_below = _swingref_state(theta, c=H + 0.03, base_lift=0.03)   # z_ref > H
+    _, s_above = _swingref_state(theta, c=H - 0.02, base_lift=0.03)   # z_ref < H
+    assert float(s_below.metrics["w_swingref"]) < -1e-3, \
+        ("foot BELOW the reference must bill", s_below.metrics["w_swingref"])
+    assert float(s_above.metrics["w_swingref"]) < -1e-3, \
+        ("foot ABOVE the reference must ALSO bill (two-sided)", s_above.metrics["w_swingref"])
+
+
+def test_swingref_masked_on_stance():
+    # A scheduled-STANCE foot below the reference bills 0 (swing_sched mask). At
+    # θ=0.25 FL,RR are stance; with all four feet near ground (below a high cmd_c),
+    # the billed cost equals the swing-feet-only (FR,RL) sum — stance feet add 0.
     theta, c = 0.25, 0.06
-    e, s = _teacher_clear_state(theta, c)
-    foot_h, v = _foot_h_and_v(e, s.pipeline_state)
-    st, sw, sf = (np.asarray(x) for x in e._gait_schedule(jp.asarray(theta)))
-    env = np.sin(np.pi * sf)
-    expected = -e._w_clearance * float(
-        np.sum(np.maximum(c * env - foot_h, 0.0) * np.sqrt(v) * sw))
-    assert abs(float(s.metrics["w_clearance"]) - expected) < 1e-4, \
-        (s.metrics["w_clearance"], expected)
+    e, s = _swingref_state(theta, c, base_lift=0.0)
+    foot_h, _ = _foot_h_and_v(e, s.pipeline_state)
+    _, sw, sf = (np.asarray(x) for x in e._gait_schedule(jp.asarray(theta)))
+    z_ref = c * np.sin(np.pi * sf)
+    per_foot = (foot_h - z_ref) ** 2 * sw
+    swing, stance = np.array([1, 2]), np.array([0, 3])
+    assert (sw[stance] < 1e-3).all(), sw                 # stance feet masked
+    assert per_foot[stance].sum() < 1e-9, per_foot       # ...so they bill 0
+    expected = -e._w_swingref * float(per_foot[swing].sum())
+    assert abs(float(s.metrics["w_swingref"]) - expected) < 1e-4, \
+        (s.metrics["w_swingref"], expected)
 
 
-def test_stance_foot_below_target_masked():
-    # A STANCE-scheduled foot below target bills 0 (swing_sched mask). At θ=0.25
-    # FL,RR are stance; all four feet sit near spawn height (foot_h ≪ c), so every
-    # foot IS below target — yet the billed cost equals the swing-feet-only (FR,RL)
-    # sum, i.e. the stance feet contribute exactly nothing.
-    theta, c = 0.25, 0.06
-    e, s = _teacher_clear_state(theta, c)
-    foot_h, v = _foot_h_and_v(e, s.pipeline_state)
-    assert (foot_h < c).all(), ("precondition: all feet below target", foot_h, c)
-    st, sw, sf = (np.asarray(x) for x in e._gait_schedule(jp.asarray(theta)))
-    env = np.sin(np.pi * sf)
-    per_foot = np.maximum(c * env - foot_h, 0.0) * np.sqrt(v) * sw
-    swing = np.array([1, 2])                       # FR,RL scheduled swing at θ=0.25
-    stance = np.array([0, 3])                      # FL,RR scheduled stance
-    assert (sw[stance] < 1e-3).all(), sw           # stance feet masked
-    assert per_foot[stance].sum() < 1e-9, per_foot # ...so they bill 0
-    expected = -e._w_clearance * float(per_foot[swing].sum())
-    assert abs(float(s.metrics["w_clearance"]) - expected) < 1e-4, \
-        (s.metrics["w_clearance"], expected)
-
-    # TRANSITION-ZONE θ (Task-2 review carry-in): at θ=0.47 no foot is fully
-    # stance — FL,RR sit in the raised-cosine edge (swing_sched ≈ 0.096), so the
-    # mask is FRACTIONAL, not 0/1. The billed cost must still equal the exact
-    # enveloped+masked reconstruction, i.e. the partial mask attenuates (does not
-    # zero) the stance-side feet's contribution rather than dropping it wholesale.
-    theta_t = 0.47
-    et, st_t = _teacher_clear_state(theta_t, c)
-    foot_h_t, v_t = _foot_h_and_v(et, st_t.pipeline_state)
-    sc_t, sw_t, sf_t = (np.asarray(x) for x in et._gait_schedule(jp.asarray(theta_t)))
-    stance_side = np.array([0, 3])                 # FL,RR: stance-side but in the edge
-    assert ((sw_t[stance_side] > 0.01) & (sw_t[stance_side] < 0.5)).all(), \
-        ("FL,RR must be a partial (fractional) mask at θ=0.47", sw_t)
-    env_t = np.sin(np.pi * sf_t)
-    expected_t = -et._w_clearance * float(
-        np.sum(np.maximum(c * env_t - foot_h_t, 0.0) * np.sqrt(v_t) * sw_t))
-    assert abs(float(st_t.metrics["w_clearance"]) - expected_t) < 1e-4, \
-        (st_t.metrics["w_clearance"], expected_t)
+def test_swingref_phase_varying_penalizes_hold():
+    # THE hold guard: a foot HELD at a FIXED height is billed MORE at an off-peak
+    # swing phase than at the peak. All four feet are held at ≈ the peak reference
+    # height. At θ=0.25 the swing feet are at swing_frac 0.5 (z_ref=cmd_c -> the
+    # held height tracks -> ~0); at θ=0.125 the SAME held feet are at swing_frac
+    # 0.25 (z_ref=cmd_c·sin(π/4) < cmd_c -> the reference moved, the foot didn't ->
+    # billed). A held foot cannot match a moving target — the √v factor's old job.
+    e0, s0 = _swingref_state(0.25, c=0.05, base_lift=0.03)
+    foot_h, _ = _foot_h_and_v(e0, s0.pipeline_state)
+    c_hold = float((foot_h[1] + foot_h[2]) / 2.0)        # held height == peak reference
+    _, s_peak = _swingref_state(0.25, c=c_hold, base_lift=0.03)
+    _, s_off = _swingref_state(0.125, c=c_hold, base_lift=0.03)
+    assert abs(float(s_peak.metrics["w_swingref"])) < 5e-3, \
+        ("held foot tracks the PEAK reference", s_peak.metrics["w_swingref"])
+    assert float(s_off.metrics["w_swingref"]) < -1e-2, \
+        ("SAME held foot is billed at the OFF-PEAK phase", s_off.metrics["w_swingref"])
+    assert float(s_off.metrics["w_swingref"]) < float(s_peak.metrics["w_swingref"]) - 1e-2, \
+        ("off-peak must bill strictly MORE than peak (phase-varying)",
+         s_off.metrics["w_swingref"], s_peak.metrics["w_swingref"])
 
 
 def test_envelope_peak_mid_swing():
-    # ENVELOPE PEAK: at swing_frac 0.5 the target equals cmd_c (sin(π·0.5)=1). θ=0.25
-    # puts FR,RL at swing_frac 0.5 -> envelope 1 -> target == cmd_c.
+    # REFERENCE PEAK: at swing_frac 0.5 the v7 target z_ref equals cmd_c
+    # (sin(π·0.5)=1). θ=0.25 puts FR,RL at swing_frac 0.5 -> envelope 1 ->
+    # z_ref == cmd_c (the apex the swing foot is pulled toward).
     e = NovaJoystick(heightmap=True)
     _, _, sf = e._gait_schedule(jp.asarray(0.25))
     sf = np.asarray(sf)
@@ -286,7 +329,8 @@ def test_envelope_peak_mid_swing():
 
 def test_envelope_zero_at_swing_edges():
     # ENVELOPE 0 at both swing edges (liftoff swing_frac 0, touchdown swing_frac 1):
-    # target -> 0, so no clearance is billed there regardless of foot height. FL
+    # z_ref -> 0, so the v7 reference asks the foot to be at GROUND level at the
+    # swing boundaries (touchdown/liftoff) — the correct trajectory endpoints. FL
     # is at the liftoff edge at θ=0.5 (swing_frac 0) and the touchdown edge at
     # θ=1⁻ (swing_frac 1).
     e = NovaJoystick(heightmap=True)
@@ -298,43 +342,12 @@ def test_envelope_zero_at_swing_edges():
     assert env_land[0] < 1e-5, (sf_land[0], env_land[0])   # touchdown edge
 
 
-def test_teacher_clearance_le_v5_form():
-    # The enveloped+masked teacher cost is STRICTLY ≤ the v5 always-on form on the
-    # SAME state (envelope only lowers the target ≤ cmd_c; the mask only removes
-    # terms) — v6 never bills MORE than v5 anywhere.
-    theta, c = 0.25, 0.06
-    e, s = _teacher_clear_state(theta, c)
-    foot_h, v = _foot_h_and_v(e, s.pipeline_state)
-    v5_cost = float(np.sum(np.maximum(c - foot_h, 0.0) * np.sqrt(v)))   # always-on
-    v5_billed = -e._w_clearance * v5_cost
-    teacher_billed = float(s.metrics["w_clearance"])
-    # both are ≤ 0 costs; |teacher| ≤ |v5| means teacher is the LESS negative one.
-    assert teacher_billed >= v5_billed - 1e-6, (teacher_billed, v5_billed)
-    # and here it is strictly lower-magnitude (stance feet dropped + edge taper)
-    assert teacher_billed > v5_billed + 1e-3, (teacher_billed, v5_billed)
-
-    # TRANSITION-ZONE θ (Task-2 review carry-in): θ=0.47 puts FL,RR in the
-    # raised-cosine EDGE (swing_sched ≈ 0.096, a partial mask — not a rail), so the
-    # ≤-v5 invariant is exercised where the envelope AND the fractional mask both
-    # attenuate. It must still hold: envelope ≤ 1 and swing_sched ≤ 1 can only lower
-    # the bill vs the always-on v5 form.
-    theta_t = 0.47
-    et, st = _teacher_clear_state(theta_t, c)
-    foot_h_t, v_t = _foot_h_and_v(et, st.pipeline_state)
-    _, sw_t, _ = (np.asarray(x) for x in et._gait_schedule(jp.asarray(theta_t)))
-    assert 0.01 < sw_t[0] < 0.99, ("θ=0.47 must be a genuine edge for FL", sw_t)
-    v5_billed_t = -et._w_clearance * float(np.sum(np.maximum(c - foot_h_t, 0.0) * np.sqrt(v_t)))
-    assert float(st.metrics["w_clearance"]) >= v5_billed_t - 1e-6, \
-        (st.metrics["w_clearance"], v5_billed_t)
-
-
-def test_blind_reward_numeric_pin_I1():
+def test_blind_clearance_unchanged_numeric():
     # I-1: ABSOLUTE numeric pin of the BLIND stepped-env reward on a deterministic
     # manufactured moving case (key=7, base +0.02, all joints qd=2.0). Captured on
-    # commit 4aee167 (Task-1 HEAD, pre-Task-2): reward = 0.892089664936. The blind
-    # path is untouched by BOTH Task-1 (clock/schedule/gait cost teacher-only) and
-    # Task-2 (phase-native clearance teacher-only), so this must hold to 1e-6 after
-    # both — the deploy-artifact reward is byte-frozen.
+    # commit 4aee167: reward = 0.892089664936. The blind path is untouched by the
+    # v6 clock (teacher-only) AND the v7 swing-reference term (teacher-only), so
+    # this must still hold to 1e-6 — the deploy-artifact reward is byte-frozen.
     BLIND_REWARD_PIN = 0.892089664936
     e = NovaJoystick()                             # blind (heightmap=False)
     s = e.reset(jax.random.PRNGKey(7))
@@ -344,7 +357,32 @@ def test_blind_reward_numeric_pin_I1():
     s2 = e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
     assert abs(float(s2.reward) - BLIND_REWARD_PIN) < 1e-6, \
         (float(s2.reward), BLIND_REWARD_PIN)
+    # blind carries the v5 one-sided clearance (active) and NO swingref term.
     assert float(s2.metrics["w_gait"]) == 0.0, s2.metrics["w_gait"]
+    assert float(s2.metrics["w_swingref"]) == 0.0, \
+        ("v7 swingref is teacher-only — blind must read 0", s2.metrics["w_swingref"])
+    assert float(s2.metrics["w_clearance"]) < 0.0, \
+        ("blind keeps the ACTIVE v5 one-sided clearance", s2.metrics["w_clearance"])
+
+
+def test_swingref_w_swingref_kwarg_scales():
+    # W_SWINGREF default + kwarg: the teacher term scales linearly with the weight.
+    # Same manufactured below-reference state (θ=0.25, feet near ground) at two
+    # weights -> the billed w_swingref scales by exactly the weight ratio.
+    theta, c = 0.25, 0.06
+    e100, s100 = _swingref_state(theta, c, base_lift=0.0)
+    e50 = NovaJoystick(heightmap=True, w_swingref=50.0)
+    s = e50.reset(jax.random.PRNGKey(24))
+    q = s.pipeline_state.q.at[7:].set(e50._default_pose).at[2].add(0.0)
+    ps = e50.pipeline_init(q, jp.zeros(e50.sys.nv))
+    s = s.replace(pipeline_state=ps,
+                  info={**s.info, "cmd_c": jp.asarray(c),
+                        "gait_phase": jp.asarray(theta),
+                        "cmd": jp.array([0.3, 0.0, 0.0])})
+    s50 = e50.step(s, jp.zeros(e50.action_size))
+    assert float(s100.metrics["w_swingref"]) < -0.001, s100.metrics["w_swingref"]
+    assert abs(float(s100.metrics["w_swingref"]) / float(s50.metrics["w_swingref"]) - 2.0) < 0.02, \
+        (s100.metrics["w_swingref"], s50.metrics["w_swingref"])
 
 
 if __name__ == "__main__":

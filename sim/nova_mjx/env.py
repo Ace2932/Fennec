@@ -155,7 +155,22 @@ W_CLEARANCE = 6.0
 # the policy was net-PAID to stay low for 120M steps. 6 makes under-lift ~20% of
 # return: undodgeable, and a compliant gait pays 0. Shuffle-escape (cutting the
 # sqrt(v) factor instead of lifting) stays dominated by track/progress — watch fwd.
-# Sweep --w-clearance.
+# Sweep --w-clearance. BLIND path only from v7 on (teacher uses W_SWINGREF below).
+
+# ---- SWING-REFERENCE TRACKING weight (v7, teacher-only) ----
+# v7 REPLACES the teacher clearance term with walk-these-ways' REAL clearance
+# form: two-sided squared TRACKING of each swing foot to a phase-varying height
+# reference z_ref = cmd_c·sin(π·swing_frac). Across v5/v6 we ran a BROKEN variant
+# (one-sided + √v-scaled + outcome-only) that specified only whether a foot
+# CLEARED a target, never the swing PATH — so the correlated lift motion stayed
+# undiscoverable by white-noise exploration (the six-generation swing-stasis root
+# cause, patterns/exploration-vs-plant-bandwidth). The squared two-sided form
+# gives a dense per-swing-phase height target the policy mean-shifts toward:
+# amplitude, not just timing. W_SWINGREF ~100 puts a ~2 cm under-track at the
+# mid-swing peak (cmd_c 0.05) at ~100·(0.03)² ≈ 0.09/step — the same order as
+# the terms it must beat. Sweep --w-swingref (probe-tuned in Task 2). See
+# docs/superpowers/specs/2026-07-24-swingref-v7-design.md.
+W_SWINGREF = 100.0
 
 # Carry cost: a foot airborne longer than AIR_MAX seconds is being HELD, not
 # stepping (a real swing tops out ~0.2-0.3s). Penalize the excess, capped so one
@@ -212,14 +227,16 @@ class NovaJoystick(PipelineEnv):
     def __init__(self, xml="nova.xml", push_interval=150, push_mag=0.6,
                  cmd_stage=2, heightmap=False, w_climb=W_CLIMB, beta_climb=0.0,
                  w_pbrs=W_PBRS, footswing_max=FOOTSWING_MAX, air_max=AIR_MAX,
-                 w_clearance=W_CLEARANCE, w_gait=W_GAIT, **kwargs):
+                 w_clearance=W_CLEARANCE, w_swingref=W_SWINGREF, w_gait=W_GAIT,
+                 **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
         self._w_pbrs = float(w_pbrs)     # approach-density weight; --w-pbrs (0=off)
         self._footswing_max = float(footswing_max)   # teacher cmd_c upper bound; --footswing-max
         self._air_max = float(air_max)             # carry-cost onset (s); --air-max
-        self._w_clearance = float(w_clearance)     # clearance weight; --w-clearance
+        self._w_clearance = float(w_clearance)     # blind clearance weight; --w-clearance
+        self._w_swingref = float(w_swingref)       # v7 teacher swing-ref weight; --w-swingref
         self._w_gait = float(w_gait)               # v6 schedule-violation cost weight; --w-gait
         path = epath.Path(__file__).parent / xml
         mj = mujoco.MjModel.from_xml_path(str(path))
@@ -373,7 +390,7 @@ class NovaJoystick(PipelineEnv):
         metrics = {k: 0.0 for k in (
             "track", "air", "height", "energy",
             # weighted contributions (what actually competes for the policy)
-            "w_track", "w_yaw", "w_progress", "w_air", "w_clearance",
+            "w_track", "w_yaw", "w_progress", "w_air", "w_clearance", "w_swingref",
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_carry", "w_gait",
             "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand",
@@ -656,42 +673,44 @@ class NovaJoystick(PipelineEnv):
         # hold pattern. Below target this is |·|-identical, so the under-lift
         # gradient is unchanged.
         #
-        # v6 PHASE-NATIVE (teacher) vs v5 ALWAYS-ON (blind) — a static
-        # `if self._heightmap` split, reusing the Task-1 schedule indicators
+        # v7 SWING-REFERENCE TRACKING (teacher) vs v5 ONE-SIDED (blind) — a static
+        # `if self._heightmap` split, reusing the v6 schedule indicators
         # (swing_sched, swing_frac from _gait_schedule at info["gait_phase"]).
-        # DIVISION OF LABOR: the trot CLOCK owns swing TIMING (when a foot lifts);
-        # cmd_c owns swing HEIGHT (how high). So the teacher clearance bills a
-        # below-target foot ONLY inside its SCHEDULED swing window, against an
-        # envelope target that tapers to 0 at the swing edges (touchdown/liftoff)
-        # and peaks at cmd_c mid-swing:
-        #     envelope_i = sin(π · swing_frac_i)   # 0 at swing_frac 0/1, 1 at 0.5
-        #     target_i   = cmd_c · envelope_i
-        #     cost       = Σ max(target_i − foot_h_i, 0)·√v_i · swing_sched_i
-        # swing_sched masks stance feet out entirely — a planted foot below target
-        # is BY DESIGN free (the clock, not this cost, decides it should be down).
-        # NON-FARMABILITY: still a one-sided cost (maxes at 0), no new positive.
-        # It is strictly ≤ the v5 always-on form on identical states — envelope
-        # only LOWERS the target (≤ cmd_c), the mask only REMOVES terms — so v6
-        # never bills MORE than v5 anywhere (test: teacher clearance ≤ v5 form).
         #
-        # AUDIT AMENDMENT (2026-07-24, F3): 75 ms servo latency = 0.1-0.15 phase
-        # at f 1-2 Hz, so a purely REACTIVE tracker lifts LATE and eats an
-        # unavoidable edge-of-window bill (both here and in the gait cost); the
-        # clock obs (sin/cos 2πθ) lets the policy ANTICIPATE — lead the schedule
-        # by the latency, feedforward, learnable. The enveloped target also LOWERS
-        # the unadapted watch baseline: v6 `clear` ≈ −0.06, NOT v5's −0.17 — so
-        # `clear`→0 is the SECONDARY, subtle run signal; `w_gait` −0.2→~0
-        # (phase-lock) is primary. See spec §4 + Audit amendments.
+        # WTW's REAL clearance reward is TWO-SIDED squared position TRACKING to a
+        # phase-varying reference — NOT the one-sided √v·max(target−h,0) OUTCOME
+        # cost we ran across v5/v6. That broken variant specified only whether a
+        # foot CLEARED a target, never the swing PATH, so the correlated lift
+        # motion stayed undiscoverable by white noise (the six-generation
+        # swing-stasis root cause). v7 restores the real form:
+        #     z_ref_i = cmd_c · sin(π · swing_frac_i)   # 0 at swing edges, cmd_c mid-swing
+        #     cost    = Σ (foot_h_i − z_ref_i)² · swing_sched_i
+        # TWO-SIDED (squared): it bills a swing foot BELOW *and* ABOVE the
+        # reference — the policy is pulled TO cmd_c, not merely above it — so the
+        # foot has an exact height target at EVERY swing phase = a dense amplitude
+        # gradient it mean-shifts along. swing_sched masks stance feet out (a
+        # planted foot is the clock's call, not this term's); z_ref is 0 there
+        # anyway (swing_frac clips to 0 in stance).
+        #
+        # WHY IT IS FARM-SAFE NOW (couldn't be in v5): it is a COST (max 0 at
+        # perfect tracking — no positive to farm), and the two v6-clock guards
+        # replace the anti-hold job the √v factor used to do — (a) the
+        # PHASE-VARYING reference means a HELD foot can't match a MOVING target
+        # (it matches one phase, is billed at the rest), and (b) w_gait bills a
+        # foot high during scheduled STANCE. The clock built the guard; v7 uses
+        # WTW's clean form on top. See
+        # docs/superpowers/specs/2026-07-24-swingref-v7-design.md.
         #
         # BLIND (heightmap=False): NO clock, NO schedule — keeps the v5 always-on
-        # flat-target form (info["cmd_c"] ≡ BLIND_FOOTSWING) EXACTLY, so the 105-d
-        # deploy reward is byte-identical (regression-pinned).
+        # one-sided flat-target form (info["cmd_c"] ≡ BLIND_FOOTSWING) EXACTLY, so
+        # the 105-d deploy reward is byte-identical (regression-pinned:
+        # BLIND_REWARD_PIN in test_gait_clock).
         if self._heightmap:
-            envelope = jp.sin(jp.pi * swing_frac)             # (4,) 0 at edges, 1 mid-swing
-            clearance_cost = jp.sum(
-                jp.maximum(info["cmd_c"] * envelope - foot_h, 0.0)
-                * jp.sqrt(foot_xy_speed) * swing_sched)
+            z_ref = info["cmd_c"] * jp.sin(jp.pi * swing_frac)   # (4,) phase-varying target
+            swingref_cost = jp.sum((foot_h - z_ref) ** 2 * swing_sched)
+            clearance_cost = jp.zeros(())                        # teacher uses swingref
         else:
+            swingref_cost = jp.zeros(())                         # blind uses one-sided clearance
             clearance_cost = jp.sum(jp.maximum(info["cmd_c"] - foot_h, 0.0)
                                     * jp.sqrt(foot_xy_speed))
         # splay: the rollout showed the hips abducted WIDE. Penalize haa (hip-
@@ -780,7 +799,13 @@ class NovaJoystick(PipelineEnv):
         # robot dodge it by standing still. Ungated is also the reference's form,
         # and it needs no gate — a planted foot has ~zero xy speed, so it pays
         # ~zero regardless.
-        w_clearance = -self._w_clearance * clearance_cost
+        w_clearance = -self._w_clearance * clearance_cost   # BLIND one-sided; 0 for teacher
+        # v7 TEACHER swing-reference tracking term (0 for blind). A SEPARATE metric
+        # from w_clearance so the diagnostics `clear` column can show the ACTIVE
+        # teacher term (Task 2 wires the column); the reward sum adds BOTH, one of
+        # which is always exactly 0, so neither path double-bills and the blind
+        # reward stays byte-identical (adding −0.0 is an IEEE identity).
+        w_swingref = -self._w_swingref * swingref_cost
         # v6 SCHEDULE-VIOLATION cost (teacher-only). cmd_moving-gated (as float) so
         # an IDLE command bills 0 — idle still means STAND, no step-in-place forcing
         # (the stand cost keeps its job). Blind forces w_gait ≡ 0.0, so `+ w_gait`
@@ -806,7 +831,8 @@ class NovaJoystick(PipelineEnv):
         w_energy = -2e-3 * energy
         w_jerk = -0.01 * jerk
         w_stand = -5e-4 * stand
-        reward = (w_track + w_yaw + w_progress + w_air + w_clearance + w_gait
+        reward = (w_track + w_yaw + w_progress + w_air + w_clearance + w_swingref
+                  + w_gait
                   + w_pose + 0.1 + w_climb + beta_climb + w_pbrs_climb
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_carry
@@ -920,7 +946,7 @@ class NovaJoystick(PipelineEnv):
         state.metrics.update(
             track=track, air=air_rew, height=height, energy=energy,
             w_track=w_track, w_yaw=w_yaw, w_progress=w_progress, w_air=w_air,
-            w_clearance=w_clearance, w_pose=w_pose,
+            w_clearance=w_clearance, w_swingref=w_swingref, w_pose=w_pose,
             w_upright=w_upright, w_angvel=w_angvel, w_height=w_height, w_z=w_z,
             w_slip=w_slip, w_splay=w_splay, w_carry=w_carry, w_gait=w_gait,
             w_actrate=w_actrate,

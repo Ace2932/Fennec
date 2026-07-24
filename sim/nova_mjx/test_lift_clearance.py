@@ -30,11 +30,11 @@ def _moving_state_with_c(e, base_lift, c, key=7, theta=0.25):
     # step, so the clearance cost bills against `c`. (The resample fires only at
     # step % 250 == 0; a fresh reset steps to step 1, so the override survives the
     # step and drives the clearance term.)
-    # GAIT-CLOCK-V6 RECONCILE: the TEACHER clearance is now phase-native
-    # (enveloped + swing-masked), so it only bills feet in their scheduled swing
-    # window. Pin the clock phase θ=0.25 (FR,RL mid-swing, envelope 1) + a moving
-    # command so the below-target billing is guaranteed and the cmd_c-scaling test
-    # below still exercises a real deficit. (Blind clearance is unaffected — this
+    # SWINGREF-V7 RECONCILE: the TEACHER term is now two-sided squared tracking to
+    # z_ref=cmd_c·sin(π·swing_frac), swing-masked, so it only bills feet in their
+    # scheduled swing window. Pin the clock phase θ=0.25 (FR,RL mid-swing, z_ref at
+    # its cmd_c peak) so the below-reference billing is guaranteed and the
+    # cmd_c-scaling test reads w_swingref. (Blind clearance is unaffected — this
     # helper is teacher-only.)
     s = e.reset(jax.random.PRNGKey(key))
     q = s.pipeline_state.q.at[2].add(base_lift)
@@ -77,18 +77,17 @@ def test_obs_105_blind_unchanged_c_fixed():
     assert abs(BLIND_FOOTSWING - 0.05) < 1e-9
 
 
-def test_clearance_targets_cmd_c():
-    # same manufactured below-target state, two c values via info override:
-    # a bigger deficit (c - foot_h) scales the bill more negative.
-    # SCOPE (gait-clock-v6): _moving_state_with_c pins θ=0.25, so this exercises the
-    # ENVELOPE PEAK only (FR,RL mid-swing, sin(π·0.5)=1 -> target == cmd_c). The
-    # cmd_c-scaling monotonicity is envelope-independent (envelope factors out of
-    # both sides), so peak-only coverage is sufficient here; the transition-zone
-    # envelope+mask behaviour is pinned in test_gait_clock.py.
+def test_swingref_targets_cmd_c():
+    # v7 TEACHER: the swing-reference term (metric w_swingref) targets cmd_c. Same
+    # manufactured below-reference state (swing feet near ground), two c values via
+    # info override: at θ=0.25 the swing feet sit at swing_frac 0.5 (z_ref=cmd_c),
+    # so a bigger cmd_c raises z_ref -> a bigger (foot_h − z_ref)² deficit -> a
+    # more-negative w_swingref. (Teacher w_clearance is inert 0 under v7.)
     e = NovaJoystick(heightmap=True)
     lo = _moving_state_with_c(e, 0.0, c=0.03, key=24)
     hi = _moving_state_with_c(e, 0.0, c=0.06, key=24)
-    assert float(hi.metrics["w_clearance"]) < float(lo.metrics["w_clearance"]) < -0.01
+    assert float(hi.metrics["w_swingref"]) < float(lo.metrics["w_swingref"]) < -0.001
+    assert float(hi.metrics["w_clearance"]) == 0.0, hi.metrics["w_clearance"]
 
 
 def test_footswing_max_kwarg():
