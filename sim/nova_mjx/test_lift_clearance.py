@@ -80,6 +80,11 @@ def test_obs_105_blind_unchanged_c_fixed():
 def test_clearance_targets_cmd_c():
     # same manufactured below-target state, two c values via info override:
     # a bigger deficit (c - foot_h) scales the bill more negative.
+    # SCOPE (gait-clock-v6): _moving_state_with_c pins θ=0.25, so this exercises the
+    # ENVELOPE PEAK only (FR,RL mid-swing, sin(π·0.5)=1 -> target == cmd_c). The
+    # cmd_c-scaling monotonicity is envelope-independent (envelope factors out of
+    # both sides), so peak-only coverage is sufficient here; the transition-zone
+    # envelope+mask behaviour is pinned in test_gait_clock.py.
     e = NovaJoystick(heightmap=True)
     lo = _moving_state_with_c(e, 0.0, c=0.03, key=24)
     hi = _moving_state_with_c(e, 0.0, c=0.06, key=24)

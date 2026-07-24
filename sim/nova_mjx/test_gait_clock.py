@@ -251,6 +251,24 @@ def test_stance_foot_below_target_masked():
     assert abs(float(s.metrics["w_clearance"]) - expected) < 1e-4, \
         (s.metrics["w_clearance"], expected)
 
+    # TRANSITION-ZONE θ (Task-2 review carry-in): at θ=0.47 no foot is fully
+    # stance — FL,RR sit in the raised-cosine edge (swing_sched ≈ 0.096), so the
+    # mask is FRACTIONAL, not 0/1. The billed cost must still equal the exact
+    # enveloped+masked reconstruction, i.e. the partial mask attenuates (does not
+    # zero) the stance-side feet's contribution rather than dropping it wholesale.
+    theta_t = 0.47
+    et, st_t = _teacher_clear_state(theta_t, c)
+    foot_h_t, v_t = _foot_h_and_v(et, st_t.pipeline_state)
+    sc_t, sw_t, sf_t = (np.asarray(x) for x in et._gait_schedule(jp.asarray(theta_t)))
+    stance_side = np.array([0, 3])                 # FL,RR: stance-side but in the edge
+    assert ((sw_t[stance_side] > 0.01) & (sw_t[stance_side] < 0.5)).all(), \
+        ("FL,RR must be a partial (fractional) mask at θ=0.47", sw_t)
+    env_t = np.sin(np.pi * sf_t)
+    expected_t = -et._w_clearance * float(
+        np.sum(np.maximum(c * env_t - foot_h_t, 0.0) * np.sqrt(v_t) * sw_t))
+    assert abs(float(st_t.metrics["w_clearance"]) - expected_t) < 1e-4, \
+        (st_t.metrics["w_clearance"], expected_t)
+
 
 def test_envelope_peak_mid_swing():
     # ENVELOPE PEAK: at swing_frac 0.5 the target equals cmd_c (sin(π·0.5)=1). θ=0.25
@@ -294,6 +312,20 @@ def test_teacher_clearance_le_v5_form():
     assert teacher_billed >= v5_billed - 1e-6, (teacher_billed, v5_billed)
     # and here it is strictly lower-magnitude (stance feet dropped + edge taper)
     assert teacher_billed > v5_billed + 1e-3, (teacher_billed, v5_billed)
+
+    # TRANSITION-ZONE θ (Task-2 review carry-in): θ=0.47 puts FL,RR in the
+    # raised-cosine EDGE (swing_sched ≈ 0.096, a partial mask — not a rail), so the
+    # ≤-v5 invariant is exercised where the envelope AND the fractional mask both
+    # attenuate. It must still hold: envelope ≤ 1 and swing_sched ≤ 1 can only lower
+    # the bill vs the always-on v5 form.
+    theta_t = 0.47
+    et, st = _teacher_clear_state(theta_t, c)
+    foot_h_t, v_t = _foot_h_and_v(et, st.pipeline_state)
+    _, sw_t, _ = (np.asarray(x) for x in et._gait_schedule(jp.asarray(theta_t)))
+    assert 0.01 < sw_t[0] < 0.99, ("θ=0.47 must be a genuine edge for FL", sw_t)
+    v5_billed_t = -et._w_clearance * float(np.sum(np.maximum(c - foot_h_t, 0.0) * np.sqrt(v_t)))
+    assert float(st.metrics["w_clearance"]) >= v5_billed_t - 1e-6, \
+        (st.metrics["w_clearance"], v5_billed_t)
 
 
 def test_blind_reward_numeric_pin_I1():

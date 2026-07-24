@@ -94,6 +94,7 @@ def _install_stubs():
     env.HM_N, env.HM_EXTENT = 11, 0.4
     env.W_PBRS, env.PBRS_LOOKAHEAD = 30.0, (0.15, 0.25, 0.35)
     env.AIR_MAX, env.W_CLEARANCE = 0.6, 6.0
+    env.W_GAIT, env.F_MIN, env.F_MAX = 0.15, 1.0, 2.0    # v6 gait-clock (train.py imports)
 
     class NovaJoystick:
         _cmd_lo, _cmd_hi, _cmd_stage = (-0.15, -0.15, -0.5), (0.35, 0.15, 0.5), 2
