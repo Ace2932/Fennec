@@ -1,8 +1,11 @@
 # Crawl-gait v8 — terrain-selected trot/crawl (the tall-stairs gait)
 
 **Date:** 2026-07-24
-**Status:** DRAFT — pending the crawl-ceiling probe (validates the ≥6cm premise). Build machinery
-once the probe confirms; the RUN also waits on v7 confirming the tracking reward lifts swing.
+**Status:** APPROVED — crawl-ceiling probe PASSED (probe_crawl_ceiling.py e6888d5): stable 6.73cm
+(~2× the trot's 3.2cm), ≥6cm YES / ≥8cm marginal. Limiter = STANCE-leg torque saturation → 3.7cm
+body sag (NOT swing reach); the probe omits CoM pre-shift, so 6.7cm is a PESSIMISTIC floor — a
+closed-loop crawl learns CoM-sway coordination (upright/height costs incentivize it) and may push
+toward 8cm. Build machinery now (independent of v7); the RUN waits on v7 confirming tracking lifts swing.
 **Context:** the ~3-4cm ceiling that scared me was a TROT ceiling (fast, 2-leg diagonal support —
 body sags under 2-leg load). Tall stairs are climbed by a slow CRAWL: one foot at a time,
 3-leg triangle support (1/3 load/leg, stable), lifting leg UNLOADED (reaches high freely), slow
@@ -12,8 +15,9 @@ ever ran trot (clock 1-2Hz, diagonal offsets) — Fennec was never given the gai
 ## Premise gate (MUST pass before building)
 
 `probe_crawl_ceiling.py`: a slow 3-leg-support single-foot IK lift must reach ≥6cm (ideally
-8cm) stably (up_z>0.9, no fall). If the crawl ALSO caps ~4cm → the premise is wrong and tall
-stairs are near-infeasible → do NOT build v8, reconsider. This spec assumes the probe passes.
+8cm) stably (up_z>0.9, no fall). PASSED: 6.73cm stable (2× trot), ≥6cm feasible. 8cm marginal (stance-torque-limited,
+CoM-shift-dependent). SUCCESS RECALIBRATED: 4-6cm risers solid (the real capability); 8cm = stretch
+the learned CoM-shift may reach, not a pass/fail bar.
 
 ## Mechanism — minimal 2-gait (NOT full WTW MoB)
 
