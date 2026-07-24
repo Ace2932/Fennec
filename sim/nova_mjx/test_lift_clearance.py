@@ -45,14 +45,16 @@ def test_cmd_c_in_info_and_range():
     assert FOOTSWING_MIN - 1e-6 <= c <= FOOTSWING_MAX + 1e-6, c
 
 
-def test_obs_227_teacher_last_dim_is_c():
+def test_obs_230_teacher_c_at_dim_226():
+    # gait-clock-v6: obs is 230 and c is no longer the LAST dim — the 3 clock dims
+    # (sin/cos 2πθ, cmd_f scaled) append AFTER it, so c sits at index 226 (obs[-4]).
     e = NovaJoystick(heightmap=True)
     s = e.reset(jax.random.PRNGKey(22))
-    assert s.obs.shape[-1] == 227, s.obs.shape
-    # last dim carries the (scaled) commanded footswing c — assert correlation,
-    # not raw equality: override cmd_c, rebuild obs, confirm the last dim tracks
-    # c monotonically and shares the cmd scaling's positive sign.
-    lasts = [float(e._get_obs({**s.info, "cmd_c": jp.asarray(c)}, s.pipeline_state)[-1])
+    assert s.obs.shape[-1] == 230, s.obs.shape
+    # dim 226 carries the (scaled) commanded footswing c — assert correlation, not
+    # raw equality: override cmd_c, rebuild obs, confirm that dim tracks c
+    # monotonically and shares the cmd scaling's positive sign.
+    lasts = [float(e._get_obs({**s.info, "cmd_c": jp.asarray(c)}, s.pipeline_state)[-4])
              for c in (0.02, 0.04, 0.06)]
     assert lasts[0] < lasts[1] < lasts[2], lasts
     assert all(v > 0 for v in lasts), lasts

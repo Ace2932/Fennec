@@ -1,0 +1,181 @@
+"""Gait-clock-v6: COMMANDED trot timing. A per-env trot clock (info["gait_phase"]
+θ advanced by info["cmd_f"]·dt) drives a smoothed stance/swing schedule; a
+cmd_moving-gated COST bills schedule violations. Teacher-only (obs 227->230);
+blind (heightmap=False) carries NO clock and its 105-d obs + reward are
+byte-unchanged. Design:
+docs/superpowers/specs/2026-07-24-gait-clock-v6-design.md
+
+  JAX_PLATFORMS=cpu python test_gait_clock.py
+"""
+import jax
+import jax.numpy as jp
+import numpy as np
+
+from env import (NovaJoystick, F_MIN, F_MAX, BLIND_CMD_F, GAIT_DUTY, GAIT_SMOOTH,
+                 GAIT_OFFSETS, W_GAIT, F_OBS_SCALE)
+
+# leg base offsets into q[7:] in LEG_NAMES order (FL,FR,RL,RR): [haa,hfe,kfe] each
+_LEG_BASE = {"FL": 0, "FR": 3, "RL": 6, "RR": 9}
+# diagonal pairs. Lifting the base then EXTENDING the named legs' (hfe,kfe) by
+# (-0.5, +0.8) plants ONLY those feet (empirically calibrated on the flat env):
+#   legs_down=[FL,RR] -> contact [1,0,0,1]  (compliant with the θ=0.25 schedule)
+#   legs_down=[FR,RL] -> contact [0,1,1,0]  (anti-phase with it)
+_COMPLIANT_LEGS = ["FL", "RR"]
+_ANTI_LEGS = ["FR", "RL"]
+
+
+def _contact(e, ps):
+    """Radius-corrected contact per foot (flat env: ground_z==0), as the reward
+    computes it. (4,) bool in LEG_NAMES order."""
+    foot_z = np.asarray(ps.x.pos[np.asarray(e._foot_ids), 2])
+    return (foot_z - 0.014) < 1e-3
+
+
+def _split_state(e, legs_down, theta, cmd, key=7):
+    """Manufacture a step with a chosen diagonal contact split + clock phase +
+    command. Lift the base 0.03 (all feet airborne), then extend `legs_down` back
+    to the floor so exactly those feet plant. Override gait_phase=theta and the
+    command before stepping (the resample fires only at step%250, so a fresh
+    reset's first step preserves the overrides)."""
+    s = e.reset(jax.random.PRNGKey(key))
+    q = s.pipeline_state.q.at[2].add(0.03)
+    for leg in legs_down:
+        b = 7 + _LEG_BASE[leg]
+        q = q.at[b + 1].add(-0.5).at[b + 2].add(0.8)     # hfe -0.5, kfe +0.8
+    ps = e.pipeline_init(q, jp.zeros(e.sys.nv))
+    s = s.replace(pipeline_state=ps,
+                  info={**s.info, "gait_phase": jp.asarray(theta),
+                        "cmd": jp.asarray(cmd, dtype=jp.float32)})
+    return e.step(s, jp.zeros(e.action_size))
+
+
+def test_clock_advances_and_wraps():
+    # θ(t+1) == frac(θ(t) + cmd_f·dt), and it wraps past 1.
+    e = NovaJoystick(heightmap=True)
+    s0 = e.reset(jax.random.PRNGKey(3))
+    th0 = float(s0.info["gait_phase"])
+    f0 = float(s0.info["cmd_f"])
+    s1 = e.step(s0, jp.zeros(e.action_size))
+    expected = (th0 + f0 * e._dt) % 1.0
+    assert abs(float(s1.info["gait_phase"]) - expected) < 1e-6, \
+        (float(s1.info["gait_phase"]), expected)
+    # wrap: phase 0.99 + 2.0Hz·0.02s = 1.03 -> frac 0.03
+    s = s0.replace(info={**s0.info, "gait_phase": jp.asarray(0.99),
+                         "cmd_f": jp.asarray(2.0)})
+    s = e.step(s, jp.zeros(e.action_size))
+    assert abs(float(s.info["gait_phase"]) - 0.03) < 1e-6, float(s.info["gait_phase"])
+
+
+def test_cmd_f_range_and_blind_fixed():
+    # teacher cmd_f ~ U(F_MIN,F_MAX); blind cmd_f is the fixed BLIND_CMD_F (1.4).
+    te = NovaJoystick(heightmap=True)
+    fs = [float(te.reset(jax.random.PRNGKey(k)).info["cmd_f"]) for k in range(12)]
+    for f in fs:
+        assert F_MIN - 1e-6 <= f <= F_MAX + 1e-6, f
+    assert max(fs) - min(fs) > 0.2, ("cmd_f should vary across resets", fs)
+    be = NovaJoystick()                       # heightmap=False
+    assert abs(float(be.reset(jax.random.PRNGKey(1)).info["cmd_f"]) - BLIND_CMD_F) < 1e-6
+    assert abs(BLIND_CMD_F - 1.4) < 1e-9
+
+
+def test_schedule_windows():
+    # at θ=0.25: FL (offset 0) is mid-STANCE, FR (offset 0.5) is mid-SWING — the
+    # trot antiphase — and stance_sched integrates to duty 0.5 over the cycle.
+    e = NovaJoystick(heightmap=True)
+    stance, swing, _ = e._gait_schedule(jp.asarray(0.25))
+    stance, swing = np.asarray(stance), np.asarray(swing)
+    # LEG_NAMES order: [0]=FL [1]=FR [2]=RL [3]=RR. Offsets [0,.5,.5,0] -> FL,RR
+    # (offset 0) planted; FR,RL (offset 0.5) swinging.
+    assert stance[0] > 0.99 and stance[1] < 0.01, stance      # FL stance, FR swing
+    assert swing[1] > 0.99 and swing[0] < 0.01, swing         # antiphase pair
+    assert stance[1] < 0.01 and stance[2] < 0.01, stance      # FR,RL both swing
+    assert stance[3] > 0.99, stance                           # RR (offset 0) stance
+    # duty 0.5: mean stance_sched over the cycle == GAIT_DUTY (per foot)
+    grid = jp.linspace(0.0, 1.0, 2001)[:-1]
+    st = np.asarray(jax.vmap(e._gait_schedule)(grid)[0])      # (N,4)
+    assert abs(st[:, 0].mean() - GAIT_DUTY) < 0.01, st[:, 0].mean()
+    # antiphase pairs sum to exactly 1 at every θ -> stance sums to 2
+    tot = np.asarray(jax.vmap(e._gait_schedule)(grid)[0]).sum(axis=1)
+    assert np.allclose(tot, 2.0, atol=1e-5), (tot.min(), tot.max())
+
+
+def test_schedule_edges_smooth():
+    # raised-cosine edges -> the indicator is CONTINUOUS across the θ grid (no
+    # reward cliffs): the max step of stance_sched between adjacent fine samples
+    # stays well under 0.15.
+    e = NovaJoystick(heightmap=True)
+    grid = jp.linspace(0.0, 1.0, 4001)
+    st = np.asarray(jax.vmap(e._gait_schedule)(grid)[0])      # (N,4)
+    max_step = np.abs(np.diff(st, axis=0)).max()
+    assert max_step < 0.15, max_step
+    # and it actually reaches both rails (a real boxcar, not a constant)
+    assert st[:, 0].max() > 0.99 and st[:, 0].min() < 0.01, (st[:, 0].max(), st[:, 0].min())
+
+
+def test_gait_cost_zero_when_compliant():
+    # contact pattern == schedule (FL,RR planted / FR,RL swinging at θ=0.25) with a
+    # moving command -> the violation cost is ~0.
+    e = NovaJoystick(heightmap=True)
+    s = _split_state(e, _COMPLIANT_LEGS, 0.25, [0.3, 0.0, 0.0])
+    assert (_contact(e, s.pipeline_state) == [1, 0, 0, 1]).all(), \
+        ("compliant precondition broken", _contact(e, s.pipeline_state))
+    assert float(s.metrics["w_gait"]) > -0.02, s.metrics["w_gait"]
+
+
+def test_gait_cost_bills_antiphase():
+    # contact pattern inverted (FL,RR swinging / FR,RL planted at θ=0.25) with a
+    # moving command -> all four feet violate -> strongly negative (~-W_GAIT·4).
+    e = NovaJoystick(heightmap=True)
+    s = _split_state(e, _ANTI_LEGS, 0.25, [0.3, 0.0, 0.0])
+    assert (_contact(e, s.pipeline_state) == [0, 1, 1, 0]).all(), \
+        ("anti precondition broken", _contact(e, s.pipeline_state))
+    assert float(s.metrics["w_gait"]) <= -W_GAIT * 4 * 0.7, s.metrics["w_gait"]
+
+
+def test_gait_cost_idle_gated():
+    # SAME inverted (would-bill) contact pattern, but an IDLE command -> the
+    # cmd_moving gate zeroes the cost (idle means STAND, no step-in-place forcing).
+    e = NovaJoystick(heightmap=True)
+    s = _split_state(e, _ANTI_LEGS, 0.25, [0.0, 0.0, 0.0])
+    assert (_contact(e, s.pipeline_state) == [0, 1, 1, 0]).all(), \
+        ("anti precondition broken", _contact(e, s.pipeline_state))
+    assert float(s.metrics["w_gait"]) == 0.0, s.metrics["w_gait"]
+
+
+def test_obs_230_teacher_105_blind():
+    # teacher obs 230, last 3 = [sin 2πθ, cos 2πθ, cmd_f·F_OBS_SCALE]; blind obs 105
+    # and its reward is byte-unchanged by the gait term (the --w-gait kwarg is
+    # ignored on the blind path — regression pin for the deploy artifact).
+    te = NovaJoystick(heightmap=True)
+    s = te.reset(jax.random.PRNGKey(5))
+    assert s.obs.shape[-1] == 230, s.obs.shape
+    th, f = float(s.info["gait_phase"]), float(s.info["cmd_f"])
+    last3 = np.asarray(s.obs[-3:])
+    assert abs(last3[0] - np.sin(2 * np.pi * th)) < 1e-5, last3
+    assert abs(last3[1] - np.cos(2 * np.pi * th)) < 1e-5, last3
+    assert abs(last3[2] - f * F_OBS_SCALE) < 1e-5, last3
+    # blind: 105-d obs, no clock dims
+    be = NovaJoystick()
+    assert be.reset(jax.random.PRNGKey(5)).obs.shape[-1] == 105
+
+    # blind reward byte-unchanged: two blind envs differing ONLY in --w-gait must
+    # produce the identical reward on the identical manufactured moving state.
+    def blind_reward(w_gait):
+        e = NovaJoystick(w_gait=w_gait)
+        s = e.reset(jax.random.PRNGKey(7))
+        q = s.pipeline_state.q.at[2].add(0.02)
+        qd = s.pipeline_state.qd.at[6:].set(2.0)
+        ps = e.pipeline_init(q, qd)
+        s2 = e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
+        return float(s2.reward), float(s2.metrics["w_gait"])
+    r0, g0 = blind_reward(0.0)
+    r9, g9 = blind_reward(50.0)
+    assert r0 == r9, ("blind reward must ignore --w-gait", r0, r9)
+    assert g0 == 0.0 and g9 == 0.0, ("blind gait cost must be OFF", g0, g9)
+
+
+if __name__ == "__main__":
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_"):
+            fn(); print(f"ok  {name}")
+    print("all gait-clock tests passed")
