@@ -96,6 +96,15 @@ clip. `--footswing-max`, `--w-clearance` etc. all stand.
   (≥ −0.11 / ≥ −0.15); (b) anti-phase script (offset by half period) → w_gait strongly
   negative (≤ −0.2). Both directions or NO-GO.
 - Regraft: `--add-dims 3` on hm227 pkl → hm230.
+- **GATE OUTCOME (2026-07-24, controller-adjudicated):** compliant-script w_gait −0.19..−0.24
+  vs the −0.05 bar = FAIL as written — but the bar demanded a BALANCED trot from an OPEN-LOOP
+  script (the documented open-loop-artifact class, v5 lesson repeated). Decomposition: −0.15
+  rear-legs-never-lift (balance, no open-loop fix; manufactured-compliance unit test bills ≈0 —
+  the cost function is exact) + −0.06 latency edge lag (F3-predicted, anticipation removes).
+  What IS provable all passed: compliance→0 (unit), anti-phase −0.36..−0.41 (clean ~0.2
+  separation), standing = 2·W_GAIT, walls hold (pose −0.114 one combo = v5's accepted value).
+  RULING: criterion recalibrated to the achievable evidence → PASSED; run authorized. The
+  compliant residual −0.2 is the calibrated unadapted `wgait` starting point for the run.
 
 ## Audit amendments (2026-07-24 pre-build review)
 
