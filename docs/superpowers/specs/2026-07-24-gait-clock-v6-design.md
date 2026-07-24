@@ -97,6 +97,17 @@ clip. `--footswing-max`, `--w-clearance` etc. all stand.
   negative (≤ −0.2). Both directions or NO-GO.
 - Regraft: `--add-dims 3` on hm227 pkl → hm230.
 
+## Audit amendments (2026-07-24 pre-build review)
+
+- **Latency phase-lead:** 75 ms servo lag = 0.1-0.15 phase at f 1-2 Hz — a purely reactive
+  tracker eats an unavoidable schedule bill; the clock obs enables ANTICIPATION (lead the
+  clock by the latency, feedforward, learnable). Comment this at the gait-cost term.
+- **Watch recalibration:** the enveloped clearance LOWERS the billing baseline — v6
+  unadapted `clear` ≈ −0.06 (NOT v5's −0.17). Primary run signal = `w_gait` −0.2 → ~0
+  (phase-lock); `clear` → 0 is secondary and subtle.
+- **Turns:** strict trot during mixed vx+wz arcs pays a compliance tax (WTW-accepted);
+  wz-only turn-in-place is already exempt via the xy-magnitude `cmd_moving` gate. Watch yaw.
+
 ## Run plan (fennec_gait_v6)
 
 Fresh 4-stage from the 230-graft, defaults + beta 20. WATCH: (1) w_gait → ~0 within stage 1

@@ -63,8 +63,8 @@ Implement per Global Constraints (read cmd_c's reset/resample/obs-append blocks 
 
 **Files:** Modify `sim/nova_mjx/probe_reward_landscape.py`, `sim/nova_mjx/train.py` (+ resume-test stub).
 
-- Probe: switch to `NovaJoystick(heightmap=True)`; override per reset: `cmd_c=0.05`, `cmd_f = 1/T` for the script's period T, and `gait_phase` pinned each step to the SCRIPT's phase (compute from step index and T, offset so script-swing aligns with schedule-swing; document the alignment). Add a second measurement mode: anti-phase (phase pinned + 0.5). Report w_gait for both.
-- train.py: `--w-gait` (mirror --w-clearance), fingerprint lines: clearance line gains `phase-native`, new `gait clock    : trot f∈[{F_MIN:g},{F_MAX:g}]Hz duty 0.5, w_gait {w_gait:g} (v6 schedule cost)`.
+- Probe: switch to `NovaJoystick(heightmap=True)`; override per reset: `cmd_c=0.05`, `cmd_f = 1/(2*T_swing)` — the probe's T is SWING duration; full trot cycle = 2T at duty 0.5 (T=0.4 -> f=1.25 Hz). Getting this wrong double-clocks the schedule and bills a perfectly-aligned script, and `gait_phase` pinned each step to the SCRIPT's phase (compute from step index and T, offset so script-swing aligns with schedule-swing; document the alignment). Add a second measurement mode: anti-phase (phase pinned + 0.5). Report w_gait for both.
+- train.py: `--w-gait` (mirror --w-clearance), diagnostics line: add `wgait {m('w_gait')/L:+.3f}` (the run's PRIMARY signal: ~-0.2 unadapted -> ~0 phase-locked); fingerprint lines: clearance line gains `phase-native`, new `gait clock    : trot f∈[{F_MIN:g},{F_MAX:g}]Hz duty 0.5, w_gait {w_gait:g} (v6 schedule cost)`.
 - Full suite one file per call (test_gait_clock, test_lift_clearance, test_heightmap, test_climb_reward, test_curriculum_resume, test_resume_budget, test_terrain_relative).
 - THE GATE (after committing): run the probe. PASS = compliant w_gait ≥ −0.05 AND pose ≥ −0.11 AND upright ≥ −0.15 at a=0.8/1.0, AND anti-phase w_gait ≤ −0.2. Report raw numbers, PASS/FAIL per criterion, touch nothing on FAIL.
 - Commit: `sim: v6 probe rework (phase-aligned + anti-phase modes), --w-gait threading, gait-clock fingerprint`.
