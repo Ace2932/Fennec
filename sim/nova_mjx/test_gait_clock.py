@@ -14,7 +14,7 @@ import numpy as np
 from env import (NovaJoystick, F_MIN, F_MAX, BLIND_CMD_F, GAIT_DUTY, GAIT_SMOOTH,
                  GAIT_OFFSETS, W_GAIT, F_OBS_SCALE,
                  CRAWL_OFFSETS, CRAWL_DUTY, CRAWL_F_MIN, CRAWL_F_MAX,
-                 TROT_F_MIN, TROT_F_MAX)
+                 TROT_F_MIN, TROT_F_MAX, CRAWL_VX_MIN, CRAWL_VX_MAX)
 from terrain import terrain_field
 
 _LEG_ORDER = ["FL", "FR", "RL", "RR"]                # LEG_NAMES order
@@ -511,6 +511,17 @@ def test_terrain_selects_gait():
     er.sys = er.sys.tree_replace({"hfield_data": jp.asarray(rough)})
     sr = er.reset(jax.random.PRNGKey(1))
     assert float(sr.info["is_crawl"]) == 0.0, ("rough env must trot", sr.info["is_crawl"])
+    # ELEVATED CONSTANT PLATEAU -> trot. A plateau is y-invariant with a nonzero
+    # peak (the raw stair signature) but does NOT rise in x, so the detector must
+    # exclude it via the max-min relief gate (else it reads as a staircase — the
+    # test_terrain_relative T5-T7 regression). This is the direct guard.
+    ep = NovaJoystick(heightmap=True)
+    nr, nc = ep._hf_nrow, ep._hf_ncol
+    ep.sys = ep.sys.tree_replace(
+        {"hfield_data": jp.asarray(np.full((nr, nc), 0.18 / 0.20).reshape(-1))})
+    sp = ep.reset(jax.random.PRNGKey(1))
+    assert float(sp.info["is_crawl"]) == 0.0, \
+        ("elevated constant plateau must trot, not crawl", sp.info["is_crawl"])
 
 
 def test_f_min_extended():
@@ -545,6 +556,37 @@ def test_obs_234_teacher_last4_swingsched():
         (np.asarray(sc.obs[-4:]), np.asarray(sw_c))
     be = NovaJoystick()                               # blind
     assert be.reset(jax.random.PRNGKey(5)).obs.shape[-1] == 105
+
+
+def test_crawl_cmd_vx_low_band_trot_unchanged():
+    # v8 COMMAND COUPLING (spec §6): sample_command draws a CRAWL env's forward vx
+    # from the low band [CRAWL_VX_MIN, CRAWL_VX_MAX]; a TROT env (is_crawl=0) and the
+    # ungated (is_crawl=None) draw are BYTE-IDENTICAL, and vy/wz are untouched on a
+    # crawl draw (same underlying uniform, only vx's affine scale changes).
+    e = NovaJoystick(heightmap=True)                  # stage 2 default vx[-0.15,0.35]
+    key = jax.random.PRNGKey(0)
+    ungated = np.asarray(e.sample_command(key))                    # pre-v8 signature
+    trot = np.asarray(e.sample_command(key, jp.asarray(0.0)))      # trot gating
+    crawl = np.asarray(e.sample_command(key, jp.asarray(1.0)))     # crawl gating
+    assert np.array_equal(ungated, trot), ("trot gate is a byte no-op", ungated, trot)
+    assert CRAWL_VX_MIN - 1e-6 <= crawl[0] <= CRAWL_VX_MAX + 1e-6, ("crawl vx band", crawl)
+    assert np.allclose(crawl[1:], trot[1:], atol=1e-7), ("vy/wz untouched", crawl, trot)
+    # across many keys a crawl draw NEVER exceeds the low cap
+    for k in range(64):
+        c = np.asarray(e.sample_command(jax.random.PRNGKey(k), jp.asarray(1.0)))
+        assert CRAWL_VX_MIN - 1e-6 <= c[0] <= CRAWL_VX_MAX + 1e-6, (k, c)
+
+
+def test_crawl_env_reset_seeds_low_vx():
+    # END TO END: a stair->crawl env's reset-seeded command has vx in the low band,
+    # while a flat->trot env keeps the full stage-2 vx range (draws above the cap).
+    ec = _crawl_env(seed=0, level=1.0)
+    for k in range(16):
+        vx = float(ec.reset(jax.random.PRNGKey(k)).info["cmd"][0])
+        assert CRAWL_VX_MIN - 1e-6 <= vx <= CRAWL_VX_MAX + 1e-6, ("crawl reset vx", k, vx)
+    ef = NovaJoystick(heightmap=True)                 # flat -> trot
+    vxs = [float(ef.reset(jax.random.PRNGKey(k)).info["cmd"][0]) for k in range(32)]
+    assert max(vxs) > CRAWL_VX_MAX + 1e-3, ("trot vx must exceed the crawl cap", max(vxs))
 
 
 def test_blind_reward_pin_holds():

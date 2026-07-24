@@ -122,6 +122,24 @@ GAIT_OFFSETS = jp.array([0.0, 0.5, 0.5, 0.0])
 # time, stance-sum 3.0, order RL,FL,RR,FR).
 CRAWL_OFFSETS = jp.array([0.5, 0.0, 0.75, 0.25])
 CRAWL_DUTY = 0.75         # crawl stance fraction (3-leg support); trot uses GAIT_DUTY
+# ---- v8 CRAWL command coupling (spec §6): stairs are slow ----
+# A crawl lifts ONE foot at a time on 3-leg support at CRAWL_F 0.3-0.6 Hz, so it
+# advances SLOWLY. If a crawl env were commanded the trot's forward vx (up to
+# +0.35 m/s) the progress + track rewards would demand a speed the slow schedule
+# physically can't reach -> the tracking gradient would fight the gait, pulling the
+# policy OFF the crawl schedule (the Task-1 carry-forward). So crawl envs draw vx
+# from a LOW forward band; vy/wz keep the stage-2 range (the crawl still steers).
+# Trot envs are BYTE-UNCHANGED (the is_crawl gate selects the old cmd_lo/hi).
+#
+# Band rationale: the trot's measured body speed tops ~0.2-0.3 m/s at 1-2 Hz; a
+# crawl at ~1/3 that gait frequency, advancing one unloaded foot at a time, scales
+# the achievable forward speed down ~3x -> ~0.07-0.10 m/s. 0.12 caps just above
+# that so a slow crawl can actually satisfy the commanded vx. lo 0.0 = a near-
+# stationary careful crawl; FORWARD-ONLY (no reverse) mirrors the stage-1 insight
+# that a forward-only command makes standing/creeping-backward never satisfy the
+# task — and reverse-crawling up stairs isn't the objective.
+CRAWL_VX_MIN = 0.0        # m/s — crawl forward-vel band low (near-stationary crawl)
+CRAWL_VX_MAX = 0.12       # m/s — crawl forward-vel band high (slow-crawl achievable speed)
 # Obs scale for cmd_f (teacher-only), mirroring CMD_OBS_SCALE / CMD_C_OBS_SCALE:
 # maps 1-2 Hz into the ~O(1) band the scaled commands occupy (cmd_f*scale in
 # [0.5, 1.0]). SINGLE SOURCE OF TRUTH for the last teacher obs dim; blind never
@@ -325,8 +343,25 @@ class NovaJoystick(PipelineEnv):
         # (0..80 ms) -> total 32..112 ms, mean ~72 ms, bracketing the real 75 ms.
         self._max_delay = 5            # delay 0..4 steps @ 50 Hz
 
-    def sample_command(self, rng):
-        return jax.random.uniform(rng, (3,), minval=self._cmd_lo, maxval=self._cmd_hi)
+    def sample_command(self, rng, is_crawl=None):
+        """Draw a velocity command U(cmd_lo, cmd_hi). v8 COMMAND COUPLING (spec §6):
+        on a CRAWL env the FORWARD vx is drawn from the low crawl band
+        [CRAWL_VX_MIN, CRAWL_VX_MAX] instead of the stage-2 vx range, so a slow crawl
+        can satisfy progress/track (a fast vx would fight the gait). vy/wz keep the
+        stage-2 range (the crawl still steers). Mirrors the is_crawl gating already
+        used for cmd_f in reset/step.
+
+        is_crawl=None (blind / default) reproduces the pre-v8 draw BYTE-IDENTICALLY,
+        and a TROT env (is_crawl=0) does too: minval/maxval only affine-scale
+        jax.random.uniform's underlying [0,1) draw, and the jp.where picks the
+        original cmd_lo/hi for trot, so the SAME command bits come out — the blind
+        reward pin depends on this."""
+        lo, hi = self._cmd_lo, self._cmd_hi
+        if is_crawl is not None:
+            _c = is_crawl > 0.5
+            lo = lo.at[0].set(jp.where(_c, CRAWL_VX_MIN, self._cmd_lo[0]))
+            hi = hi.at[0].set(jp.where(_c, CRAWL_VX_MAX, self._cmd_hi[0]))
+        return jax.random.uniform(rng, (3,), minval=lo, maxval=hi)
 
     def reset(self, rng):
         rng, kc, kv, kj, ko, kd, kb, kjb = jax.random.split(rng, 8)
@@ -348,15 +383,23 @@ class NovaJoystick(PipelineEnv):
         # DomainRandomizationVmapWrapper swaps sys per env inside reset), so we read
         # the gait straight off the terrain — deterministic, so it needs NO rng draw
         # (fold_in(kc,3) is reserved for a future stair-trot mix; cmd_c=1, clock=2).
-        # A staircase is the ONLY terrain that varies in +x but is CONSTANT along y
-        # (terrain.terrain_field is_stair branch: height depends only on x), so its
-        # per-column std down the rows (y) is EXACTLY 0 with a nonzero peak. Flat
-        # (peak 0) and rough (2D structure, row-std > 0) both -> trot. Blind always
-        # trots — the schedule is unused in the 105-d deploy reward (byte-frozen).
+        # A staircase is the ONLY terrain that RISES in +x while staying CONSTANT
+        # along y (terrain.terrain_field is_stair branch: height depends only on x).
+        # THREE conditions pin it, each excluding one other terrain:
+        #   (a) per-column std down the rows (y) ≈ 0  -> constant in y (excludes ROUGH,
+        #       whose 2D structure gives row-std > 0),
+        #   (b) the field actually has RELIEF, max−min > 0 -> it rises (excludes a
+        #       constant ELEVATED PLATEAU, which is also y-invariant with a nonzero
+        #       peak but does NOT rise — the Task-1 detector wrongly read it as a
+        #       staircase; test_terrain_relative T5-T7 build exactly that plateau),
+        #   (c) a nonzero peak (redundant with (b) for a nonneg field, kept explicit).
+        # Flat (peak 0, no relief) -> trot. Blind always trots — the schedule is
+        # unused in the 105-d deploy reward (byte-frozen).
         if self._heightmap:
             _hf = self.sys.hfield_data.reshape(self._hf_nrow, self._hf_ncol)
             is_crawl = jp.where((jp.max(_hf) > 1e-6)
-                                & (jp.mean(jp.std(_hf, axis=0)) < 1e-6), 1.0, 0.0)
+                                & (jp.mean(jp.std(_hf, axis=0)) < 1e-6)
+                                & ((jp.max(_hf) - jp.min(_hf)) > 1e-6), 1.0, 0.0)
         else:
             is_crawl = jp.asarray(0.0)
         _c = is_crawl > 0.5
@@ -368,7 +411,10 @@ class NovaJoystick(PipelineEnv):
         f_lo = jp.where(_c, CRAWL_F_MIN, TROT_F_MIN)
         f_hi = jp.where(_c, CRAWL_F_MAX, TROT_F_MAX)
         info = {
-            "rng": rng, "cmd": self.sample_command(kc),
+            # v8: gait-dependent vx band (crawl envs draw a LOW forward vx so the
+            # slow crawl can satisfy progress/track). is_crawl computed above from
+            # the per-env terrain; trot/blind (is_crawl=0) -> byte-identical draw.
+            "rng": rng, "cmd": self.sample_command(kc, is_crawl),
             # COMMANDED footswing clearance target (lift-v5). Teacher samples it
             # per-episode (observed, obs 227); blind holds it FIXED (unobserved,
             # obs 105 byte-unchanged). fold_in derives a fresh key from kc WITHOUT
@@ -930,7 +976,7 @@ class NovaJoystick(PipelineEnv):
         info["prop_hist"] = jp.concatenate([frame[None], info["prop_hist"][:-1]], axis=0)
         info["step"] += 1
         info["cmd"] = jp.where(info["step"] % 250 == 0,
-                               self.sample_command(ka), cmd)
+                               self.sample_command(ka, info["is_crawl"]), cmd)
         # resample the COMMANDED footswing target on the SAME 250-step cadence —
         # TEACHER ONLY. fold_in(ka, 1) derives a fresh key without disturbing
         # sample_command(ka), keeping the command RNG stream byte-identical. Blind

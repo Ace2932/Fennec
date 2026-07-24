@@ -73,6 +73,14 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
           "   [radius-corrected]")
     print(f"  clearance    : SWING-REF TRACK w={w_swingref:g} to cmd_c·sin(phase) (v7, two-sided)")
     print(f"  gait clock   : trot f∈[{F_MIN:g},{F_MAX:g}]Hz duty {GAIT_DUTY:g}, w_gait {w_gait:g} (v6 schedule cost)")
+    # v8: terrain SELECTS the gait (stair->crawl, flat/rough->trot). Read the live
+    # crawl consts so this can't drift from what the env runs.
+    _obs = env.observation_size if getattr(env, "_heightmap", False) else 105
+    print(f"  gait (v8)    : terrain-selected TROT/CRAWL | "
+          f"crawl off {[round(float(v), 3) for v in _env.CRAWL_OFFSETS]} "
+          f"duty {_env.CRAWL_DUTY:g} f∈[{_env.CRAWL_F_MIN:g},{_env.CRAWL_F_MAX:g}]Hz "
+          f"vx∈[{_env.CRAWL_VX_MIN:g},{_env.CRAWL_VX_MAX:g}] | "
+          f"F range [{F_MIN:g},{F_MAX:g}] | obs {_obs} (teacher +4 swing_sched)")
     print(f"  stride       : air_max {air_max:g}s carry onset, pose STANCE-GATED, upright deadzone 25°, w_air 1.0 (lift-v4/v5)")
     print(f"  cmd stage {env._cmd_stage}  : vx[{lo[0]:+.2f},{hi[0]:+.2f}] "
           f"vy[{lo[1]:+.2f},{hi[1]:+.2f}] wz[{lo[2]:+.2f},{hi[2]:+.2f}]")
