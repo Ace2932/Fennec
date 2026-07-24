@@ -63,6 +63,12 @@ def main():
     ap.add_argument("--stair-level", type=float, default=0.0,
                     help="inject a STAIRCASE (rise STAIR_RISE*level) into the single-env "
                          "terrain so you can watch the teacher climb. Needs --heightmap.")
+    ap.add_argument("--cmd-c", type=float, default=None,
+                    help="force the commanded footswing height info['cmd_c'] (lift-v5) to "
+                         "this fixed value, re-pinned every step so the env's 250-step "
+                         "resample can't drift it. Omit = env's own random schedule "
+                         "(U(0.015,0.06) at reset/resample) — needed so a stair probe isn't "
+                         "judged at a randomly-low lift command.")
     args = ap.parse_args()
 
     env = NovaJoystick(heightmap=args.heightmap)
@@ -72,6 +78,7 @@ def main():
         hf = terrain_field(jax.random.PRNGKey(0), args.stair_level, 0.0, 1.0)
         env.sys = env.sys.tree_replace({"hfield_data": _jp.asarray(hf)})
     cmd = jp.array([args.vx, 0.0, args.wz])
+    cmd_c_j = jp.asarray(args.cmd_c) if args.cmd_c is not None else None
 
     if args.policy:
         policy = load_policy(args.policy, env.observation_size, env.action_size)
@@ -84,6 +91,8 @@ def main():
     rng = jax.random.PRNGKey(0)
     state = jit_reset(rng)
     state = state.replace(info={**state.info, "cmd": cmd})
+    if cmd_c_j is not None:          # force the commanded footswing (lift-v5)
+        state = state.replace(info={**state.info, "cmd_c": cmd_c_j})
 
     # base z at spawn, to report net climb (world z) alongside x travel — the
     # eyeball check that a stair teacher actually gained elevation, not just
@@ -98,6 +107,8 @@ def main():
             action = jp.zeros(env.action_size)
         state = jit_step(state, action)
         state = state.replace(info={**state.info, "cmd": cmd})  # hold command
+        if cmd_c_j is not None:      # re-pin: survives the env's 250-step resample
+            state = state.replace(info={**state.info, "cmd_c": cmd_c_j})
         qpos.append(np.array(state.pipeline_state.q))
         if float(state.done) > 0.5:
             print(f"  fell at step {len(qpos)}")
