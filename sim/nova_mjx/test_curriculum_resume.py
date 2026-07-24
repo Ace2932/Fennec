@@ -27,6 +27,8 @@ SEEDS = []                # seed each stage was trained with
 # fractions these used to (wrongly) look like.
 EVAL_METRICS = {"eval/episode_fwd_speed": 820.0, "eval/episode_w_progress": 1400.0,
                 "eval/episode_w_clearance": -300.0, "eval/episode_swing_xy_speed": 210.0,
+                # v7: the `clear` column reads w_swingref (the ACTIVE teacher term)
+                "eval/episode_w_swingref": -300.0,
                 "eval/episode_w_height": -50.0, "eval/episode_w_z": -20.0,
                 # climb/climb_max telescope to end-quantities (metres), NOT sums
                 # to divide; swing_h_per_step is already per-step (brax divides
@@ -94,7 +96,9 @@ def _install_stubs():
     env.HM_N, env.HM_EXTENT = 11, 0.4
     env.W_PBRS, env.PBRS_LOOKAHEAD = 30.0, (0.15, 0.25, 0.35)
     env.AIR_MAX, env.W_CLEARANCE = 0.6, 6.0
+    env.W_SWINGREF = 100.0                                # v7 swing-ref (train.py imports)
     env.W_GAIT, env.F_MIN, env.F_MAX = 0.15, 1.0, 2.0    # v6 gait-clock (train.py imports)
+    env.GAIT_DUTY = 0.5                                   # v6 gait-clock (train.py imports)
 
     class NovaJoystick:
         _cmd_lo, _cmd_hi, _cmd_stage = (-0.15, -0.15, -0.5), (0.35, 0.15, 0.5), 2
@@ -151,7 +155,7 @@ def test_diagnostics_prints_per_step_not_raw_episode_sums():
     line = train.diagnostics(dict(EVAL_METRICS))
     assert "fwd  0.82" in line, line          # 820.0 / avg_episode_length 1000.0
     assert "prog  +1.40" in line, line        # 1400.0 / 1000.0 (per-step; raw in csv)
-    assert "clear  -0.30" in line, line       # -300.0 / 1000.0
+    assert "clear  -0.30" in line, line       # -300.0 / 1000.0 (w_swingref, v7 teacher)
     assert "hgt -0.050" in line, line         # -50.0 / 1000.0
     assert "z -0.020" in line, line           # -20.0 / 1000.0
     assert "climb +0.35/0.42" in line, line   # RAW: net climbed / episode peak (m)
