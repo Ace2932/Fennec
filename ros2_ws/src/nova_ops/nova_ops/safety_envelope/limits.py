@@ -120,20 +120,32 @@ def _thigh_flexion(front: bool) -> JointLimit:
     # 93 deg (leg_v6 LA-19, clean to 92.5), and 86 deg keeps the same 7 deg
     # margin the away-trunk side already used — so the window is symmetric.
     #
-    # ⚠ CONSEQUENCE: this clamp is no longer a backstop against a riser-skirt
-    # strike. It only stops a command from exceeding what the LINKAGE can do.
-    # A skirt strike is now prevented solely by the posture gate upstream.
-    lower = -86.0 if front else -86.0
+    # ENVELOPE-DERIVED BACKSTOP (issue #142) — not mechanical, not the old +50.
+    #
+    # wrapper.publish() applies the true posture bound per leg before these
+    # scalars, so the chassis is protected on every publisher. But mechanical
+    # +-86 here left it SINGLE-LAYER: build_joint_limits_data() feeds these HARD
+    # limits to the Teensy's own joint_limit_min/max table, and the Teensy cannot
+    # evaluate posture (one joint at a time, no chassis model). A host-side bug
+    # publishing a deep fold would have had nothing beneath it.
+    #
+    # A scalar cannot express the envelope — but it CAN be the envelope's worst
+    # case over the haa range actually reachable. _hip_abduction holds haa to a
+    # symmetric +-15 deg until HAA_INBOARD_SIGN is filled, and over |haa| <= 15
+    # the gated envelope across all four legs and all kfe is [-63.1, +61.6].
+    # Rounded inward below. Real protection again (vs +-86), and it clips
+    # nothing: the widest thing anything commands is the trot's front +59.4.
+    #
+    # ⚠ RECOMPUTE when homing opens haa to 40 deg outboard. Past |haa| 15 the
+    # envelope collapses hard — that is the inboard belly-pack constraint, which
+    # |haa| applies BOTH ways because the servo-frame sign is unknown. At that
+    # point this scalar stops being viable and the firmware needs a posture rule.
+    # test_hfe_backstop_matches_envelope re-derives both bounds from the shipped
+    # table and fails if either side drifts.
+    lower = -63.0 if front else -63.0
     return JointLimit(
         lower=math.radians(lower),
-        # RE-LOOSENED to mechanical once the precondition was actually met:
-        # wrapper.publish() now applies rom_envelope.hfe_bounds() per leg BEFORE
-        # these per-joint scalars, so the chassis constraint is enforced at the
-        # choke point every publisher passes through -- including
-        # nova_calibration's servo_homing and actuator_char, which publish
-        # /joint_commands directly and never touch nova_locomotion.solve_side.
-        # Locked by test_safety_envelope.test_posture_gate_* .
-        upper=math.radians(86.0),
+        upper=math.radians(61.5),
         velocity=math.radians(220.0),
         effort=0.70,
     )

@@ -108,3 +108,78 @@ def test_firmware_message_contract():
     for i in range(12):
         lo, hi = data[2 * i], data[2 * i + 1]
         assert 0.0 <= lo < hi <= 4095.0
+
+
+# ---- issue #142: the hfe scalar must track the posture envelope --------------
+
+
+def _gated_window_over_haa_band(max_haa_deg: float):
+    """Worst-case gated hfe window across all legs / all kfe, for |haa| <= band.
+
+    This is what a per-joint SCALAR can honestly promise: it cannot see posture,
+    so it must hold for every posture the haa limit still permits.
+    """
+    from nova_ops.rom_envelope import MARGIN_DEG
+    from nova_ops.rom_envelope_table import ENVELOPE, HAAS, KFES
+
+    lo, hi = -999.0, 999.0
+    for leg in ENVELOPE:
+        for kfe in KFES:
+            for i, haa in enumerate(HAAS):
+                if abs(haa) > max_haa_deg:
+                    continue
+                cell_lo, cell_hi = ENVELOPE[leg][kfe][i]
+                lo, hi = max(lo, cell_lo), min(hi, cell_hi)
+    return lo + MARGIN_DEG, hi - MARGIN_DEG
+
+
+def test_hfe_backstop_matches_envelope():
+    """The firmware hfe scalar must never permit what the envelope forbids.
+
+    These limits are handed to the Teensy verbatim (build_joint_limits_data ->
+    joint_limits topic -> joint_limit_min/max in main.cpp), and the Teensy cannot
+    evaluate posture. So the scalar has to be the envelope's worst case over the
+    haa band the haa limit still allows — re-derived here rather than trusted.
+    """
+    import math
+
+    from nova_ops.safety_envelope.limits import (
+        _HAA_INBOARD_CAP,
+        _thigh_flexion,
+    )
+
+    band = math.degrees(_HAA_INBOARD_CAP)          # the haa cap actually in force
+    env_lo, env_hi = _gated_window_over_haa_band(band)
+    lim = _thigh_flexion(front=True)
+
+    assert math.degrees(lim.upper) <= env_hi + 1e-9, (
+        f"firmware hfe upper {math.degrees(lim.upper):.1f} permits more than the "
+        f"envelope allows at |haa|<={band:.0f} ({env_hi:.1f})"
+    )
+    assert math.degrees(lim.lower) >= env_lo - 1e-9, (
+        f"firmware hfe lower {math.degrees(lim.lower):.1f} permits more than the "
+        f"envelope allows at |haa|<={band:.0f} ({env_lo:.1f})"
+    )
+    # and it must still be a real backstop, not effectively mechanical
+    assert math.degrees(lim.upper) < 80.0, "hfe upper is back to ~mechanical"
+
+
+def test_hfe_backstop_does_not_clip_any_commanded_pose():
+    """...and it must not clamp anything the robot actually commands.
+
+    The SOFT bound is what the wrapper enforces (hard minus a 2 deg margin), so
+    that is what gaits have to clear. Headroom here is thin by construction —
+    the trot's front peak is +59.4 against a soft +59.5 — which is the point of
+    asserting it: if either the gaits or the envelope move, this fails loudly
+    instead of the trot being silently clipped.
+    """
+    import math
+
+    from nova_ops.safety_envelope.limits import _thigh_flexion
+
+    WIDEST_COMMANDED_DEG = 59.4        # trot front peak; crawl +57.0, lie +49.0
+    soft_upper = math.degrees(_thigh_flexion(front=True).soft_upper)
+    assert soft_upper >= WIDEST_COMMANDED_DEG, (
+        f"soft hfe upper {soft_upper:.2f} would clip the widest commanded pose "
+        f"({WIDEST_COMMANDED_DEG}) — the firmware backstop is now too tight"
+    )

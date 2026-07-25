@@ -85,7 +85,7 @@ def test_limits_type_grouping_matches_yaml():
         # scalar cannot express a limit that depends on the other two joints, so
         # the chassis constraint moved to nova_ops.safety_envelope.rom_envelope
         # and this limit is now purely the linkage's own travel.
-        "hfe": math.radians(86.0),
+        "hfe": math.radians(61.5),
         "kfe": math.radians(109.0),  # LA-11: URDF kfe_range cap (was 130, wrong)
     }
     for name, jid in m.items():
