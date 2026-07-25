@@ -115,7 +115,7 @@ def _thigh_flexion(front: bool) -> JointLimit:
     # +50 here clipped every gait to another posture's worst case.
     #
     # The chassis constraint is now enforced upstream, per posture, by
-    # nova_locomotion.kinematics.rom_envelope via within_limits()/solve_side().
+    # nova_ops.safety_envelope.rom_envelope, applied by wrapper.publish().
     # THIS limit is now purely MECHANICAL: leg self-collision is measured at
     # 93 deg (leg_v6 LA-19, clean to 92.5), and 86 deg keeps the same 7 deg
     # margin the away-trunk side already used — so the window is symmetric.
@@ -126,6 +126,13 @@ def _thigh_flexion(front: bool) -> JointLimit:
     lower = -86.0 if front else -86.0
     return JointLimit(
         lower=math.radians(lower),
+        # RE-LOOSENED to mechanical once the precondition was actually met:
+        # wrapper.publish() now applies rom_envelope.hfe_bounds() per leg BEFORE
+        # these per-joint scalars, so the chassis constraint is enforced at the
+        # choke point every publisher passes through -- including
+        # nova_calibration's servo_homing and actuator_char, which publish
+        # /joint_commands directly and never touch nova_locomotion.solve_side.
+        # Locked by test_safety_envelope.test_posture_gate_* .
         upper=math.radians(86.0),
         velocity=math.radians(220.0),
         effort=0.70,

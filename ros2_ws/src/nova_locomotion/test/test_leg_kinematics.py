@@ -8,7 +8,7 @@ of the (placeholder) link lengths.
 import math
 import pytest
 
-from nova_locomotion.kinematics.rom_envelope import hfe_bounds
+from nova_ops.safety_envelope.rom_envelope import hfe_bounds
 from nova_locomotion.kinematics.leg_ik import (
     LegParams,
     forward_kinematics,
@@ -85,7 +85,7 @@ def test_hfe_window_is_posture_aware_and_end_specific():
          because a positive canonical hfe swings the knee backward, which is
          toward the trunk at the front and away from it at the rear.
     """
-    from nova_locomotion.kinematics.rom_envelope import hfe_bounds
+    from nova_ops.safety_envelope.rom_envelope import hfe_bounds
 
     # -105, not -109: kfe_range is 1.9 rad = 108.86 deg, so -109 fails the kfe
     # check first and would mask what this test is actually asserting.

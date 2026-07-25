@@ -5,6 +5,7 @@ counter accounting, and the clamp + velocity + load logic in isolation.
 """
 
 import math
+import pytest
 import types
 
 
@@ -194,3 +195,68 @@ def test_load_refusal_allows_backoff():
     assert math.isclose(out, 0.28, abs_tol=1e-6), (
         f"load-reducing back-off should pass, got {out}"
     )
+
+
+# ---- posture gate (the chassis envelope, at the choke point) ---------------
+#
+# 2026-07-25 review finding: the chassis constraint is POSTURE-dependent (how far
+# a leg may fold depends on haa splay and kfe fold together), and it was only
+# enforced in nova_locomotion.solve_side — the GAIT path. nova_calibration's
+# servo_homing and actuator_char publish /joint_commands directly and never touch
+# it, and homing is the first thing that runs on real hardware. These lock the
+# gate into the wrapper, which every publisher passes through.
+
+
+def _posture_wrapper():
+    """12-joint wrapper with hfe scalars wide open, so ONLY the posture gate
+    can be what moves an hfe command."""
+    table = {i + 1: _hard_limit(lower=-math.pi, upper=math.pi) for i in range(12)}
+    node, pub = _FakeNode(), _FakePub()
+    sw = SafeJointCommandPublisher(
+        node=node, limits=JointLimits(table), raw_publisher=pub
+    )
+    return sw, pub
+
+
+def _cmd_with(leg_ids, haa, hfe, kfe):
+    pos = [0.0] * 12
+    haa_id, hfe_id, kfe_id = leg_ids
+    pos[haa_id - 1], pos[hfe_id - 1], pos[kfe_id - 1] = haa, hfe, kfe
+    return _CmdMsg(pos)
+
+
+def test_posture_gate_clamps_fold_that_would_reach_the_skirt():
+    """Splayed + folded is refused; the SAME fold at neutral haa is allowed.
+
+    This is the behaviour a per-joint scalar cannot express, and the reason the
+    firmware hfe cap could be loosened to mechanical at all.
+    """
+    sw, pub = _posture_wrapper()
+    assert sw._leg_ids, "posture gate inactive — joint map did not load"
+    fl = sw._leg_ids["FL"]
+    kfe = math.radians(-105.0)
+    fold = math.radians(60.0)
+
+    sw.publish(_cmd_with(fl, math.radians(40.0), fold, kfe))   # full outboard splay
+    splayed = pub.published[-1][fl[1] - 1]
+    sw.publish(_cmd_with(fl, 0.0, fold, kfe))                  # neutral hip
+    neutral = pub.published[-1][fl[1] - 1]
+
+    assert splayed < fold - 1e-9, "splayed fold was NOT clamped — skirt exposure"
+    assert neutral == pytest.approx(fold), "neutral fold was clamped — over-tight"
+
+
+def test_posture_gate_is_conservative_while_haa_sign_is_unknown():
+    """/joint_commands is in the SERVO frame, where the inboard haa direction is
+    unknown until homing fills HAA_INBOARD_SIGN. Until then BOTH interpretations
+    of a commanded haa must be respected, so a splay magnitude is clamped
+    whichever sign it arrives with."""
+    sw, pub = _posture_wrapper()
+    fl = sw._leg_ids["FL"]
+    kfe, fold = math.radians(-105.0), math.radians(60.0)
+    out = []
+    for sign in (+1.0, -1.0):
+        sw.publish(_cmd_with(fl, sign * math.radians(40.0), fold, kfe))
+        out.append(pub.published[-1][fl[1] - 1])
+    assert out[0] == pytest.approx(out[1]), "haa sign changed the bound"
+    assert out[0] < fold - 1e-9

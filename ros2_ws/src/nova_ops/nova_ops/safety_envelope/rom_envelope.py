@@ -44,7 +44,7 @@ from __future__ import annotations
 import math
 from typing import Optional, Tuple
 
-from nova_locomotion.kinematics.rom_envelope_table import ENVELOPE, HAAS, KFES
+from .rom_envelope_table import ENVELOPE, HAAS, KFES
 
 # Clearance back-off from the measured first-contact boundary, degrees. The gate
 # refuses a posture because it would come NEAR the body, not only because it
@@ -89,12 +89,11 @@ def hfe_bounds(leg: Optional[str], haa: float, kfe: float) -> Tuple[float, float
     (including None) yields the conservative intersection of both ends.
     """
     haa_deg, kfe_deg = math.degrees(haa), math.degrees(kfe)
-    if leg in FRONT_ENDS:
-        ends = ("FRONT",)
-    elif leg in REAR_ENDS:
-        ends = ("REAR",)
-    else:
-        ends = ("FRONT", "REAR")
+    # PER-LEG since the 2026-07-25 review (S3): all four legs are swept, so a
+    # known leg gets its own measured envelope rather than an assumed mirror.
+    # (Measured L/R asymmetry is 0.0 deg, so the old assumption held — but it is
+    # now verified rather than assumed.) Unknown leg -> intersect all four.
+    ends = (leg,) if leg in ENVELOPE else tuple(ENVELOPE)
     lo, hi = -1e9, 1e9
     for end in ends:
         e_lo, e_hi = _end_bounds(end, haa_deg, kfe_deg)

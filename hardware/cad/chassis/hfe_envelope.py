@@ -34,7 +34,10 @@ import check_fit as cf
 # the separate haa cap already forbids), so a coarse 10-deg grid there drags a
 # collapsed neighbour into every conservative bracket just inside the cap.
 HAAS = [-40, -30, -20, -15, -12, -10, -8, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40]
-KFES = [-109, -90, -70, -50, -25, 0]
+# S2 (review 2026-07-25): POSITIVE kfe is now swept. It was not, so every
+# kfe > 0 query extrapolated from the kfe=0 row — an unvalidated region inside a
+# safety gate. solve_side(knee_forward=True) produces positive kfe.
+KFES = [-109, -90, -70, -50, -25, 0, 25, 50, 75, 109]
 HFE_LO, HFE_HI = -95.0, 95.0
 COARSE = 2.5                              # deg, scan step
 FINE_ITERS = 5                            # bisection refinement -> ~0.08 deg
@@ -71,7 +74,11 @@ def clear(label, base, pivot, tgts, haa, hfe, kfe):
     the negation — so negate on the way into cf.rot. Sanity check: canonical
     +40 (full outboard splay) must land on the documented ~+50 front worst case.
     """
-    Sx = cf.rot(-haa, [1, 0, 0], pivot)
+    # canonical -> check_fit haa. check_fit sets inboard = -haa on an R leg and
+    # +haa on an L leg; canonical is OUTBOARD-positive, so haa_cf = -canonical
+    # on the LEFT and +canonical on the RIGHT. Derived per leg, because getting
+    # it backwards silently mirrors the entire table.
+    Sx = cf.rot(haa if label[1] == "R" else -haa, [1, 0, 0], pivot)
     p = cf.tf(cf.tf(cf.leg_cloud(hfe, kfe), base), Sx)
     for _name, mesh, filt in tgts:
         sub = p[filt(p)]
@@ -108,12 +115,17 @@ def main():
     tgts = targets()
     bases = dict(cf.coax_to_trunk_bases())
     rows = {}
-    for end, label in (("FRONT", "FL"), ("REAR", "RL")):
+    # S3 (review 2026-07-25): all FOUR legs are swept and stored PER LEG.
+    # Previously only FL and RL were, with the right side assumed
+    # mirror-identical — an unverified assumption inside a safety gate.
+    # check_fit itself sweeps all four.
+    for label in ("FL", "FR", "RL", "RR"):
+        end = label
         base = bases[label]
         # pivot must match the base: check_fit uses +HIP_LAT for 'R', -HIP_LAT for 'L'
         pivot = [cf.HIP_FA if label[0] == "F" else -cf.HIP_FA,
-                 -cf.HIP_LAT, cf.HIP_Z]
-        print(f"\n== {end} ({label}) ==   hfe contact-free interval, degrees")
+                 cf.HIP_LAT if label[1] == "R" else -cf.HIP_LAT, cf.HIP_Z]
+        print(f"\n== {label} ==   hfe contact-free interval, degrees")
         print("   kfe \\ haa " + "".join(f"{h:>14d}" for h in HAAS))
         for kfe in KFES:
             cells = []
@@ -134,7 +146,7 @@ def main():
                 '"""\n')
         f.write(f"HAAS = {HAAS!r}\nKFES = {KFES!r}\n")
         f.write("ENVELOPE = {\n")
-        for end in ("FRONT", "REAR"):
+        for end in ("FL", "FR", "RL", "RR"):
             f.write(f'    "{end}": {{\n')
             for kfe in KFES:
                 vals = [rows[(end, h, kfe)] for h in HAAS]
