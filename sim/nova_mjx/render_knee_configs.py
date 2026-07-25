@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env import KNEE_CONFIGS, knee_pose, LEG_NAMES   # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "knee_config_views")
+OUT = os.path.join(HERE, "artifacts", "knee_config_views")
 W, H = 640, 480      # MuJoCo's default offscreen framebuffer; larger needs <global offwidth>
 
 

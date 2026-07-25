@@ -27,7 +27,7 @@ from env import LEG_NAMES   # noqa: E402
 from build_mjcf import EFF_HIP, EFF_LEG   # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "standup_views")
+OUT = os.path.join(HERE, "artifacts", "standup_views")
 W, H = 640, 480
 D = np.radians
 SIDE = {"FL": +1.0, "FR": -1.0, "RL": +1.0, "RR": -1.0}

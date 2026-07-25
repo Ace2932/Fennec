@@ -588,7 +588,8 @@ def main():
 
     t0 = time.time()
     lvl = args.stair_level
-    out_dir = args.out_dir or os.path.join(os.path.dirname(__file__), "climber_out")
+    out_dir = args.out_dir or os.path.join(
+        os.path.dirname(__file__), "artifacts", "climber_out")
     os.makedirs(out_dir, exist_ok=True)
     tag = f"L{lvl:.2f}".replace(".", "p")
     if args.eff_scale != 1.0:

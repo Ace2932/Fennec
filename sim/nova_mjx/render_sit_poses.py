@@ -30,7 +30,7 @@ from env import LEG_NAMES   # noqa: E402
 from build_mjcf import HAA_IN, HAA_OUT, HFE_FOLD, HFE_EXT, KFE   # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "sit_pose_views")
+OUT = os.path.join(HERE, "artifacts", "sit_pose_views")
 W, H = 640, 480
 D = np.radians
 SIDE = {"FL": +1.0, "FR": -1.0, "RL": +1.0, "RR": -1.0}     # +1 = left (outboard = +haa)
