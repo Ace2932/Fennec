@@ -40,6 +40,7 @@ depth-testing fidelity back, not just a renumbering.
 """
 
 from __future__ import annotations
+import math
 from dataclasses import dataclass
 from typing import Dict, Iterator, List, Optional, Tuple
 
@@ -84,27 +85,108 @@ class ChoreoParams:
     lie_z: float = 0.1708  # deepest inside the +50° skirt cap: front hfe +49.0°
 
 
-# canonical foot-space keyframes: (x, y, z) per leg — same for all legs
-# (the knee configuration lives in the IK branch, not the target)
+# Canonical foot-space keyframes, PER LEG (2026-07-25). They used to be one
+# shared (x, y, z) for all four legs with x = 0 and haa = 0 — "feet under hips".
+# That rule is what collapsed the translated-knee crouch envelope to 0.92 cm: with
+# the foot pinned under the hip, ALL of a height change has to come out of hfe
+# fold, and fold is the one direction the riser skirt caps (+50°). Free the foot
+# and the cap stops binding — min hip height goes 16.85 cm -> 2.00 cm, because a
+# foot placed FORWARD drives hfe NEGATIVE (phi = atan2(-x, -z)) into the unused
+# -86° side. Sim-measured, sim/nova_mjx/probe_lift_envelope.py + probe_standup.py.
+#
+# SIT / DOWN come from backlog #15's controlled-limp pose and are expressed as
+# JOINT angles, not foot targets: they are defined by the chassis gate (belly
+# lands on the skid rails) rather than by where the foot goes. See SIT_JOINTS.
 def KEYFRAMES(p: ChoreoParams):
     d = p.leg.hip_offset
+
+    def all_legs(z):
+        return {leg: (0.0, d, -z) for leg in LEGS}
+
     return {
-        "lie": (0.0, d, -p.lie_z),
-        "crouch": (0.0, d, -p.crouch_z),
-        "stand": (0.0, d, -p.stand_z),
+        "lie": all_legs(p.lie_z),
+        "crouch": all_legs(p.crouch_z),
+        "stand": all_legs(p.stand_z),
     }
 
 
-def pose_for(name: str, p: ChoreoParams) -> Pose:
-    """Keyframe -> physical joint angles per leg (X-config branches)."""
-    foot = KEYFRAMES(p)[name]
-    pose: Pose = {}
+# backlog #15 controlled-limp SIT, canonical/outboard-positive (haa, hfe, kfe).
+# Splaying outboard drops the body via the haa axis instead of folding hfe into
+# the skirt: hip height 8.49 cm with 10° of skirt margin, vs 'lie' at 17.08 cm
+# with 1°. Verified settled under gravity through the real position servos
+# (sim/nova_mjx/render_sit_poses.py) and recoverable — stand-up succeeds from
+# both poses, 6/6 (sim/nova_mjx/probe_standup.py).
+SIT_JOINTS: Tuple[float, float, float] = (0.6981, 0.6981, -1.5708)  # +40, +40, -90
+
+
+def joint_keyframes(p: ChoreoParams) -> Dict[str, Pose]:
+    """Poses defined directly in JOINT space (canonical), not via foot IK.
+
+    'down' = all four splayed+folded, belly settles on the skid rails (the
+             soft-fault controlled-limp target).
+    'sit'  = dog sit: REAR splayed+folded, FRONT holding the stand pose, so the
+             body pitches nose-up ~24° and the rear belly comes down first.
+    """
+    stand_leg = pose_for("stand", p)  # physical angles, already side-mirrored
+    sit_phys = {}
     for leg in LEGS:
-        theta = solve_side(LEG_SIDE[leg], foot, p.leg, KNEE_FORWARD[leg], leg=leg)
-        # canonical-frame check (undo the side mirror on haa)
-        t_canon = (-theta[0], theta[1], theta[2]) if LEG_SIDE[leg] == "right" else theta
-        if not within_limits(t_canon, p.leg, KNEE_FORWARD[leg], leg=leg):
-            raise ValueError(f"keyframe {name!r} out of ROM for {leg}: {theta}")
+        haa, hfe, kfe = SIT_JOINTS
+        sit_phys[leg] = (haa * (-1.0 if LEG_SIDE[leg] == "right" else 1.0), hfe, kfe)
+    return {
+        "down": sit_phys,
+        "sit": {
+            leg: (sit_phys[leg] if leg in ("RL", "RR") else stand_leg[leg])
+            for leg in LEGS
+        },
+    }
+
+
+JOINT_POSES = ("sit", "down")  # defined in joint space, not by a foot target
+
+
+def _check_rom(name: str, leg: str, theta, p: ChoreoParams) -> None:
+    # canonical-frame check (undo the side mirror on haa)
+    t_canon = (-theta[0], theta[1], theta[2]) if LEG_SIDE[leg] == "right" else theta
+    if not within_limits(t_canon, p.leg, KNEE_FORWARD[leg], leg=leg):
+        raise ValueError(f"keyframe {name!r} out of ROM for {leg}: {theta}")
+
+
+def pose_for(name: str, p: ChoreoParams) -> Pose:
+    """Keyframe -> physical joint angles per leg (translated knee config).
+
+    Foot-space keyframes (lie/crouch/stand) carry a target PER LEG, so a pose is
+    free to be front/rear asymmetric. sit/down are joint-space (JOINT_POSES) —
+    they are defined by where the chassis lands, not by a foot position.
+    """
+    if name in JOINT_POSES:
+        pose = joint_keyframes(p)[name]
+        for leg in LEGS:
+            # SPLAY POSES ARE GATED ON HOMING CALIBRATION, BY DESIGN.
+            # They need ~40° OUTBOARD haa; LegParams.haa_range is a deliberate
+            # conservative SYMMETRIC ±15° (the chassis gate's INBOARD cap —
+            # belly-pack contact from ~18°) that stays symmetric until
+            # nova_ops.safety_envelope.limits.HAA_INBOARD_SIGN is filled. That
+            # sign is the INBOARD direction in the SERVO COMMAND frame and is
+            # genuinely unknowable until homing watches a real servo move —
+            # limits.py says so and says splay choreography is why to fill it.
+            # Fail LOUD and specific rather than emit a pose the runtime would
+            # silently clamp (the exact failure mode that put choreo's lie/crouch
+            # 27 mm off target under the translated knee config).
+            if abs(pose[leg][0]) > p.leg.haa_range + 1e-9:
+                raise ValueError(
+                    f"keyframe {name!r} needs {abs(math.degrees(pose[leg][0])):.0f}° "
+                    f"outboard haa on {leg}, but the gate ROM is a conservative "
+                    f"symmetric ±{math.degrees(p.leg.haa_range):.0f}° until "
+                    f"nova_ops.safety_envelope.limits.HAA_INBOARD_SIGN[{leg}] is "
+                    f"filled at homing calibration. Splay poses unlock there."
+                )
+            _check_rom(name, leg, pose[leg], p)
+        return pose
+    feet = KEYFRAMES(p)[name]
+    pose = {}
+    for leg in LEGS:
+        theta = solve_side(LEG_SIDE[leg], feet[leg], p.leg, KNEE_FORWARD[leg], leg=leg)
+        _check_rom(name, leg, theta, p)
         pose[leg] = theta
     return pose
 
