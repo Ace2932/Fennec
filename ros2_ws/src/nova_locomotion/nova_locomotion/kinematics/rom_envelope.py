@@ -28,6 +28,9 @@ CONVENTIONS
     outside the grid is clamped to the edge cell. Never interpolate toward a
     looser bound — the sampled surface is not guaranteed monotonic between cells.
   * Unknown leg -> the intersection of the FRONT and REAR envelopes.
+  * The table is RAW FIRST-CONTACT geometry. hfe_bounds() backs off MARGIN_DEG
+    from it, so the gate refuses a posture for coming NEAR the body rather than
+    only for already touching it. Measurement in the table, policy in the code.
 
 ⚠ This is the KINEMATIC truth. The scalars derived from it downstream —
 LegParams.hfe_max, nova.urdf.xacro hfe_fold, sim/nova_mjx/build_mjcf.HFE_FOLD and
@@ -43,6 +46,12 @@ from typing import Optional, Tuple
 
 from nova_locomotion.kinematics.rom_envelope_table import ENVELOPE, HAAS, KFES
 
+# Clearance back-off from the measured first-contact boundary, degrees. The gate
+# refuses a posture because it would come NEAR the body, not only because it
+# already touches it. 5 deg is the convention already in use: the chassis gate
+# measured front skirt contact at ~+55 and published the cap as +50.
+MARGIN_DEG = 5.0
+
 FRONT_ENDS = frozenset({"FL", "FR"})
 REAR_ENDS = frozenset({"RL", "RR"})
 
@@ -55,7 +64,7 @@ def _bracket(vals, x):
         return (len(vals) - 1, len(vals) - 1)
     for i, v in enumerate(vals):
         if v == x:
-            return (i, i)          # exact grid hit — no need to widen the bracket
+            return (i, i)  # exact grid hit — no need to widen the bracket
     hi = next(i for i, v in enumerate(vals) if v >= x)
     return (hi - 1, hi)
 
@@ -90,4 +99,16 @@ def hfe_bounds(leg: Optional[str], haa: float, kfe: float) -> Tuple[float, float
     for end in ends:
         e_lo, e_hi = _end_bounds(end, haa_deg, kfe_deg)
         lo, hi = max(lo, e_lo), min(hi, e_hi)
+    # BACK OFF from the measured FIRST-CONTACT boundary. The table is raw
+    # geometry — the angle at which the leg TOUCHES. A gate that permits poses
+    # right up to first contact permits grazing, and the point of the gate is
+    # that a posture is refused because it would come NEAR the body.
+    # 5 deg matches the convention the project already used: the chassis gate
+    # measured front skirt contact at ~+55 and the published cap was +50.
+    # Policy lives here, not in the table, so the margin is tunable and the
+    # measurement stays a measurement.
+    lo, hi = lo + MARGIN_DEG, hi - MARGIN_DEG
+    if lo > hi:  # margin swallowed the cell — refuse it all
+        mid = 0.5 * (lo + hi)
+        lo = hi = mid
     return math.radians(lo), math.radians(hi)
