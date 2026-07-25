@@ -99,6 +99,11 @@ def _install_stubs():
     env.W_SWINGREF = 100.0                                # v7 swing-ref (train.py imports)
     env.W_GAIT, env.F_MIN, env.F_MAX = 0.15, 1.0, 2.0    # v6 gait-clock (train.py imports)
     env.GAIT_DUTY = 0.5                                   # v6 gait-clock (train.py imports)
+    # v8 crawl consts — print_fingerprint's v8 gait line reads these off the module.
+    env.CRAWL_OFFSETS = (0.5, 0.0, 0.75, 0.25)
+    env.CRAWL_DUTY = 0.75
+    env.CRAWL_F_MIN, env.CRAWL_F_MAX = 0.3, 0.6
+    env.CRAWL_VX_MIN, env.CRAWL_VX_MAX = 0.0, 0.12
 
     class NovaJoystick:
         _cmd_lo, _cmd_hi, _cmd_stage = (-0.15, -0.15, -0.5), (0.35, 0.15, 0.5), 2
