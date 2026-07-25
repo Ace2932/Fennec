@@ -51,13 +51,20 @@ def test_keyframes_within_rom_all_legs_x_config():
             )
 
 
-def test_x_config_rear_knees_mirrored():
+def test_translated_config_all_knees_backward():
+    """TRANSLATED layout (corrected 2026-07-25): every knee bends BACKWARD.
+
+    Was test_x_config_rear_knees_mirrored, which asserted front/rear kfe of
+    OPPOSITE sign. The robot as built is translated — all four knees back — and
+    the MJX sim always matched it (sim/nova_mjx DEFAULT_POSE kfe -1.2 on all
+    four). See leg_ik.KNEE_FORWARD.
+    """
     stand = pose_for("stand", P)
-    # front and rear kfe have OPPOSITE signs (X-config), same magnitude
-    assert stand["FL"][2] > 0 and stand["RL"][2] < 0
-    assert math.isclose(stand["FL"][2], -stand["RL"][2], abs_tol=1e-9)
-    # and hfe mirrors with the knee branch
-    assert math.isclose(stand["FL"][1], -stand["RL"][1], abs_tol=1e-9)
+    # every leg takes the SAME elbow branch -> same-sign kfe, equal magnitude
+    assert all(stand[leg][2] < 0 for leg in ("FL", "FR", "RL", "RR")), stand
+    assert math.isclose(stand["FL"][2], stand["RL"][2], abs_tol=1e-9)
+    # hfe likewise no longer mirrors front-to-rear
+    assert math.isclose(stand["FL"][1], stand["RL"][1], abs_tol=1e-9)
 
 
 def test_keyframe_feet_under_hips():

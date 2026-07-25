@@ -8,6 +8,7 @@ of the (placeholder) link lengths.
 import math
 import pytest
 
+from nova_ops.rom_envelope import hfe_bounds
 from nova_locomotion.kinematics.leg_ik import (
     LegParams,
     forward_kinematics,
@@ -69,32 +70,44 @@ def test_within_limits():
     assert not within_limits((10.0, 0.0, 0.0), P)
 
 
-def test_within_limits_front_rear_hfe_split():
-    """LA-13 introduced within_limits' leg= selector (FRONT_LEGS use
-    p.hfe_min_front, REAR_LEGS/unknown use p.hfe_min). #47 (2026-07-11,
-    MEASURED — hardware/cad/chassis/head_cap_sweep.py): the front cap's
-    -50deg value was stale (no head/L2/D456 contact found anywhere in the
-    front leg's structurally-reachable hfe range), so hfe_min_front ==
-    hfe_min today and there's no longer an angle that's legal for one and
-    illegal for the other. Test the SELECTOR MECHANISM itself (front picks
-    hfe_min_front, rear picks hfe_min) parametrically off the live values
-    instead of a hardcoded angle, so this keeps working if a future head
-    redesign reintroduces a real split."""
-    eps = math.radians(0.01)
-    just_inside_front = (0.0, P.hfe_min_front + eps, 0.0)
-    just_outside_front = (0.0, P.hfe_min_front - eps, 0.0)
-    for leg in ("FL", "FR"):
-        assert within_limits(just_inside_front, P, leg=leg), leg
-        assert not within_limits(just_outside_front, P, leg=leg), leg
-    just_inside_rear = (0.0, P.hfe_min + eps, 0.0)
-    just_outside_rear = (0.0, P.hfe_min - eps, 0.0)
-    for leg in ("RL", "RR"):
-        assert within_limits(just_inside_rear, P, leg=leg), leg
-        assert not within_limits(just_outside_rear, P, leg=leg), leg
-    # an unrecognized/omitted leg name defaults to the permissive REAR
-    # window (opt-in, not fail-safe — see within_limits' docstring)
-    assert within_limits(just_inside_rear, P)
-    assert within_limits(just_inside_rear, P, leg="unknown")
+def test_hfe_window_is_posture_aware_and_end_specific():
+    """The chassis hfe bound is a FUNCTION of (haa, kfe), not a scalar.
+
+    MEASURED by hardware/cad/chassis/hfe_envelope.py against the real meshes
+    (riser / pocket / pack / rails / head) with check_fit's rear hip placement
+    corrected from a reflection to a rotation. Two properties matter and both are
+    asserted off the live table rather than hardcoded angles:
+
+      1. POSTURE-AWARE — a FRONT leg may fold further toward the trunk when the
+         hip is NOT splayed. Full outboard splay is where the old scalar +50
+         came from; at haa 0 the real bound is ~+70.
+      2. END-SPECIFIC — front and rear are constrained in OPPOSITE directions,
+         because a positive canonical hfe swings the knee backward, which is
+         toward the trunk at the front and away from it at the rear.
+    """
+    from nova_ops.rom_envelope import hfe_bounds
+
+    # -105, not -109: kfe_range is 1.9 rad = 108.86 deg, so -109 fails the kfe
+    # check first and would mask what this test is actually asserting.
+    kfe = math.radians(-105.0)
+    _lo_splay, hi_splay = hfe_bounds("FL", math.radians(40.0), kfe)
+    _lo_neut, hi_neut = hfe_bounds("FL", 0.0, kfe)
+    # splaying the hip TIGHTENS the front fold bound — the whole point
+    assert hi_splay < hi_neut, (math.degrees(hi_splay), math.degrees(hi_neut))
+    # and a pose legal at haa 0 can be illegal at full splay
+    mid = 0.5 * (hi_splay + hi_neut)
+    assert within_limits((0.0, mid, kfe), P, leg="FL")
+    assert not within_limits((math.radians(40.0), mid, kfe), P, leg="FL")
+
+    # ends are constrained in opposite directions
+    front_lo, front_hi = hfe_bounds("FL", 0.0, kfe)
+    rear_lo, rear_hi = hfe_bounds("RL", 0.0, kfe)
+    assert front_hi < rear_hi   # front is the one capped going toward-trunk
+    assert rear_lo > front_lo   # rear is the one capped going the other way
+
+    # an unknown leg cannot know its end -> conservative INTERSECTION
+    u_lo, u_hi = hfe_bounds(None, 0.0, kfe)
+    assert u_hi <= front_hi and u_lo >= rear_lo
 
 
 def test_workspace_reach_matches_links():
@@ -150,10 +163,13 @@ def test_solve_side_clamps_front_hfe_to_cap():
     assert clamped[0] == pytest.approx(unclamped[0])
     assert clamped[2] == pytest.approx(unclamped[2])
 
-    # REAR legs are NOT clamped by solve_side (issue #47 is front-only;
-    # rear hfe has never had a chassis-side complaint) — same for "right".
+    # REAR legs ARE clamped now (added 2026-07-25) — to the MIRROR window.
+    # They previously had no runtime backstop at all, on the belief that the
+    # +50 riser-skirt cap was front-only; the corrected check_fit crouch sweep
+    # cuts the riser at rear hfe -86/-45 while +45..+86 is clean.
     rear = solve_side("left", foot, p, knee_forward=True, leg="RL")
-    assert rear[1] == pytest.approx(-math.radians(90.0))
+    rear_env_lo, _hi = hfe_bounds("RL", 0.0, math.radians(30.0))
+    assert rear[1] == pytest.approx(max(rear_env_lo, p.hfe_min))
     right_clamped = solve_side("right", foot, p, knee_forward=True, leg="FR")
     assert right_clamped[1] == pytest.approx(p.hfe_min_front)
     assert right_clamped[0] == pytest.approx(-unclamped[0])
@@ -163,3 +179,28 @@ def test_solve_side_clamps_front_hfe_to_cap():
     foot_ok = forward_kinematics(theta_ok, p)
     out_ok = solve_side("left", foot_ok, p, knee_forward=True, leg="FL")
     assert out_ok == pytest.approx(solve_side("left", foot_ok, p, knee_forward=True))
+
+
+def test_leg_ik_stays_pure_math_no_ros_package_pull_in():
+    """leg_ik's docstring promises "pure math, no ROS/hardware". Keep it true.
+
+    It needs the chassis envelope, which lives in nova_ops (it cannot live here:
+    nova_locomotion.node already imports nova_ops, so the reverse would be a
+    package cycle). The envelope itself is pure data + math — but if it is
+    imported from under nova_ops.safety_envelope, that package's __init__ drags
+    in wrapper/counters/firmware_limits, i.e. a kinematics module transitively
+    depending on the ROS-facing safety publisher. It briefly did. This asserts
+    it does not.
+    """
+    import subprocess
+    import sys
+
+    src = (
+        "import sys, nova_locomotion.kinematics.leg_ik;"
+        "print(repr([m for m in sys.modules "
+        "if 'safety_envelope' in m or m == 'rclpy']))"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", src], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    assert out == "[]", f"leg_ik dragged in {out}"

@@ -26,7 +26,50 @@ from brax.envs.base import PipelineEnv, State
 from brax.io import mjcf
 from etils import epath
 
-DEFAULT_POSE = jp.array([0.0, 0.6, -1.2] * 4)          # stand keyframe joints
+# ---- KNEE CONFIGURATION (#142) ---------------------------------------------
+# The two IK elbow branches for the SAME canonical neutral foot (0.012479, 0.06430,
+# -0.194697) — verified identical to 9 decimals, so every foothold/geometry constant
+# derived from the neutral foot is branch-invariant; only the ACTION ORIGIN moves.
+#   elbow-back  (leg_ik knee_forward=False): hfe +0.600, kfe -1.200
+#   elbow-fwd   (leg_ik knee_forward=True) : hfe -0.728, kfe +1.200
+# Fold margin to the hfe stop differs a lot between them: elbow-back has 0.273 rad
+# (15.6 deg) to the +50 deg riser-skirt cap; elbow-fwd has 0.773 rad (44.3 deg) to
+# the -86 deg away-trunk limit. That margin is the step-up budget for stairs.
+_ELBOW_BACK = (0.0, 0.600000000, -1.200000000)
+_ELBOW_FWD = (0.0, -0.728009933, 1.200000000)
+# per-leg elbow-forward flags in LEG_NAMES order (FL, FR, RL, RR)
+#
+# ✅ RESOLVED 2026-07-25 (Aiden, ground truth): the REAL layout is knees BACKWARD on
+# BOTH pairs — the TRANSLATED layout, "elbow_back" below. The sim was already right;
+# no X-config anywhere. Verified by render_knee_configs.py (knee offset vs the
+# hip->foot chord: elbow_back = -66.0 mm on all four legs).
+#
+# ⚠ CONSEQUENCE: nova_locomotion is now known INCONSISTENT with the robot —
+# leg_ik.KNEE_FORWARD = {FL: True, FR: True, RL: False, RR: False} commands the FRONT
+# knees FORWARD, and its README + docs/knee-config-analysis.md both record an
+# "X-CONFIG decided 2026-07-06" that is not the built configuration. That is a
+# hardware-bring-up hazard, not a sim issue: controller.gait_pose would drive the
+# front legs to a mirrored stance on first stand. Fix belongs in nova_locomotion.
+#
+# The xconfig_* entries are kept as the comparison/evidence trail (round 8), not as
+# live options — do not switch to them without re-tuning the gait, whose parameters
+# (FWD_LEAN, COM_GAIN, STEP_FWD) are all tuned against the elbow-back stance.
+KNEE_CONFIGS = {
+    "elbow_back":   (False, False, False, False),   # THE REAL ROBOT + the trained walker
+    "xconfig_code": (True,  True,  False, False),   # leg_ik.KNEE_FORWARD as coded
+    "xconfig_doc":  (False, False, True,  True),    # knee-config-analysis.md's rationale
+}
+
+
+def knee_pose(cfg):
+    """Stand-pose joint vector (12,) for a knee configuration name."""
+    if cfg not in KNEE_CONFIGS:
+        raise ValueError(f"knee_config must be one of {sorted(KNEE_CONFIGS)}, got {cfg!r}")
+    return jp.array([v for fwd in KNEE_CONFIGS[cfg]
+                     for v in (_ELBOW_FWD if fwd else _ELBOW_BACK)])
+
+
+DEFAULT_POSE = knee_pose("elbow_back")                 # stand keyframe joints
 ACTION_SCALE = 0.4                                     # rad, target = default + a*scale
 STAND_HEIGHT = 0.17
 # Upright-penalty deadzone (lift-v5). tilt_sq = up_x²+up_y² = sin²θ; the penalty
@@ -275,7 +318,8 @@ class NovaJoystick(PipelineEnv):
                  cmd_stage=2, heightmap=False, w_climb=W_CLIMB, beta_climb=0.0,
                  w_pbrs=W_PBRS, footswing_max=FOOTSWING_MAX, air_max=AIR_MAX,
                  w_clearance=W_CLEARANCE, w_swingref=W_SWINGREF, w_gait=W_GAIT,
-                 **kwargs):
+                 eff_scale=1.0, eff_scale_speed=False, kp_scale=1.0,
+                 knee_config="elbow_back", **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
@@ -288,11 +332,45 @@ class NovaJoystick(PipelineEnv):
         path = epath.Path(__file__).parent / xml
         mj = mujoco.MjModel.from_xml_path(str(path))
         sys = mjcf.load_model(mj)
+        # SERVO-UPGRADE PROBE (#142): scale the LEG (hfe/kfe) stall torque to model a
+        # bigger servo than the STS3215's 1.8 N*m. Only the 8 leg actuators move — the
+        # haa hips (2.9 N*m) are not the wall and are not on the shopping list.
+        # Actuator order is LEGS x (haa, hfe, kfe); the free joint eats dof 0-5, so
+        # dof index == 6 + actuator index.
+        #
+        # DAMPING: d = stall / no_load IS the motor's torque-speed slope (build_mjcf).
+        # Default (eff_scale_speed=False) scales damping WITH torque -> the no-load
+        # speed stays 2.80 rad/s: the conservative "same gearbox class, more torque"
+        # servo. eff_scale_speed=True holds damping -> no-load speed scales too, the
+        # optimistic case. Report which one a result came from.
+        self._eff_scale = float(eff_scale)
+        if self._eff_scale != 1.0:
+            leg_act = jp.array([a for a in range(sys.nu) if a % 3 != 0])   # hfe + kfe
+            fr = sys.actuator_forcerange.at[leg_act].multiply(self._eff_scale)
+            damp = sys.dof_damping
+            if not eff_scale_speed:
+                damp = damp.at[leg_act + 6].multiply(self._eff_scale)
+            sys = sys.replace(actuator_forcerange=fr, dof_damping=damp)
+        # kp is tuned around the 1.8 N*m rail; raising forcerange alone leaves the
+        # position servo soft relative to its new authority. kp_scale retunes the
+        # leg gains in step so a torque result isn't just a detuning artifact.
+        # MJX position actuator: gainprm[:,0] = kp, biasprm[:,1] = -kp.
+        if kp_scale != 1.0:
+            leg_act = jp.array([a for a in range(sys.nu) if a % 3 != 0])
+            gp = sys.actuator_gainprm.at[leg_act, 0].multiply(kp_scale)
+            bp = sys.actuator_biasprm.at[leg_act, 1].multiply(kp_scale)
+            sys = sys.replace(actuator_gainprm=gp, actuator_biasprm=bp)
         self._dt = 0.02                                # 50 Hz control
         n_frames = int(self._dt / sys.opt.timestep)    # 5
         super().__init__(sys, backend="mjx", n_frames=n_frames)
 
-        self._default_pose = DEFAULT_POSE
+        # KNEE CONFIG: reset() seeds the joints from _default_pose and step() uses it
+        # as the action origin, so this one line IS the sim's knee configuration.
+        # Default stays "elbow_back" — the trained walker (nova_policy_hm.pkl) learned
+        # deltas from THAT origin, so changing it silently would invalidate the only
+        # policy that demonstrably walks.
+        self._knee_config = knee_config
+        self._default_pose = knee_pose(knee_config)
         self._nu = sys.nu
         # COMMAND CURRICULUM.
         #

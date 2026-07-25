@@ -499,7 +499,28 @@ def load_leg_parts():
 
 def coax_to_trunk_bases():
     """4 hip placements. Front: trunk = [s_y+141.2, s_x, s_z+38.05];
-    rear + left side are mirrors (envelope check — see module docstring)."""
+    LEFT side is a mirror (real: coax_L/femur_L/tibia_L are mirrored parts).
+
+    REAR IS NOT MIRRORED — CORRECTED 2026-07-25.
+    The rear used to carry the `end` sign inside the ROTATION as well as the
+    translation ([0, end, 0, end*HIP_FA]), which made the rear placement a
+    REFLECTION: det(S2T @ MIR) = -1 for the rear vs +1 for the front. A
+    reflection is not a placement any physical part can take. leg_v6/ ships
+    only LEFT/RIGHT variants (coax/coax_L, femur/femur_L, tibia/tibia_L,
+    shoulder_plate/shoulder_plate_L) — there is NO front/rear part, so the rear
+    leg is the SAME part in the SAME orientation, translated to -HIP_FA. That
+    is also what sim/nova_mjx/build_mjcf.py models, and the built robot is the
+    TRANSLATED knee layout (all four knees bend backward, leg_ik.KNEE_FORWARD).
+
+    The old mirror made front and rear sweep IDENTICAL volumes (FR and RR
+    returned byte-identical hit counts for every pose), which is why the
+    module docstring could say "chirality is irrelevant for a swept-envelope
+    check" — true for a symmetric union, but it also meant this gate could
+    never produce a per-END result. The +50 deg toward-trunk fold cap it
+    reports was therefore ONE measurement presented as two: with the rear
+    unmirrored, +hfe is toward-trunk at the FRONT but AWAY from the trunk at
+    the REAR, so the two ends do not share a window.
+    """
     T = trimesh.transformations.translation_matrix
     MIR = np.eye(4); MIR[1, 1] = -1                    # coax -> shoulder
     bases = []
@@ -509,7 +530,7 @@ def coax_to_trunk_bases():
         if hip_sign < 0:
             MIRX[0, 0] = -1                            # mirror the leg itself
         for end in (1, -1):                            # front / rear
-            S2T = np.array([[0, end, 0, end * HIP_FA],
+            S2T = np.array([[0, 1, 0, end * HIP_FA],
                             [1, 0, 0, 0],
                             [0, 0, 1, HIP_Z],
                             [0, 0, 0, 1.0]])

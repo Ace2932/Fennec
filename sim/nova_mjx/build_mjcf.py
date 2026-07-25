@@ -126,16 +126,30 @@ def sensors():
     return "\n".join(s)
 
 
+# KNEE CONFIG (#142): per-leg elbow-forward flags, LEGS order (FL, FR, RL, RR).
+# Both elbow branches reach the IDENTICAL neutral foot, so this only moves the stand
+# keyframe / action origin. Keep in sync with env.KNEE_CONFIGS — env._default_pose is
+# what reset() actually seeds; this keyframe is the model's own documentation of it.
+#   all-False      = elbow_back (sim default, the trained walker's origin)
+#   (T, T, F, F)   = xconfig_code (nova_locomotion.KNEE_FORWARD)
+#   (F, F, T, T)   = xconfig_doc  (docs/knee-config-analysis.md: big margin on rear)
+KNEE_FWD = (False, False, False, False)
+ELBOW_BACK = (0.600000000, -1.200000000)      # (hfe, kfe), leg_ik knee_forward=False
+ELBOW_FWD = (-0.728009933, 1.200000000)       # (hfe, kfe), leg_ik knee_forward=True
+
+
 def home_keyframe():
     # base at z0, identity quat, then per-leg (haa, hfe, kfe) folded to stand.
     # foot_z_below_haa = -0.0095 -0.1069 cos(hfe) -0.1290 cos(hfe+kfe).
-    hfe, kfe = 0.6, -1.2
     q = []
-    for _, _, sy in LEGS:
-        q += [0.0, hfe, kfe]
+    for (_, _, sy), fwd in zip(LEGS, KNEE_FWD):
+        h, k = ELBOW_FWD if fwd else ELBOW_BACK
+        q += [0.0, h, k]
     joints = " ".join(f"{v:.3f}" for v in q)
+    # ctrl MUST equal the keyframe joints (position servos hold the stand pose);
+    # deriving both from `q` keeps them from drifting apart per-leg.
     return (f'    <key name="stand" qpos="0 0 0.17 1 0 0 0 {joints}"\n'
-            f'         ctrl="{" ".join("0 %.3f %.3f" % (hfe, kfe) for _ in LEGS)}"/>')
+            f'         ctrl="{joints}"/>')
 
 
 MJCF = f'''<mujoco model="nova_sm3">

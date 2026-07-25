@@ -104,10 +104,36 @@ def _thigh_flexion(front: bool) -> JointLimit:
     # self-collision, LA-19: clean to 92.5deg, first contact 93deg) —
     # `front` is kept as a parameter (not collapsed away) so a future
     # head-position change has one obvious place to reintroduce a split.
+    # LOOSENED TO MECHANICAL 2026-07-25 — the +50 fold cap moved OUT of this
+    # scalar and into the posture-aware gate.
+    #
+    # +50 is the riser-skirt bound at ONE posture: full outboard splay with the
+    # knee fully folded. It is not the bound anywhere else — measured
+    # (hardware/cad/chassis/hfe_envelope.py) the front leg reaches +70.6 at
+    # haa 0, which is exactly where trot and crawl run. A per-joint scalar
+    # CANNOT express a limit that depends on the other two joints, so holding
+    # +50 here clipped every gait to another posture's worst case.
+    #
+    # The chassis constraint is now enforced upstream, per posture, by
+    # nova_ops.safety_envelope.rom_envelope, applied by wrapper.publish().
+    # THIS limit is now purely MECHANICAL: leg self-collision is measured at
+    # 93 deg (leg_v6 LA-19, clean to 92.5), and 86 deg keeps the same 7 deg
+    # margin the away-trunk side already used — so the window is symmetric.
+    #
+    # ⚠ CONSEQUENCE: this clamp is no longer a backstop against a riser-skirt
+    # strike. It only stops a command from exceeding what the LINKAGE can do.
+    # A skirt strike is now prevented solely by the posture gate upstream.
     lower = -86.0 if front else -86.0
     return JointLimit(
         lower=math.radians(lower),
-        upper=math.radians(50.0),
+        # RE-LOOSENED to mechanical once the precondition was actually met:
+        # wrapper.publish() now applies rom_envelope.hfe_bounds() per leg BEFORE
+        # these per-joint scalars, so the chassis constraint is enforced at the
+        # choke point every publisher passes through -- including
+        # nova_calibration's servo_homing and actuator_char, which publish
+        # /joint_commands directly and never touch nova_locomotion.solve_side.
+        # Locked by test_safety_envelope.test_posture_gate_* .
+        upper=math.radians(86.0),
         velocity=math.radians(220.0),
         effort=0.70,
     )

@@ -80,7 +80,12 @@ def test_limits_type_grouping_matches_yaml():
     lims = load_default_limits()
     expected_upper = {
         "haa": math.radians(15.0),  # conservative cap (firmware-limits lane)
-        "hfe": math.radians(50.0),  # LA-12: URDF hfe_fold cap (was 90, wrong)
+        # 2026-07-25: MECHANICAL +86, not the old +50 riser-skirt cap. +50 is the
+        # bound at ONE posture (full outboard splay + full knee fold); a per-joint
+        # scalar cannot express a limit that depends on the other two joints, so
+        # the chassis constraint moved to nova_ops.safety_envelope.rom_envelope
+        # and this limit is now purely the linkage's own travel.
+        "hfe": math.radians(86.0),
         "kfe": math.radians(109.0),  # LA-11: URDF kfe_range cap (was 130, wrong)
     }
     for name, jid in m.items():

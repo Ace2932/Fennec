@@ -46,6 +46,7 @@ from typing import Deque, Dict, Optional
 
 from .limits import JointLimits
 from .counters import EnvelopeCounters
+from nova_ops.rom_envelope import hfe_bounds
 
 
 # Load check uses a time-window mean of /joint_states.effort[] per
@@ -89,7 +90,28 @@ class SafeJointCommandPublisher:
             "position": {},
             "velocity": {},
             "load": {},
+            "posture": {},   # chassis envelope (see _clamp_posture)
         }
+
+        # Leg -> (haa_id, hfe_id, kfe_id) for the posture gate. PER-LEG-
+        # SEQUENTIAL bus map: each leg is haa, hfe, kfe in consecutive IDs.
+        # Built from the yaml so it tracks the canonical map rather than
+        # re-deriving it; if the map is unavailable the posture gate is simply
+        # inactive (the per-joint scalars still apply).
+        self._leg_ids: Optional[Dict[str, tuple]] = None
+        try:
+            from nova_ops.joint_map import load_joint_id_map
+
+            ids: Dict[str, int] = {}
+            for name, jid in load_joint_id_map().items():
+                leg, jtype = name.split("_")[0], name.split("_")[1]
+                if jtype == "haa":
+                    ids[leg] = jid
+            self._leg_ids = {
+                leg: (jid, jid + 1, jid + 2) for leg, jid in ids.items()
+            }
+        except Exception:
+            self._leg_ids = None
 
     # ---- /joint_states callback (load tracking) -----------------------
 
@@ -138,6 +160,51 @@ class SafeJointCommandPublisher:
 
     # ---- The hot path -------------------------------------------------
 
+    def _clamp_posture(self, cmd_msg) -> None:
+        """Clamp hfe to the POSTURE-aware chassis bound, per leg.
+
+        THE CHOKE POINT. The per-joint scalars below cannot express the chassis
+        constraint: how far a leg may fold before the tibia flank reaches the
+        riser skirt depends on how far the hip is splayed and the knee folded AT
+        THE SAME TIME (measured: front reaches +70.6 deg at haa 0 but only +51.7
+        at full outboard splay). nova_locomotion applies this in solve_side, but
+        that is only the GAIT path — nova_calibration's servo_homing and
+        actuator_char publish /joint_commands directly and never touch it, and
+        homing is the first thing that runs on real hardware, driving joints
+        toward hard stops. So the gate belongs HERE, where every publisher
+        passes, not only in the IK.
+
+        HAA SIGN IS UNKNOWN in this frame. /joint_commands is in the SERVO
+        command frame, and which haa direction is inboard there is exactly what
+        HAA_INBOARD_SIGN records as None until homing observes real motion. So
+        while a sign is unfilled, evaluate the envelope for BOTH interpretations
+        of the commanded haa and take the tighter — the same conservative
+        posture limits.py already takes for the haa limit itself.
+        """
+        legs = getattr(self, "_leg_ids", None)
+        if legs is None:
+            return
+        for leg, (haa_id, hfe_id, kfe_id) in legs.items():
+            idxs = [j - 1 for j in (haa_id, hfe_id, kfe_id)]
+            if max(idxs) >= len(cmd_msg.position):
+                continue
+            haa, hfe, kfe = (cmd_msg.position[i] for i in idxs)
+            lo_a, hi_a = hfe_bounds(leg, haa, kfe)
+            lo_b, hi_b = hfe_bounds(leg, -haa, kfe)  # sign unknown -> both ways
+            lo, hi = max(lo_a, lo_b), min(hi_a, hi_b)
+            if not (lo <= hfe <= hi):
+                clamped = max(lo, min(hi, hfe))
+                self._log(
+                    "posture",
+                    hfe_id,
+                    f"{leg} hfe {math.degrees(hfe):.1f}° outside the chassis "
+                    f"envelope [{math.degrees(lo):.1f}, {math.degrees(hi):.1f}] "
+                    f"at haa {math.degrees(haa):.1f}° kfe {math.degrees(kfe):.1f}°; "
+                    f"clamped to {math.degrees(clamped):.1f}°",
+                )
+                self.counters.increment("position", hfe_id)
+                cmd_msg.position[idxs[1]] = clamped
+
     def publish(self, cmd_msg) -> None:
         """Clamp + filter + publish.
 
@@ -148,6 +215,7 @@ class SafeJointCommandPublisher:
         """
         cmd_msg = copy.deepcopy(cmd_msg)
         now_ns = self.node.get_clock().now().nanoseconds
+        self._clamp_posture(cmd_msg)
 
         for idx in range(len(cmd_msg.position)):
             joint_id = idx + 1

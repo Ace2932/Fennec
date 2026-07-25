@@ -4,6 +4,7 @@ import pytest
 
 from nova_locomotion.gait.trot import TrotParams, foot_target, all_feet, LEGS
 from nova_locomotion.kinematics.leg_ik import (
+    KNEE_FORWARD,
     LegParams,
     inverse_kinematics,
     within_limits,
@@ -62,5 +63,10 @@ def test_gait_targets_are_ik_reachable():
     for i in range(100):
         ph = i / 100.0
         for leg, foot in all_feet(ph, T).items():
-            sol = inverse_kinematics(foot, p, knee_forward=True)
+            # solve with the leg's REAL branch. Hardcoding True tested the
+            # elbow-FORWARD solution, which the built robot does not use
+            # (leg_ik.KNEE_FORWARD is all-False, TRANSLATED). Under the real
+            # branch the SAME +-59.4 deg excursion lands on the opposite SIGN,
+            # which for a FRONT leg points into the riser skirt.
+            sol = inverse_kinematics(foot, p, knee_forward=KNEE_FORWARD[leg])
             assert within_limits(sol, p, leg=leg), f"{leg}@{ph}: {sol} out of limits"
