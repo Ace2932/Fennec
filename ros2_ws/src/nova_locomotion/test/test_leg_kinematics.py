@@ -86,15 +86,23 @@ def test_within_limits_front_rear_hfe_split():
     for leg in ("FL", "FR"):
         assert within_limits(just_inside_front, P, leg=leg), leg
         assert not within_limits(just_outside_front, P, leg=leg), leg
-    just_inside_rear = (0.0, P.hfe_min + eps, 0.0)
-    just_outside_rear = (0.0, P.hfe_min - eps, 0.0)
+    # REAR is the MIRROR window, not the same one (corrected 2026-07-25 from the
+    # measured check_fit crouch sweep): a rear leg's toward-trunk fold is
+    # NEGATIVE canonical hfe, so its window is [-hfe_max, -hfe_min].
+    just_inside_rear = (0.0, -P.hfe_max + eps, 0.0)
+    just_outside_rear = (0.0, -P.hfe_max - eps, 0.0)
     for leg in ("RL", "RR"):
         assert within_limits(just_inside_rear, P, leg=leg), leg
         assert not within_limits(just_outside_rear, P, leg=leg), leg
-    # an unrecognized/omitted leg name defaults to the permissive REAR
-    # window (opt-in, not fail-safe — see within_limits' docstring)
-    assert within_limits(just_inside_rear, P)
-    assert within_limits(just_inside_rear, P, leg="unknown")
+    # the two ends genuinely disagree now: the front's away-trunk reach is
+    # ILLEGAL for a rear leg, and vice versa.
+    assert within_limits(just_inside_front, P, leg="FL")
+    assert not within_limits(just_inside_front, P, leg="RL")
+    # an unrecognized/omitted leg cannot know which end it is, so it gets the
+    # CONSERVATIVE INTERSECTION of the two windows, not a permissive default.
+    assert within_limits((0.0, 0.0, 0.0), P)
+    assert not within_limits(just_inside_front, P)
+    assert not within_limits(just_inside_front, P, leg="unknown")
 
 
 def test_workspace_reach_matches_links():
@@ -150,10 +158,12 @@ def test_solve_side_clamps_front_hfe_to_cap():
     assert clamped[0] == pytest.approx(unclamped[0])
     assert clamped[2] == pytest.approx(unclamped[2])
 
-    # REAR legs are NOT clamped by solve_side (issue #47 is front-only;
-    # rear hfe has never had a chassis-side complaint) — same for "right".
+    # REAR legs ARE clamped now (added 2026-07-25) — to the MIRROR window.
+    # They previously had no runtime backstop at all, on the belief that the
+    # +50 riser-skirt cap was front-only; the corrected check_fit crouch sweep
+    # cuts the riser at rear hfe -86/-45 while +45..+86 is clean.
     rear = solve_side("left", foot, p, knee_forward=True, leg="RL")
-    assert rear[1] == pytest.approx(-math.radians(90.0))
+    assert rear[1] == pytest.approx(-p.hfe_max)
     right_clamped = solve_side("right", foot, p, knee_forward=True, leg="FR")
     assert right_clamped[1] == pytest.approx(p.hfe_min_front)
     assert right_clamped[0] == pytest.approx(-unclamped[0])

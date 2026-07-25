@@ -158,6 +158,14 @@ def solve_side(
         raise ValueError(f"side must be 'left'|'right', got {side!r}")
     if leg in FRONT_LEGS:
         t2 = max(p.hfe_min_front, min(p.hfe_max, t2))
+    elif leg in REAR_LEGS:
+        # REAR CLAMP ADDED 2026-07-25. The rear pair previously had NO runtime
+        # backstop: only FRONT_LEGS were clamped, on the belief that the +50
+        # riser-skirt cap was the rear's cap too. It is not — the rear's
+        # toward-trunk fold is NEGATIVE canonical hfe, and the corrected
+        # check_fit crouch sweep cuts the riser at rear hfe -86/-45 while
+        # +45..+86 is clean. Same mirror as within_limits; see its docstring.
+        t2 = max(-p.hfe_max, min(-p.hfe_min, t2))
     return (t1, t2, t3)
 
 
@@ -222,7 +230,35 @@ def within_limits(
     """
     t1, t2, t3 = theta
     hfe_min = p.hfe_min_front if leg in FRONT_LEGS else p.hfe_min
-    lo, hi = (hfe_min, p.hfe_max) if knee_forward else (-p.hfe_max, -hfe_min)
+    # WINDOW KEYS ON LEG POSITION, NOT THE KNEE BRANCH — corrected 2026-07-25.
+    #
+    # The asymmetric window exists because ONE END of it is the riser-skirt
+    # graze (toward-trunk fold) and the other is free space (away-trunk). Which
+    # SIGN of canonical hfe points toward the trunk depends on where the leg is
+    # mounted, not on which elbow branch the IK picked: with the built
+    # TRANSLATED layout (all four knees backward, leg_ik.KNEE_FORWARD) a
+    # positive canonical hfe swings the knee BACKWARD, which is toward the
+    # trunk at the FRONT and away from it at the REAR.
+    #
+    # MEASURED, hardware/cad/chassis/check_fit.py crouch sweep after its rear
+    # hip placement was corrected from a reflection to a real rotation
+    # (2026-07-25 — the old mirror made front and rear sweep identical volumes,
+    # so the gate reported ONE window as if it were two):
+    #     FRONT  clean at -86/-45,  riser contact from +55  -> [hfe_min, +50]
+    #     REAR   riser contact at -86/-45, clean +45..+86   -> [-50, -hfe_min]
+    # an exact mirror pair. Keying this on knee_forward silently gave every leg
+    # the REAR window once KNEE_FORWARD became all-False, i.e. it certified
+    # front-leg poses out to +86 against a skirt that contacts at +55.
+    #
+    # `leg` omitted -> the end is unknown, so use the CONSERVATIVE INTERSECTION
+    # of the two windows rather than guessing an end. Pass leg= to get the real
+    # one (solve_side already threads it through).
+    if leg in FRONT_LEGS:
+        lo, hi = hfe_min, p.hfe_max
+    elif leg in REAR_LEGS:
+        lo, hi = -p.hfe_max, -hfe_min
+    else:
+        lo, hi = -p.hfe_max, p.hfe_max
     return (
         abs(t1) <= p.haa_range + 1e-9
         and lo - 1e-9 <= t2 <= hi + 1e-9
