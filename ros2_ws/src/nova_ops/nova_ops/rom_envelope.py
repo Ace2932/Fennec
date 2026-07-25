@@ -28,9 +28,9 @@ CONVENTIONS
     outside the grid is clamped to the edge cell. Never interpolate toward a
     looser bound — the sampled surface is not guaranteed monotonic between cells.
   * Unknown leg -> the intersection of the FRONT and REAR envelopes.
-  * The table is RAW FIRST-CONTACT geometry. hfe_bounds() backs off MARGIN_DEG
-    from it, so the gate refuses a posture for coming NEAR the body rather than
-    only for already touching it. Measurement in the table, policy in the code.
+  * The table is a CLEARANCE boundary, not first contact: it was swept with a
+    proximity test at rom_envelope_table.CLEARANCE_MM, so the required gap is
+    already inside the stored numbers. MARGIN_DEG is an extra hook, now 0.
 
 ⚠ This is the KINEMATIC truth. The scalars derived from it downstream —
 LegParams.hfe_max, nova.urdf.xacro hfe_fold, sim/nova_mjx/build_mjcf.HFE_FOLD and
@@ -46,11 +46,22 @@ from typing import Optional, Tuple
 
 from nova_ops.rom_envelope_table import ENVELOPE, HAAS, KFES
 
-# Clearance back-off from the measured first-contact boundary, degrees. The gate
-# refuses a posture because it would come NEAR the body, not only because it
-# already touches it. 5 deg is the convention already in use: the chassis gate
-# measured front skirt contact at ~+55 and published the cap as +50.
-MARGIN_DEG = 5.0
+# The required gap now lives in the MEASUREMENT, not here (issue #146 / S4).
+# hfe_envelope.py sweeps the boundary with a proximity test — "the leg comes
+# within CLEARANCE_MM of the chassis" — instead of a containment flip, so the
+# stored bounds already stand off the geometry by a real physical distance.
+#
+# That fixes two things an angular back-off could not. Containment only trips
+# once a SAMPLED point is inside the solid, which is late twice over: the cloud
+# is sparse (a tangential graze can register zero points while surfaces touch)
+# and a 2.5 deg scan step is ~6.5 mm of arc at the tibia flank, enough to step
+# over a boss entirely. Proximity sees a feature from CLEARANCE_MM away. And a
+# degree is not a distance: the retired 5 deg was worth ~5 mm at haa +40 but
+# noticeably more at haa 0, so it silently varied by posture.
+#
+# Kept at 0 as a deliberate hook — set it only to add margin ON TOP of the
+# measured gap, never as a substitute for regenerating the table.
+MARGIN_DEG = 0.0
 
 FRONT_ENDS = frozenset({"FL", "FR"})
 REAR_ENDS = frozenset({"RL", "RR"})
