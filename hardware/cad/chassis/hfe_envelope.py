@@ -39,7 +39,12 @@ HAAS = [-40, -30, -20, -15, -12, -10, -8, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40]
 # safety gate. solve_side(knee_forward=True) produces positive kfe.
 KFES = [-109, -90, -70, -50, -25, 0, 25, 50, 75, 109]
 HFE_LO, HFE_HI = -95.0, 95.0
-COARSE = 2.5                              # deg, scan step
+# 0.5 deg, was 2.5. The verifier caught the reason: at 2.5 the scan STEPPED OVER
+# a blocked sliver below the returned edge (FL haa-5 kfe-109 reported +57.6 while
+# +57.0 was already blocked), so the stored bound was not a contiguous safe
+# interval — exactly the granularity half of S4. Proximity is ~1 ms per probe, so
+# 5x the steps costs ~3 min for the whole sweep.
+COARSE = 0.5                              # deg, scan step
 FINE_ITERS = 5                            # bisection refinement -> ~0.08 deg
 
 
