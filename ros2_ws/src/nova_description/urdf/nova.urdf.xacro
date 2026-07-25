@@ -55,7 +55,7 @@
             all four legs (knees translated, one convention) — VERIFY IN SIM. -->
   <xacro:property name="haa_in"   value="0.262"/>  <!-- 15 deg inboard -->
   <xacro:property name="haa_out"  value="0.698"/>  <!-- 40 deg outboard -->
-  <xacro:property name="hfe_fold" value="0.873"/>  <!-- +50 toward trunk (both) -->
+  <xacro:property name="hfe_fold" value="1.501"/>  <!-- +86 toward trunk (both) — MECHANICAL, 2026-07-25. Was +50 (riser-skirt graze); that bound is POSTURE-DEPENDENT (it is the value at full outboard splay + full knee fold only, measured +70.6 at haa 0) and a per-joint scalar cannot express it. Chassis constraint moved to nova_locomotion.kinematics.rom_envelope, enforced per posture by within_limits/solve_side. 86 = leg self-collision 93 (LA-19) minus the same 7deg margin hfe_ext uses -> symmetric window. -->
   <xacro:property name="hfe_ext"       value="1.501"/>  <!-- -86 away, REAR legs -->
   <xacro:property name="hfe_ext_front" value="1.501"/>  <!-- -86 away, FRONT legs — #47: head clearance is NOT the binding constraint (measured), leg self-collision (LA-19, 93deg) is; matches hfe_ext -->
   <xacro:property name="kfe_range" value="1.9"/>   <!-- sweep-gate: mech stop ~118 deg (tibia flank vs fork throat); 109 sw = margin. Deep-sit = v7 offset-plane option -->

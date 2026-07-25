@@ -56,8 +56,16 @@ class LegParams:
     # to this permissive rear value — see within_limits' docstring.
     hfe_min: float = -1.501  # −86° away-trunk (gate), REAR legs (+ default)
     hfe_min_front: float = -1.501  # −86° away-trunk (gate), FRONT legs — #47: not head-limited (measured); matches hfe_min
-    hfe_max: float = 0.873  # +50° toward-trunk fold cap (riser graze), all legs.
-    # ⚠ leg-local→canonical sign mapping VERIFY IN SIM (URDF note).
+    hfe_max: float = 1.501  # +86° toward-trunk MECHANICAL travel (2026-07-25).
+    # Was +50 (the riser-skirt graze). That is the bound at ONE posture — full
+    # outboard splay with the knee fully folded — not everywhere: measured
+    # (hardware/cad/chassis/hfe_envelope.py) the front leg reaches +70.6 at
+    # haa 0, which is where trot and crawl actually run. A scalar cannot
+    # express a bound that depends on the other two joints, so the chassis
+    # constraint now lives in kinematics/rom_envelope.py and is applied per
+    # posture by within_limits()/solve_side(). This value is the LINKAGE limit:
+    # self-collision 93° (leg_v6 LA-19, clean to 92.5) minus the same 7° margin
+    # hfe_min already uses -> a symmetric ±86° mechanical window.
     kfe_range: float = 1.9  # sweep-gate: mech stop ~118deg; see URDF note
 
 
