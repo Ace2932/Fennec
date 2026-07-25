@@ -73,8 +73,14 @@ from nova_locomotion.kinematics.leg_ik import (   # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from env import (   # noqa: E402
     NovaJoystick, DEFAULT_POSE, ACTION_SCALE, CRAWL_OFFSETS, CRAWL_DUTY, LEG_NAMES,
+    KNEE_CONFIGS, knee_pose,
 )
-from terrain import terrain_field, STAIR_RISE   # noqa: E402
+from terrain import (   # noqa: E402
+    terrain_field, STAIR_RISE, STAIR_RUN_CELLS, STAIR_PAD_MIN, FLAT_R, TN,
+)
+from build_mjcf import (   # noqa: E402  (TR2 = hfield full extent, m; cell = TR2/TN)
+    TR2, HAA_IN, HAA_OUT, HFE_FOLD, HFE_EXT, KFE,
+)
 
 DT = 0.02                                        # 50 Hz control, matches env._dt
 PARAMS = LegParams()
@@ -114,6 +120,28 @@ FWD_LEAN = 0.07           # THE PROPULSION: command the body this far AHEAD of t
 #                         # steady stable forward crawl; 0 (centred) drifts slowly back.
 CLEARANCE = 0.05          # swing arc lift above the interpolated tread ramp (m) — clears
 #                         # the riser edge (peak above liftoff = riser + CLEARANCE).
+SPLAY = 0.0               # OUTBOARD stance widening (m) added to the nominal hip->foot
+#                         # y, applied to EVERY foothold. MEASURED HARMFUL (#142): it
+#                         # spends the STANCE legs' lateral reach, which they need for
+#                         # FWD_LEAN + CoM sway -> n_unreach 4362 -> 6387 and the gait
+#                         # walked backwards. Kept at 0; use SWING_ABDUCT instead.
+SWING_ABDUCT = 0.0        # THE HIP-OPENING LIFT (m): outboard bulge applied to the
+#                         # SWING foot only, peaking mid-swing (sin(pi*frac)) and back
+#                         # to zero at touchdown, so the planted foothold width — and
+#                         # therefore every stance leg's reach budget — is UNCHANGED.
+#                         # The swing leg is unloaded, so this is free authority.
+#                         # WHY IT BUYS CLEARANCE (probe_lift_envelope.py section 5):
+#                         # the step-up is capped by the hfe fold stop (+50 deg, the
+#                         # chassis riser skirt), NOT by torque. Abducting rotates the
+#                         # leg's working plane so the same vertical foot travel costs
+#                         # less fold. Max swing-foot lift: 5.69 cm at 0 abduction ->
+#                         # 8.40 cm at +4 cm. That is the difference between clearing
+#                         # a riser and raising Unreachable.
+ABDUCT_CLIMB = 0.0        # EXTRA outboard per metre of foot RISE the swing must make
+#                         # (landing tread above liftoff tread). This is the "robot
+#                         # understands it can open the hips to gain clearance" term:
+#                         # abduction is spent in proportion to the riser being climbed,
+#                         # so flat ground keeps a narrow efficient stance.
 COM_GAIN = 0.45          # fraction of support-centroid LATERAL body sway (keeps upright)
 PITCH_GAIN = 1.0          # fraction of the tread-slope pitch the body tracks
 LEAN_CLIMB = 1.0          # EXTRA forward lean per metre of tread SPREAD (feet straddling a
@@ -131,8 +159,11 @@ FALL_UP_Z = 0.4
 
 
 # ---------------------------------------------------------------------------
-def make_env(stair_level):
-    env = NovaJoystick(heightmap=True, push_mag=0.0)
+def make_env(stair_level, eff_scale=1.0, eff_scale_speed=False, kp_scale=1.0,
+             knee_config="elbow_back"):
+    env = NovaJoystick(heightmap=True, push_mag=0.0, eff_scale=eff_scale,
+                       eff_scale_speed=eff_scale_speed, kp_scale=kp_scale,
+                       knee_config=knee_config)
     if stair_level > 0:
         hf = terrain_field(jax.random.PRNGKey(0), stair_level, 0.0, 1.0)  # stair_frac=1
         env.sys = env.sys.tree_replace({"hfield_data": jp.asarray(hf)})
@@ -171,18 +202,52 @@ def settle(env, jit_step, state, n=SETTLE_STEPS):
     return state
 
 
-def ik_action(li, canon_target, default):
-    """12-vec with leg li driven to canonical (x,y,z). Returns (action12 or None)."""
-    try:
-        t1, t2, t3 = inverse_kinematics(canon_target, PARAMS, knee_forward=False)
-    except Unreachable:
-        return None
-    j = 3 * li
-    a = np.zeros(12, dtype=np.float32)
-    a[j + 0] = (t1 - default[j + 0]) / ACTION_SCALE
-    a[j + 1] = (t2 - default[j + 1]) / ACTION_SCALE
-    a[j + 2] = (t3 - default[j + 2]) / ACTION_SCALE
-    return a
+# per-leg LEG-LOCAL joint limits, mirrored exactly as build_mjcf.haa_range() emits
+# them into nova.xml: left legs [-HAA_IN, +HAA_OUT], right legs [-HAA_OUT, +HAA_IN]
+# (positive haa rotates about world +x, which is OUTBOARD for a left leg and INBOARD
+# for a right one). hfe/kfe ranges are identical on every leg.
+J_LO = np.array([[-HAA_IN if s > 0 else -HAA_OUT, -HFE_EXT, -KFE] for s in SIDE])
+J_HI = np.array([[HAA_OUT if s > 0 else HAA_IN, HFE_FOLD, KFE] for s in SIDE])
+
+
+def ik_action(li, canon_target, default, prefer_kf):
+    """Drive leg li to a canonical (x, y, z) foot target.
+
+    Returns (action12, knee_fwd_used, flipped) or (None, prefer_kf, False).
+
+    THREE FIXES over the original (#142):
+
+    1. MIRRORING. leg_ik.solve_side() is documented as "THE ONE MIRRORING BOUNDARY":
+       inverse_kinematics() works in the CANONICAL (left-leg) frame where +y is
+       outboard for every leg, and a RIGHT leg's physical haa is the NEGATED
+       canonical angle. This function used to call inverse_kinematics() DIRECTLY and
+       never flip, so every nonzero haa command (CoM sway, swing abduction) drove FR
+       and RR the WRONG WAY. Dormant at the haa=0 default pose, active exactly when
+       the hips are asked to do something.
+
+    2. JOINT LIMITS. Nothing checked them. IK "succeeded" with out-of-range angles,
+       MuJoCo silently clamped them at the joint stop, and the foot quietly missed
+       its target. Now an out-of-range solution is rejected like an unreachable one.
+
+    3. KNEE BRANCH. knee_forward was hard-coded False, locking out the elbow-forward
+       solution — which probe_posture_search.py finds is the branch the best-clearance
+       swing posture actually wants. Both branches are now tried, but the INCUMBENT is
+       preferred (hysteresis): a mid-motion branch flip swings the leg through full
+       extension, so switch only when the incumbent is genuinely infeasible.
+    """
+    for kf in (prefer_kf, not prefer_kf):
+        try:
+            t1, t2, t3 = inverse_kinematics(canon_target, PARAMS, knee_forward=kf)
+        except Unreachable:
+            continue
+        t = np.array([t1 * SIDE[li], t2, t3])          # canonical -> leg-local (fix 1)
+        if np.any(t < J_LO[li] - 1e-9) or np.any(t > J_HI[li] + 1e-9):
+            continue                                    # out of range (fix 2)
+        j = 3 * li
+        a = np.zeros(12, dtype=np.float32)
+        a[j:j + 3] = (t - np.asarray(default[j:j + 3])) / ACTION_SCALE
+        return a, kf, kf != prefer_kf
+    return None, prefer_kf, False
 
 
 def rot_pitch(p):
@@ -204,7 +269,9 @@ def leg_phase(theta):
 
 
 def run(env, jit_reset, jit_step, stair_level, n_steps, seed=0):
-    default = np.asarray(DEFAULT_POSE, dtype=np.float64)
+    # the action origin IS the env's configured knee pose — read it from the env so a
+    # --knee-config run can never drift from the model it is driving.
+    default = np.asarray(env._default_pose, dtype=np.float64)
     state = _pin(jit_reset(jax.random.PRNGKey(seed)))
     state = settle(env, jit_step, state)
 
@@ -231,8 +298,14 @@ def run(env, jit_reset, jit_step, stair_level, n_steps, seed=0):
     qpos = [np.array(state.pipeline_state.q)]
     bz = np.zeros(n_steps); bx = np.zeros(n_steps); uz = np.zeros(n_steps)
     fz = np.zeros((n_steps, 4)); fgz = np.zeros((n_steps, 4))
+    tq = np.zeros((n_steps, 12))          # actuator force — the torque-wall disambiguator
     which = np.full(n_steps, -1, dtype=int)
     n_unreach = 0; fell = False; done_step = n_steps
+    # per-leg preferred elbow branch = the env's knee configuration, so the IK starts
+    # on the branch the action origin was built from (a leg whose preferred branch
+    # disagrees with its default pose would command a huge step on frame 0).
+    knee_kf = np.array(KNEE_CONFIGS[env._knee_config], dtype=bool)
+    n_flip = 0; n_outband = 0
 
     for k in range(n_steps):
         cyc = k * DT * GAIT_FREQ
@@ -250,7 +323,14 @@ def run(env, jit_reset, jit_step, stair_level, n_steps, seed=0):
             if is_sw and not prev_swing[i]:
                 swing_from[i] = foothold[i].copy()       # lift off from where it stood
                 nx = b_meas[0] + HB[i, 0] + _X0 + STEP_FWD
-                ny = b_meas[1] + HB[i, 1] + SIDE[i] * LAT
+                # SPLAY (#142): widen the stance outboard. probe_lift_force.py showed
+                # the step-up is blocked by the hfe fold cap (+50 deg, the chassis riser
+                # skirt), NOT by torque — at nominal width the leg can only shorten
+                # 3.81 cm, and a riser + clearance needs ~7 cm. Abducting rotates the
+                # leg's working plane so the same vertical foot travel costs less hfe
+                # fold: +6 cm splay -> 7.98 cm of shortening. Same units as the probe's
+                # dy (outboard hip->foot y offset added to the nominal LAT).
+                ny = b_meas[1] + HB[i, 1] + SIDE[i] * (LAT + amp * SPLAY)
                 foothold[i] = np.array([nx, ny, ground_z(env, nx, ny) + foot_r[i]])
             prev_swing[i] = is_sw
 
@@ -289,22 +369,39 @@ def run(env, jit_reset, jit_step, stair_level, n_steps, seed=0):
                 fy = p_from[1] + (p_to[1] - p_from[1]) * frac
                 base_z_arc = p_from[2] + (p_to[2] - p_from[2]) * frac
                 fzt = base_z_arc + amp * CLEARANCE * np.sin(np.pi * frac)
+                # HIP-OPENING LIFT: bulge the swing foot OUTBOARD in step with the
+                # vertical arc. Both peak at mid-swing and both vanish at touchdown,
+                # so the foot lands at the planned (nominal-width) foothold and no
+                # stance leg ever inherits a widened stance. ABDUCT_CLIMB spends the
+                # abduction in proportion to the riser this swing has to gain, so the
+                # hips open exactly when clearance is scarce.
+                need_rise = max(0.0, float(p_to[2] - p_from[2]))
+                ab = amp * (SWING_ABDUCT + ABDUCT_CLIMB * need_rise)
+                fy += SIDE[i] * ab * np.sin(np.pi * frac)
                 foot_w = np.array([fx, fy, fzt])
             else:
                 foot_w = foothold[i]
             vec_body = R.T @ (foot_w - hip_w)
             canon = (vec_body[0], SIDE[i] * vec_body[1], vec_body[2])
-            a = ik_action(i, canon, default)
+            a, kf, flipped = ik_action(i, canon, default, knee_kf[i])
             if a is None:
                 n_unreach += 1
             else:
                 act += a
+                knee_kf[i] = kf
+                n_flip += int(flipped)
+                # CLONABILITY: a tanh policy outputs a in [-1,1], so env.step can only
+                # realise |theta - default| <= ACTION_SCALE (0.4 rad). The expert has no
+                # such cap here, but anything it commands beyond the band CANNOT be
+                # reproduced by the policy that is supposed to clone it.
+                n_outband += int(np.sum(np.abs(a) > 1.0))
 
         state = _pin(state)
         state = jit_step(state, jp.asarray(act))
         b = base_pos(state); fpm = foot_pos(env, state)
         bz[k] = b[2]; bx[k] = b[0]; uz[k] = up_z(state); which[k] = sw_leg
         fz[k] = fpm[:, 2]
+        tq[k] = np.asarray(state.pipeline_state.actuator_force)
         for i in range(4):
             fgz[k, i] = ground_z(env, fpm[i, 0], fpm[i, 1])
         qpos.append(np.array(state.pipeline_state.q))
@@ -320,9 +417,10 @@ def run(env, jit_reset, jit_step, stair_level, n_steps, seed=0):
     d = done_step
     return {
         "qpos": qpos, "bz": bz[:d], "bx": bx[:d], "uz": uz[:d],
-        "fz": fz[:d], "fgz": fgz[:d], "which": which[:d],
+        "fz": fz[:d], "fgz": fgz[:d], "which": which[:d], "tq": tq[:d],
+        "eff_leg": float(env.sys.actuator_forcerange[1, 1]),
         "b0": b0, "f0": f0, "rise": rise, "fell": fell, "done_step": d,
-        "n_unreach": n_unreach,
+        "n_unreach": n_unreach, "n_flip": n_flip, "n_outband": n_outband,
     }
 
 
@@ -342,15 +440,39 @@ def verdict(r, stair_level):
     print("\n" + "=" * 78)
     print(f"VERDICT — stair-level {stair_level:.2f} (rise {rise*100:.2f} cm/step)")
     print("=" * 78)
+    riser_txt = f"= {n_risers_base:+.2f} risers   " if rise > 1e-4 else "(flat: no risers) "
     print(f"  base ascent (final-spawn) = {base_ascent*100:+6.2f} cm  "
-          f"= {n_risers_base:+.2f} risers   (peak {base_peak*100:+.2f} cm)")
+          f"{riser_txt}(peak {base_peak*100:+.2f} cm)")
     print(f"  base x travel             = {x_travel*100:+6.2f} cm")
+    # APPROACH-PAD GUARD: terrain.py puts the first NONZERO tread at
+    # (flat_r_stair + STAIR_RUN_CELLS) cells from spawn. If the run never travels
+    # that far, a FAIL says nothing about climbing — it only measured approach
+    # speed. Print the geometry so the confound can't hide in a 0.0-risers row.
+    cell = TR2 / TN
+    first_tread_x = (STAIR_PAD_MIN + (FLAT_R - STAIR_PAD_MIN) * stair_level
+                     + STAIR_RUN_CELLS) * cell
+    reach_x = float(r["bx"].max()) + HB[0, 0] + _X0            # furthest front-foot x
+    print(f"  first riser at x = {first_tread_x*100:.1f} cm; furthest front-foot x = "
+          f"{reach_x*100:.1f} cm -> stairs "
+          f"{'REACHED' if reach_x >= first_tread_x else 'NEVER REACHED (result is not a climb test)'}")
     print(f"  up_z min                  = {up_min:.3f}   fell={r['fell']}  "
           f"steps={r['done_step']}  n_unreach={r['n_unreach']}")
+    print(f"  knee-branch flips = {r['n_flip']}   "
+          f"out-of-band joint cmds (|theta-default| > {ACTION_SCALE} rad, "
+          f"NOT clonable by a tanh policy) = {r['n_outband']}")
     print(f"  per-foot highest tread reached (cm) = "
           f"{np.round(foot_peak_tread*100,2).tolist()} ({LEG_NAMES})")
     print(f"  per-foot risers climbed             = "
           f"{np.round(risers_per_foot,2).tolist()}")
+    # TORQUE-WALL DISAMBIGUATOR: if the hfe/kfe actuators are NOT pinned at their
+    # forcerange, more stall torque cannot be what is missing — the limit is the
+    # controller/plan, and a servo upgrade buys nothing. Report both.
+    leg_j = [j for j in range(12) if j % 3 != 0]
+    tq = np.abs(r["tq"][:, leg_j]); eff = r["eff_leg"]
+    sat = float(np.mean(tq >= 0.99 * eff))
+    print(f"  hfe/kfe torque: limit {eff:.2f} N*m  mean|t| {tq.mean():.3f}  "
+          f"p95 {np.percentile(tq, 95):.3f}  peak {tq.max():.3f}  "
+          f"saturated {sat*100:.1f}% of joint-steps")
     feet_climbed = int(np.sum(foot_peak_tread >= 1.5 * rise)) if rise > 1e-6 else 0
     stable = (not r["fell"]) and up_min > 0.9
     climbs = base_ascent >= 2.0 * rise
@@ -426,12 +548,36 @@ def main():
     ap.add_argument("--step-fwd", type=float, default=None)
     ap.add_argument("--fwd-lean", type=float, default=None)
     ap.add_argument("--clearance", type=float, default=None)
+    ap.add_argument("--splay", type=float, default=None,
+                    help="outboard stance widening (m), ALL footholds — measured harmful")
+    ap.add_argument("--swing-abduct", type=float, default=None,
+                    help="outboard bulge (m) on the SWING foot at mid-swing — the "
+                         "hip-opening clearance gain")
+    ap.add_argument("--abduct-climb", type=float, default=None,
+                    help="extra swing abduction per metre of riser being climbed")
     ap.add_argument("--com-gain", type=float, default=None)
     ap.add_argument("--pitch-gain", type=float, default=None)
     ap.add_argument("--ramp", type=float, default=None)
+    # servo-upgrade probe (#142): 1.0 = STS3215 (1.8 N*m hfe/kfe). 1.63 ~= a 30 kgf*cm
+    # servo (2.94 N*m). Damping scales with torque unless --eff-scale-speed.
+    ap.add_argument("--knee-config", default="elbow_back",
+                    choices=sorted(KNEE_CONFIGS),
+                    help="elbow_back (sim default / trained walker) | xconfig_code "
+                         "(nova_locomotion.KNEE_FORWARD: front elbow-fwd) | xconfig_doc "
+                         "(knee-config-analysis.md: rear elbow-fwd)")
+    ap.add_argument("--eff-scale", type=float, default=1.0)
+    ap.add_argument("--eff-scale-speed", action="store_true",
+                    help="hold damping fixed -> no-load speed scales with torque too")
+    ap.add_argument("--kp-scale", type=float, default=1.0,
+                    help="scale hfe/kfe position gain; match --eff-scale to retune "
+                         "the servo to its new torque authority")
     args = ap.parse_args()
 
     global GAIT_FREQ, STEP_FWD, FWD_LEAN, CLEARANCE, COM_GAIN, PITCH_GAIN, RAMP_CYCLES
+    global SPLAY, SWING_ABDUCT, ABDUCT_CLIMB
+    if args.splay is not None: SPLAY = args.splay
+    if args.swing_abduct is not None: SWING_ABDUCT = args.swing_abduct
+    if args.abduct_climb is not None: ABDUCT_CLIMB = args.abduct_climb
     if args.freq is not None: GAIT_FREQ = args.freq
     if args.step_fwd is not None: STEP_FWD = args.step_fwd
     if args.fwd_lean is not None: FWD_LEAN = args.fwd_lean
@@ -445,15 +591,39 @@ def main():
     out_dir = args.out_dir or os.path.join(os.path.dirname(__file__), "climber_out")
     os.makedirs(out_dir, exist_ok=True)
     tag = f"L{lvl:.2f}".replace(".", "p")
+    if args.eff_scale != 1.0:
+        tag += f"_eff{args.eff_scale:.2f}".replace(".", "p")
+    if args.kp_scale != 1.0:
+        tag += f"_kp{args.kp_scale:.2f}".replace(".", "p")
+    if SPLAY:
+        tag += f"_splay{SPLAY:.3f}".replace(".", "p")
+    if args.knee_config != "elbow_back":
+        tag += f"_{args.knee_config}"
+    if SWING_ABDUCT:
+        tag += f"_ab{SWING_ABDUCT:.3f}".replace(".", "p")
+    if ABDUCT_CLIMB:
+        tag += f"_abc{ABDUCT_CLIMB:.1f}".replace(".", "p")
+    if args.clearance is not None:
+        tag += f"_clr{CLEARANCE:.3f}".replace(".", "p")
 
     print("=" * 78)
     print(f"SCRIPTED CRAWL-CLIMB CONTROLLER — stair-level {lvl:.2f}  ({args.steps} steps)")
     print("=" * 78)
     print(f"neutral canonical foot: x0={_X0:+.5f} d={_D:.5f} z0={_Z0:+.5f}")
     print(f"gait freq={GAIT_FREQ}Hz duty={DUTY} order(RL,FL,RR,FR) step_fwd={STEP_FWD} "
-          f"fwd_lean={FWD_LEAN} clearance={CLEARANCE} com_gain={COM_GAIN} pitch={PITCH_GAIN}")
+          f"fwd_lean={FWD_LEAN} clearance={CLEARANCE} com_gain={COM_GAIN} pitch={PITCH_GAIN} "
+          f"splay={SPLAY} swing_abduct={SWING_ABDUCT} abduct_climb={ABDUCT_CLIMB}")
 
-    env, jit_reset, jit_step = make_env(lvl)
+    if args.eff_scale != 1.0:
+        print(f"SERVO-UPGRADE PROBE: hfe/kfe stall {1.8*args.eff_scale:.2f} N*m "
+              f"({args.eff_scale:.2f}x STS3215), no-load speed "
+              f"{2.80*(args.eff_scale if args.eff_scale_speed else 1.0):.2f} rad/s")
+    if args.knee_config != "elbow_back":
+        print(f"KNEE CONFIG: {args.knee_config} -> elbow-forward flags "
+              f"{dict(zip(LEG_NAMES, KNEE_CONFIGS[args.knee_config]))}")
+        print(f"  stand pose = {np.round(np.asarray(knee_pose(args.knee_config)), 3).tolist()}")
+    env, jit_reset, jit_step = make_env(lvl, args.eff_scale, args.eff_scale_speed,
+                                        args.kp_scale, args.knee_config)
     print(f"NovaJoystick action={env.action_size} obs={env.observation_size}  "
           f"stairs injected (stair_frac=1, level={lvl})\n")
 
