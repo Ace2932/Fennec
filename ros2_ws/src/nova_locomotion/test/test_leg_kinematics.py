@@ -8,7 +8,7 @@ of the (placeholder) link lengths.
 import math
 import pytest
 
-from nova_ops.safety_envelope.rom_envelope import hfe_bounds
+from nova_ops.rom_envelope import hfe_bounds
 from nova_locomotion.kinematics.leg_ik import (
     LegParams,
     forward_kinematics,
@@ -85,7 +85,7 @@ def test_hfe_window_is_posture_aware_and_end_specific():
          because a positive canonical hfe swings the knee backward, which is
          toward the trunk at the front and away from it at the rear.
     """
-    from nova_ops.safety_envelope.rom_envelope import hfe_bounds
+    from nova_ops.rom_envelope import hfe_bounds
 
     # -105, not -109: kfe_range is 1.9 rad = 108.86 deg, so -109 fails the kfe
     # check first and would mask what this test is actually asserting.
@@ -179,3 +179,28 @@ def test_solve_side_clamps_front_hfe_to_cap():
     foot_ok = forward_kinematics(theta_ok, p)
     out_ok = solve_side("left", foot_ok, p, knee_forward=True, leg="FL")
     assert out_ok == pytest.approx(solve_side("left", foot_ok, p, knee_forward=True))
+
+
+def test_leg_ik_stays_pure_math_no_ros_package_pull_in():
+    """leg_ik's docstring promises "pure math, no ROS/hardware". Keep it true.
+
+    It needs the chassis envelope, which lives in nova_ops (it cannot live here:
+    nova_locomotion.node already imports nova_ops, so the reverse would be a
+    package cycle). The envelope itself is pure data + math — but if it is
+    imported from under nova_ops.safety_envelope, that package's __init__ drags
+    in wrapper/counters/firmware_limits, i.e. a kinematics module transitively
+    depending on the ROS-facing safety publisher. It briefly did. This asserts
+    it does not.
+    """
+    import subprocess
+    import sys
+
+    src = (
+        "import sys, nova_locomotion.kinematics.leg_ik;"
+        "print(repr([m for m in sys.modules "
+        "if 'safety_envelope' in m or m == 'rclpy']))"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", src], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    assert out == "[]", f"leg_ik dragged in {out}"

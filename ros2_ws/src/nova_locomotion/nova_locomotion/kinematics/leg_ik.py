@@ -19,7 +19,7 @@ to get physical joint angles — it owns the left/right mirror (haa sign).
 from __future__ import annotations
 import math
 
-from nova_ops.safety_envelope.rom_envelope import hfe_bounds
+from nova_ops.rom_envelope import hfe_bounds
 from dataclasses import dataclass
 from typing import Optional
 

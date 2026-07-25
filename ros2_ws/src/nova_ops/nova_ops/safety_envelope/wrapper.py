@@ -46,7 +46,7 @@ from typing import Deque, Dict, Optional
 
 from .limits import JointLimits
 from .counters import EnvelopeCounters
-from .rom_envelope import hfe_bounds
+from nova_ops.rom_envelope import hfe_bounds
 
 
 # Load check uses a time-window mean of /joint_states.effort[] per

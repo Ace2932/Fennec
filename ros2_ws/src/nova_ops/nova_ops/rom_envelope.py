@@ -44,7 +44,7 @@ from __future__ import annotations
 import math
 from typing import Optional, Tuple
 
-from .rom_envelope_table import ENVELOPE, HAAS, KFES
+from nova_ops.rom_envelope_table import ENVELOPE, HAAS, KFES
 
 # Clearance back-off from the measured first-contact boundary, degrees. The gate
 # refuses a posture because it would come NEAR the body, not only because it
