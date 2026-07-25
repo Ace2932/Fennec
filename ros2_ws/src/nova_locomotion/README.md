@@ -28,9 +28,24 @@ cd ros2_ws/src/nova_locomotion && PYTHONPATH=. python -m pytest test/ -q
   stand, feet under hips) -> joint-space quintic blends, zero vel+acc at
   ends; `stand_up(start_pose=...)` accepts the real current pose (post-
   E-stop recovery never assumes a keyframe). 50 Hz output.
-- `KNEE_FORWARD` (leg_ik) — **X-CONFIG decided 2026-07-06**: rear knee
-  branch mirrored; `within_limits` flips the asymmetric hfe window for
-  mirrored legs. Gait planners: keep >=40 mm front<->rear foot exclusion.
+- `KNEE_FORWARD` (leg_ik) — **TRANSLATED, corrected 2026-07-25**: every
+  knee bends BACKWARD (all four `False`). The robot as built is the
+  translated layout and the MJX sim always matched it (`sim/nova_mjx`
+  `DEFAULT_POSE` kfe −1.2 on all four). The previous "X-CONFIG decided
+  2026-07-06" value `{FL: True, FR: True, RL: False, RR: False}` was
+  never built and commanded the FRONT knees FORWARD — `gait_pose` would
+  have driven the front legs to a mirrored stance on first stand.
+  Verified: `sim/nova_mjx/render_knee_configs.py`.
+  ⚠ **Two open consequences (see docs/knee-config-analysis.md):**
+  (1) `within_limits` flips the hfe window whenever `knee_forward` is
+  False, so it now flips for ALL legs — correct for the REAR pair (whose
+  toward-trunk fold is negative canonical) but WRONG for the FRONT pair,
+  which needs the unflipped `[hfe_min, hfe_max]`. `solve_side`'s
+  FRONT_LEGS clamp is the runtime backstop and does apply the right
+  bound, so this bites gait-quality tests, not hardware.
+  (2) the `lie`/`crouch` choreo keyframes need front hfe +61°/+57°,
+  past the +50° riser-skirt cap — `test_keyframe_feet_under_hips` fails
+  on this and is left failing deliberately.
 
 ## Modules (added 2026-07-06, pre-hardware locomotion work package)
 Roadmap: `docs/roadmap-trot-balance.md`. All pure-math, no rclpy in tests.

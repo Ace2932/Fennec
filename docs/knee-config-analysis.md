@@ -1,5 +1,45 @@
 # Knee Configuration Analysis (backlog #6)
 
+> ## ⛔ SUPERSEDED 2026-07-25 — the robot is TRANSLATED, not X-CONFIG
+>
+> The 2026-07-06 decision below selected X-CONFIG. **It was never built.**
+> Ground truth (Aiden, 2026-07-25): the robot is the **TRANSLATED** layout —
+> all four knees bend BACKWARD — and the MJX sim has always matched it
+> (`sim/nova_mjx`: `DEFAULT_POSE` hfe +0.6 / kfe −1.2 on every leg).
+> `leg_ik.KNEE_FORWARD` is now `{FL, FR, RL, RR: False}`; it previously read
+> `{FL: True, FR: True, RL: False, RR: False}`, which commanded the FRONT
+> knees FORWARD and would have driven the front legs to a mirrored stance on
+> first stand via `controller.gait_pose`.
+>
+> Verified by `sim/nova_mjx/render_knee_configs.py`, which measures each knee
+> against the hip→foot chord: **−66.0 mm (backward) on all four legs**.
+>
+> **The analysis below is still accurate about the TRADE-OFF**, and the
+> translated column's cost is now live rather than hypothetical:
+> * Crouching in translated folds the FRONT legs TOWARD the trunk, into the
+>   riser skirt (+50° cap, contact ~+55°). The `lie` and `crouch` choreo
+>   keyframes need front hfe **+61.3°** and **+57.4°** — both past the cap.
+>   Deepest body height inside it is **−16.83 cm**, vs today's keyframes at
+>   −14.0 (lie) and −15.0 (crouch); stand at −18.0 is fine (+45.1°).
+>   `test_keyframe_feet_under_hips` fails on exactly this and is left failing.
+> * The REAR legs crouch by folding AWAY from the trunk, so they keep the
+>   −86° away-trunk room and are not skirt-limited.
+> * Under X-config BOTH pairs folded away from the trunk, which is where the
+>   "46° rear margin" advantage came from. That advantage is now forfeited.
+>
+> **Open, needs a decision** — three ways to recover the front-leg fold range:
+> raise the `lie`/`crouch` keyframes to ≥ −16.83 cm (safe, but leaves almost
+> no sit travel); re-measure the skirt cap (precedent: #47 found the front
+> `hfe_ext` −50° stale by 36°, but contact here is measured at ~+55°, short of
+> the +61.3° needed); or trim the riser skirt itself — it is a printed part,
+> and it is the SAME part that caps stair step-up (see the #142 write-up:
+> the leg can only shorten 3.81 cm at nominal width before hfe hits +50°).
+>
+> Also note `within_limits` keys its hfe-window flip off `knee_forward`, which
+> in translated is now False for every leg — correct for the REAR pair, wrong
+> for the FRONT pair. `solve_side`'s FRONT_LEGS clamp still applies the right
+> bound at runtime.
+
 2026-07-06. Question: keep the stock TRANSLATED layout (all knees fold
 the same world direction) or switch the rear pair to X-CONFIG
 (mirrored, mammal/dog layout) — decide BEFORE gait work bakes it in.
@@ -37,7 +77,7 @@ Notes on the two negative rows:
 - The +50 fold cap is the riser-skirt graze, applied leg-local to all
   legs. In X the rear pair simply never visits that side of its range.
 
-## DECIDED 2026-07-06: **X-CONFIG** (user call, same day)
+## ~~DECIDED 2026-07-06: **X-CONFIG** (user call, same day)~~ — SUPERSEDED, see the banner above; the robot is TRANSLATED
 
 Rear crouch margin (46° vs 10°) + robot-level symmetry + natural
 stand-up mechanics outweigh the modestly wider foot-exclusion zone. And

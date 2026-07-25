@@ -163,12 +163,24 @@ def solve_side(
 
 LEG_SIDE = {"FL": "left", "FR": "right", "RL": "left", "RR": "right"}
 
-# Knee configuration — X-CONFIG (DECIDED 2026-07-06, docs/knee-config-
-# analysis.md): rear knees mirrored (dog layout). Pure software: this is
-# the IK elbow branch per leg; foot targets stay canonical. Rear crouch
-# margin 46° vs 10°, robot-level fore/aft symmetry. Gait planners must
-# keep a >=40 mm front<->rear foot exclusion (X worst-case convergence).
-KNEE_FORWARD = {"FL": True, "FR": True, "RL": False, "RR": False}
+# Knee configuration — TRANSLATED (knees BACKWARD on both pairs).
+#
+# CORRECTED 2026-07-25 (Aiden, ground truth): the robot as built is the
+# TRANSLATED layout — every knee bends backward — and the MJX sim
+# (sim/nova_mjx: DEFAULT_POSE hfe +0.6 / kfe -1.2 on all four legs, and
+# nova.xml's stand keyframe) has always matched it. The previous value
+# {FL: True, FR: True, RL: False, RR: False} recorded an "X-CONFIG
+# DECIDED 2026-07-06" (docs/knee-config-analysis.md) that was never
+# built, and it commanded the FRONT knees FORWARD — controller.gait_pose
+# would have driven the front legs to a mirrored stance on first stand.
+# Verified by sim/nova_mjx/render_knee_configs.py, which measures each
+# knee against the hip->foot chord: translated = -66.0 mm (backward) on
+# all four legs.
+#
+# Pure software: this is the IK elbow branch per leg; foot targets stay
+# canonical. Knee config is NOT a build property — CAD femur/tibia are
+# mirrored left/right only, never front/rear.
+KNEE_FORWARD = {"FL": False, "FR": False, "RL": False, "RR": False}
 
 # LA-13 introduced these as "legs whose away-trunk hfe reach is capped
 # tighter than the rear default" (chassis check_fit HEAD case — a -86

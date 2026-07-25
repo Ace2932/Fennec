@@ -59,16 +59,33 @@ Pose = Dict[str, Tuple[float, float, float]]
 class ChoreoParams:
     leg: LegParams = LegParams()
     dt: float = 0.02  # 50 Hz output (matches feedback rate)
-    stand_z: float = 0.180  # nominal stand (76% reach, knee ~81°)
-    # #47 (2026-07-11): RESTORED to the pre-LA-13 depths now that FL/FR
-    # share REAR's -86° hfe cap (see module docstring) — LA-13's interim
-    # 0.176/0.172 is no longer needed.
-    crouch_z: float = 0.150  # low crouch (front hfe ~-57°, knee ~102°)
-    lie_z: float = 0.140  # deepest commandable (front hfe ~-61°, knee ~108°)
+    stand_z: float = 0.180  # nominal stand (76% reach, front hfe +45.1°)
+    # RAISED 2026-07-25 (knee config corrected to TRANSLATED, leg_ik.KNEE_FORWARD).
+    #
+    # Under the X-config these were 0.150 / 0.140, where the front legs took the
+    # elbow-FORWARD branch and crouching drove front hfe NEGATIVE (~-57°/-61°),
+    # away from the trunk into the -86° window — lots of room.
+    #
+    # Translated flips that: every knee bends backward, so crouching drives front
+    # hfe POSITIVE, TOWARD the trunk and into the riser skirt. The skirt caps
+    # hfe_max at +50° (chassis gate 2026-07-06; tibia flank contacts from ~+55°),
+    # and the old depths need +57.4° (crouch) and +61.3° (lie) — both past it.
+    # solve_side's FRONT_LEGS clamp fired and the foot landed 27 mm off target.
+    #
+    # New depths sit inside the cap with margin: crouch +47°, lie +49°.
+    # ⚠ The usable crouch envelope in translated is only ~1.2 cm (stand 18.01 cm
+    # at the cap-free +45° down to 16.84 cm at the +50° cap), so lie/crouch/stand
+    # are now nearly the same pose. Recovering real sit travel needs either a
+    # riser-skirt trim (the same part that caps stair step-up) or a front/rear
+    # ASYMMETRIC crouch — only the FRONT pair is skirt-limited; the rear pair
+    # folds away from the trunk and keeps its full -86° room, which is also how a
+    # dog actually sits. See docs/knee-config-analysis.md.
+    crouch_z: float = 0.1755  # front hfe +47.0°, kfe -84.3°
+    lie_z: float = 0.1708  # deepest inside the +50° skirt cap: front hfe +49.0°
 
 
 # canonical foot-space keyframes: (x, y, z) per leg — same for all legs
-# (X-config lives in the knee branch, not the target)
+# (the knee configuration lives in the IK branch, not the target)
 def KEYFRAMES(p: ChoreoParams):
     d = p.leg.hip_offset
     return {
