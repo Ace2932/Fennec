@@ -18,6 +18,8 @@ to get physical joint angles — it owns the left/right mirror (haa sign).
 
 from __future__ import annotations
 import math
+
+from nova_locomotion.kinematics.rom_envelope import hfe_bounds
 from dataclasses import dataclass
 from typing import Optional
 
@@ -156,9 +158,16 @@ def solve_side(
         t1 = -t1
     elif side != "left":
         raise ValueError(f"side must be 'left'|'right', got {side!r}")
-    if leg in FRONT_LEGS:
-        t2 = max(p.hfe_min_front, min(p.hfe_max, t2))
-    elif leg in REAR_LEGS:
+    if leg in FRONT_LEGS or leg in REAR_LEGS:
+        # POSTURE-AWARE CLAMP (2026-07-25) — matches within_limits. Clamping every
+        # posture to one worst-case scalar cost real stride: the trot's +59.4 deg
+        # front excursion is chassis-clear at haa 0 (bound +70.6) and was being
+        # pulled back to +50, a bound that only applies at full outboard splay.
+        env_lo, env_hi = hfe_bounds(leg, t1, t3)
+        hfe_lo = max(env_lo, p.hfe_min_front if leg in FRONT_LEGS else p.hfe_min)
+        hfe_hi = min(env_hi, -p.hfe_min)
+        t2 = max(hfe_lo, min(hfe_hi, t2))
+    elif False:
         # REAR CLAMP ADDED 2026-07-25. The rear pair previously had NO runtime
         # backstop: only FRONT_LEGS were clamped, on the belief that the +50
         # riser-skirt cap was the rear's cap too. It is not — the rear's
@@ -253,12 +262,16 @@ def within_limits(
     # `leg` omitted -> the end is unknown, so use the CONSERVATIVE INTERSECTION
     # of the two windows rather than guessing an end. Pass leg= to get the real
     # one (solve_side already threads it through).
-    if leg in FRONT_LEGS:
-        lo, hi = hfe_min, p.hfe_max
-    elif leg in REAR_LEGS:
-        lo, hi = -p.hfe_max, -hfe_min
-    else:
-        lo, hi = -p.hfe_max, p.hfe_max
+    # POSTURE-AWARE (2026-07-25): the chassis bound is a function of (haa, kfe),
+    # not a scalar. rom_envelope carries the MEASURED contact-free hfe interval
+    # per leg END and posture cell; intersect it with the leg's own mechanical
+    # travel (+-|hfe_min|, the gate's away-trunk figure) so a chassis-clear pose
+    # still cannot exceed what the linkage can physically do.
+    #     FRONT  haa +40 / kfe -109 -> +51.7   (this is where the old +50 came from)
+    #     FRONT  haa   0 / kfe -109 -> +70.6   (where trot and crawl actually run)
+    #     REAR   haa   0            -> -80.1
+    env_lo, env_hi = hfe_bounds(leg, t1, t3)
+    lo, hi = max(env_lo, hfe_min), min(env_hi, -hfe_min)
     return (
         abs(t1) <= p.haa_range + 1e-9
         and lo - 1e-9 <= t2 <= hi + 1e-9
