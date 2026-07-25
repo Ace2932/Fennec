@@ -37,6 +37,10 @@ import numpy as np
 
 _PROJ = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(_PROJ, "ros2_ws", "src", "nova_locomotion"))
+# nova_ops too: leg_ik imports the chassis ROM envelope from
+# nova_ops.rom_envelope (it cannot live in nova_locomotion — nova_locomotion.node
+# already imports nova_ops, so that direction would be a package cycle).
+sys.path.insert(0, os.path.join(_PROJ, "ros2_ws", "src", "nova_ops"))
 from nova_locomotion.kinematics.leg_ik import (   # noqa: E402
     LegParams, forward_kinematics, inverse_kinematics, Unreachable,
 )
