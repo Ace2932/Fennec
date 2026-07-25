@@ -411,21 +411,6 @@
 			(uuid "5b0a98b7-0b36-4175-a8f8-80fa9b4aba99")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -5.5 -5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -5.5 5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KICAD9_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x02_P2.54mm_Vertical.step"
-			(offset (xyz 8 1.27 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 0))
-		)
 	)
 	(footprint "nova_v6:INA226_Module_Breakout"
 		(layer "F.Cu")
@@ -623,16 +608,6 @@
 			(uuid "6b21db76-b5f5-4cfb-9edb-e2a1cd353b90")
 		)
 		(embedded_fonts no)
-			(model "${KICAD9_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x04_P2.54mm_Vertical.step"
-			(offset (xyz -5.08 -6.5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KIPRJMOD}/../3dmodels/INA226_Module.wrl"
-			(offset (xyz 0 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 0))
-		)
 	)
 	(footprint "Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical"
 		(layer "F.Cu")
@@ -980,10 +955,16 @@
 			(uuid "04060ef6-a326-458d-96b5-660b493adc50")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -3 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
+		(model "${KICAD9_3DMODEL_DIR}/Connector_AMASS.3dshapes/AMASS_XT30U-M_1x02_P5.0mm_Vertical.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
 		)
 	)
 	(footprint "Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical"
@@ -1321,10 +1302,16 @@
 			(uuid "d10c044c-21b2-44ec-9fe4-eb382677d9fd")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -3 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
+		(model "${KICAD9_3DMODEL_DIR}/Connector_AMASS.3dshapes/AMASS_XT30U-M_1x02_P5.0mm_Vertical.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
 		)
 	)
 	(footprint "Diode_SMD:D_SOD-123F"
@@ -2588,10 +2575,16 @@
 			(uuid "c38d34fa-71d7-495b-abb5-464085f30368")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -3 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
+		(model "${KICAD9_3DMODEL_DIR}/Connector_AMASS.3dshapes/AMASS_XT30U-M_1x02_P5.0mm_Vertical.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
 		)
 	)
 	(footprint "Resistor_SMD:R_0603_1608Metric"
@@ -3128,10 +3121,16 @@
 			(uuid "04136fc8-e5e7-487f-a5fb-3fe3f0b69c3e")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -3 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
+		(model "${KICAD9_3DMODEL_DIR}/Connector_AMASS.3dshapes/AMASS_XT30U-M_1x02_P5.0mm_Vertical.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
 		)
 	)
 	(footprint "Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical"
@@ -3480,10 +3479,16 @@
 			(uuid "8cd7254a-e384-4cb7-a0fc-ab7f0cc67b10")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -3 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
+		(model "${KICAD9_3DMODEL_DIR}/Connector_AMASS.3dshapes/AMASS_XT30U-M_1x02_P5.0mm_Vertical.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
 		)
 	)
 	(footprint "nova_v6:Buck_Offboard_Terminal_2xXT30"
@@ -3730,21 +3735,6 @@
 			(uuid "6c046ef6-821a-41c6-aedf-dfb0312a18fe")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -5.5 -5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -5.5 5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KICAD9_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x02_P2.54mm_Vertical.step"
-			(offset (xyz 8 1.27 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 0))
-		)
 	)
 	(footprint "Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical"
 		(layer "F.Cu")
@@ -4081,10 +4071,16 @@
 			(uuid "72470152-7af0-4f88-afad-b299bd2c698a")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -3 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
+		(model "${KICAD9_3DMODEL_DIR}/Connector_AMASS.3dshapes/AMASS_XT30U-M_1x02_P5.0mm_Vertical.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
 		)
 	)
 	(footprint "MountingHole:MountingHole_3.2mm_M3"
@@ -5226,21 +5222,6 @@
 			(uuid "1681c7f8-1195-4bbe-a9f7-a2960f6993a3")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -5.5 -5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -5.5 5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KICAD9_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x02_P2.54mm_Vertical.step"
-			(offset (xyz 8 1.27 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 0))
-		)
 	)
 	(footprint "Connector_AMASS:AMASS_XT60-M_1x02_P7.20mm_Vertical"
 		(layer "F.Cu")
@@ -5774,16 +5755,6 @@
 			(uuid "8b344a29-2836-4af7-9253-1ed964a0d5f6")
 		)
 		(embedded_fonts no)
-			(model "${KICAD9_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x04_P2.54mm_Vertical.step"
-			(offset (xyz -5.08 -6.5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KIPRJMOD}/../3dmodels/INA226_Module.wrl"
-			(offset (xyz 0 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 0))
-		)
 	)
 	(footprint "TerminalBlock_Philmore:TerminalBlock_Philmore_TB132_1x02_P5.00mm_Horizontal"
 		(layer "F.Cu")
@@ -11850,16 +11821,6 @@
 			(uuid "d9283fed-bf0a-43cc-bb64-3bb12ad2be69")
 		)
 		(embedded_fonts no)
-			(model "${KICAD9_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x04_P2.54mm_Vertical.step"
-			(offset (xyz -5.08 -6.5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KIPRJMOD}/../3dmodels/INA226_Module.wrl"
-			(offset (xyz 0 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 0))
-		)
 	)
 	(footprint "nova_v6:Buck_Offboard_Terminal_2xXT30"
 		(layer "F.Cu")
@@ -12105,21 +12066,6 @@
 			(uuid "d0db6acc-5e06-4040-9195-8fabc5f0936a")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -5.5 -5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -5.5 5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KICAD9_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x02_P2.54mm_Vertical.step"
-			(offset (xyz 8 1.27 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 0))
-		)
 	)
 	(footprint "MountingHole:MountingHole_3.2mm_M3"
 		(layer "F.Cu")
@@ -12568,10 +12514,16 @@
 			(uuid "6f0399a2-22d4-44ff-95f9-eb77c279241a")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -3 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
+		(model "${KICAD9_3DMODEL_DIR}/Connector_AMASS.3dshapes/AMASS_XT30U-M_1x02_P5.0mm_Vertical.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
 		)
 	)
 	(footprint "Package_TO_SOT_THT:TO-220-3_Vertical"
@@ -13205,21 +13157,6 @@
 			(uuid "779f0a34-983c-4df7-9df7-76a20d92906f")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -5.5 -5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -5.5 5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KICAD9_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x02_P2.54mm_Vertical.step"
-			(offset (xyz 8 1.27 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 0))
-		)
 	)
 	(footprint "nova_v6:INA226_Module_Breakout"
 		(layer "F.Cu")
@@ -13417,16 +13354,6 @@
 			(uuid "00c86b6e-ccb2-4b6b-a1f8-7fc717b5d235")
 		)
 		(embedded_fonts no)
-			(model "${KICAD9_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x04_P2.54mm_Vertical.step"
-			(offset (xyz -5.08 -6.5 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
-		)
-		(model "${KIPRJMOD}/../3dmodels/INA226_Module.wrl"
-			(offset (xyz 0 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 0))
-		)
 	)
 	(footprint "Connector_AMASS:AMASS_XT30U-M_1x02_P5.0mm_Vertical"
 		(layer "F.Cu")
@@ -13763,10 +13690,16 @@
 			(uuid "9a7c0ce8-c615-4130-9c33-552ad9095ae4")
 		)
 		(embedded_fonts no)
-			(model "${KIPRJMOD}/../3dmodels/XT30-M.step"
-			(offset (xyz -3 0 0))
-			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 90))
+		(model "${KICAD9_3DMODEL_DIR}/Connector_AMASS.3dshapes/AMASS_XT30U-M_1x02_P5.0mm_Vertical.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
 		)
 	)
 	(footprint "Capacitor_THT:CP_Radial_D12.5mm_P5.00mm"
