@@ -90,7 +90,7 @@ class SafeJointCommandPublisher:
             "position": {},
             "velocity": {},
             "load": {},
-            "posture": {},   # chassis envelope (see _clamp_posture)
+            "posture": {},  # chassis envelope (see _clamp_posture)
         }
 
         # Leg -> (haa_id, hfe_id, kfe_id) for the posture gate. PER-LEG-
@@ -102,14 +102,23 @@ class SafeJointCommandPublisher:
         try:
             from nova_ops.joint_map import load_joint_id_map
 
-            ids: Dict[str, int] = {}
-            for name, jid in load_joint_id_map().items():
-                leg, jtype = name.split("_")[0], name.split("_")[1]
-                if jtype == "haa":
-                    ids[leg] = jid
-            self._leg_ids = {
-                leg: (jid, jid + 1, jid + 2) for leg, jid in ids.items()
-            }
+            # LOOK EACH JOINT UP BY NAME. This used to find the haa and assume
+            # (jid, jid+1, jid+2). That holds under the current PER-LEG
+            # SEQUENTIAL convention, but it is an assumption about the map's
+            # SHAPE rather than a read of the map — if the convention ever
+            # changes, the posture gate silently reads the wrong joints and
+            # clamps the wrong thing. The yaml already names every joint.
+            jmap = load_joint_id_map()
+            legs = {name.split("_")[0] for name in jmap}
+            self._leg_ids = {}
+            for leg in sorted(legs):
+                try:
+                    self._leg_ids[leg] = tuple(
+                        jmap[f"{leg}_{jt}"] for jt in ("haa", "hfe", "kfe")
+                    )
+                except KeyError:
+                    continue  # not a 3-joint leg (e.g. the Phase-4 arm)
+            self._leg_ids = self._leg_ids or None
         except Exception:
             self._leg_ids = None
 

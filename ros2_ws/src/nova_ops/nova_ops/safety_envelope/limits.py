@@ -168,9 +168,29 @@ def _knee() -> JointLimit:
     # the ~113-115 deg CAD plastic-contact sweep and the 109 sw ROM used
     # everywhere else — would have crashed the knee into its hard stop.
     # Never lock to 0 (lower margin unchanged).
+    # SIGN CORRECTED 2026-07-25. This window was [+5, +109] — kfe treated as a
+    # positive bend MAGNITUDE. It is not: leg_ik/URDF kfe is SIGNED, and the
+    # built TRANSLATED knee config puts every commanded knee NEGATIVE.
+    #
+    # Nothing converts between them. solve_side() returns physical angles,
+    # pose_to_positions() is a pure slot remap, and the node publishes that
+    # verbatim — so the envelope was clamping EVERY knee command to the +5 floor:
+    #
+    #     trot FL kfe commanded -73.1  ->  published +7.0   (soft lower)
+    #     trot RL kfe commanded -95.1  ->  published +7.0
+    #
+    # i.e. the robot would have been commanded to near-straight knees under load
+    # on its first stand. Never caught because no test crossed the gait ->
+    # publish frame boundary; solve_side, within_limits and limits.py were each
+    # tested in isolation. test_end_to_end_gait_survives_the_envelope now does.
+    #
+    # Everything the robot commands lives in -95.1 .. -71.1 (trot, crawl, all
+    # three choreo poses), so [-109, -5] clears it by 11.9 / 64.1 deg. -109 is
+    # the URDF kfe_range; -5 keeps the original "never lock the knee straight"
+    # intent, now on the correct side of zero.
     return JointLimit(
-        lower=math.radians(5.0),
-        upper=math.radians(109.0),
+        lower=math.radians(-109.0),
+        upper=math.radians(-5.0),
         velocity=math.radians(240.0),
         effort=0.70,
     )

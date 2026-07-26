@@ -86,7 +86,9 @@ def test_limits_type_grouping_matches_yaml():
         # the chassis constraint moved to nova_ops.safety_envelope.rom_envelope
         # and this limit is now purely the linkage's own travel.
         "hfe": math.radians(86.0),
-        "kfe": math.radians(109.0),  # LA-11: URDF kfe_range cap (was 130, wrong)
+        # SIGNED and NEGATIVE: the translated knee config commands -95..-71.
+        # Was +109, which clamped every knee command to the +5 floor.
+        "kfe": math.radians(-5.0),
     }
     for name, jid in m.items():
         jtype = name.split("_")[1]
