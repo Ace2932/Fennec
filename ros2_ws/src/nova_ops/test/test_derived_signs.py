@@ -111,7 +111,7 @@ def test_home_tick_matches_the_measured_homing_convention():
 
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_haa_ranges_are_exact_left_right_mirrors():
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
     rng = {}
@@ -128,7 +128,7 @@ def test_haa_ranges_are_exact_left_right_mirrors():
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_hfe_kfe_identical_across_all_four_legs():
     """No fore-aft mirroring -- corroborates '4 identical translated legs'."""
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
     for joint in ("hfe", "kfe"):
@@ -142,7 +142,7 @@ def test_hfe_kfe_identical_across_all_four_legs():
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_positive_haa_moves_every_foot_toward_plus_y():
     """Step 5, measured rather than predicted."""
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
     d = mujoco.MjData(m)
@@ -163,7 +163,7 @@ def test_positive_haa_moves_every_foot_toward_plus_y():
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_measured_outboard_direction_matches_the_derived_table():
     """Step 6 end-to-end: model geometry must reproduce the shipped signs."""
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
     d = mujoco.MjData(m)
@@ -262,7 +262,7 @@ def test_full_urdf_sign_table_covers_all_twelve_joints():
 
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_pitch_ranges_identical_across_legs_supports_shared_front_rear_sign():
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
     for joint in ("hfe", "kfe"):
@@ -323,7 +323,7 @@ def test_cad_and_convention_reproduce_the_shipped_pitch_table():
       * measured convention -> +tick is a NEGATIVE rotation about the shaft.
       * URDF -> hfe/kfe axis is +y on all four legs.
     """
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
     import numpy as np
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
@@ -348,7 +348,7 @@ def test_cad_and_convention_reproduce_the_shipped_pitch_table():
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_haa_axis_is_fore_aft_and_pitch_axis_is_lateral():
     """The whole left/right asymmetry rests on which axis the mirror flips."""
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
     import numpy as np
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
