@@ -260,3 +260,65 @@ def test_posture_gate_is_conservative_while_haa_sign_is_unknown():
         out.append(pub.published[-1][fl[1] - 1])
     assert out[0] == pytest.approx(out[1]), "haa sign changed the bound"
     assert out[0] < fold - 1e-9
+
+
+# ---- END-TO-END: a real gait pose must survive the envelope ------------------
+#
+# THE MISSING TEST CLASS. solve_side, within_limits and limits.py were each
+# tested in isolation, and all passed, while the path BETWEEN them was broken:
+# limits.py held kfe as a positive magnitude [+5, +109] while leg_ik emits it
+# SIGNED and negative, and nothing converts. Result — every knee command was
+# clamped to the +5 floor (trot RL: commanded -95.1, published +7.0), i.e. the
+# robot would have been driven to near-straight knees under load on first stand.
+#
+# No unit test could see it. This one walks the real chain:
+#   gait -> solve_side -> pose_to_positions -> SafeJointCommandPublisher.publish
+
+
+def _gait_positions(phase: float):
+    from nova_locomotion.controller import pose_to_positions, LEGS
+    from nova_locomotion.gait.trot import TrotParams, all_feet
+    from nova_locomotion.kinematics.leg_ik import (
+        KNEE_FORWARD, LEG_SIDE, LegParams, solve_side,
+    )
+    from nova_ops.joint_map import load_joint_id_map
+
+    p = LegParams()
+    feet = all_feet(phase, TrotParams())
+    pose = {
+        leg: solve_side(LEG_SIDE[leg], feet[leg], p, KNEE_FORWARD[leg], leg=leg)
+        for leg in LEGS
+    }
+    return pose_to_positions(pose, load_joint_id_map()), load_joint_id_map()
+
+
+def test_end_to_end_gait_survives_the_envelope():
+    """Every joint a real trot commands must publish UNCHANGED.
+
+    A clamp here is not a safety win — it means the gait and the envelope
+    disagree about what a legal pose is, and the robot executes neither.
+    """
+    from nova_ops.safety_envelope import load_default_limits
+
+    node, pub = _FakeNode(), _FakePub()
+    sw = SafeJointCommandPublisher(
+        node=node, limits=load_default_limits(), raw_publisher=pub
+    )
+    worst = []
+    for phase in [i / 24.0 for i in range(24)]:
+        pos, idm = _gait_positions(phase)
+        sw.publish(_CmdMsg(pos))
+        out = pub.published[-1]
+        for name, jid in idm.items():
+            i = jid - 1
+            if i < len(pos) and abs(out[i] - pos[i]) > 1e-9:
+                worst.append(
+                    f"{name}@phase{phase:.2f}: commanded "
+                    f"{math.degrees(pos[i]):+.1f}° -> published "
+                    f"{math.degrees(out[i]):+.1f}°"
+                )
+    assert not worst, (
+        "the safety envelope altered a real gait command:\n  "
+        + "\n  ".join(worst[:8])
+        + (f"\n  ...and {len(worst) - 8} more" if len(worst) > 8 else "")
+    )
