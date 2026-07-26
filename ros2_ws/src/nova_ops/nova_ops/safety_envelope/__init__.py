@@ -13,7 +13,15 @@ this envelope catches buggy commands BEFORE they hit the bus.
 from .limits import JointLimit, JointLimits, load_default_limits
 from .wrapper import SafeJointCommandPublisher
 from .counters import EnvelopeCounters
-from .firmware_limits import JointHomeCalib, build_joint_limits_data
+from .firmware_limits import (
+    JointHomeCalib,
+    build_calib,
+    build_joint_limits_data,
+    convert_positions,
+    is_calibrated,
+    raw_to_rad,
+    rad_to_raw,
+)
 
 __all__ = [
     "JointLimit",
@@ -22,5 +30,10 @@ __all__ = [
     "SafeJointCommandPublisher",
     "EnvelopeCounters",
     "JointHomeCalib",
+    "build_calib",
     "build_joint_limits_data",
+    "convert_positions",
+    "is_calibrated",
+    "raw_to_rad",
+    "rad_to_raw",
 ]
