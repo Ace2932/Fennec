@@ -73,6 +73,22 @@ CASES = [
 ]
 
 
+# ---- haa envelope, module-level so the drift guard can import it (#157) ----
+# MEASURED, not read off a frame comment: the coax->shoulder MIR transform used
+# by the cable/shoulder checks is the same one that nearly inverted the hip
+# signs in #156 when hand-mapped. Probing points down the leg (foot at coax
+# z=-200) through that transform, haa=-40 puts the foot at x=+167.6 while
+# haa=+40 puts it at x=-89.5, across the centreline (hip station x=+39.05,
+# centreline x=0). So NEGATIVE haa is OUTBOARD in this file's frame.
+# Re-derive by running it, never by reading it.
+HAA_OUTBOARD_SIGN = -1
+# MJCF haa range [-0.262, +0.698] rad = 15deg inboard / 40deg outboard
+# (sim/nova_mjx/nova.xml, mirrored per side). nova_ops test_derived_signs.py
+# asserts these still match the model, so the gate cannot silently drift.
+HAA_OUTBOARD_MAX_DEG = 40.0
+HAA_INBOARD_MAX_DEG = 15.0
+
+
 def rot_about(angle_deg, axis, point):
     return trimesh.transformations.rotation_matrix(
         np.radians(angle_deg), axis, point)
@@ -504,15 +520,41 @@ def cable_checks():
     base_cs = HIP_T @ MIR   # coax frame -> shoulder frame (right hip)
     haa_anchor = np.array([0, 19, -27])          # coax.scad's new pair midpoint (x=+/-7 avg 0)
     grommet = np.array([32, -75.7, -26])         # shoulder.scad Ø12 grommet bore midpoint
+    # #157: this used to sweep a SYMMETRIC [-45..+45], which measured 40deg of
+    # INBOARD travel the robot is not permitted to use while sampling the legal
+    # outboard travel once. Sweep the real, asymmetric envelope instead.
+    #
+    # Sign and envelope live at module scope (see the block above rot_about) so
+    # the nova_ops drift guard can import them.
+    def _haa_samples():
+        out = [HAA_OUTBOARD_SIGN * a for a in (40, 30, 20, 10, 0)]
+        inb = [-HAA_OUTBOARD_SIGN * a for a in (5, 10, 15)]
+        return out + inb
+
+    print(f'   HAA envelope swept: {HAA_INBOARD_MAX_DEG:.0f}deg inboard .. '
+          f'{HAA_OUTBOARD_MAX_DEG:.0f}deg outboard (asymmetric; '
+          f'outboard = {"-" if HAA_OUTBOARD_SIGN < 0 else "+"}haa here)')
     worst_haa = None
-    for haa in [-45, -40, -25, 0, 25, 40, 45]:
+    best_haa = None
+    for haa in _haa_samples():
         S = rot_about(haa, [0, 1, 0], [39.05, 0, 0])
         p = trimesh.transform_points([haa_anchor], base_cs)[0]
         p = trimesh.transform_points([p], S)[0]
         d = float(np.linalg.norm(p - grommet))
         worst_haa = d if worst_haa is None else min(worst_haa, d)
+        best_haa = d if best_haa is None else max(best_haa, d)
         tag = 'WARN' if d < MIN_SPAN else 'OK  '
-        print(f'   {tag} HAA  loop haa {haa:+4d}deg: {d:.1f}mm span (>= {MIN_SPAN:.0f}mm wanted)')
+        side = 'neutral ' if haa == 0 else (
+            'OUTBOARD' if np.sign(haa) == HAA_OUTBOARD_SIGN else 'inboard ')
+        print(f'   {tag} HAA  loop haa {haa:+4d}deg ({side}): {d:.1f}mm span '
+              f'(>= {MIN_SPAN:.0f}mm wanted)')
+    # The EXCURSION is the fatigue-relevant number at a ~1e5 cyc/hr joint: the
+    # static minimum is what MIN_SPAN tests, but it is the swing between the
+    # extremes that flexes the loop. Unlocking the 40deg splay (#156/#157)
+    # leaves the minimum untouched -- it sits at the inboard limit, inside the
+    # old +/-15 lock -- while roughly TRIPLING this, 1.71mm -> 5.26mm.
+    print(f'   HAA  loop excursion across the envelope: '
+          f'{best_haa - worst_haa:.2f}mm ({worst_haa:.1f}..{best_haa:.1f}mm)')
 
     print(f'   worst-case span: KNEE {worst_knee:.1f}mm, HIP {worst_hip:.1f}mm, '
           f'HAA {worst_haa:.1f}mm -- LA-14 (open, not fixed): all three loops fold '

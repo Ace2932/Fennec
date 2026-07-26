@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import math
 import pathlib
+import sys
 
 import pytest
 
@@ -35,6 +36,36 @@ MJCF = REPO / "sim" / "nova_mjx" / "nova.xml"
 
 LEFT = ("FL", "RL")
 RIGHT = ("FR", "RR")
+
+
+def _load_cad_module(rel_dir: str, name: str):
+    """Load a CAD helper BY PATH, never by `sys.path` + module name.
+
+    There are two `check_fit.py` in the tree -- `hardware/cad/chassis/` and
+    `hardware/cad/leg_v6/`. Importing by bare name means whichever test ran
+    first and inserted its directory wins, so the second silently gets the
+    wrong module. That surfaced as a SKIP ("cannot import name
+    HAA_INBOARD_MAX_DEG") which looked like an optional dependency and was
+    really a drift guard that never ran. Explicit paths + distinct module
+    names make it order-independent.
+    """
+    import importlib.util
+
+    path = REPO / rel_dir / "check_fit.py"
+    if not path.exists():
+        pytest.skip(f"{path} not present")
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    # The module still needs its OWN directory importable for sibling imports
+    # (chassis/check_fit.py pulls in power_board_model). Binding it under a
+    # unique name is what prevents the collision; the path entry is separate
+    # and still required.
+    added = str(path.parent)
+    if added not in sys.path:
+        sys.path.insert(0, added)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 # --------------------------------------------------------------------------
@@ -255,16 +286,11 @@ def test_cad_places_every_pitch_horn_inboard():
     coax frame is redefined, the derived table must be revisited.
     """
     np = pytest.importorskip("numpy")
-    chassis = REPO / "hardware" / "cad" / "chassis"
-    if not (chassis / "check_fit.py").exists():
-        pytest.skip("check_fit not present")
-    import sys
-
-    sys.path.insert(0, str(chassis))
     try:
-        from check_fit import coax_to_trunk_bases
-    except Exception as exc:  # pragma: no cover - trimesh optional locally
-        pytest.skip(f"check_fit unavailable: {exc}")
+        cf = _load_cad_module("hardware/cad/chassis", "_nova_chassis_check_fit")
+    except ImportError as exc:  # pragma: no cover - trimesh optional locally
+        pytest.skip(f"chassis check_fit unavailable: {exc}")
+    coax_to_trunk_bases = cf.coax_to_trunk_bases
 
     dets = {}
     for name, B in coax_to_trunk_bases():
@@ -362,6 +388,44 @@ def test_confirm_urdf_sign_rejects_unusable_input():
         confirm_urdf_sign(1, +100, 0.0)
     with pytest.raises(ValueError):
         confirm_urdf_sign(99, +100, 0.1)
+
+
+@pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
+def test_cable_gate_haa_envelope_matches_the_model():
+    """#157: the CAD cable gate must sweep the ROM the robot actually has.
+
+    It used to sweep a symmetric +-45, measuring 40 deg of INBOARD travel the
+    robot is not permitted to use while sampling the legal outboard travel
+    once. It now sweeps the asymmetric envelope from constants -- which can
+    drift away from the MJCF with nothing to notice, since the CAD tree is
+    deliberately standalone and cannot import the model. This is that notice.
+    """
+    import mujoco
+    import numpy as np
+
+    try:
+        cf = _load_cad_module("hardware/cad/leg_v6", "_nova_leg_v6_check_fit")
+    except ImportError as exc:  # pragma: no cover - trimesh optional locally
+        pytest.skip(f"leg_v6 check_fit unavailable: {exc}")
+    HAA_INBOARD_MAX_DEG = cf.HAA_INBOARD_MAX_DEG
+    HAA_OUTBOARD_MAX_DEG = cf.HAA_OUTBOARD_MAX_DEG
+    HAA_OUTBOARD_SIGN = cf.HAA_OUTBOARD_SIGN
+
+    m = mujoco.MjModel.from_xml_path(str(MJCF))
+    for leg in LEFT + RIGHT:
+        b = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, f"{leg}_hip")
+        side = float(np.sign(m.body_pos[b][1]))
+        lo, hi = m.jnt_range[
+            mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, f"{leg}_haa")
+        ]
+        # +haa moves the foot toward +y (measured elsewhere in this file), so
+        # the OUTBOARD limit is the one on the leg's own side of the model.
+        outboard = hi if side > 0 else -lo
+        inboard = -lo if side > 0 else hi
+        assert np.degrees(outboard) == pytest.approx(HAA_OUTBOARD_MAX_DEG, abs=0.6), leg
+        assert np.degrees(inboard) == pytest.approx(HAA_INBOARD_MAX_DEG, abs=0.6), leg
+
+    assert HAA_OUTBOARD_SIGN in (-1, 1)
 
 
 def test_runtime_haa_sign_is_still_unset():
