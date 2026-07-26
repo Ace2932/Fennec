@@ -229,7 +229,7 @@ module femur_v6() {
         // NOTE: the fork-block hull footprint spans x 56.15..122.75 at full
         // depth (-26.4) — underside features must stay x < 56 or cut the
         // block/arm faces explicitly. LA-6 (2026-07-11): x=40/44/52 below
-        // are all >= SUB_X1 (32), i.e. already sitting on the new SUB_FLOOR
+        // are all >= SUB_X1 (21), i.e. already sitting on the new SUB_FLOOR
         // (-26.6) exterior, not the old SLAB_Z0 (-22.2) -- cuts re-based to
         // SUB_FLOOR so they still reach the true (now deeper) exterior.
         // groove along the open underside: tunnel exit -> block edge.
@@ -252,7 +252,7 @@ module femur_v6() {
         // not loop through to clamp cable_clip. h=40 matches the x62/84
         // through-hole convention elsewhere in this file (top z16.8, 2.1mm
         // clear past SLAB_Z1) -- genuine through-holes, ray-cast verified.
-        // LA-6: both sit at x >= SUB_X1 (32), i.e. on the new SUB_FLOOR
+        // LA-6: both sit at x >= SUB_X1 (21), i.e. on the new SUB_FLOOR
         // exterior -- z0 + h re-based (was SLAB_Z0-1 / 40) so the bore still
         // starts at the true exterior and reaches the same top (z16.8).
         zip_pair_neg(44, 0, SUB_FLOOR - 1, 44.4);

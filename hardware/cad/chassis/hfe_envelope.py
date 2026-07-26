@@ -1,6 +1,19 @@
 #!/usr/bin/env python3
 """Measure the FRONT/REAR hfe contact envelope as a function of (haa, kfe).
 
+⚠ THE TABLE ON DISK IS STALE FOR THE REAR LEGS (2026-07-26). It was generated
+against the 2026-07-25 rear hip placement, which put the rear leg's fore-aft
+geometry backwards (see check_fit.coax_to_trunk_bases()'s docstring — the rear
+shoulder is YAWED 180 deg, not translated). Re-run this script (it needs the real
+servo.stl) and, when you do, state the leg-local -> canonical hfe SIGN for the
+yawed rear hips explicitly in the generated header: the rear leg's local +hfe is
+the opposite world rotation from the front's, and nothing downstream currently
+says so. Re-measured with the corrected placement (2026-07-26, box-model servo
+stand-in, 2 deg scan): every rear cell equals its front counterpart in the
+leg-local sign — [-94, +66] at haa 0 / kfe -109, [-94, +14] at haa -15 /
+kfe -109 — where the shipped rear rows carry a flat [-77.2, +95] with NO kfe
+dependence at all.
+
 WHY: the chassis ROM has been carried as a single scalar — "hfe toward-trunk fold
 +50 deg" — but the constraint is genuinely 3-dimensional. The corrected crouch
 sweep (check_fit.py, rear placement fixed 2026-07-25) shows the front leg's first
@@ -170,7 +183,10 @@ def main():
                 f'Boundary = the leg comes within {CLEARANCE_MM} mm of the chassis\\n'
                 '(proximity, not intersection), so the gap is already included.\n'
                 'Measured against riser_bay / battery_pocket / pack /\n'
-                'skid rails / head with the corrected (unmirrored) rear hip placement.\n'
+                'skid rails / head. REAR HIP = the front placement YAWED 180 deg\n'
+                '(check_fit.coax_to_trunk_bases, fixed 2026-07-26) -- so a rear\n'
+                'leg-local +hfe is the OPPOSITE world rotation from a front one:\n'
+                'state that sign where these bounds are consumed.\n'
                 '"""\n')
         f.write(f"CLEARANCE_MM = {CLEARANCE_MM!r}\nHAAS = {HAAS!r}\nKFES = {KFES!r}\n")
         f.write("ENVELOPE = {\n")
