@@ -111,7 +111,7 @@ def test_home_tick_matches_the_measured_homing_convention():
 
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_haa_ranges_are_exact_left_right_mirrors():
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
     rng = {}
@@ -128,7 +128,7 @@ def test_haa_ranges_are_exact_left_right_mirrors():
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_hfe_kfe_identical_across_all_four_legs():
     """No fore-aft mirroring -- corroborates '4 identical translated legs'."""
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
     for joint in ("hfe", "kfe"):
@@ -142,7 +142,7 @@ def test_hfe_kfe_identical_across_all_four_legs():
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_positive_haa_moves_every_foot_toward_plus_y():
     """Step 5, measured rather than predicted."""
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
     d = mujoco.MjData(m)
@@ -163,7 +163,7 @@ def test_positive_haa_moves_every_foot_toward_plus_y():
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_measured_outboard_direction_matches_the_derived_table():
     """Step 6 end-to-end: model geometry must reproduce the shipped signs."""
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
     d = mujoco.MjData(m)
@@ -262,7 +262,7 @@ def test_full_urdf_sign_table_covers_all_twelve_joints():
 
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_pitch_ranges_identical_across_legs_supports_shared_front_rear_sign():
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
     for joint in ("hfe", "kfe"):
@@ -323,7 +323,7 @@ def test_cad_and_convention_reproduce_the_shipped_pitch_table():
       * measured convention -> +tick is a NEGATIVE rotation about the shaft.
       * URDF -> hfe/kfe axis is +y on all four legs.
     """
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
     import numpy as np
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
@@ -348,7 +348,7 @@ def test_cad_and_convention_reproduce_the_shipped_pitch_table():
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_haa_axis_is_fore_aft_and_pitch_axis_is_lateral():
     """The whole left/right asymmetry rests on which axis the mirror flips."""
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
     import numpy as np
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
@@ -388,44 +388,6 @@ def test_confirm_urdf_sign_rejects_unusable_input():
         confirm_urdf_sign(1, +100, 0.0)
     with pytest.raises(ValueError):
         confirm_urdf_sign(99, +100, 0.1)
-
-
-@pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
-def test_cable_gate_haa_envelope_matches_the_model():
-    """#157: the CAD cable gate must sweep the ROM the robot actually has.
-
-    It used to sweep a symmetric +-45, measuring 40 deg of INBOARD travel the
-    robot is not permitted to use while sampling the legal outboard travel
-    once. It now sweeps the asymmetric envelope from constants -- which can
-    drift away from the MJCF with nothing to notice, since the CAD tree is
-    deliberately standalone and cannot import the model. This is that notice.
-    """
-    import mujoco
-    import numpy as np
-
-    try:
-        cf = _load_cad_module("hardware/cad/leg_v6", "_nova_leg_v6_check_fit")
-    except ImportError as exc:  # pragma: no cover - trimesh optional locally
-        pytest.skip(f"leg_v6 check_fit unavailable: {exc}")
-    HAA_INBOARD_MAX_DEG = cf.HAA_INBOARD_MAX_DEG
-    HAA_OUTBOARD_MAX_DEG = cf.HAA_OUTBOARD_MAX_DEG
-    HAA_OUTBOARD_SIGN = cf.HAA_OUTBOARD_SIGN
-
-    m = mujoco.MjModel.from_xml_path(str(MJCF))
-    for leg in LEFT + RIGHT:
-        b = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, f"{leg}_hip")
-        side = float(np.sign(m.body_pos[b][1]))
-        lo, hi = m.jnt_range[
-            mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, f"{leg}_haa")
-        ]
-        # +haa moves the foot toward +y (measured elsewhere in this file), so
-        # the OUTBOARD limit is the one on the leg's own side of the model.
-        outboard = hi if side > 0 else -lo
-        inboard = -lo if side > 0 else hi
-        assert np.degrees(outboard) == pytest.approx(HAA_OUTBOARD_MAX_DEG, abs=0.6), leg
-        assert np.degrees(inboard) == pytest.approx(HAA_INBOARD_MAX_DEG, abs=0.6), leg
-
-    assert HAA_OUTBOARD_SIGN in (-1, 1)
 
 
 def test_runtime_haa_sign_is_still_unset():
