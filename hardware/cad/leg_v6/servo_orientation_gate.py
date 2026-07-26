@@ -21,20 +21,22 @@ does not constrain the orientation and the derived hfe/kfe signs are unfounded.
 That answer is a valid and useful outcome. Do not tune it away.
 
 RESULT (2026-07-26): flipped is BLOCKED at all three joints, derived clean at
-all three, so the derivation survived. The EVIDENCE IS NOT EQUALLY STRONG:
+all three, so the derivation survived. But the margins are SMALL:
 
     joint  clamped by                  flipped blocked by   radial reach
     HFE    coax arms                   0.97mm / 88 pts      16.92mm
     KFE    femur yoke + knee_arm       1.65mm / 106 pts     15.82mm
-    HAA    shoulder + shoulder_plate   0.67mm / 17 pts      13.96mm  <- THIN
+    HAA    shoulder + shoulder_plate   0.67mm / 17 pts      13.96mm
 
-HAA is materially weaker. Its interference is the servo's CONNECTOR BAY (which
-the flip moves to the horn side) grazing the shoulder arm, and it reaches only
-0.96mm past R_EXCLUDE: the verdict is BLOCKED at r>=13 and FITS at r>=14, so it
-turns on the exclusion threshold. It is stable across seeds (17/21/23 points in
-three draws, never zero), so it is a real feature and not mesh noise -- but do
-not read the HAA row as the same class of proof as HFE/KFE. The gate prints
-`reach=` and a THIN warning so this stays visible rather than buried.
+TWO of the three block by UNDER A MILLIMETRE. Print tolerance is ~0.2-0.3mm and
+PA6-CF flexes, so haa and hfe are ~3-4x tolerance at a feature corner -- a
+person can force either together without noticing. Treat these as poka-yoke
+GAPS, not mechanical keys: the CAD forbids the mistake on paper and barely
+resists it in the hand. The gate says so on every run rather than reporting a
+flat PASS. HAA is thinnest: its block is the servo's CONNECTOR BAY, which the
+flip moves to the horn side, grazing the shoulder arm at r 13.33..13.96. It is
+stable across seeds (17/21/23 in three draws, never zero), so it is a real
+feature and not mesh noise.
 
 TWO THINGS THIS DOES NOT DO
 ---------------------------
@@ -70,8 +72,17 @@ SERVO = (
     HERE.parents[3] / "feetech_servo_models" / "converted_stl" / "servo.stl"
 )
 
-R_EXCLUDE = 13.0  # designed disc interfaces, per check_fit doctrine
+# Mask the DESIGNED disc interface. Derived from the part, not inherited: the
+# horn/wheel discs are Oe20 (r=10), so anything past r=10 cannot be legitimate
+# disc-on-seat contact. Measured: the derived orientation is clean at EVERY
+# radius down to r>=10 at all three joints, so 10.5 discards nothing real.
+# It was 13.0, copied from check_fit's SWEPT-ENVELOPE checks -- a different
+# problem. That threw away 3mm of valid evidence, which happened to be exactly
+# the band the HAA interference lives in (r 13.33..13.96), leaving that verdict
+# sitting 0.96mm from flipping. At 10.5 the margin to the cliff is ~3.5mm.
+R_EXCLUDE = 10.5
 SPLINE_OFFSET = -12.5  # sts3215_real(): moves the spline to the origin
+FORCEABLE_MM = 1.0     # below this a printed part can simply be forced together
 
 # preview_leg_assembly.scad, RIGHT leg
 HFE_AT = (33.8, 11.6, -9.5)  # coax frame; axis along coax +X
@@ -176,10 +187,17 @@ def main() -> int:
                 f"  {tag:24} r>={R_EXCLUDE:g}: {n:5d} pts  maxpen={pen:5.2f}mm"
                 f"{margin}  -> {verdict}"
             )
-            if n and rmax < R_EXCLUDE + 1.5:
+            # Warn on the PHYSICAL margin, not on distance to the mask -- the
+            # mask is a parameter we choose, the interference is the part.
+            # Print tolerance runs ~0.2-0.3mm and PA6-CF flexes, so a block of
+            # well under a millimetre at a feature corner is something a person
+            # can force together without noticing. That is a poka-yoke gap, not
+            # a mechanical key, and it is worth saying out loud even on a PASS.
+            if n and pen < FORCEABLE_MM:
                 print(
-                    f"     ^ THIN: only {rmax - R_EXCLUDE:.2f}mm past the exclusion "
-                    f"radius; this verdict flips if R_EXCLUDE moves ~1mm"
+                    f"     ^ MARGINAL: blocked by only {pen:.2f}mm over {n} pts. "
+                    f"That is ~{pen / 0.25:.0f}x print tolerance -- forceable by "
+                    f"hand. Verify horn direction visually; do not rely on fit."
                 )
 
         derived_fits = results[f"derived  horn {d_lbl}"] == 0
