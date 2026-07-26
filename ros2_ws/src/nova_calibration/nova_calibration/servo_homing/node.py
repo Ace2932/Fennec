@@ -31,7 +31,7 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Int32, String
 from std_srvs.srv import Trigger
 
-from .config import JOINT_CONFIGS
+from .config import JOINT_CONFIGS, observed_urdf_sign
 from .hard_stop import HardStopCalibrator, HardStopParams, Outcome
 from . import storage
 
@@ -140,11 +140,20 @@ class ServoHomingNode(Node):
                 self._status(f'joint {jid} ({cfg.name}): probing...')
                 res = calibrator.run_joint(cfg)
                 res.name = cfg.name
+                # OBSERVE the raw-vs-URDF direction. The sweep already drove
+                # this joint into a known mechanical stop, so the direction is
+                # free -- it just used to be thrown away, leaving the
+                # `urdf_sign` the command path consumes with NO producer.
+                if res.outcome == Outcome.OK:
+                    res.urdf_sign = observed_urdf_sign(
+                        cfg.search_dir, cfg.stop_urdf_end)
+                    self._confirm_against_derivation(jid, cfg.name, res.urdf_sign)
                 results.append(res)
                 self.get_logger().info(
                     f'joint {jid} {cfg.name}: {res.outcome.value} '
                     f'home_raw={res.home_raw} stop={res.stop_pos_raw} '
-                    f'peak_load={res.peak_load} ({res.detail})')
+                    f'peak_load={res.peak_load} urdf_sign={res.urdf_sign:+d} '
+                    f'({res.detail})')
                 if res.outcome == Outcome.ABORTED:
                     self._status('ABORTED — safety tripped mid-sweep')
                     return
@@ -162,6 +171,47 @@ class ServoHomingNode(Node):
             self._status(f'ERROR: {exc!r}')
         finally:
             self._busy = False
+
+
+    def _confirm_against_derivation(self, jid, name, observed_sign):
+        """Cross-check the OBSERVED sign against the CAD-derived table.
+
+        derive-then-CONFIRM: derived_signs predicts every joint's sign from the
+        measured "+tick = CW from horn side" convention composed with the mount
+        orientation. This is the confirmation half -- the only step that puts a
+        real servo's motion against that prediction. Before this existed the
+        confirm_* functions had no callers at all.
+
+        A mismatch is LOUD but not fatal to the sweep: the observation wins (it
+        came from hardware), the derivation is what is suspect, and the operator
+        needs to know before that sign reaches the command path. Wrong on a haa
+        joint it means a leg swinging inboard under the LiPo at 40 deg.
+        """
+        try:
+            from nova_ops.safety_envelope.derived_signs import (
+                DERIVED_URDF_SIGN, SignMismatch, confirm_urdf_sign,
+            )
+        except ImportError:
+            self.get_logger().warn(
+                f'joint {jid} {name}: nova_ops.derived_signs unavailable — '
+                f'observed urdf_sign={observed_sign:+d} NOT cross-checked')
+            return
+        expected = DERIVED_URDF_SIGN.get(jid)
+        if expected is None:
+            return
+        try:
+            # +1 raw count moving +expected radians is the derivation's claim;
+            # feed the observation in the same terms.
+            confirm_urdf_sign(jid, +1.0, float(observed_sign))
+            self.get_logger().info(
+                f'joint {jid} {name}: urdf_sign {observed_sign:+d} CONFIRMS '
+                f'the CAD derivation')
+        except SignMismatch as exc:
+            self.get_logger().error(
+                f'joint {jid} {name}: SIGN MISMATCH — observed '
+                f'{observed_sign:+d}, CAD derivation says {expected:+d}. {exc} '
+                f'The observation wins; the derivation is suspect. Do NOT widen '
+                f'ROM until this is understood.')
 
     # ---------------- HardStopCalibrator callbacks ----------------
     def _read_position(self, jid):

@@ -12,7 +12,8 @@ YAML schema (v1):
     created: "2026-06-06T16:30:00"
     note: "hard-stop home auto-detect"
     joints:
-      1: {name: FL_coxa, home_raw: 1421, stop_pos_raw: 1933, peak_load: 240}
+      1: {name: FL_coxa, home_raw: 1421, stop_pos_raw: 1933, peak_load: 240,
+          urdf_sign: -1}
       ...
 """
 import os
@@ -41,6 +42,10 @@ def save_offsets(results, note='hard-stop home auto-detect') -> str:
             'home_raw': r.home_raw,
             'stop_pos_raw': r.stop_pos_raw,
             'peak_load': r.peak_load,
+            # The COMMAND path consumes this (nova_locomotion node.py's
+            # urdf_sign param). Persisting home_raw alone left that param with
+            # no producer at all, so the per-joint sign could never activate.
+            'urdf_sign': getattr(r, 'urdf_sign', 0),
         }
         for r in results
     }

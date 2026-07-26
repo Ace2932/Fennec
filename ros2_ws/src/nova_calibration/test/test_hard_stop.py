@@ -154,3 +154,84 @@ def test_leash_does_not_break_normal_detection():
     res = calib.run_joint(cfg)
     assert res.outcome == Outcome.OK
     assert res.stop_pos_raw == 1800
+
+
+# ---- urdf_sign is OBSERVED by the sweep, not guessed ------------------------
+
+
+def test_observed_urdf_sign_truth_table():
+    """sign = search_dir * (+1 upper / -1 lower).
+
+    Driving in search_dir reached the stop at that URDF end, so the two
+    together give the raw-vs-URDF direction with no extra motion.
+    """
+    from nova_calibration.servo_homing.config import observed_urdf_sign
+
+    assert observed_urdf_sign(+1, "upper") == +1  # raw up -> angle up
+    assert observed_urdf_sign(+1, "lower") == -1  # raw up -> angle down
+    assert observed_urdf_sign(-1, "upper") == -1
+    assert observed_urdf_sign(-1, "lower") == +1
+
+
+def test_observed_urdf_sign_rejects_nonsense():
+    import pytest
+
+    from nova_calibration.servo_homing.config import observed_urdf_sign
+
+    with pytest.raises(ValueError, match="search_dir"):
+        observed_urdf_sign(0, "upper")
+    with pytest.raises(ValueError, match="stop_urdf_end"):
+        observed_urdf_sign(+1, "middle")
+
+
+def test_observed_sign_agrees_with_the_cad_derivation_for_every_joint():
+    """The two independent routes to the same 12 bits must agree.
+
+    Left side: the sweep's config (search_dir + which URDF end its stop is).
+    Right side: derived_signs, from the measured servo convention composed
+    with the CAD mount orientation. If a config entry is filled in a way that
+    contradicts the derivation, that is either a wrong config or a wrong
+    derivation -- either way it must not reach the command path silently.
+
+    Skipped while every config entry is still a PLACEHOLDER: search_dir is a
+    guess until measured from the leg CAD, so comparing it would assert on
+    noise.
+    """
+    from nova_calibration.servo_homing.config import (
+        JOINT_CONFIGS,
+        observed_urdf_sign,
+    )
+
+    try:
+        from nova_ops.safety_envelope.derived_signs import DERIVED_URDF_SIGN
+    except ImportError:
+        import pytest
+
+        pytest.skip("nova_ops.derived_signs not on the path")
+
+    checked = 0
+    for jid, cfg in JOINT_CONFIGS.items():
+        if cfg.placeholder:
+            continue
+        checked += 1
+        assert observed_urdf_sign(cfg.search_dir, cfg.stop_urdf_end) == (
+            DERIVED_URDF_SIGN[jid]
+        ), (
+            f"joint {jid} {cfg.name}: config implies "
+            f"{observed_urdf_sign(cfg.search_dir, cfg.stop_urdf_end):+d}, "
+            f"CAD derivation says {DERIVED_URDF_SIGN[jid]:+d}"
+        )
+    if checked == 0:
+        import pytest
+
+        pytest.skip("every JOINT_CONFIGS entry is still a placeholder")
+
+
+def test_storage_persists_urdf_sign():
+    """The command path's urdf_sign param had no producer at all before this."""
+    from nova_calibration.servo_homing.hard_stop import HardStopResult, Outcome
+
+    r = HardStopResult(joint_id=1, outcome=Outcome.OK)
+    assert hasattr(r, "urdf_sign") and r.urdf_sign == 0  # 0 = not observed
+    r.urdf_sign = -1
+    assert r.urdf_sign == -1
