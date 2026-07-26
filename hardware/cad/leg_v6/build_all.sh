@@ -22,3 +22,8 @@ ls -la *_R.stl *_L.stl
 ../../../.venv/bin/python ../mesh_health.py *_R.stl *_L.stl knee_arm.stl knee_bumper.stl shoulder.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl strap.stl grommet_insert.stl coax_hfe_plate.stl coax_hfe_plate_L.stl
 ../../../.venv/bin/python check_fit.py --sweep
 ../../../.venv/bin/python check_shoe.py
+# Proves the hfe/kfe servos still seat only ONE way round. This is what backs
+# the derived hfe/kfe servo signs in nova_ops/safety_envelope/derived_signs.py:
+# loosen an arm relief and the flipped servo starts fitting, which silently
+# removes the evidence those signs rest on. Runs on the STLs rendered above.
+../../../.venv/bin/python servo_orientation_gate.py
