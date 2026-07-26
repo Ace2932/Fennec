@@ -56,7 +56,7 @@ def _load_leg_v6_check_fit():
 
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
 def test_cable_gate_haa_envelope_matches_the_model():
-    import mujoco
+    mujoco = pytest.importorskip("mujoco")
     import numpy as np
 
     cf = _load_leg_v6_check_fit()
