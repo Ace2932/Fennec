@@ -73,11 +73,32 @@ legs, so
 Front and rear share a sign, as for the hips -- corroborated by the MJCF, where
 hfe/kfe ranges are identical across all four legs.
 
-Unlike haa there is NO independent kinematic cross-check available: the URDF
-axis is +y on all four and the ranges are identical, so there is no left/right
-asymmetry in the model to exploit. The hfe/kfe signs rest on the CAD sources
-above plus the homing confirmation -- one notch weaker than haa, which is why
-they get the same derive-then-confirm treatment.
+The "horn faces INBOARD" premise is no longer just a reading of somebody's
+constant. `hardware/cad/leg_v6/servo_orientation_gate.py` seats the real servo
+mesh both ways -- the flip being 180 deg about the CASE axis, which keeps the
+case put and moves only the horn, the mis-assembly hardest to tell apart -- and
+asks which orientations the mating parts admit:
+
+    HFE (coax arms)              derived FITS  |  flipped BLOCKED 0.97mm / 88 pts
+    KFE (femur yoke + knee_arm)  derived FITS  |  flipped BLOCKED 1.65mm / 106 pts
+
+That is a falsification test, free to return "both fit" and declare these signs
+unfounded; the femur pocket ALONE does exactly that, which is what makes the
+PASS meaningful. So the MOUNT half of hfe/kfe now rests on a physical
+impossibility proof rather than on documentation -- arguably firmer than haa's,
+which rests on reading a placement transform.
+
+What stays unconfirmed is the half hfe/kfe SHARE with haa: "+tick = CLOCKWISE
+from horn side". No mesh can check a servo's internal convention. There is also
+no independent kinematic cross-check for the pitch joints the way haa has the
+mirrored ranges -- the URDF axis is +y on all four with identical ranges, so the
+model holds no left/right asymmetry to exploit. Homing confirmation is still
+required for every joint.
+
+ASSEMBLY NOTE worth carrying to the bench: the femur/tibia POCKET does not
+discriminate. A backwards servo drops in perfectly happily and only refuses
+later, at the arms, by ~1-1.7mm on a printed part -- forceable, and easy to miss
+by hand.
 
 HOW MUCH OF THIS IS CHECKED
 ---------------------------
