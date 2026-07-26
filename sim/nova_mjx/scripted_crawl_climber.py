@@ -141,6 +141,18 @@ SWING_ABDUCT = 0.0        # THE HIP-OPENING LIFT (m): outboard bulge applied to 
 #                         # less fold. Max swing-foot lift: 5.69 cm at 0 abduction ->
 #                         # 8.40 cm at +4 cm. That is the difference between clearing
 #                         # a riser and raising Unreachable.
+BODY_LIFT = 0.0           # RAISE the commanded body z by this fraction of the riser the
+#                         # SWING foot must gain (m per m). The plan holds body z at a FIXED
+#                         # height above the mean tread, so 100% of a step-up has to come out
+#                         # of the swing leg's own fold — probe_posture_search measured 13.59 cm
+#                         # of clearance available across body height + pitch + abduction vs
+#                         # the 5.69 cm this fixed-height plan uses. Raising the body during a
+#                         # climbing swing is clearance the swing leg never has to pay for.
+CLONABLE = False          # clamp every commanded joint into the +-ACTION_SCALE band a tanh
+#                         # policy can express. THE POINT OF v9 IS BEHAVIOUR CLONING: an expert
+#                         # that only climbs by leaving the student's action space is worthless.
+#                         # 47-65%% of this expert's commands were out of band, so a success
+#                         # without this flag proves nothing about clonability.
 ABDUCT_CLIMB = 0.0        # EXTRA outboard per metre of foot RISE the swing must make
 #                         # (landing tread above liftoff tread). This is the "robot
 #                         # understands it can open the hips to gain clearance" term:
@@ -345,7 +357,15 @@ def run(env, jit_reset, jit_step, stair_level, n_steps, seed=0):
         front_t = treads_now[FRONT_IDX].mean(); rear_t = treads_now[REAR_IDX].mean()
         spread = float(treads_now.max() - treads_now.min())      # feet straddling a riser
         # body z: track the treads + lift the front onto the step; pitch to the slope.
-        body_z = float(treads_now.mean()) + BODY_H + amp * FRONT_LIFT * (front_t - rear_t)
+        # BODY_LIFT: while a foot is climbing to a higher tread, raise the whole body
+        # in proportion. Clearance bought here is clearance the swing leg does not
+        # have to fold for — the lever the fixed-height plan never used.
+        climb_need = 0.0
+        if sw_leg >= 0:
+            climb_need = max(0.0, float(foothold[sw_leg, 2] - swing_from[sw_leg, 2]))
+        body_z = (float(treads_now.mean()) + BODY_H
+                  + amp * FRONT_LIFT * (front_t - rear_t)
+                  + amp * BODY_LIFT * climb_need)
         pitch = amp * PITCH_GAIN * np.arctan2(front_t - rear_t, 2 * abs(HB[0, 0]))
         body_y = 0.0
         if sw_leg >= 0:
@@ -391,7 +411,6 @@ def run(env, jit_reset, jit_step, stair_level, n_steps, seed=0):
             if a is None:
                 n_unreach += 1
             else:
-                act += a
                 knee_kf[i] = kf
                 n_flip += int(flipped)
                 # CLONABILITY: a tanh policy outputs a in [-1,1], so env.step can only
@@ -399,6 +418,12 @@ def run(env, jit_reset, jit_step, stair_level, n_steps, seed=0):
                 # such cap here, but anything it commands beyond the band CANNOT be
                 # reproduced by the policy that is supposed to clone it.
                 n_outband += int(np.sum(np.abs(a) > 1.0))
+                if CLONABLE:
+                    # CLAMP BEFORE ACCUMULATING. Clipping after `act += a` mutates a
+                    # dead local and changes nothing — every --clonable run came out
+                    # byte-identical to its unclamped twin until this was fixed.
+                    a = np.clip(a, -1.0, 1.0)
+                act += a
 
         state = _pin(state)
         state = jit_step(state, jp.asarray(act))
@@ -557,6 +582,12 @@ def main():
     ap.add_argument("--swing-abduct", type=float, default=None,
                     help="outboard bulge (m) on the SWING foot at mid-swing — the "
                          "hip-opening clearance gain")
+    ap.add_argument("--body-lift", type=float, default=None,
+                    help="raise the body by this fraction of the riser a climbing "
+                         "swing must gain (m/m); the lever the fixed-height plan never used")
+    ap.add_argument("--clonable", action="store_true",
+                    help="clamp commands into the +-ACTION_SCALE band a tanh policy can "
+                         "express — a climb that needs more is not clonable")
     ap.add_argument("--abduct-climb", type=float, default=None,
                     help="extra swing abduction per metre of riser being climbed")
     ap.add_argument("--com-gain", type=float, default=None)
@@ -578,10 +609,12 @@ def main():
     args = ap.parse_args()
 
     global GAIT_FREQ, STEP_FWD, FWD_LEAN, CLEARANCE, COM_GAIN, PITCH_GAIN, RAMP_CYCLES
-    global SPLAY, SWING_ABDUCT, ABDUCT_CLIMB
+    global SPLAY, SWING_ABDUCT, ABDUCT_CLIMB, BODY_LIFT, CLONABLE
     if args.splay is not None: SPLAY = args.splay
     if args.swing_abduct is not None: SWING_ABDUCT = args.swing_abduct
     if args.abduct_climb is not None: ABDUCT_CLIMB = args.abduct_climb
+    if args.body_lift is not None: BODY_LIFT = args.body_lift
+    CLONABLE = args.clonable
     if args.freq is not None: GAIT_FREQ = args.freq
     if args.step_fwd is not None: STEP_FWD = args.step_fwd
     if args.fwd_lean is not None: FWD_LEAN = args.fwd_lean
@@ -617,7 +650,8 @@ def main():
     print(f"neutral canonical foot: x0={_X0:+.5f} d={_D:.5f} z0={_Z0:+.5f}")
     print(f"gait freq={GAIT_FREQ}Hz duty={DUTY} order(RL,FL,RR,FR) step_fwd={STEP_FWD} "
           f"fwd_lean={FWD_LEAN} clearance={CLEARANCE} com_gain={COM_GAIN} pitch={PITCH_GAIN} "
-          f"splay={SPLAY} swing_abduct={SWING_ABDUCT} abduct_climb={ABDUCT_CLIMB}")
+          f"splay={SPLAY} swing_abduct={SWING_ABDUCT} abduct_climb={ABDUCT_CLIMB} "
+          f"body_lift={BODY_LIFT} clonable={CLONABLE}")
 
     if args.eff_scale != 1.0:
         print(f"SERVO-UPGRADE PROBE: hfe/kfe stall {1.8*args.eff_scale:.2f} N*m "
