@@ -63,6 +63,18 @@ def main():
     ap.add_argument("--stair-level", type=float, default=0.0,
                     help="inject a STAIRCASE (rise STAIR_RISE*level) into the single-env "
                          "terrain so you can watch the teacher climb. Needs --heightmap.")
+    ap.add_argument("--terrain-level", type=float, default=0.0,
+                    help="inject ROUGH terrain at this difficulty (0 = flat, 1 = max "
+                         "amplitude ~20 cm). This is the terrain the walker is actually "
+                         "for; --stair-level is the tier-2 teacher case and wins if both "
+                         "are given. Does NOT need --heightmap (a blind policy can still "
+                         "be rolled out over it — that is the interesting test).")
+    ap.add_argument("--step-terrain", action="store_true",
+                    help="with --terrain-level, use a QUANTIZED terrace (curb/step, "
+                         "tier-1) instead of smooth rough")
+    ap.add_argument("--terrain-seed", type=int, default=0,
+                    help="RNG seed for the terrain draw — vary it to check the walker "
+                         "against several rough fields, not one lucky one")
     ap.add_argument("--cmd-c", type=float, default=None,
                     help="force the commanded footswing height info['cmd_c'] (lift-v5) to "
                          "this fixed value, re-pinned every step so the env's 250-step "
@@ -72,11 +84,29 @@ def main():
     args = ap.parse_args()
 
     env = NovaJoystick(heightmap=args.heightmap)
-    if args.stair_level > 0:            # inject stairs into this env's hfield
+    # TERRAIN INJECTION. terrain_field picks the TYPE by fraction, mutually
+    # exclusive: stair_frac -> staircase, else step_frac -> quantized terrace
+    # (curb/step), else smooth rough. `level` scales amplitude in every case, and
+    # the flat spawn pad stays flat regardless. Only stairs were reachable from
+    # the CLI before, so rough — the terrain this walker is actually meant for —
+    # could not be rolled out at all.
+    terr_level = max(args.stair_level, args.terrain_level)
+    if terr_level > 0:
         import jax.numpy as _jp
         from terrain import terrain_field
-        hf = terrain_field(jax.random.PRNGKey(0), args.stair_level, 0.0, 1.0)
+        if args.stair_level > 0:
+            kind, step_frac, stair_frac = "staircase", 0.0, 1.0
+        elif args.step_terrain:
+            kind, step_frac, stair_frac = "stepped terrace", 1.0, 0.0
+        else:
+            kind, step_frac, stair_frac = "smooth rough", 0.0, 0.0
+        hf = terrain_field(jax.random.PRNGKey(args.terrain_seed), terr_level,
+                           step_frac, stair_frac)
         env.sys = env.sys.tree_replace({"hfield_data": _jp.asarray(hf)})
+        print(f"terrain: {kind}, level {terr_level:.2f}, seed {args.terrain_seed} "
+              f"(peak height {terr_level * 0.20 * 100:.1f} cm over the pad)")
+    else:
+        print("terrain: FLAT")
     cmd = jp.array([args.vx, 0.0, args.wz])
     cmd_c_j = jp.asarray(args.cmd_c) if args.cmd_c is not None else None
 
