@@ -68,6 +68,10 @@ def main():
             if abs(edge) >= OPEN_EDGE:
                 skipped += 1        # open edge: nothing to contact, nothing to prove
                 continue
+            if lo == 0.0 and hi == 0.0:
+                skipped += 1        # degenerate cell: hfe_envelope.edge() returns 0
+                continue            # when even the NEUTRAL pose is not clear, so
+                                    # there is no boundary here to probe either side of
             checked += 1
             inside = H.clear(leg, base, pivot, tgts, haa, edge - direction * PROBE, kfe)
             outside = H.clear(leg, base, pivot, tgts, haa, edge + direction * PROBE, kfe)
