@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove the hfe/kfe servos can only be seated ONE way round.
+"""Prove each leg servo can only be seated ONE way round.
 
 WHY
 ---
@@ -20,9 +20,21 @@ It is a FALSIFICATION test: it can return "both fit", which would mean the CAD
 does not constrain the orientation and the derived hfe/kfe signs are unfounded.
 That answer is a valid and useful outcome. Do not tune it away.
 
-RESULT (2026-07-26): flipped is BLOCKED at both joints -- hfe 0.97mm over 88
-sample points, kfe 1.65mm over 106 -- while the derived orientation is clean at
-both. The derivation survived.
+RESULT (2026-07-26): flipped is BLOCKED at all three joints, derived clean at
+all three, so the derivation survived. The EVIDENCE IS NOT EQUALLY STRONG:
+
+    joint  clamped by                  flipped blocked by   radial reach
+    HFE    coax arms                   0.97mm / 88 pts      16.92mm
+    KFE    femur yoke + knee_arm       1.65mm / 106 pts     15.82mm
+    HAA    shoulder + shoulder_plate   0.67mm / 17 pts      13.96mm  <- THIN
+
+HAA is materially weaker. Its interference is the servo's CONNECTOR BAY (which
+the flip moves to the horn side) grazing the shoulder arm, and it reaches only
+0.96mm past R_EXCLUDE: the verdict is BLOCKED at r>=13 and FITS at r>=14, so it
+turns on the exclusion threshold. It is stable across seeds (17/21/23 points in
+three draws, never zero), so it is a real feature and not mesh noise -- but do
+not read the HAA row as the same class of proof as HFE/KFE. The gate prints
+`reach=` and a THIN warning so this stays visible rather than buried.
 
 TWO THINGS THIS DOES NOT DO
 ---------------------------
@@ -65,6 +77,7 @@ SPLINE_OFFSET = -12.5  # sts3215_real(): moves the spline to the origin
 HFE_AT = (33.8, 11.6, -9.5)  # coax frame; axis along coax +X
 KFE_AT = (106.9, 0.0, 0.0)  # femur frame; axis along femur +Z
 KNEE_ARM_AT = (59.0, 0.0, 17.75)
+HIP_STATION = (39.05, 0.0, 0.0)  # haa axis in the shoulder frame (Y line)
 
 
 def rot(a: float, b: float, c: float) -> np.ndarray:
@@ -85,17 +98,28 @@ def tr(v) -> np.ndarray:
 
 
 def interference(mesh, pts, xform, axis_pt, axis):
-    """Sample points inside `mesh`, outside the designed disc interface."""
+    """Sample points inside `mesh`, outside the designed disc interface.
+
+    Returns (n, max_penetration, max_radial_reach). The radial reach is the
+    MARGIN indicator: a block whose points sit just outside R_EXCLUDE would
+    vanish if that threshold moved a millimetre, and is far weaker evidence
+    than one reaching well past it. See the HAA note in the module docstring.
+    """
     p = trimesh.transform_points(pts, xform)
     hit = p[mesh.contains(p)]
     if not len(hit):
-        return 0, 0.0
+        return 0, 0.0, 0.0
     d = hit - np.asarray(axis_pt, float)
     radial = np.linalg.norm(d - np.outer(d @ axis, axis), axis=1)
-    keep = hit[radial >= R_EXCLUDE]
+    sel = radial >= R_EXCLUDE
+    keep = hit[sel]
     if not len(keep):
-        return 0, 0.0
-    return len(keep), float(trimesh.proximity.signed_distance(mesh, keep).max())
+        return 0, 0.0, 0.0
+    return (
+        len(keep),
+        float(trimesh.proximity.signed_distance(mesh, keep).max()),
+        float(radial[sel].max()),
+    )
 
 
 def main() -> int:
@@ -110,31 +134,56 @@ def main() -> int:
     knee_arm = trimesh.load(HERE / "knee_arm.stl")
     knee_arm.apply_transform(tr(KNEE_ARM_AT))
     yoke = trimesh.util.concatenate([femur, knee_arm])
+    shoulder_arms = trimesh.util.concatenate(
+        [trimesh.load(HERE / "shoulder.stl"), trimesh.load(HERE / "shoulder_plate.stl")]
+    )
 
     pts, _ = trimesh.sample.sample_surface(servo, args.samples)
     spline = tr([SPLINE_OFFSET, 0, 0])
     flip = rot(180, 0, 0)  # 180 deg about the servo CASE axis
 
     hfe_base = tr(HFE_AT) @ rot(0, 0, 180) @ rot(0, 90, 0)
+    # HAA: servo sits in the coax pocket, yoked by the shoulder. Its own
+    # placement already carries the rot(0,0,180) the others need, so it is
+    # applied here and cancelled in the loop.
+    mir = np.eye(4)
+    mir[1, 1] = -1
+    haa_base = tr(HIP_STATION) @ mir @ rot(0, -90, 0) @ rot(90, 0, 0) @ rot(0, 0, -180)
     cases = [
-        ("HFE", "coax arms", coax, hfe_base, HFE_AT, np.array([1.0, 0, 0])),
-        ("KFE", "femur yoke + knee_arm", yoke, tr(KFE_AT), KFE_AT, np.array([0, 0, 1.0])),
+        ("HAA", "shoulder + shoulder_plate", shoulder_arms, haa_base,
+         HIP_STATION, np.array([0, 1.0, 0]), "FORWARD", "REARWARD"),
+        ("HFE", "coax arms", coax, hfe_base,
+         HFE_AT, np.array([1.0, 0, 0]), "INBOARD", "OUTBOARD"),
+        ("KFE", "femur yoke + knee_arm", yoke, tr(KFE_AT),
+         KFE_AT, np.array([0, 0, 1.0]), "INBOARD", "OUTBOARD"),
     ]
 
     ok = True
-    for joint, against, mesh, base, axis_pt, axis in cases:
+    for joint, against, mesh, base, axis_pt, axis, d_lbl, f_lbl in cases:
         print(f"{joint}  (servo clamped by {against})")
         results = {}
-        for tag, extra in (("derived  horn INBOARD", np.eye(4)), ("flipped  horn OUTBOARD", flip)):
-            n, pen = interference(
+        for tag, extra in (
+            (f"derived  horn {d_lbl}", np.eye(4)),
+            (f"flipped  horn {f_lbl}", flip),
+        ):
+            n, pen, rmax = interference(
                 mesh, pts, base @ extra @ rot(0, 0, 180) @ spline, axis_pt, axis
             )
             results[tag] = n
             verdict = "BLOCKED" if n else "FITS"
-            print(f"  {tag:24} r>={R_EXCLUDE:g}: {n:5d} pts  maxpen={pen:5.2f}mm  -> {verdict}")
+            margin = f"  reach={rmax:5.2f}mm" if n else ""
+            print(
+                f"  {tag:24} r>={R_EXCLUDE:g}: {n:5d} pts  maxpen={pen:5.2f}mm"
+                f"{margin}  -> {verdict}"
+            )
+            if n and rmax < R_EXCLUDE + 1.5:
+                print(
+                    f"     ^ THIN: only {rmax - R_EXCLUDE:.2f}mm past the exclusion "
+                    f"radius; this verdict flips if R_EXCLUDE moves ~1mm"
+                )
 
-        derived_fits = results["derived  horn INBOARD"] == 0
-        flipped_blocked = results["flipped  horn OUTBOARD"] > 0
+        derived_fits = results[f"derived  horn {d_lbl}"] == 0
+        flipped_blocked = results[f"flipped  horn {f_lbl}"] > 0
         if not derived_fits:
             print(f"  !! {joint}: the DERIVED orientation does not seat — placement is wrong")
             ok = False
