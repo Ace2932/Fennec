@@ -126,7 +126,28 @@ def _thigh_flexion(front: bool) -> JointLimit:
     lower = -86.0 if front else -86.0
     return JointLimit(
         lower=math.radians(lower),
-        # RE-LOOSENED to mechanical once the precondition was actually met:
+        # DECIDED 2026-07-25 (issue #142): this stays MECHANICAL. The host posture
+    # gate is the sole chassis protection pre-homing.
+    #
+    # A firmware posture rule was evaluated and rejected -- not on effort, on
+    # measurement. The chassis tightness is entirely INBOARD (the belly pack: the
+    # bound drops from +66.3 at haa 0 to +57.0 at 1 deg inboard, +13.8 at 15),
+    # while outboard stays roomy (+66.1 at 1 deg, +46.8 at full 40 splay). The
+    # firmware reads /joint_commands in the SERVO frame, where which haa direction
+    # is inboard is exactly what HAA_INBOARD_SIGN leaves None until homing. So any
+    # firmware rule must key on |haa| and assume the inboard value BOTH ways --
+    # capping hfe at +57.0 from 1 deg onward, which clips the trot. A scalar and a
+    # sign-agnostic posture rule are forced to the same worst case, so neither can
+    # be simultaneously safe and non-clipping. Mechanical is the only option that
+    # is neither.
+    #
+    # ACCEPTED COST: a host-side bug that publishes a deep fold reaches the
+    # chassis with nothing beneath it. The Teensy protects the LINKAGE only.
+    # REVISIT AT HOMING: once HAA_INBOARD_SIGN is filled the firmware can tell
+    # inboard from outboard and a real posture rule becomes worthwhile -- same
+    # unlock as #145, do them together.
+    #
+    # RE-LOOSENED to mechanical once the precondition was actually met:
         # wrapper.publish() now applies rom_envelope.hfe_bounds() per leg BEFORE
         # these per-joint scalars, so the chassis constraint is enforced at the
         # choke point every publisher passes through -- including

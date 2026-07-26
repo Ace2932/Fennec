@@ -60,7 +60,11 @@ Pose = Dict[str, Tuple[float, float, float]]
 class ChoreoParams:
     leg: LegParams = LegParams()
     dt: float = 0.02  # 50 Hz output (matches feedback rate)
-    stand_z: float = 0.180  # nominal stand (76% reach, front hfe +45.1°)
+    # 0.190 (#150): follows TrotParams.stand_height so the robot does not change
+    # height when it starts walking. Side benefit -- it widens the crouch envelope
+    # the translated knee config had collapsed: stand 19.0 -> lie 17.08 is 1.92 cm
+    # of travel, up from 0.92.
+    stand_z: float = 0.190  # nominal stand (81% reach)
     # RAISED 2026-07-25 (knee config corrected to TRANSLATED, leg_ik.KNEE_FORWARD).
     #
     # Under the X-config these were 0.150 / 0.140, where the front legs took the

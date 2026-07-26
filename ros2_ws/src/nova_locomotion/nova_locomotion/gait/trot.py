@@ -24,7 +24,22 @@ PHASE_OFFSET = {"FL": 0.0, "RR": 0.0, "FR": 0.5, "RL": 0.5}
 class TrotParams:
     step_length: float = 0.06  # total fore-aft foot travel (m)
     step_height: float = 0.03  # swing apex lift (m)
-    stand_height: float = 0.18  # nominal hip-to-foot drop (m) — 76% of measured
+    # 0.190, RAISED from 0.180 2026-07-25 (issue #150). At 0.180 the trot's front
+    # fold peaks at +59.4 deg and the chassis envelope allows +57.0 as soon as the
+    # hip rolls 1 deg INBOARD -- i.e. the gait had ZERO haa headroom and fitted
+    # only because every pose commands haa exactly 0.00. Any lateral hip motion (a
+    # balance loop, CoM sway, Raibert foot placement) would have had its fold
+    # silently clamped by the posture gate.
+    #
+    # Measured haa headroom vs stand height: 18.0 -> 0.0 deg, 18.5 -> 0.0,
+    # 19.0 -> 11.5, 19.5 -> 11.5. 19.0 is the KNEE -- taller buys nothing more,
+    # because past ~12 deg inboard the belly-pack cliff dominates regardless of
+    # fold. Stride is the wrong lever: halving step_length buys only 1.5 deg.
+    #
+    # Not a trade: the straighter stance IMPROVES capacity (hold 2.80 -> 3.03x
+    # the per-leg share, lift power 0.692 -> 0.744 W at 2 cm/s). At 73 deg of knee
+    # bend it is nowhere near the singular region.
+    stand_height: float = 0.190  # nominal hip-to-foot drop (m) — 81% of measured
     # full reach (femur 106.9 + tibia 129.0 = 235.9 mm), knee bent ~81°. OK.
     stand_y: float = 0.0643  # lateral foot offset = hip_offset (m), stock stance
     duty: float = 0.5  # fraction of cycle in stance (0.5 = trot)
