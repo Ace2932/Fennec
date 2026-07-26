@@ -15,14 +15,21 @@ Topology (the project-policy publish path, wrapper.py docstring):
   /joint_commands
 
 UNITS — WIRE-AT-CALIBRATION: positions here are RADIANS end to end;
-firmware main.cpp currently reads /joint_commands as RAW STS3215
-COUNTS. Until the Jetson bridge owns the conversion, the
-counts_per_rad + home_offset params (default identity = radians pass
-straight through) convert AFTER the envelope (limits are radians).
-TODO(calibration): fill from servo homing (counts_per_rad ~= 651.74 =
-4096/2pi with per-joint sign, home_offset per joint) or delete once
-the bridge converts. Same for /joint_states seeding: raw counts would
-need the inverse before positions_to_pose().
+firmware main.cpp reads /joint_commands as RAW STS3215 COUNTS. The
+conversion happens AFTER the envelope (limits are radians), in both
+directions, and is PER JOINT (#154):
+
+    raw = home_raw + urdf_sign * theta * RAW_PER_RAD
+
+from the `home_raw` / `urdf_sign` params, filled by servo homing. This
+was two GLOBAL scalars, which could not express the per-joint SIGN the
+limits path was already using — an inverted joint would have received a
+correctly-signed limit window and a wrong-signed command. Both paths now
+share firmware_limits.rad_to_raw/raw_to_rad, so they cannot diverge.
+
+Uncalibrated (any joint with urdf_sign 0) = radians pass straight
+through, unchanged, which is the pre-hardware state. All-or-nothing on
+purpose: the firmware reads the whole array in ONE unit.
 """
 
 from __future__ import annotations
@@ -40,6 +47,10 @@ from nova_locomotion.controller import (
 )
 from nova_locomotion.gait.backlash import BacklashComp
 from nova_ops.joint_map import load_joint_id_map
+from nova_ops.safety_envelope.firmware_limits import (
+    JointHomeCalib,
+    convert_positions,
+)
 from nova_ops.safety_envelope.limits import load_default_limits
 from nova_ops.safety_envelope.wrapper import SafeJointCommandPublisher
 
@@ -48,26 +59,46 @@ RATE_HZ = 100.0  # firmware command rate
 
 class _CountsAdapter:
     """Publisher shim: radians -> firmware units AFTER the envelope.
-    Identity by default (WIRE-AT-CALIBRATION, module docstring)."""
 
-    def __init__(self, raw_pub, counts_per_rad: float, home_offset: float):
+    PER-JOINT since issue #154. This used to apply two GLOBAL scalars
+    (counts_per_rad, home_offset) to all twelve joints, while the limits path
+    already converted per joint via JointHomeCalib.urdf_sign. A joint whose
+    servo is mounted inverted therefore received a correctly-signed limit
+    window and a WRONG-SIGNED command — it would drive away from target into
+    its stop at full authority, with the firmware backstop computed for the
+    opposite sense so it could not help.
+
+    The kinematic left/right mirror is a different thing and is already handled
+    (solve_side flips haa only; hfe/kfe need no flip because their axis is
+    PARALLEL to the mirror normal, so the axis flip and the angle negation
+    cancel). THIS is the servo MOUNTING direction: per joint, physical, and
+    only knowable once homing has watched a real servo move.
+
+    Identity until every joint is calibrated — see convert_positions() for why
+    the all-or-nothing rule is deliberate.
+    """
+
+    def __init__(self, raw_pub, calib=None):
         self.raw_pub = raw_pub
-        self.counts_per_rad = counts_per_rad
-        self.home_offset = home_offset
+        self.calib = calib or {}
+        self._warned = False
 
     def publish(self, msg):
-        if self.counts_per_rad != 1.0 or self.home_offset != 0.0:
-            msg.position = [
-                p * self.counts_per_rad + self.home_offset for p in msg.position
-            ]
+        if self.calib:
+            converted = convert_positions(list(msg.position), self.calib, to_raw=True)
+            if converted is not None:
+                msg.position = converted
         self.raw_pub.publish(msg)
 
 
 class GaitNode(Node):
     def __init__(self):
         super().__init__("gait_node")
-        self.declare_parameter("counts_per_rad", 1.0)  # WIRE-AT-CALIBRATION
-        self.declare_parameter("home_offset", 0.0)  # WIRE-AT-CALIBRATION
+        # Per-joint homing calibration (#154). home_raw + urdf_sign per bus ID,
+        # filled by servo homing. Empty = uncalibrated = radians pass straight
+        # through, which is the pre-hardware state.
+        self.declare_parameter("home_raw", [0.0] * 12)   # WIRE-AT-CALIBRATION
+        self.declare_parameter("urdf_sign", [0] * 12)    # 0 = unknown
 
         self.id_map = load_joint_id_map()
         self.controller = GaitController(ControllerParams(), BacklashComp())
@@ -75,11 +106,8 @@ class GaitNode(Node):
         self._current_positions = None  # last /joint_states positions
 
         raw_pub = self.create_publisher(JointState, "/joint_commands", 10)
-        adapter = _CountsAdapter(
-            raw_pub,
-            float(self.get_parameter("counts_per_rad").value),
-            float(self.get_parameter("home_offset").value),
-        )
+        self.calib = self._load_calib()
+        adapter = _CountsAdapter(raw_pub, self.calib)
         self.safe_pub = SafeJointCommandPublisher(
             node=self, limits=load_default_limits(), raw_publisher=adapter
         )
@@ -92,11 +120,31 @@ class GaitNode(Node):
 
     # ---- subscriptions -------------------------------------------------
 
+    def _load_calib(self):
+        """Bus ID -> JointHomeCalib from ROS params. Unknown sign = omitted."""
+        home = list(self.get_parameter("home_raw").value or [])
+        sign = list(self.get_parameter("urdf_sign").value or [])
+        out = {}
+        for i in range(12):
+            if i < len(sign) and int(sign[i]) in (1, -1):
+                out[i + 1] = JointHomeCalib(
+                    home_raw=float(home[i]) if i < len(home) else 0.0,
+                    urdf_sign=int(sign[i]),
+                )
+        return out
+
     def _on_states(self, msg: JointState) -> None:
         self.safe_pub.on_joint_states(msg)  # envelope load window
         if len(msg.position) >= 12:
-            # TODO(calibration): raw counts -> radians before seeding
-            self._current_positions = list(msg.position[:12])
+            # RAW COUNTS -> RADIANS before seeding (#154). positions_to_pose()
+            # expects radians; feeding it raw counts made stand_up(start_pose=)
+            # begin from a garbage pose — and that is the E-stop RECOVERY path.
+            pos = list(msg.position[:12])
+            if self.calib:
+                converted = convert_positions(pos, self.calib, to_raw=False)
+                if converted is not None:
+                    pos = converted
+            self._current_positions = pos
 
     def _on_mode(self, msg: String) -> None:
         mode = msg.data.strip()

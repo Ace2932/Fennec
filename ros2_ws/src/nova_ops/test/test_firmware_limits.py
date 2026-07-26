@@ -2,6 +2,7 @@
 topic, plus the haa asymmetric/conservative default behavior in limits."""
 
 import math
+import pytest
 
 from nova_ops.safety_envelope import (
     JointHomeCalib,
@@ -108,3 +109,77 @@ def test_firmware_message_contract():
     for i in range(12):
         lo, hi = data[2 * i], data[2 * i + 1]
         assert 0.0 <= lo < hi <= 4095.0
+
+
+# ---- #154: command path and limit path must agree, per joint ----------------
+
+
+def test_command_and_limit_paths_agree_on_an_INVERTED_joint():
+    """The case that was silently broken: a servo mounted backwards.
+
+    The limits path already converted per joint via urdf_sign; the command path
+    used one global scalar for all twelve. So an inverted joint got a
+    correctly-signed limit WINDOW and a wrong-signed COMMAND — it would drive
+    away from target into its stop, with the firmware backstop computed for the
+    opposite sense so it could not catch it.
+
+    Both paths share rad_to_raw() now. This asserts they cannot diverge: a
+    commanded angle inside the joint's radian limits must convert to a raw count
+    inside the raw window the firmware was handed.
+    """
+    from nova_ops.safety_envelope.firmware_limits import (
+        JointHomeCalib, build_joint_limits_data, rad_to_raw,
+    )
+    from nova_ops.safety_envelope.limits import load_default_limits
+
+    limits = load_default_limits()
+    for sign in (+1, -1):                       # normal AND inverted mounting
+        calib = {i: JointHomeCalib(home_raw=2048.0, urdf_sign=sign)
+                 for i in range(1, 13)}
+        table = build_joint_limits_data(limits, calib)
+        for jid in range(1, 13):
+            lim = limits.get(jid)
+            raw_lo, raw_hi = table[2 * (jid - 1)], table[2 * (jid - 1) + 1]
+            # sample across the joint's legal radian span
+            for f in (0.0, 0.25, 0.5, 0.75, 1.0):
+                theta = lim.lower + f * (lim.upper - lim.lower)
+                raw = rad_to_raw(theta, calib[jid])
+                assert raw_lo - 1e-6 <= raw <= raw_hi + 1e-6, (
+                    f"sign={sign:+d} joint {jid}: a LEGAL angle "
+                    f"{math.degrees(theta):+.1f}° converts to raw {raw:.0f}, "
+                    f"outside the firmware window [{raw_lo:.0f}, {raw_hi:.0f}] "
+                    f"the same calibration produced"
+                )
+
+
+def test_round_trip_survives_an_inverted_joint():
+    """raw_to_rad(rad_to_raw(x)) == x for both mounting directions.
+
+    The /joint_states seeding path depends on this: node.py converts feedback
+    back to radians before positions_to_pose(), which is what stand_up() uses
+    as its start pose after an E-stop.
+    """
+    from nova_ops.safety_envelope.firmware_limits import (
+        JointHomeCalib, raw_to_rad, rad_to_raw,
+    )
+
+    for sign in (+1, -1):
+        c = JointHomeCalib(home_raw=1700.0, urdf_sign=sign)
+        for deg in (-95.0, -40.0, 0.0, 37.5, 86.0):
+            theta = math.radians(deg)
+            assert raw_to_rad(rad_to_raw(theta, c), c) == pytest.approx(theta)
+
+
+def test_partial_calibration_converts_NOTHING():
+    """All-or-nothing. The firmware reads the whole array in ONE unit, so a
+    part-counts / part-radians message is worse than no conversion."""
+    from nova_ops.safety_envelope.firmware_limits import (
+        JointHomeCalib, convert_positions,
+    )
+
+    partial = {i: JointHomeCalib(home_raw=2048.0, urdf_sign=+1)
+               for i in range(1, 12)}            # 11 of 12
+    assert convert_positions([0.1] * 12, partial, to_raw=True) is None
+    full = dict(partial)
+    full[12] = JointHomeCalib(home_raw=2048.0, urdf_sign=+1)
+    assert convert_positions([0.1] * 12, full, to_raw=True) is not None

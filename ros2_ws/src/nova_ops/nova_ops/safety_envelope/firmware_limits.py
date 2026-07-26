@@ -50,11 +50,65 @@ class JointHomeCalib:
     urdf_sign: Optional[int]  # +1 / -1 / None (unknown -> wide open)
 
 
+def rad_to_raw(theta_rad: float, calib: JointHomeCalib) -> float:
+    """URDF radians -> raw servo counts for ONE joint.
+
+    THE single conversion. Issue #154: this formula lived only inside
+    _raw_pair(), so the LIMITS path applied per-joint ``urdf_sign`` while the
+    COMMAND path (node.py's unit shim) used one global scalar for all twelve.
+    A joint whose servo is mounted inverted therefore got a correctly-signed
+    limit window and a WRONG-SIGNED command — driving away from target into its
+    stop, with the firmware backstop computed for the opposite sense.
+
+    Both paths call this now. Callers must check ``is_calibrated`` first;
+    an unknown sign has no defined conversion.
+    """
+    return calib.home_raw + calib.urdf_sign * theta_rad * RAW_PER_RAD
+
+
+def raw_to_rad(raw: float, calib: JointHomeCalib) -> float:
+    """Raw servo counts -> URDF radians. Inverse of rad_to_raw.
+
+    Needed on the way BACK: node.py seeds ``current_pose`` from /joint_states
+    and feeds it to positions_to_pose(), which expects radians. Without this
+    the E-stop recovery path (stand_up(start_pose=...)) starts from a garbage
+    pose.
+    """
+    return (raw - calib.home_raw) / (calib.urdf_sign * RAW_PER_RAD)
+
+
+def is_calibrated(calib: Optional[JointHomeCalib]) -> bool:
+    return calib is not None and calib.urdf_sign in (1, -1)
+
+
+def convert_positions(
+    positions: List[float],
+    calib: Dict[int, JointHomeCalib],
+    to_raw: bool,
+) -> Optional[List[float]]:
+    """Convert a bus-ordered 12-vec, or None if the conversion is not defined.
+
+    ALL OR NOTHING, deliberately. The firmware reads the whole array in ONE
+    unit, so converting the joints that happen to be calibrated and passing the
+    rest through would emit a message that is part counts and part radians —
+    far worse than not converting. None means "leave it alone" (the
+    WIRE-AT-CALIBRATION identity behaviour).
+    """
+    fn = rad_to_raw if to_raw else raw_to_rad
+    out: List[float] = []
+    for idx, value in enumerate(positions[:N_JOINTS]):
+        c = calib.get(idx + 1)
+        if not is_calibrated(c):
+            return None
+        out.append(fn(value, c))
+    return out if len(out) == N_JOINTS else None
+
+
 def _raw_pair(lower_rad: float, upper_rad: float, calib: JointHomeCalib) -> tuple:
-    if calib.urdf_sign not in (1, -1):
+    if not is_calibrated(calib):
         return (RAW_MIN, RAW_MAX)
-    a = calib.home_raw + calib.urdf_sign * lower_rad * RAW_PER_RAD
-    b = calib.home_raw + calib.urdf_sign * upper_rad * RAW_PER_RAD
+    a = rad_to_raw(lower_rad, calib)
+    b = rad_to_raw(upper_rad, calib)
     lo, hi = (a, b) if a < b else (b, a)
     lo = max(RAW_MIN, min(lo, RAW_MAX))
     hi = max(RAW_MIN, min(hi, RAW_MAX))
