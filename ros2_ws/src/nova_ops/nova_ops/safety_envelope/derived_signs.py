@@ -39,10 +39,45 @@ THE DERIVATION (each step is invertible, so each is stated)
     => +tick swings a LEFT leg INBOARD   (HAA_INBOARD_SIGN = +1)
     => +tick swings a RIGHT leg OUTBOARD (HAA_INBOARD_SIGN = -1)
 
-hfe/kfe are NOT included here. Their shafts run along the lateral axis, which an
-L/R mirror DOES flip, so their urdf_sign differs left-to-right — and unlike the
-hips there is no "all-forward" statement pinning them. Derive those separately
-or observe them; do not guess.
+HFE AND KFE
+-----------
+Same method, different mount. Their shafts run along the LATERAL axis, which an
+L/R mirror does flip, so unlike the hips their urdf_sign differs left-to-right.
+No "all-forward" statement pins them, so the horn facing comes from CAD:
+
+  * every leg part is a true mirror about its own lateral axis --
+    `coax_L = mirror([1,0,0]) coax_v6()` ("lateral axis = X in coax frame"),
+    `femur_L`/`tibia_L` = `mirror([0,0,1])`. Each mirror plane is PERPENDICULAR
+    to the shaft, so it swaps the horn and wheel seats end-for-end. A real
+    (unmirrorable) servo still fits by flipping 180 deg about its case axis --
+    the case is symmetric that way, and that rotation moves the connector bay
+    exactly where the mirror puts it -- so the mirrored pocket is buildable and
+    the shaft points opposite lateral ways on the two sides.
+  * `coax.scad`: `ARM_IN_X1 = FEMUR_MID - HORN_Z1  // femur horn seat face`.
+    Coax +X is outboard, so the INBOARD arm lands on the HORN seat (the
+    outboard arm, `ARM_OUT_X0 = 56.2`, is on the wheel side)
+    => the HFE horn faces INBOARD, and femur-frame +Z is inboard.
+  * `knee_arm.scad`: "FEMUR-frame: plate spans z 17.75..21.75", the horn-seat
+    face (`HORN_Z1`) => the KFE horn also faces INBOARD.
+  * confirmed against the authoritative placement,
+    `check_fit.coax_to_trunk_bases()`: the hfe/kfe shaft resolves INBOARD on all
+    four legs, with det +1 right / -1 left (the sides really are mirror images).
+
+Composing with the same measured convention: +tick is a negative rotation about
+the shaft, the shaft points inboard, and the URDF hfe/kfe axis is +y on all four
+legs, so
+
+    LEFT  leg (at +y): shaft = -y => +tick is POSITIVE about +y => urdf_sign +1
+    RIGHT leg (at -y): shaft = +y => +tick is NEGATIVE about +y => urdf_sign -1
+
+Front and rear share a sign, as for the hips -- corroborated by the MJCF, where
+hfe/kfe ranges are identical across all four legs.
+
+Unlike haa there is NO independent kinematic cross-check available: the URDF
+axis is +y on all four and the ranges are identical, so there is no left/right
+asymmetry in the model to exploit. The hfe/kfe signs rest on the CAD sources
+above plus the homing confirmation -- one notch weaker than haa, which is why
+they get the same derive-then-confirm treatment.
 
 HOW MUCH OF THIS IS CHECKED
 ---------------------------
@@ -89,6 +124,29 @@ DERIVED_HAA_INBOARD_SIGN: Dict[int, int] = {
 #: Step 4. Same for all four hips — raw up = URDF angle down.
 DERIVED_HAA_URDF_SIGN: Dict[int, int] = {jid: -1 for jid in HAA_IDS.values()}
 
+# joint_id_map is PER-LEG SEQUENTIAL: FL 1-3, FR 4-6, RL 7-9, RR 10-12,
+# each leg ordered haa -> hfe -> kfe.
+HFE_IDS: Dict[str, int] = {"FL": 2, "FR": 5, "RL": 8, "RR": 11}
+KFE_IDS: Dict[str, int] = {"FL": 3, "FR": 6, "RL": 9, "RR": 12}
+
+LEFT_LEGS = ("FL", "RL")
+RIGHT_LEGS = ("FR", "RR")
+
+#: hfe/kfe horns face INBOARD on every leg, and the lateral shaft is what an
+#: L/R mirror flips -- so unlike haa these differ left-to-right.
+DERIVED_PITCH_URDF_SIGN: Dict[int, int] = {
+    **{HFE_IDS[leg]: +1 for leg in LEFT_LEGS},
+    **{KFE_IDS[leg]: +1 for leg in LEFT_LEGS},
+    **{HFE_IDS[leg]: -1 for leg in RIGHT_LEGS},
+    **{KFE_IDS[leg]: -1 for leg in RIGHT_LEGS},
+}
+
+#: Every joint's raw-vs-URDF sign in one table (all 12).
+DERIVED_URDF_SIGN: Dict[int, int] = {
+    **DERIVED_HAA_URDF_SIGN,
+    **DERIVED_PITCH_URDF_SIGN,
+}
+
 #: Homing convention (measured): one-key center at the nominal pose.
 HOME_TICK = 2048
 
@@ -132,5 +190,39 @@ def confirm_haa_sign(
             f"{'INBOARD' if observed_inboard else 'OUTBOARD'}. One of the six "
             f"derivation steps is inverted for this joint — do NOT unlock the "
             f"40 deg outboard ROM until it is understood."
+        )
+    return expected
+
+
+def confirm_urdf_sign(
+    joint_id: int,
+    raw_delta: float,
+    urdf_delta_rad: float,
+) -> int:
+    """Check any joint's observed raw-vs-URDF direction against the derivation.
+
+    `firmware_limits.rad_to_raw` defines
+    ``raw = home_raw + urdf_sign * theta * RAW_PER_RAD``, so with RAW_PER_RAD
+    positive the observed sign is simply ``sign(raw_delta) * sign(urdf_delta)``.
+
+    Works for all 12 joints. Use at homing alongside `confirm_haa_sign()`, which
+    additionally pins the body-relative INBOARD direction that haa needs and a
+    pitch joint has no notion of.
+    """
+    if joint_id not in DERIVED_URDF_SIGN:
+        raise ValueError(f"unknown joint id {joint_id} (expected 1..12)")
+    if raw_delta == 0 or urdf_delta_rad == 0:
+        raise SignMismatch(
+            f"joint {joint_id}: no usable observation "
+            f"(raw_delta={raw_delta}, urdf_delta={urdf_delta_rad})"
+        )
+    observed = (1 if raw_delta > 0 else -1) * (1 if urdf_delta_rad > 0 else -1)
+    expected = DERIVED_URDF_SIGN[joint_id]
+    if observed != expected:
+        raise SignMismatch(
+            f"joint {joint_id}: derivation says urdf_sign={expected:+d}, "
+            f"observed {observed:+d} (raw {raw_delta:+.0f} counts moved the "
+            f"joint {urdf_delta_rad:+.4f} rad). An inverted joint drives AWAY "
+            f"from target into its stop at full authority — stop and resolve."
         )
     return expected
