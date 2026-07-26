@@ -49,6 +49,7 @@ from nova_locomotion.gait.backlash import BacklashComp
 from nova_ops.joint_map import load_joint_id_map
 from nova_ops.safety_envelope.firmware_limits import (
     JointHomeCalib,
+    build_calib,
     convert_positions,
 )
 from nova_ops.safety_envelope.limits import load_default_limits
@@ -97,8 +98,8 @@ class GaitNode(Node):
         # Per-joint homing calibration (#154). home_raw + urdf_sign per bus ID,
         # filled by servo homing. Empty = uncalibrated = radians pass straight
         # through, which is the pre-hardware state.
-        self.declare_parameter("home_raw", [0.0] * 12)   # WIRE-AT-CALIBRATION
-        self.declare_parameter("urdf_sign", [0] * 12)    # 0 = unknown
+        self.declare_parameter("home_raw", [0.0] * 12)  # WIRE-AT-CALIBRATION
+        self.declare_parameter("urdf_sign", [0] * 12)  # 0 = unknown
 
         self.id_map = load_joint_id_map()
         self.controller = GaitController(ControllerParams(), BacklashComp())
@@ -121,17 +122,11 @@ class GaitNode(Node):
     # ---- subscriptions -------------------------------------------------
 
     def _load_calib(self):
-        """Bus ID -> JointHomeCalib from ROS params. Unknown sign = omitted."""
-        home = list(self.get_parameter("home_raw").value or [])
-        sign = list(self.get_parameter("urdf_sign").value or [])
-        out = {}
-        for i in range(12):
-            if i < len(sign) and int(sign[i]) in (1, -1):
-                out[i + 1] = JointHomeCalib(
-                    home_raw=float(home[i]) if i < len(home) else 0.0,
-                    urdf_sign=int(sign[i]),
-                )
-        return out
+        """Bus ID -> JointHomeCalib from the ROS params. See build_calib()."""
+        return build_calib(
+            list(self.get_parameter("home_raw").value or []),
+            list(self.get_parameter("urdf_sign").value or []),
+        )
 
     def _on_states(self, msg: JointState) -> None:
         self.safe_pub.on_joint_states(msg)  # envelope load window

@@ -183,3 +183,55 @@ def test_partial_calibration_converts_NOTHING():
     full = dict(partial)
     full[12] = JointHomeCalib(home_raw=2048.0, urdf_sign=+1)
     assert convert_positions([0.1] * 12, full, to_raw=True) is not None
+
+
+# ---- build_calib: a broken calibration must not become motion --------------
+
+
+def test_build_calib_full_and_uncalibrated():
+    from nova_ops.safety_envelope import build_calib
+
+    assert len(build_calib([2048.0] * 12, [1] * 12)) == 12
+    # sign 0 = unknown = uncalibrated, the pre-hardware state (NOT an error)
+    assert build_calib([2048.0] * 12, [0] * 12) == {}
+    # mixed: only the signed joints appear
+    assert sorted(build_calib([2048.0] * 12, [1, 0, -1] + [0] * 9)) == [1, 3]
+
+
+def test_short_home_raw_RAISES_instead_of_defaulting_to_zero():
+    """The bug this guards: home_raw silently defaulting to 0.0.
+
+    0.0 instead of ~2048 is a 2048-count, 180-degree command error, and the
+    firmware backstop is built from the SAME calibration, so its window moves
+    with the error and cannot catch it — the exact #154 shape. 0.0 is inside
+    the legal raw range, so nothing downstream rejects it either.
+    """
+    from nova_ops.safety_envelope import build_calib
+
+    with pytest.raises(ValueError, match="home_raw has only 3 entries"):
+        build_calib([2048.0] * 3, [1] * 12)
+
+
+def test_build_calib_rejects_bad_sign_and_out_of_range_home():
+    from nova_ops.safety_envelope import build_calib
+
+    with pytest.raises(ValueError, match="urdf_sign must be"):
+        build_calib([2048.0] * 12, [2] * 12)
+    for bad in (-1.0, 4096.0):
+        with pytest.raises(ValueError, match="outside the STS3215 range"):
+            build_calib([bad] * 12, [1] * 12)
+
+
+def test_a_short_array_would_have_been_180_degrees_off():
+    """Negative control on the FIX: prove the old default was catastrophic.
+
+    Pins the magnitude so nobody re-introduces a lenient default thinking it
+    is harmless.
+    """
+    from nova_ops.safety_envelope.firmware_limits import JointHomeCalib, rad_to_raw
+
+    good = JointHomeCalib(home_raw=2048.0, urdf_sign=+1)
+    bad = JointHomeCalib(home_raw=0.0, urdf_sign=+1)  # the old silent default
+    err = rad_to_raw(0.6, good) - rad_to_raw(0.6, bad)
+    assert err == pytest.approx(2048.0)
+    assert math.degrees(2048.0 / RAW_PER_RAD) == pytest.approx(180.0, abs=0.5)

@@ -104,6 +104,49 @@ def convert_positions(
     return out if len(out) == N_JOINTS else None
 
 
+def build_calib(home, sign):
+    """Bus ID -> JointHomeCalib. Unknown sign (0) = omitted = uncalibrated.
+
+    Pure, so it is testable without rclpy (same reason hard_stop.py is
+    ROS-free). FAILS LOUD on an inconsistent calibration rather than filling a
+    default: a joint given a sign but no ``home_raw`` used to silently take
+    home_raw=0.0 instead of ~2048 — a 2048-count, 180-degree error. The
+    firmware backstop is built from this SAME calibration, so the window moves
+    with the error and cannot catch it. That is exactly the #154 shape: a
+    wrong command with a limit that agrees with it. 0.0 is also inside the
+    legal raw range, so nothing downstream would have rejected it.
+
+    Raising stops the node: a broken calibration must not become motion. Note
+    what this does NOT do — silently dropping the joint would leave the calib
+    partial, so convert_positions() would return None and pass RADIANS to a
+    firmware reading raw counts, which is worse again.
+    """
+    out = {}
+    for i in range(N_JOINTS):
+        jid = i + 1
+        s = int(sign[i]) if i < len(sign) else 0
+        if s == 0:
+            continue  # unknown sign -> uncalibrated, the pre-hardware state
+        if s not in (1, -1):
+            raise ValueError(
+                f"joint {jid}: urdf_sign must be +1, -1 or 0 (unknown), got {s}"
+            )
+        if i >= len(home):
+            raise ValueError(
+                f"joint {jid}: urdf_sign={s:+d} given but home_raw has only "
+                f"{len(home)} entries. Refusing to default home_raw — it would be "
+                f"a ~2048-count (180 deg) error that the firmware window, built "
+                f"from this same calibration, could not catch."
+            )
+        hr = float(home[i])
+        if not 0.0 <= hr <= 4095.0:
+            raise ValueError(
+                f"joint {jid}: home_raw={hr} outside the STS3215 range 0..4095"
+            )
+        out[jid] = JointHomeCalib(home_raw=hr, urdf_sign=s)
+    return out
+
+
 def _raw_pair(lower_rad: float, upper_rad: float, calib: JointHomeCalib) -> tuple:
     if not is_calibrated(calib):
         return (RAW_MIN, RAW_MAX)

@@ -15,6 +15,7 @@ from .wrapper import SafeJointCommandPublisher
 from .counters import EnvelopeCounters
 from .firmware_limits import (
     JointHomeCalib,
+    build_calib,
     build_joint_limits_data,
     convert_positions,
     is_calibrated,
@@ -29,6 +30,7 @@ __all__ = [
     "SafeJointCommandPublisher",
     "EnvelopeCounters",
     "JointHomeCalib",
+    "build_calib",
     "build_joint_limits_data",
     "convert_positions",
     "is_calibrated",
