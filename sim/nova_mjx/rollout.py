@@ -90,21 +90,37 @@ def main():
     # the flat spawn pad stays flat regardless. Only stairs were reachable from
     # the CLI before, so rough — the terrain this walker is actually meant for —
     # could not be rolled out at all.
-    terr_level = max(args.stair_level, args.terrain_level)
-    if terr_level > 0:
+    # EACH TYPE USES ITS OWN LEVEL. A `max()` across the two flags would let
+    # --terrain-level silently override the requested STAIR level: asking for
+    # --stair-level 0.25 --terrain-level 0.5 built 4 cm risers instead of 2 cm.
+    if args.stair_level > 0:
+        kind, level, step_frac, stair_frac = "staircase", args.stair_level, 0.0, 1.0
+    elif args.terrain_level > 0 and args.step_terrain:
+        kind, level, step_frac, stair_frac = ("stepped terrace",
+                                              args.terrain_level, 1.0, 0.0)
+    elif args.terrain_level > 0:
+        kind, level, step_frac, stair_frac = ("smooth rough",
+                                              args.terrain_level, 0.0, 0.0)
+    else:
+        kind, level = None, 0.0
+        if args.step_terrain:
+            print("warning: --step-terrain ignored, it needs --terrain-level > 0")
+    if kind:
         import jax.numpy as _jp
-        from terrain import terrain_field
-        if args.stair_level > 0:
-            kind, step_frac, stair_frac = "staircase", 0.0, 1.0
-        elif args.step_terrain:
-            kind, step_frac, stair_frac = "stepped terrace", 1.0, 0.0
-        else:
-            kind, step_frac, stair_frac = "smooth rough", 0.0, 0.0
-        hf = terrain_field(jax.random.PRNGKey(args.terrain_seed), terr_level,
+        from terrain import STAIR_RISE, TZ, terrain_field
+        hf = terrain_field(jax.random.PRNGKey(args.terrain_seed), level,
                            step_frac, stair_frac)
         env.sys = env.sys.tree_replace({"hfield_data": _jp.asarray(hf)})
-        print(f"terrain: {kind}, level {terr_level:.2f}, seed {args.terrain_seed} "
-              f"(peak height {terr_level * 0.20 * 100:.1f} cm over the pad)")
+        # MEASURE the peak off the generated field rather than predicting it.
+        # The predicted version was ~2x wrong: it scaled by TZ (0.20, the hfield
+        # ceiling) when the rough amplitude is BUMP_M (0.12) * level * a field
+        # that does not reach unity. Stairs clip to the ceiling at every level,
+        # so a single "peak" is meaningless there and is reported as a rise/step.
+        peak_cm = float(_jp.max(hf)) * TZ * 100.0
+        extra = (f"rise {STAIR_RISE * level * 100:.1f} cm/step"
+                 if stair_frac else f"peak {peak_cm:.1f} cm")
+        print(f"terrain: {kind}, level {level:.2f}, seed {args.terrain_seed} "
+              f"({extra}, flat spawn pad)")
     else:
         print("terrain: FLAT")
     cmd = jp.array([args.vx, 0.0, args.wz])
