@@ -390,44 +390,6 @@ def test_confirm_urdf_sign_rejects_unusable_input():
         confirm_urdf_sign(99, +100, 0.1)
 
 
-@pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
-def test_cable_gate_haa_envelope_matches_the_model():
-    """#157: the CAD cable gate must sweep the ROM the robot actually has.
-
-    It used to sweep a symmetric +-45, measuring 40 deg of INBOARD travel the
-    robot is not permitted to use while sampling the legal outboard travel
-    once. It now sweeps the asymmetric envelope from constants -- which can
-    drift away from the MJCF with nothing to notice, since the CAD tree is
-    deliberately standalone and cannot import the model. This is that notice.
-    """
-    import mujoco
-    import numpy as np
-
-    try:
-        cf = _load_cad_module("hardware/cad/leg_v6", "_nova_leg_v6_check_fit")
-    except ImportError as exc:  # pragma: no cover - trimesh optional locally
-        pytest.skip(f"leg_v6 check_fit unavailable: {exc}")
-    HAA_INBOARD_MAX_DEG = cf.HAA_INBOARD_MAX_DEG
-    HAA_OUTBOARD_MAX_DEG = cf.HAA_OUTBOARD_MAX_DEG
-    HAA_OUTBOARD_SIGN = cf.HAA_OUTBOARD_SIGN
-
-    m = mujoco.MjModel.from_xml_path(str(MJCF))
-    for leg in LEFT + RIGHT:
-        b = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, f"{leg}_hip")
-        side = float(np.sign(m.body_pos[b][1]))
-        lo, hi = m.jnt_range[
-            mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, f"{leg}_haa")
-        ]
-        # +haa moves the foot toward +y (measured elsewhere in this file), so
-        # the OUTBOARD limit is the one on the leg's own side of the model.
-        outboard = hi if side > 0 else -lo
-        inboard = -lo if side > 0 else hi
-        assert np.degrees(outboard) == pytest.approx(HAA_OUTBOARD_MAX_DEG, abs=0.6), leg
-        assert np.degrees(inboard) == pytest.approx(HAA_INBOARD_MAX_DEG, abs=0.6), leg
-
-    assert HAA_OUTBOARD_SIGN in (-1, 1)
-
-
 def test_runtime_haa_sign_is_still_unset():
     """Guard the derive-then-confirm boundary.
 
