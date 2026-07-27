@@ -333,9 +333,14 @@ def test_cad_places_every_pitch_horn_inboard():
         assert shaft[1] * np.sign(hip_y) < 0, f"{name}: pitch horn is not inboard"
         dets[name] = round(float(np.linalg.det(R)), 3)
 
-    # left legs are mirror images of right legs -- opposite handedness
-    assert dets["FR"] == dets["RR"] == 1.0
-    assert dets["FL"] == dets["RL"] == -1.0
+    # Handedness is DIAGONAL, not per-side (#163): the rear hip is a 180 deg
+    # YAW, so the +y corner takes the unmirrored part at the FRONT and the
+    # mirrored one at the REAR. det here encodes WHICH CHIRALITY sits at each
+    # corner -- a reflection applied to the right-leg cloud IS the left part.
+    # This assertion used to read FR==RR==+1 / FL==RL==-1, which encoded the
+    # translation premise and failed the moment the placement was corrected.
+    assert dets["FR"] == dets["RL"] == 1.0
+    assert dets["FL"] == dets["RR"] == -1.0
 
 
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")

@@ -322,3 +322,70 @@ def test_end_to_end_gait_survives_the_envelope():
         + "\n  ".join(worst[:8])
         + (f"\n  ...and {len(worst) - 8} more" if len(worst) > 8 else "")
     )
+
+
+# ---- #164: the table is LEG-LOCAL hfe; the consumer converts ---------------
+
+
+def test_to_canonical_front_is_identity_rear_negates_and_swaps():
+    """Rear hip is a 180 deg YAW (#163), so leg-local +hfe is the opposite
+    world rotation from the front's. MEASURED: leg-local +hfe moves the foot
+    -x at the front and +x at the rear, while URDF +hfe moves it -x on all
+    four. Endpoints must SWAP as well as negate -- negating an interval
+    reverses which end is the low one.
+    """
+    from nova_ops.rom_envelope import _to_canonical
+
+    assert _to_canonical("FL", -95.0, 67.9) == (-95.0, 67.9)
+    assert _to_canonical("FR", -95.0, 67.9) == (-95.0, 67.9)
+    assert _to_canonical("RL", -95.0, 67.9) == (-67.9, 95.0)
+    assert _to_canonical("RR", -95.0, 67.9) == (-67.9, 95.0)
+
+
+def test_rear_canonical_window_stays_bounded_BELOW():
+    """The direction check that catches a sign error.
+
+    At the REAR, folding toward the trunk is FORWARD, which is canonical
+    NEGATIVE hfe -- so the restrictive bound must sit on the negative side. If
+    the conversion were dropped (or applied twice) the tight bound would land
+    on the positive side, permitting exactly the folds that reach the riser.
+    """
+    import math
+
+    from nova_ops.rom_envelope import hfe_bounds
+
+    f_lo, f_hi = hfe_bounds("FL", 0.0, math.radians(-109))
+    r_lo, r_hi = hfe_bounds("RL", 0.0, math.radians(-109))
+    # front: tight on the POSITIVE side; rear: tight on the NEGATIVE side
+    assert abs(f_hi) < abs(f_lo), (math.degrees(f_lo), math.degrees(f_hi))
+    assert abs(r_lo) < abs(r_hi), (math.degrees(r_lo), math.degrees(r_hi))
+    # and they are mirror images of each other
+    assert math.degrees(r_lo) == pytest.approx(-math.degrees(f_hi), abs=0.01)
+
+
+def test_table_rows_are_LEG_LOCAL_not_pre_negated():
+    """Guard against a DOUBLE negation.
+
+    hfe_envelope.py emits leg-local and says so; rom_envelope converts. If a
+    future regeneration also negated rear rows generator-side, the consumer
+    would negate again and put the rear bound back on the wrong side. In
+    leg-local the rear rows MIRROR the front rows (same sign, same side); if
+    they ever come back pre-negated this fails.
+    """
+    from nova_ops.rom_envelope_table import ENVELOPE
+
+    for kfe in (-109, -50, 0):
+        f_lo, f_hi = ENVELOPE["FL"][kfe][8]   # haa index 8 == 0 deg
+        r_lo, r_hi = ENVELOPE["RL"][kfe][8]
+        assert r_lo == pytest.approx(f_lo, abs=3.0), (kfe, f_lo, r_lo)
+        assert r_hi == pytest.approx(f_hi, abs=3.0), (kfe, f_hi, r_hi)
+
+
+def test_rear_rows_are_kfe_dependent_again():
+    """The stale rear rows were flat across all ten kfe values -- the tell that
+    they were an artefact of the backwards placement (the knee folded AWAY from
+    the chassis, so kfe stopped mattering)."""
+    from nova_ops.rom_envelope_table import ENVELOPE, KFES
+
+    his = [ENVELOPE["RL"][k][8][1] for k in KFES]
+    assert max(his) - min(his) > 3.0, f"rear still flat across kfe: {his}"
