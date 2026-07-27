@@ -12,9 +12,15 @@ They are not unknown. Every input is already measured and recorded:
 
   * "+tick = CLOCKWISE from horn side" — MEASURED (leg homing convention),
     with home_tick = 2048 on every joint and RAW_PER_RAD = 4096/2pi = 651.9.
-  * "haa horns ALL-FORWARD ... front/rear shoulder = ONE part translated"
-    (leg_v6 doctrine, A360-verified). Chosen precisely so the rear legs are
-    TRANSLATIONS, not mirrors, keeping solve_side's L/R-only flip valid.
+  * the rear hip is the front placement YAWED 180 deg about Z (#163), NOT a
+    translation. The leg_v6 doctrine line saying "front/rear shoulder = ONE
+    part translated" is wrong, and an earlier fix in this repo replaced a
+    reflection with a translation -- both are det +1, so the handedness check
+    that motivated it could not tell them apart. The decisive fact is that
+    shoulder.scad bolts to the trunk END FACE (x +-63.5) and reaches 77.7mm to
+    the hip station: 63.5 + 77.7 = 141.2. Translated, the rear flange lands at
+    x -218.9, 155mm behind the trunk it is bolted to. Only the yaw is
+    buildable. So front horns face FORWARD and REAR horns face REARWARD.
   * left/right parts are true mirrors (coax/coax_L, shoulder_plate R/L).
 
 THE DERIVATION (each step is invertible, so each is stated)
@@ -22,22 +28,29 @@ THE DERIVATION (each step is invertible, so each is stated)
 1. Right-hand rule: a positive rotation about +A appears COUNTER-clockwise to a
    viewer positioned at +A looking back along -A. Therefore CLOCKWISE from the
    horn side  =>  NEGATIVE rotation about the shaft axis.
-2. Horns all-forward => the shaft (+Z of the servo frame) points along trunk +x
-   on ALL FOUR hips. An L/R mirror maps y -> -y and leaves +x fixed, so
-   mirroring does not change which way the horn faces.
-3. (1)+(2): +tick = NEGATIVE rotation about trunk +x, identically on all four.
+2. The shaft (+Z of the servo frame) points along trunk +x at the FRONT and
+   trunk -x at the REAR (the 180 deg yaw). An L/R mirror maps y -> -y and
+   leaves x fixed, so the LEFT/RIGHT mirror does not change horn facing --
+   only the front/rear yaw does.
+3. (1)+(2): +tick = NEGATIVE rotation about the shaft, i.e. negative about
+   trunk +x at the front and POSITIVE about trunk +x at the rear.
 4. The URDF/MJCF haa axis is +x on all four legs, so an increasing URDF angle is
-   a POSITIVE rotation about +x. With (3), raw counts and URDF angle move in
-   OPPOSITE directions => urdf_sign = -1 for every haa. Same on all four, which
-   is the payoff of the all-forward choice.
+   a POSITIVE rotation about +x. FRONT hips have the shaft along +x, so raw and
+   URDF move OPPOSITE => urdf_sign -1. REAR hips are yawed, shaft along -x, so
+   they move TOGETHER => urdf_sign +1. The front/rear split is the whole point:
+   an earlier version of this file asserted -1 uniformly, on the strength of the
+   translation premise.
 5. Foot geometry: the foot hangs below the hip (z < 0), and a positive rotation
    about +x moves it by dy = -z*sin(theta) > 0, i.e. toward +y. So +tick (a
    negative rotation) moves the foot toward -y.
 6. Body geometry: LEFT legs sit at +y, so -y is INBOARD. RIGHT legs sit at -y,
-   so -y is OUTBOARD.
+   so -y is OUTBOARD. Combined with the front/rear shaft flip from (2), the
+   result is DIAGONAL:
 
-    => +tick swings a LEFT leg INBOARD   (HAA_INBOARD_SIGN = +1)
-    => +tick swings a RIGHT leg OUTBOARD (HAA_INBOARD_SIGN = -1)
+    FL (+y, horn fwd)  +tick -> foot -y -> INBOARD   (+1)
+    FR (-y, horn fwd)  +tick -> foot -y -> OUTBOARD  (-1)
+    RL (+y, horn rear) +tick -> foot +y -> OUTBOARD  (-1)
+    RR (-y, horn rear) +tick -> foot +y -> INBOARD   (+1)
 
 HFE AND KFE
 -----------
@@ -135,15 +148,27 @@ from typing import Dict, Optional
 HAA_IDS: Dict[str, int] = {"FL": 1, "FR": 4, "RL": 7, "RR": 10}
 
 #: Step 6. +1 = increasing raw counts swings that leg INBOARD.
+#: DIAGONAL, not per-side: the rear hip is a 180 deg YAW (#163), so a rear leg's
+#: horn faces REARWARD and its foot swings the opposite way from the front leg
+#: on the same side. FL pairs with RR, FR with RL -- which is exactly the
+#: diagonal chirality pairing #163 measured from the meshes, arrived at
+#: independently.
 DERIVED_HAA_INBOARD_SIGN: Dict[int, int] = {
     HAA_IDS["FL"]: +1,
     HAA_IDS["FR"]: -1,
-    HAA_IDS["RL"]: +1,
-    HAA_IDS["RR"]: -1,
+    HAA_IDS["RL"]: -1,
+    HAA_IDS["RR"]: +1,
 }
 
-#: Step 4. Same for all four hips — raw up = URDF angle down.
-DERIVED_HAA_URDF_SIGN: Dict[int, int] = {jid: -1 for jid in HAA_IDS.values()}
+#: Step 4. FRONT hips -1, REAR hips +1. NOT uniform: the yaw reverses the haa
+#: shaft in body frame (front horn FORWARD, rear horn REARWARD) while the URDF
+#: axis stays +x on all four, so raw-vs-URDF flips end to end.
+DERIVED_HAA_URDF_SIGN: Dict[int, int] = {
+    HAA_IDS["FL"]: -1,
+    HAA_IDS["FR"]: -1,
+    HAA_IDS["RL"]: +1,
+    HAA_IDS["RR"]: +1,
+}
 
 # joint_id_map is PER-LEG SEQUENTIAL: FL 1-3, FR 4-6, RL 7-9, RR 10-12,
 # each leg ordered haa -> hfe -> kfe.
