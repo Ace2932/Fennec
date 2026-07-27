@@ -12,7 +12,7 @@ says so. Re-measured with the corrected placement (2026-07-26, box-model servo
 stand-in, 2 deg scan): every rear cell equals its front counterpart in the
 leg-local sign — [-94, +66] at haa 0 / kfe -109, [-94, +14] at haa -15 /
 kfe -109 — where the shipped rear rows carry a flat [-77.2, +95] with NO kfe
-dependence at all.
+dependence at all. Tracked as issue #164.
 
 WHY: the chassis ROM has been carried as a single scalar — "hfe toward-trunk fold
 +50 deg" — but the constraint is genuinely 3-dimensional. The corrected crouch

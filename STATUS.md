@@ -8,6 +8,8 @@ _Last updated: 2026-07-26_
 
 ## 🔴 2026-07-26 — CAD review: rear hip placement + the posture safety table
 Full review: [`docs/cad-review-2026-07-26.md`](docs/cad-review-2026-07-26.md); backlog rows CR26-1..8.
+Open items are tracked as issues: **#164** (rear ROM rows + rear hfe sign, sev:high) · **#165** (URDF/MJX hip grid)
+· **#166** (CAD gates unrunnable off-laptop / not in CI) · **#167** (rib vs drop-in acceptance) · **#168** (proud wheel heads).
 - **FIXED**: the rear hip was placed as a *translation* of the front in `chassis/check_fit.py`
   `coax_to_trunk_bases()` + `preview_assembly.py`. One shoulder part, flange on the trunk end face
   (±63.5 + 77.7 = ±141.2 hip station) ⇒ the rear is that placement **yawed 180°**. Translated put the

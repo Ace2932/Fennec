@@ -8,8 +8,18 @@ shoulders-in-assembly), and the geometry each of them exports to
 
 Method: read every `.scad` + gate script, then re-ran the parts of the gates
 that do not need the out-of-repo servo mesh against the committed STLs, plus
-independent probes (see `#verification` for exactly what was executed). Two
-findings are structural; the rest are small.
+independent probes (see §5 for exactly what was executed). Two findings are
+structural; the rest are small.
+
+**Tracking:** the placement fix and the doc corrections landed in
+[#163](https://github.com/Ace2932/Fennec/pull/163). Everything left open has an
+issue: [#164](https://github.com/Ace2932/Fennec/issues/164) (regenerate the rear
+ROM rows + pin the rear hfe sign — **sev:high**, §1),
+[#165](https://github.com/Ace2932/Fennec/issues/165) (URDF/MJX hip grid, §2),
+[#166](https://github.com/Ace2932/Fennec/issues/166) (gate portability + CI, §4),
+[#167](https://github.com/Ace2932/Fennec/issues/167) (rib vs drop-in acceptance,
+§4), [#168](https://github.com/Ace2932/Fennec/issues/168) (proud wheel screw
+heads, §4).
 
 ---
 

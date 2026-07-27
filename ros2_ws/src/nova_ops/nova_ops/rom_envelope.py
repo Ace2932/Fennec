@@ -6,7 +6,8 @@ TRANSLATION of the front, but the same shoulder part is used at both trunk ends
 and its flange bolts to the trunk end face, so the rear hip is the front
 placement YAWED 180 deg about Z. Derivation + measurements:
 hardware/cad/chassis/check_fit.py coax_to_trunk_bases() (fixed there
-2026-07-26) and docs/cad-review-2026-07-26.md.
+2026-07-26), docs/cad-review-2026-07-26.md, and issue #164 (the regeneration +
+the rear hfe sign are tracked there).
 
 What that means here, concretely:
   * The correct rear window equals the FRONT window in the leg's own frame
