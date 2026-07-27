@@ -135,13 +135,22 @@ def main():
     MIR = np.eye(4); MIR[1, 1] = -1
     S2T_f = np.array([[0, 1, 0, HIP_FA],
                       [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
-    FR = leg.copy()
+    FR = leg.copy()                                    # +y FRONT corner
     FR.apply_transform(S2T_f @ T([HIP_LAT, 0, 0]) @ MIR)
-    RR = FR.copy()
-    RR.apply_transform(T([-2 * HIP_FA, 0, 0]))    # translated: knees same way
     MY = np.eye(4); MY[1, 1] = -1
-    FL = FR.copy(); FL.apply_transform(MY)
-    RL = RR.copy(); RL.apply_transform(MY)
+    FL = FR.copy(); FL.apply_transform(MY)             # -y FRONT corner
+    # REAR = the front leg YAWED 180 deg about the trunk Z axis, NOT translated
+    # (fixed 2026-07-26, same bug as check_fit.coax_to_trunk_bases() — see that
+    # docstring for the derivation). The shoulder above is already placed with
+    # `end` inside the rotation, so its rear flange sits on the trunk end face
+    # and its horn plane at x -158.9; a translated rear leg put its own horn
+    # face at -123.4 — 35.5 mm off its plate and facing the trunk. Rz(180) maps
+    # (x,y) -> (-x,-y), so the front hip at +HIP_FA lands at -HIP_FA with no
+    # extra offset, and each rear corner ends up with the OTHER chirality
+    # (diagonal pairs: the +y rear corner is the -y FRONT leg yawed).
+    YAW = rot(180, [0, 0, 1], [0, 0, HIP_Z])
+    RR = FL.copy(); RR.apply_transform(YAW)            # +y REAR corner
+    RL = FR.copy(); RL.apply_transform(YAW)            # -y REAR corner
     parts += [FR, RR, FL, RL]
     # REAL D456 (d456_ref.stl, mm, from the RealSense SLDPRT via STL). Mounts
     # rear->plate (the 2x M3 @ ±47.2 are on the REAR face = STL z-26), lens

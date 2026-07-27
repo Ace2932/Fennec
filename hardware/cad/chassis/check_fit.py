@@ -501,41 +501,77 @@ def coax_to_trunk_bases():
     """4 hip placements. Front: trunk = [s_y+141.2, s_x, s_z+38.05];
     LEFT side is a mirror (real: coax_L/femur_L/tibia_L are mirrored parts).
 
-    REAR IS NOT MIRRORED — CORRECTED 2026-07-25.
-    The rear used to carry the `end` sign inside the ROTATION as well as the
-    translation ([0, end, 0, end*HIP_FA]), which made the rear placement a
-    REFLECTION: det(S2T @ MIR) = -1 for the rear vs +1 for the front. A
-    reflection is not a placement any physical part can take. leg_v6/ ships
-    only LEFT/RIGHT variants (coax/coax_L, femur/femur_L, tibia/tibia_L,
-    shoulder_plate/shoulder_plate_L) — there is NO front/rear part, so the rear
-    leg is the SAME part in the SAME orientation, translated to -HIP_FA. That
-    is also what sim/nova_mjx/build_mjcf.py models, and the built robot is the
-    TRANSLATED knee layout (all four knees bend backward, leg_ik.KNEE_FORWARD).
+    REAR = THE FRONT PLACEMENT YAWED 180 deg ABOUT Z — CORRECTED 2026-07-26.
+    Two earlier revisions were both wrong, in opposite directions, and the
+    physical option (a plain 180 deg YAW: det +1, a real rotation any part can
+    take) was never on the table:
+      * pre-2026-07-25 carried `end` inside the rotation AND the lateral row,
+        which came out an improper placement of the R leg at the rear-R corner;
+      * 2026-07-25 replaced it with a PURE TRANSLATION on the grounds that "a
+        reflection is not a placement any physical part can take" — true, but
+        the fix for an improper placement is the missing ROTATION, not dropping
+        the fore-aft flip.
 
-    The old mirror made front and rear sweep IDENTICAL volumes (FR and RR
-    returned byte-identical hit counts for every pose), which is why the
-    module docstring could say "chirality is irrelevant for a swept-envelope
-    check" — true for a symmetric union, but it also meant this gate could
-    never produce a per-END result. The +50 deg toward-trunk fold cap it
-    reports was therefore ONE measurement presented as two: with the rear
-    unmirrored, +hfe is toward-trunk at the FRONT but AWAY from the trunk at
-    the REAR, so the two ends do not share a window.
+    WHY A YAW IS FORCED (all repo numbers): shoulder.scad is ONE part at both
+    ends ("SAME part both ends; print 2") and its flange (shoulder-local
+    y -77.7) bolts to the trunk's END FACE (x +-63.5, trunk.stl bounds) — that
+    is what puts the hip station at +-HIP_FA in the first place (63.5 + 77.7 =
+    141.2). Under a pure translation the REAR flange lands at x = -218.9, i.e.
+    155 mm behind the trunk it is bolted to, and the rear coax's horn face ends
+    up at x = -123.4 while the rear shoulder's own horn plane is at -158.9.
+    THIS FILE ALREADY PLACES THE SHOULDER CORRECTLY (cases 3 + 6 keep `end` in
+    the rotation, so the rear flange lands on the end face) — the translated
+    rear LEG was therefore bolted to a shoulder the same gate had placed the
+    other way round. (Those two shoulder placements also swap the lateral row
+    without the `end` sign; harmless, because shoulder.stl is mirror-symmetric
+    in its own sx — every feature is cut for sx = +-1 — so the placed solid is
+    identical either way. The LEG is NOT sx-symmetric, which is why it matters
+    here and not there.)
+
+    MEASURED consequences (both verified against the real meshes, 2026-07-26):
+      * the hfe axis sits 11.6 mm TOWARD THE TRUNK at BOTH ends (x +-129.6);
+        the translated rear put it 11.6 mm the other way (-152.8), i.e. 23.2 mm
+        of rear leg station error. NB +-129.6 is also what the URDF/MJX hip
+        grid should carry for the pitch axes (they still use +-141.2 with a
+        zero haa->hfe fore-aft term — see dimensions.md "Hip grid").
+      * leg CHIRALITY PAIRS DIAGONALLY: the +y corner takes coax_R at the FRONT
+        and coax_L at the REAR (and vice versa). Still two parts, two of each,
+        but NOT the same part at both ends of one side. MIRX below is therefore
+        keyed on the sign of the shoulder-local station (sx < 0), which under
+        the yaw is the diagonal, not the side.
+      * front and rear DO share an hfe window (they are mirror images), so the
+        "the two ends do not share a window" note this docstring used to carry
+        was an artefact of the translated placement. Re-measured with
+        hfe_envelope.py's own targets + 5 mm proximity rule at haa 0: the rear
+        interval comes out equal to the front's ([-94, +66] at kfe -109,
+        [-94, +72] at kfe 0, leg-local sign) instead of the flat [-76, +94]
+        the shipped table carries at every kfe.
+      * => rom_envelope_table.py's REAR rows are STALE and ~5-10 deg LOOSE on
+        the constrained side, and they lost their kfe dependence entirely.
+        Regenerate (needs the real servo.stl) before trusting them; the runtime
+        posture gate is now the SOLE chassis protection (limits.py loosened the
+        hfe scalar to mechanical +-86 on 2026-07-25).
     """
     T = trimesh.transformations.translation_matrix
     MIR = np.eye(4); MIR[1, 1] = -1                    # coax -> shoulder
     bases = []
-    for hip_sign in (1, -1):                           # right / left hip
-        HIP = T([hip_sign * HIP_LAT, 0, 0])
-        MIRX = np.eye(4)
-        if hip_sign < 0:
-            MIRX[0, 0] = -1                            # mirror the leg itself
+    for corner_y in (1, -1):                           # world +y / -y hip
         for end in (1, -1):                            # front / rear
-            S2T = np.array([[0, 1, 0, end * HIP_FA],
-                            [1, 0, 0, 0],
+            # shoulder -> trunk. end=+1 is the front placement, unchanged;
+            # end=-1 is that same placement yawed 180 deg about Z (both rows
+            # carry `end`), which lands the flange on the trunk end face.
+            S2T = np.array([[0, end, 0, end * HIP_FA],
+                            [end, 0, 0, 0],
                             [0, 0, 1, HIP_Z],
                             [0, 0, 0, 1.0]])
-            bases.append((f'{"F" if end > 0 else "R"}{"R" if hip_sign > 0 else "L"}',
-                          S2T @ HIP @ MIRX @ MIR))
+            # world_y = end * sx, so hold the CORNER fixed and let the
+            # shoulder-local station follow the yaw.
+            sx = end * corner_y * HIP_LAT
+            MIRX = np.eye(4)
+            if sx < 0:
+                MIRX[0, 0] = -1                        # mirror the leg itself
+            bases.append((f'{"F" if end > 0 else "R"}{"R" if corner_y > 0 else "L"}',
+                          S2T @ T([sx, 0, 0]) @ MIRX @ MIR))
     return bases
 
 

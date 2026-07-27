@@ -1,6 +1,40 @@
 #!/usr/bin/env python3
 """Measure the FRONT/REAR hfe contact envelope as a function of (haa, kfe).
 
+⚠ THE TABLE ON DISK IS STALE FOR THE REAR LEGS (2026-07-26). It was generated
+against the 2026-07-25 rear hip placement, which put the rear leg's fore-aft
+geometry backwards (see check_fit.coax_to_trunk_bases()'s docstring — the rear
+shoulder is YAWED 180 deg, not translated).
+
+⚠⚠ WHEN YOU RE-RUN THIS (it needs the real servo.stl): THE REAR ROWS MUST BE
+NEGATED to be canonical, and NOTHING IN THIS PIPELINE DOES THAT YET. The
+`hfe` this script sweeps is applied inside cf.leg_cloud(), i.e. in the COAX
+frame, so +hfe means "fold toward the trunk" for whichever leg it is placed on.
+The canonical/URDF hfe axis is UNIFORM in world for all four legs
+(leg.macro.xacro: `axis xyz="0 1 0"` on every hfe/kfe joint), so canonical +hfe
+swings all four feet REARWARD -- which is toward the trunk at the FRONT and away
+from it at the REAR. Hence:
+
+    canonical_rear_interval = (-hi_local, -lo_local)     # negate AND swap ends
+
+Under the OLD translated placement this was a no-op -- the rear local frame was
+world-aligned with the front's, so the table came out canonical by accident. The
+placement fix REMOVES that accident, so an un-negated regeneration will put the
+rear bound on the WRONG SIDE: it would permit exactly the folds that reach the
+riser and forbid the harmless ones. Self-check after regenerating: the rear rows
+must stay bounded BELOW (lo around -66, hi near +95), same side as the current
+shipped rows -- if they come out bounded above, the negation is missing.
+Note it is ONLY hfe that needs an end-keyed sign here. The haa mapping in
+clear() is keyed on the SIDE (label[1]), and outboard is side-determined, not
+end-determined, so it stays correct under the yaw. (The servo-frame picture is
+the dual of this: there it is only haa that moves -- see issue #170.)
+
+Re-measured with the corrected placement (2026-07-26, box-model servo
+stand-in, 2 deg scan): every rear cell equals its front counterpart in the
+leg-local sign — [-94, +66] at haa 0 / kfe -109, [-94, +14] at haa -15 /
+kfe -109 — where the shipped rear rows carry a flat [-77.2, +95] with NO kfe
+dependence at all. Tracked as issue #164.
+
 WHY: the chassis ROM has been carried as a single scalar — "hfe toward-trunk fold
 +50 deg" — but the constraint is genuinely 3-dimensional. The corrected crouch
 sweep (check_fit.py, rear placement fixed 2026-07-25) shows the front leg's first
@@ -170,7 +204,10 @@ def main():
                 f'Boundary = the leg comes within {CLEARANCE_MM} mm of the chassis\\n'
                 '(proximity, not intersection), so the gap is already included.\n'
                 'Measured against riser_bay / battery_pocket / pack /\n'
-                'skid rails / head with the corrected (unmirrored) rear hip placement.\n'
+                'skid rails / head. REAR HIP = the front placement YAWED 180 deg\n'
+                '(check_fit.coax_to_trunk_bases, fixed 2026-07-26) -- so a rear\n'
+                'leg-local +hfe is the OPPOSITE world rotation from a front one:\n'
+                'state that sign where these bounds are consumed.\n'
                 '"""\n')
         f.write(f"CLEARANCE_MM = {CLEARANCE_MM!r}\nHAAS = {HAAS!r}\nKFES = {KFES!r}\n")
         f.write("ENVELOPE = {\n")

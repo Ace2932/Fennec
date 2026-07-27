@@ -4,7 +4,29 @@ Single-pane blockers / in-progress / next-actions. Hand-maintained; the detail
 lives in `README.md` (Open Decisions + Build Roadmap), `docs/order-list.md`,
 per-board `ROUTING_HANDOFF.md`, and memory. Update when state changes.
 
-_Last updated: 2026-06-27_
+_Last updated: 2026-07-26_
+
+## 🔴 2026-07-26 — CAD review: rear hip placement + the posture safety table
+Full review: [`docs/cad-review-2026-07-26.md`](docs/cad-review-2026-07-26.md); backlog rows CR26-1..8.
+Open items are tracked as issues: **#164** (rear ROM rows + rear hfe sign, sev:high) · **#165** (URDF/MJX hip grid)
+· **#166** (CAD gates unrunnable off-laptop / not in CI) · **#167** (rib vs drop-in acceptance) · **#168** (proud wheel heads).
+- **FIXED**: the rear hip was placed as a *translation* of the front in `chassis/check_fit.py`
+  `coax_to_trunk_bases()` + `preview_assembly.py`. One shoulder part, flange on the trunk end face
+  (±63.5 + 77.7 = ±141.2 hip station) ⇒ the rear is that placement **yawed 180°**. Translated put the
+  rear flange 155 mm behind its own trunk and the rear hfe axis at −152.8 instead of −129.6 — and bolted
+  the leg to a shoulder the *same gate* placed the other way round.
+- **🔴 OPEN, owner + real `servo.stl`**: `rom_envelope_table.py`'s **REAR rows are therefore invalid**, and
+  since `limits.py` loosened the hfe scalar to mechanical ±86 (2026-07-25) that table is the **sole**
+  chassis protection. Re-measured rear = front ([−94,+66] @ haa 0/kfe −109) vs the shipped flat
+  [−77.2,+95] at every kfe. **Re-run `hfe_envelope.py`, copy to `nova_ops/`, and pin the leg-local→canonical
+  hfe SIGN for the yawed rear hips** (same class as #153/#155) — the rear rows must be **NEGATED**
+  (`canonical_rear = (−hi_local, −lo_local)`; the URDF hfe axis is uniform in world, so canonical +hfe folds
+  toward the trunk at the front and away at the rear). Under the old translated placement that negation was a
+  no-op, so an un-negated regeneration silently puts the rear bound on the WRONG SIDE. No LiPo-powered ROM
+  extremes on the rear legs until then.
+- **FIXED (docs)**: leg chirality pairs **diagonally** (front +y = R, rear +y = **L**) — `leg_v6/README.md`.
+- **🟠 DECISION (gait/sim)**: URDF `body_half_x`/MJX `MOUNT.x` 0.1412 is the *stock* hfe station; v6 puts the
+  pitch axes at ±129.6 ⇒ the modeled stance is 23.2 mm longer fore-aft than the robot. Folds into B2.
 
 ## 🟢 2026-06-27 — Boards FAB-READY (supersedes the "Pending board edit" + B1 items below)
 Both boards **fab_gate GO**, branch `feat/power-board-arm-routed` (HEAD 475cdc5). The two "Pending board edit"

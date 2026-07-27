@@ -21,6 +21,13 @@ Deps: none (pure string emit). Validate with validate_model.py (needs mujoco).
 """
 
 # ---- measured kinematics (m) — nova.urdf.xacro ----------------------------
+# ⚠ OPEN (CAD review 2026-07-26): MOUNT.x + HAA_TO_HFE[0] are a STOCK-assembly
+# pair — 0.1412 is the stock HFE-axis fore-aft station, so a zero fore-aft
+# haa->hfe term is exact for stock. leg_v6 is different: the built hfe (pitch)
+# axes sit at ±0.1296, spacing 0.2592 not 0.2824, so this model's stance is
+# 23.2 mm longer fore-aft than the robot. Not changed here — it moves the
+# geometry every trained policy was fit to. See nova.urdf.xacro's own note,
+# hardware/cad/dimensions.md "Hip grid", docs/cad-review-2026-07-26.md §2.
 MOUNT = dict(x=0.1412, y=0.0390, z=0.0380)     # base -> haa (half hip grid)
 HAA_TO_HFE = (0.0, 0.0338, -0.0095)            # y scaled by reflect
 HFE_TO_KFE = (0.0, 0.0, -0.1069)               # femur length

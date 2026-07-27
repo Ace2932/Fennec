@@ -68,7 +68,20 @@
        24.6 mm outboard + 9.5 mm below haa; kfe a further 9.2 mm outboard;
        the tibia S-curve puts the foot 30.5 mm outboard of kfe.
        Total haa->foot lateral = 64.3 mm = LegParams.hip_offset. -->
-  <xacro:property name="body_half_x" value="0.1412"/> <!-- MEASURED half hip-grid length -->
+  <!-- ⚠ OPEN (CAD review 2026-07-26): body_half_x + hip_to_upper_x below are a
+       STOCK-assembly pair. 141.2 is the stock HFE-axis fore-aft station, which
+       is why hip_to_upper_x = 0 is exact for stock (the haa axis is fore-aft
+       parallel, so its own station along that axis is a kinematic no-op).
+       leg_v6 moved it: shoulder.scad puts the haa station at ±141.2 (trunk end
+       face ±63.5 + 77.7 flange) and coax.scad puts the hfe axis 11.6 mm TOWARD
+       THE TRUNK of it, at both ends -> real pitch-axis spacing 259.2, not
+       282.4. So this model's stance is 23.2 mm longer fore-aft than the built
+       robot (same error in sim/nova_mjx/build_mjcf.py MOUNT/HAA_TO_HFE).
+       Fix is either body_half_x 0.1296 or hip_to_upper_x ∓0.0116 — NOT changed
+       here: it shifts every trained policy's geometry and is a B2/gait-lane
+       call. Details: hardware/cad/dimensions.md "Hip grid" +
+       docs/cad-review-2026-07-26.md §2. -->
+  <xacro:property name="body_half_x" value="0.1412"/> <!-- MEASURED half hip-grid length (⚠ stock hfe station, see above) -->
   <xacro:property name="body_half_y" value="0.0390"/> <!-- MEASURED half hip-grid width  -->
   <xacro:property name="mount_z"     value="0.0380"/> <!-- hip row above chassis-mesh origin; ⚠ REVIEW-visual (trunk-node bbox polluted by children) -->
   <xacro:property name="hip_to_upper_x" value="0.0"/>

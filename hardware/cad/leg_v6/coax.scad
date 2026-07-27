@@ -348,8 +348,13 @@ module coax_v6() {
             // outboard-arm boss reaching the femur wheel (56.2 -> 51.5)
             translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0])
                 wheel_boss_pos();
-            // front strap pads (0.8 proud: the case top cap ridge stands
-            // 0.2 proud of the horn-face plane); full wall-width blocks
+            // front strap pads (0.8 proud of BLK_Y0). NB since rev 3 moved the
+            // horn seat 17.2->17.75 the case's top cap ridge (CAP_TOP 17.4)
+            // sits 0.35 BEHIND that plane, so the strap lands 1.15 clear of
+            // the cap, not 0.6 as the pre-rev-3 comment here implied — that is
+            // the intended NON-contact (README tolerance map row 15, "cap gap
+            // >=0.2": the strap is a lift backstop, it must not press the
+            // cap). Full wall-width blocks;
             // outboard edge held to x15.6: at 16.6 it grazed the femur rim
             // plane at full hip swing (sweep-gate find)
             for (sx = [-1, 1])

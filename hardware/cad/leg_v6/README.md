@@ -99,11 +99,31 @@ Every mate, its fit, and who provides location:
 First-article: run an M3 through the Ø3.1 dowel pair (prints ~3.0), M2 through
 columns, insert purchase test at Ø4.0 before committing the knee arms.
 
-**Corner identity:** only TWO leg variants exist (L/R — front and rear are the
-same parts translated). An ASSEMBLED leg becomes corner-specific via its servo
+**Corner identity:** only TWO leg variants exist (L/R), two of each — but they
+go on **DIAGONAL** corners, not one variant per side (**CORRECTED 2026-07-26**;
+this section previously said "front and rear are the same parts translated").
+`shoulder.scad` is the SAME part at both trunk ends and its flange bolts to the
+trunk **end face**, so the rear crossmember is the front one **yawed 180° about
+the vertical** — which flips which chirality each rear corner needs. Verified
+against the meshes (`../chassis/check_fit.py` `coax_to_trunk_bases()`, fixed the
+same day; `docs/cad-review-2026-07-26.md` §1):
+
+| corner | coax / femur / tibia | hip station | hfe axis (trunk frame) |
+|---|---|---|---|
+| FRONT +y | R parts | x +141.2 | x **+129.6** (11.6 toward the trunk) |
+| FRONT −y | L parts | x +141.2 | x +129.6 |
+| REAR +y | **L parts** | x −141.2 | x **−129.6** |
+| REAR −y | **R parts** | x −141.2 | x −129.6 |
+
+A wrong-chirality leg is caught immediately at assembly (its femur yoke points
+*inboard*, under the trunk) — but plan the print batch and the pre-assembly
+kitting off the table above, not off "L on the left, R on the right".
+
+An ASSEMBLED leg becomes corner-specific via its servo
 IDs (FL 1-3 · FR 4-6 · RL 7-9 · RR 10-12): after ID assignment + centering,
-LABEL the coax (tape/marker: corner + IDs). Two assembled left legs are
-physically identical — swapping FL↔RL scrambles the gait with zero visual cue.
+LABEL the coax (tape/marker: corner + IDs). The two legs of the SAME chirality
+(now FL↔RR / FR↔RL) are physically identical — swapping them scrambles the gait
+with zero visual cue.
 
 ## Fit gate (run after every geometry change)
 `../../../.venv/bin/python check_fit.py` — places the REAL servo mesh

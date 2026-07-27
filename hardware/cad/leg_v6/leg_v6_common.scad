@@ -27,7 +27,8 @@
 // Joint pattern (SO-ARM-style, bolted BOTH sides):
 //   * driven yoke TOP arm bolts the horn (underside contacts horn face 17.75)
 //   * driven yoke BOTTOM arm carries a Ø19 boss up through the pocket
-//     floor's Ø24 window and BOLTS THE WHEEL (face -17.7)
+//     floor's Ø21.5 window (WHEEL_WIN_D) and BOLTS THE WHEEL
+//     (face WHEEL_Z0 -17.75, rev 3)
 //   * servo body: drops into the open-top pocket; floor seats the bay
 //     (-19.7) + a raised front platform (-15.6); 4x M2 x >=22 through-floor
 //     into the case columns; printed strap over the tail as backup
@@ -304,7 +305,8 @@ module wheel_couple_neg() {
         // same defect LA-5 removed from shoulder.scad's standalone cut, but it
         // was still latent in this SHARED module -> coax HFE + femur KFE wheels).
         // Removed. The wheel's proud center boss is cleared by the blind
-        // idler-boss relief below (Ø7 x WHEEL_CTR_DEEP), which does NOT go
+        // idler-boss relief below (WHEEL_CTR_D Ø9.5 x WHEEL_CTR_DEEP, widened
+        // from Ø7 by the 2026-07-13 hub caliper fix), which does NOT go
         // through. The 4 BCD screws above are the real fasteners.
     }
     // idler-boss relief (rev 3): the wheel side has NO retention screw —

@@ -78,16 +78,21 @@ yoke arm/boss between the screw head and the disc that a stock (thin-arm,
 direct-mount) screw isn't sized for; **source all 6 M2.5 lengths (5/6/8/14mm)
 explicitly**, don't assume the servo kit's screws cover any of them.
 
-**Open finding (not fixed here — docs only):** `leg_v6_common.scad`'s shared
-`wheel_couple_neg()` still cuts a 5th "center (wheel is M2.5)" clearance hole
-— the same phantom center-screw bug fixed at the hip stations under LA-5
-(`shoulder.scad`, `improvement-backlog.md`) but **not yet applied to the
-shared module**, so it's still latent in `coax.scad`'s HFE wheel coupling and
-`femur.scad`'s own KFE wheel coupling. Not counted as a real fastener above
-(matches `load-analysis.md`'s existing "4× M2.5 wheel screws" and the LA-5
-rationale that the idler has no retention screw) — flagged for a follow-up
-code fix, `design-outline.md:95` ("4× M2.5 + ctr") repeats the same stale
-assumption.
+**~~Open finding~~ CLOSED (re-checked 2026-07-26):** the phantom 5th "center
+(wheel is M2.5)" clearance hole in the shared `wheel_couple_neg()` was already
+removed under **#51 (2026-07-11)** — the module now cuts only the 4 BCD screws
+plus the blind `WHEEL_CTR_D` idler-boss relief, so nothing is latent in
+`coax.scad`'s HFE or `femur.scad`'s KFE wheel coupling. This paragraph was
+stale, not the code. Still open elsewhere: `design-outline.md:95` ("4× M2.5 +
+ctr") repeats the retired assumption.
+
+**Head protrusion at the wheel BCD (noted 2026-07-26, first-article check):**
+the Ø5.2 counterbore is **1.6 mm deep** (above) while an M2.5 SHCS head is
+~2.5 mm tall, so each of those 8 heads per leg stands **~0.9 mm proud** of the
+yoke bottom-arm / coax outboard-arm exterior. Both faces look into free air
+(femur underside at the knee, coax outboard flank) and the sweep gates are run
+against the STLs, which do not model heads — so this is a snag/scuff item, not
+an interference one. Use low-head/button M2.5 if sourcing fresh, or accept it.
 
 **cowl → upright ×2 (M2×10 SHCS + M2×4 insert, Ø5.5 c'bore)** — REMOVED
 2026-07-10 (backlog #41): `jetson_cowl.scad` retired in place, superseded by
