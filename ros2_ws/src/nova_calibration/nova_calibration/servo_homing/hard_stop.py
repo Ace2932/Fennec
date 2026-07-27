@@ -71,6 +71,7 @@ class HardStopResult:
     peak_load: int = 0
     ticks: int = 0
     detail: str = ""
+    urdf_sign: int = 0    # 0 = not observed; +1/-1 from config.observed_urdf_sign
 
 
 def _clamp_raw(v: int) -> int:

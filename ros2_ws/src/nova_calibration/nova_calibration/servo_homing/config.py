@@ -12,6 +12,14 @@ For each joint you must know two things from the mechanical design:
                       hard stop — not a soft cable bundle or a foot on the
                       ground.
 
+  stop_urdf_end       'lower' or 'upper' — WHICH end of the joint's URDF range
+                      the mechanical stop you are driving into corresponds to.
+                      This is the missing piece that makes urdf_sign FREE: the
+                      homing run already observes which way raw counts moved to
+                      reach the stop, so knowing which URDF end it is gives the
+                      raw-vs-URDF direction with no extra motion. See
+                      observed_urdf_sign().
+
   stop_to_home_raw    Raw-count distance from the mechanical stop to the
                       logical joint zero (URDF home). Sign is relative to
                       search_dir: home = stop_pos - search_dir * stop_to_home_raw.
@@ -41,6 +49,7 @@ class JointHomeConfig:
     name: str
     search_dir: int          # +1 or -1
     stop_to_home_raw: int    # see module docstring
+    stop_urdf_end: str = 'lower'   # 'lower' | 'upper' — see module docstring
     placeholder: bool = True  # True => values are guesses, node will skip
 
 
@@ -65,3 +74,30 @@ JOINT_CONFIGS = {
     11: JointHomeConfig(11, 'RR_hfe', search_dir=-1, stop_to_home_raw=deg_to_raw(90)),
     12: JointHomeConfig(12, 'RR_kfe', search_dir=-1, stop_to_home_raw=deg_to_raw(90)),
 }
+
+
+def observed_urdf_sign(search_dir: int, stop_urdf_end: str) -> int:
+    """OBSERVED raw-vs-URDF direction for one joint. +1 / -1.
+
+    Driving in `search_dir` reached the mechanical stop at `stop_urdf_end`, so:
+
+        search_dir=+1 (raw rose) and the stop is the URDF UPPER end
+            => raw up went with angle up  => +1
+        search_dir=+1 and the stop is the LOWER end
+            => raw up went with angle down => -1
+
+    which collapses to sign = search_dir * (+1 upper / -1 lower).
+
+    This is an OBSERVATION -- it comes from a servo that actually moved -- and
+    is the missing producer for the `urdf_sign` the command path consumes
+    (nova_locomotion node.py, firmware_limits.build_calib). Cross-check it
+    against the CAD-derived table before trusting it; see
+    nova_ops.safety_envelope.derived_signs.confirm_urdf_sign.
+    """
+    if search_dir not in (1, -1):
+        raise ValueError(f"search_dir must be +1 or -1, got {search_dir}")
+    if stop_urdf_end not in ('lower', 'upper'):
+        raise ValueError(
+            f"stop_urdf_end must be 'lower' or 'upper', got {stop_urdf_end!r}"
+        )
+    return search_dir * (1 if stop_urdf_end == 'upper' else -1)
