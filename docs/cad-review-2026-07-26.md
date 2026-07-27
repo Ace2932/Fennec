@@ -86,11 +86,28 @@ each with the derivation in the docstring/comment. Warnings added at
 **Left to the owner (needs the real `servo.stl`, ~3 min on that machine):**
 
 1. Regenerate `rom_envelope_table.py` and copy it to `nova_ops/`.
-2. While regenerating, **pin the leg-local → canonical hfe sign for the yawed
-   rear hips.** Their local `+hfe` is the opposite world rotation from the
-   front's, and nothing downstream states it (`rom_envelope.py` documents a
-   canonical convention for `haa` only). This is the same defect class as
-   #153/#155 — treat the sign as a deliverable of the regeneration.
+2. While regenerating, **negate the rear rows** — and note that nothing in the
+   pipeline does this yet. `hfe_envelope.py` sweeps `hfe` inside `leg_cloud()`,
+   i.e. in the coax frame, where `+hfe` = "fold toward the trunk" for whichever
+   leg it is placed on. The canonical hfe axis is **uniform in world** for all
+   four legs (`leg.macro.xacro`: `axis xyz="0 1 0"` on every hfe joint), so
+   canonical `+hfe` swings all four feet rearward — toward the trunk at the
+   front, *away* from it at the rear. Hence
+   `canonical_rear = (−hi_local, −lo_local)`.
+
+   Under the old translated placement this was a **no-op** — the rear local
+   frame was world-aligned with the front's, so the table came out canonical by
+   accident. The placement fix removes the accident, so an un-negated
+   regeneration would put the rear bound on the *wrong side*: permitting exactly
+   the folds that reach the riser and forbidding the harmless ones. Self-check
+   after regenerating: rear rows stay bounded **below** (lo ≈ −66 at haa 0 /
+   kfe −109, hi ≈ +95) — same side as today, just tighter and now kfe-dependent.
+
+   Only `hfe` needs an end-keyed sign. `haa` is keyed on **side** in
+   `hfe_envelope.clear()`, and outboard is side-determined rather than
+   end-determined, so it survives the yaw untouched. The servo frame is the exact
+   dual — there only `haa` moves (#170, whose `HAA_INBOARD_SIGN` comes out
+   **diagonal**, FL↔RR / FR↔RL, independently corroborating §3).
 3. Expect the crouch/ROM cases to move. They should stay green: the corrected
    rear is the front's mirror and the front already passes; the residual
    asymmetries are the head (front-only) and the skid rails (`x −55..75`).
