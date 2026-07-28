@@ -11,11 +11,25 @@ on:
     paths:
       - 'ros2_ws/src/**'
       - '.github/workflows/ros-pytest.yml'
+      # test_urdf_sync reads the CAD and the generated MJCF directly — it is
+      # the cross-seam check that CAD, URDF and sim agree on the same geometry
+      # (#165). Filtering it to ros2_ws only would have meant the guard never
+      # fired on the changes MOST likely to break it: a CAD edit, or a
+      # regenerated nova.xml.
+      - 'hardware/cad/**'
+      - 'sim/nova_mjx/**'
   push:
     branches: [main]
     paths:
       - 'ros2_ws/src/**'
       - '.github/workflows/ros-pytest.yml'
+      # test_urdf_sync reads the CAD and the generated MJCF directly — it is
+      # the cross-seam check that CAD, URDF and sim agree on the same geometry
+      # (#165). Filtering it to ros2_ws only would have meant the guard never
+      # fired on the changes MOST likely to break it: a CAD edit, or a
+      # regenerated nova.xml.
+      - 'hardware/cad/**'
+      - 'sim/nova_mjx/**'
 
 jobs:
   pytest:

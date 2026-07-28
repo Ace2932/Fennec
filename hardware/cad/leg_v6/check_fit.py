@@ -15,16 +15,23 @@ coax_hfe cap mount-hardware gate alone).
 
 Exit 0 = clean, 1 = interference (clusters printed).
 """
+import pathlib
 import sys
+
 import numpy as np
 import trimesh
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from cad_assets import asset  # noqa: E402  (path insert must come first)
 
 # servo.stl = STS3215_03a v1 (same snapshot as the canonical
 # "STS3215_03a v1.3mf") INCLUDING the output horn + bottom wheel bodies the
 # 3mf omits. Cross-checked 2026-07-03: the 3mf's bare case matches this
 # mesh's case body feature-for-feature (pins/screw bores/spline boss/cap)
 # within 0.1mm after a +1.0mm z-origin shift.
-SERVO = '/Users/afox/codebases/NOVA/feetech_servo_models/converted_stl/servo.stl'
+# Vendored into this repo (#166) — was an absolute /Users path into the ROOT
+# repo, so this gate could only run on one machine.
+SERVO = str(asset('servo.stl'))
 
 
 def servo_mesh():
