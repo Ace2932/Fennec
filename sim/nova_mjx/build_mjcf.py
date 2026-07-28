@@ -21,15 +21,18 @@ Deps: none (pure string emit). Validate with validate_model.py (needs mujoco).
 """
 
 # ---- measured kinematics (m) — nova.urdf.xacro ----------------------------
-# ⚠ OPEN (CAD review 2026-07-26): MOUNT.x + HAA_TO_HFE[0] are a STOCK-assembly
-# pair — 0.1412 is the stock HFE-axis fore-aft station, so a zero fore-aft
-# haa->hfe term is exact for stock. leg_v6 is different: the built hfe (pitch)
-# axes sit at ±0.1296, spacing 0.2592 not 0.2824, so this model's stance is
-# 23.2 mm longer fore-aft than the robot. Not changed here — it moves the
-# geometry every trained policy was fit to. See nova.urdf.xacro's own note,
-# hardware/cad/dimensions.md "Hip grid", docs/cad-review-2026-07-26.md §2.
+# HIP GRID fixed 2026-07-27 (#165). MOUNT.x + HAA_TO_HFE[0] were a STOCK
+# pair: 0.1412 is the stock HFE-axis station, which made a zero fore-aft
+# haa->hfe term exact for stock (the haa axis is fore-aft parallel, so the hip
+# origin's station along it is a kinematic no-op). leg_v6 is different — the
+# haa station is ±0.1412 and the hfe axis sits 0.0116 TOWARD THE TRUNK of it at
+# both ends, so the pitch axes are at ±0.1296, spacing 0.2592 not 0.2824. The
+# model's stance was 23.2 mm longer fore-aft than the robot.
+# HAA_TO_HFE[0] is a MAGNITUDE — leg_body() applies the sign per END (-sx),
+# since toward-the-trunk is -x at the front and +x at the rear.
+# Must stay in step with nova.urdf.xacro (body_half_x / hip_to_upper_x).
 MOUNT = dict(x=0.1412, y=0.0390, z=0.0380)     # base -> haa (half hip grid)
-HAA_TO_HFE = (0.0, 0.0338, -0.0095)            # y scaled by reflect
+HAA_TO_HFE = (0.0116, 0.0338, -0.0095)         # x by -sx (end), y by reflect
 HFE_TO_KFE = (0.0, 0.0, -0.1069)               # femur length
 KFE_TO_FOOT = (0.0, 0.0305, -0.1290)           # tibia length; y by reflect
 
@@ -84,14 +87,18 @@ def haa_range(reflect):
 
 
 def leg_body(name, sx, sy):
+    # hx: the hfe axis sits HAA_TO_HFE[0] TOWARD THE TRUNK of the haa station
+    # (#165) — -x at the front (sx +1), +x at the rear (sx -1). Per END, not
+    # per side: keying this off sy would put both rear hips on the wrong side.
+    hx = -sx * HAA_TO_HFE[0]
     hy = HAA_TO_HFE[1] * sy
     fy = KFE_TO_FOOT[1] * sy
     return f'''
       <body name="{name}_hip" pos="{sx*MOUNT['x']:.4f} {sy*MOUNT['y']:.4f} {MOUNT['z']:.4f}">
         <joint name="{name}_haa" axis="1 0 0" range="{haa_range(sy)}" damping="{DAMP_HIP:.3f}"/>
         {inertial(LINK_I['hip'], sy)}
-        <geom type="capsule" fromto="0 0 0 0 {hy:.4f} {HAA_TO_HFE[2]:.4f}" size="{R_THIGH}" class="viz"/>
-        <body name="{name}_upper" pos="0 {hy:.4f} {HAA_TO_HFE[2]:.4f}">
+        <geom type="capsule" fromto="0 0 0 {hx:.4f} {hy:.4f} {HAA_TO_HFE[2]:.4f}" size="{R_THIGH}" class="viz"/>
+        <body name="{name}_upper" pos="{hx:.4f} {hy:.4f} {HAA_TO_HFE[2]:.4f}">
           <joint name="{name}_hfe" axis="0 1 0" range="{-HFE_EXT:.4f} {HFE_FOLD:.4f}" damping="{DAMP_LEG:.3f}"/>
           {inertial(LINK_I['upper'], sy)}
           <geom type="capsule" fromto="0 0 0 0 0 {HFE_TO_KFE[2]:.4f}" size="{R_THIGH}" class="viz"/>

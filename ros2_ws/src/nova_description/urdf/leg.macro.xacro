@@ -43,7 +43,12 @@
     <joint name="${leg}_hfe" type="revolute">
       <parent link="${leg}_hip"/>
       <child  link="${leg}_upper"/>
-      <origin xyz="${hip_to_upper_x} ${reflect*hip_to_upper_y} ${hip_to_upper_z}" rpy="0 0 0"/>
+      <!-- hip_to_upper_x is a MAGNITUDE; the hfe axis sits that far TOWARD THE
+           TRUNK of the haa station (#165). That is -x at the front and +x at
+           the rear, so the sign is keyed per END (leg[0]) exactly like the hfe
+           extension limit below — NOT per side via reflect, which would put
+           both rear hips on the wrong side of their own hip station. -->
+      <origin xyz="${hip_to_upper_x if leg[0] == 'R' else -hip_to_upper_x} ${reflect*hip_to_upper_y} ${hip_to_upper_z}" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
       <!-- gate ROM: toward-trunk +50 (both) .. away-trunk -86 (both — #47
            MEASURED 2026-07-11: front head clearance is not the binding
