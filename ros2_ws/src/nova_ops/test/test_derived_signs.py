@@ -427,15 +427,147 @@ def test_confirm_urdf_sign_rejects_unusable_input():
         confirm_urdf_sign(99, +100, 0.1)
 
 
-def test_runtime_haa_sign_is_still_unset():
-    """Guard the derive-then-confirm boundary.
+def test_runtime_haa_sign_carries_provenance(monkeypatch):
+    """Guard the derive-then-confirm boundary — by PROVENANCE, not emptiness.
 
-    If someone wires DERIVED_* into limits without an on-robot confirmation,
-    this fails. Deleting this test is the decision to trust an unconfirmed sign
-    with 40 deg of travel toward the battery -- make it deliberately.
+    This asserted every runtime sign was still None (#161). That guard had to
+    be DELETED to ship confirmed signs, and a test you must remove to make
+    progress is one people remove without much thought — on the constant whose
+    failure mode is a leg swinging under the LiPo at 40 deg. The moment it was
+    legitimately in the way was the moment it stopped protecting anything.
+
+    So: a sign may be populated, but only WITH a recorded observation. None is
+    still fine (uncalibrated). What is forbidden is the derived table typed
+    straight in, which is the thing the old test was really trying to prevent
+    and the one state it could not distinguish once deletion was on the table.
     """
     assert set(limits.HAA_INBOARD_SIGN) == set(HAA_IDS.values())
-    assert all(v is None for v in limits.HAA_INBOARD_SIGN.values()), (
-        "haa signs are now populated at runtime -- confirm each hip with "
-        "confirm_haa_sign() at homing before relying on them"
+    limits.check_haa_sign_provenance()  # raises if any sign lacks a record
+
+
+def test_provenance_check_catches_a_sign_typed_STRAIGHT_IN(monkeypatch):
+    """The negative control: the exact move the old guard existed to stop."""
+    monkeypatch.setitem(limits.HAA_INBOARD_SIGN, HAA_IDS["FL"], +1)
+    with pytest.raises(limits.UnconfirmedSign, match="no recorded confirmation"):
+        limits.check_haa_sign_provenance()
+
+
+def test_recording_a_confirmation_populates_the_sign(monkeypatch):
+    monkeypatch.setattr(limits, "HAA_INBOARD_SIGN", dict(limits.HAA_INBOARD_SIGN))
+    monkeypatch.setattr(
+        limits, "HAA_SIGN_CONFIRMATION", dict(limits.HAA_SIGN_CONFIRMATION)
     )
+    jid = HAA_IDS["RR"]
+    limits.record_haa_confirmation(
+        jid,
+        sign=DERIVED_HAA_INBOARD_SIGN[jid],
+        observed_utc="2026-07-27T18:00:00Z",
+        method="homing: +200 counts, watched the foot cross toward the belly",
+        assembly="leg_v6 rev2 / RR / servo 10",
+    )
+    assert limits.HAA_INBOARD_SIGN[jid] == DERIVED_HAA_INBOARD_SIGN[jid]
+    limits.check_haa_sign_provenance()  # sign + record agree
+
+
+def test_confirmation_survives_neither_a_blank_field_nor_a_bad_sign(monkeypatch):
+    """A record with an empty method or assembly is not provenance.
+
+    'When, how, against which assembly' is what makes the value survivable
+    across a servo swap or a re-seat -- a bare timestamp does not.
+    """
+    monkeypatch.setattr(limits, "HAA_INBOARD_SIGN", dict(limits.HAA_INBOARD_SIGN))
+    monkeypatch.setattr(
+        limits, "HAA_SIGN_CONFIRMATION", dict(limits.HAA_SIGN_CONFIRMATION)
+    )
+    ok = dict(
+        sign=+1,
+        observed_utc="2026-07-27T18:00:00Z",
+        method="homing sweep",
+        assembly="leg_v6 rev2 / FL",
+    )
+    for field in ("observed_utc", "method", "assembly"):
+        with pytest.raises(ValueError, match=field):
+            limits.record_haa_confirmation(HAA_IDS["FL"], **{**ok, field: "  "})
+    with pytest.raises(ValueError, match="sign"):
+        limits.record_haa_confirmation(HAA_IDS["FL"], **{**ok, "sign": 0})
+    with pytest.raises(ValueError, match="not a haa"):
+        limits.record_haa_confirmation(2, **ok)
+    # nothing partial got written on the way out
+    assert limits.HAA_INBOARD_SIGN[HAA_IDS["FL"]] is None
+    assert limits.HAA_SIGN_CONFIRMATION[HAA_IDS["FL"]] is None
+
+
+def test_clearing_a_confirmation_takes_the_sign_WITH_it(monkeypatch):
+    """A servo swap or re-seat invalidates the observation. Clearing must drop
+    the sign too, or the hip keeps the wide ROM on a record that no longer
+    describes the hardware in front of you."""
+    monkeypatch.setattr(limits, "HAA_INBOARD_SIGN", dict(limits.HAA_INBOARD_SIGN))
+    monkeypatch.setattr(
+        limits, "HAA_SIGN_CONFIRMATION", dict(limits.HAA_SIGN_CONFIRMATION)
+    )
+    jid = HAA_IDS["FR"]
+    limits.record_haa_confirmation(
+        jid,
+        sign=-1,
+        observed_utc="2026-07-27T18:00:00Z",
+        method="homing sweep",
+        assembly="leg_v6 rev2 / FR",
+    )
+    limits.clear_haa_confirmation(jid)
+    assert limits.HAA_INBOARD_SIGN[jid] is None
+    assert limits.HAA_SIGN_CONFIRMATION[jid] is None
+    limits.check_haa_sign_provenance()
+
+
+def test_an_UNCONFIRMED_sign_does_not_unlock_the_wide_ROM(monkeypatch):
+    """Provenance has to be load-bearing, not decorative.
+
+    If only the test enforced it, the check would be one CI edit away from
+    meaning nothing. So the CONFIRMATION unlocks the asymmetric window, not the
+    number: a sign typed straight in leaves the hip on the conservative
+    symmetric ±15 — the fail-safe answer to "we do not know which way this hip
+    swings", and 40 deg of it would be toward the LiPo.
+    """
+    jid = HAA_IDS["FL"]
+    monkeypatch.setitem(limits.HAA_INBOARD_SIGN, jid, +1)  # no record
+    lim = limits._hip_abduction(jid)
+    assert lim.lower == pytest.approx(-math.radians(15.0))
+    assert lim.upper == pytest.approx(+math.radians(15.0))
+    assert limits.confirmed_haa_sign(jid) is None
+
+
+def test_a_CONFIRMED_sign_does_unlock_it(monkeypatch):
+    monkeypatch.setattr(limits, "HAA_INBOARD_SIGN", dict(limits.HAA_INBOARD_SIGN))
+    monkeypatch.setattr(
+        limits, "HAA_SIGN_CONFIRMATION", dict(limits.HAA_SIGN_CONFIRMATION)
+    )
+    jid = HAA_IDS["FL"]
+    limits.record_haa_confirmation(
+        jid,
+        sign=+1,  # +counts = inboard, so outboard is the NEGATIVE side
+        observed_utc="2026-07-27T18:00:00Z",
+        method="homing sweep",
+        assembly="leg_v6 rev2 / FL",
+    )
+    lim = limits._hip_abduction(jid)
+    assert lim.lower == pytest.approx(-math.radians(40.0))
+    assert lim.upper == pytest.approx(+math.radians(15.0))
+
+
+def test_a_confirmation_disagreeing_with_its_own_sign_is_caught(monkeypatch):
+    """The two must not drift. Recording writes both; poking one is the drift."""
+    monkeypatch.setattr(limits, "HAA_INBOARD_SIGN", dict(limits.HAA_INBOARD_SIGN))
+    monkeypatch.setattr(
+        limits, "HAA_SIGN_CONFIRMATION", dict(limits.HAA_SIGN_CONFIRMATION)
+    )
+    jid = HAA_IDS["RL"]
+    limits.record_haa_confirmation(
+        jid,
+        sign=-1,
+        observed_utc="2026-07-27T18:00:00Z",
+        method="homing sweep",
+        assembly="leg_v6 rev2 / RL",
+    )
+    limits.HAA_INBOARD_SIGN[jid] = +1  # someone "fixed" the sign in place
+    with pytest.raises(limits.UnconfirmedSign, match="disagrees"):
+        limits.check_haa_sign_provenance()

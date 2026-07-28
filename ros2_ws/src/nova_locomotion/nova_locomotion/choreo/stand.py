@@ -181,8 +181,11 @@ def pose_for(name: str, p: ChoreoParams) -> Pose:
                     f"keyframe {name!r} needs {abs(math.degrees(pose[leg][0])):.0f}° "
                     f"outboard haa on {leg}, but the gate ROM is a conservative "
                     f"symmetric ±{math.degrees(p.leg.haa_range):.0f}° until "
-                    f"nova_ops.safety_envelope.limits.HAA_INBOARD_SIGN[{leg}] is "
-                    f"filled at homing calibration. Splay poses unlock there."
+                    f"nova_ops.safety_envelope.limits.record_haa_confirmation() "
+                    f"records an OBSERVED inboard sign for {leg} at homing "
+                    f"calibration. Splay poses unlock there. Writing "
+                    f"HAA_INBOARD_SIGN by hand will not do it (#161) — the "
+                    f"confirmation is what unlocks the window, not the number."
                 )
             _check_rom(name, leg, pose[leg], p)
         return pose
