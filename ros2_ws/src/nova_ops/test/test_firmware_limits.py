@@ -128,14 +128,17 @@ def test_command_and_limit_paths_agree_on_an_INVERTED_joint():
     inside the raw window the firmware was handed.
     """
     from nova_ops.safety_envelope.firmware_limits import (
-        JointHomeCalib, build_joint_limits_data, rad_to_raw,
+        JointHomeCalib,
+        build_joint_limits_data,
+        rad_to_raw,
     )
     from nova_ops.safety_envelope.limits import load_default_limits
 
     limits = load_default_limits()
-    for sign in (+1, -1):                       # normal AND inverted mounting
-        calib = {i: JointHomeCalib(home_raw=2048.0, urdf_sign=sign)
-                 for i in range(1, 13)}
+    for sign in (+1, -1):  # normal AND inverted mounting
+        calib = {
+            i: JointHomeCalib(home_raw=2048.0, urdf_sign=sign) for i in range(1, 13)
+        }
         table = build_joint_limits_data(limits, calib)
         for jid in range(1, 13):
             lim = limits.get(jid)
@@ -160,7 +163,9 @@ def test_round_trip_survives_an_inverted_joint():
     as its start pose after an E-stop.
     """
     from nova_ops.safety_envelope.firmware_limits import (
-        JointHomeCalib, raw_to_rad, rad_to_raw,
+        JointHomeCalib,
+        raw_to_rad,
+        rad_to_raw,
     )
 
     for sign in (+1, -1):
@@ -174,15 +179,75 @@ def test_partial_calibration_converts_NOTHING():
     """All-or-nothing. The firmware reads the whole array in ONE unit, so a
     part-counts / part-radians message is worse than no conversion."""
     from nova_ops.safety_envelope.firmware_limits import (
-        JointHomeCalib, convert_positions,
+        JointHomeCalib,
+        convert_positions,
     )
 
-    partial = {i: JointHomeCalib(home_raw=2048.0, urdf_sign=+1)
-               for i in range(1, 12)}            # 11 of 12
+    partial = {
+        i: JointHomeCalib(home_raw=2048.0, urdf_sign=+1) for i in range(1, 12)
+    }  # 11 of 12
     assert convert_positions([0.1] * 12, partial, to_raw=True) is None
     full = dict(partial)
     full[12] = JointHomeCalib(home_raw=2048.0, urdf_sign=+1)
     assert convert_positions([0.1] * 12, full, to_raw=True) is not None
+
+
+# ---- #159: the three calibration states must be DISTINGUISHABLE -----------
+
+
+def test_calibration_state_names_the_three_states():
+    """The dangerous state is PARTIAL, and it used to look like pre-hardware.
+
+    Both emit radians into a firmware reading raw counts. Fully uncalibrated is
+    the expected pre-hardware state (nothing is listening). Partial is bring-up
+    with some joints homed — same behaviour, completely different consequence.
+    """
+    from nova_ops.safety_envelope.firmware_limits import (
+        JointHomeCalib,
+        calibration_state,
+    )
+
+    full = {i: JointHomeCalib(home_raw=2048.0, urdf_sign=+1) for i in range(1, 13)}
+    assert calibration_state({}) == ("uncalibrated", list(range(1, 13)))
+    assert calibration_state(full) == ("active", [])
+
+    partial = {i: c for i, c in full.items() if i not in (4, 11)}
+    assert calibration_state(partial) == ("partial", [4, 11])
+
+
+def test_calibration_state_counts_an_unknown_SIGN_as_missing():
+    """A present entry with urdf_sign None has no defined conversion — it is
+    missing, not calibrated. is_calibrated() is the authority, not membership."""
+    from nova_ops.safety_envelope.firmware_limits import (
+        JointHomeCalib,
+        calibration_state,
+        convert_positions,
+    )
+
+    calib = {i: JointHomeCalib(home_raw=2048.0, urdf_sign=+1) for i in range(1, 13)}
+    calib[7] = JointHomeCalib(home_raw=2048.0, urdf_sign=None)
+    assert calibration_state(calib) == ("partial", [7])
+    # and it agrees with the conversion it is describing
+    assert convert_positions([0.1] * 12, calib, to_raw=True) is None
+
+
+def test_calibration_state_agrees_with_convert_positions():
+    """The classifier must never say 'active' where the conversion declines."""
+    from nova_ops.safety_envelope.firmware_limits import (
+        JointHomeCalib,
+        calibration_state,
+        convert_positions,
+    )
+
+    for drop in ([], [1], [6, 12], list(range(1, 13))):
+        calib = {
+            i: JointHomeCalib(home_raw=2048.0, urdf_sign=+1)
+            for i in range(1, 13)
+            if i not in drop
+        }
+        state, _ = calibration_state(calib)
+        converted = convert_positions([0.1] * 12, calib, to_raw=True)
+        assert (state == "active") == (converted is not None), (drop, state)
 
 
 # ---- build_calib: a broken calibration must not become motion --------------

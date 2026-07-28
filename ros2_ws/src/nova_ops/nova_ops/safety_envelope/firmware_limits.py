@@ -104,6 +104,34 @@ def convert_positions(
     return out if len(out) == N_JOINTS else None
 
 
+def calibration_state(calib: Dict[int, JointHomeCalib]):
+    """Classify a calibration: ``(state, missing_ids)``. See #159.
+
+    ``convert_positions`` is all-or-nothing, so it answers one question — does
+    the conversion apply. It cannot distinguish the two ways of getting "no":
+
+      * ``uncalibrated`` — NOTHING is homed. The pre-hardware state, expected,
+        nothing is listening.
+      * ``partial``      — SOME joints are homed. Identical behaviour, and it
+        is the bring-up state: radians go to a firmware reading raw counts,
+        so 0.6 rad becomes 0.6 counts and every servo drives toward a stop.
+      * ``active``       — all twelve convert.
+
+    Same behaviour, different consequence, and no caller could tell them apart.
+    ``is_calibrated`` is the authority for "homed" (a present entry with an
+    unknown sign has no defined conversion), so this stays in step with
+    ``convert_positions`` by construction rather than by a parallel rule.
+    """
+    missing = [
+        jid for jid in range(1, N_JOINTS + 1) if not is_calibrated(calib.get(jid))
+    ]
+    if not missing:
+        return "active", missing
+    if len(missing) == N_JOINTS:
+        return "uncalibrated", missing
+    return "partial", missing
+
+
 def build_calib(home, sign):
     """Bus ID -> JointHomeCalib. Unknown sign (0) = omitted = uncalibrated.
 

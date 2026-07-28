@@ -48,8 +48,8 @@ from nova_locomotion.controller import (
 from nova_locomotion.gait.backlash import BacklashComp
 from nova_ops.joint_map import load_joint_id_map
 from nova_ops.safety_envelope.firmware_limits import (
-    JointHomeCalib,
     build_calib,
+    calibration_state,
     convert_positions,
 )
 from nova_ops.safety_envelope.limits import load_default_limits
@@ -77,18 +77,55 @@ class _CountsAdapter:
 
     Identity until every joint is calibrated — see convert_positions() for why
     the all-or-nothing rule is deliberate.
+
+    SAYS WHICH STATE IT IS IN (#159). Identity behaviour means radians reach a
+    firmware reading raw counts — harmless before hardware (nothing listening),
+    dangerous during bring-up (0.6 rad becomes 0.6 counts). Those two states
+    looked identical in the log; now each announces itself once.
     """
 
-    def __init__(self, raw_pub, calib=None):
+    def __init__(self, raw_pub, calib=None, logger=None):
         self.raw_pub = raw_pub
         self.calib = calib or {}
+        self.logger = logger
         self._warned = False
+        self._announce()
+
+    def _announce(self):
+        if self.logger is None:
+            return
+        state, missing = calibration_state(self.calib)
+        if state == "active":
+            self.logger.info("joint calibration ACTIVE: commands convert to raw counts")
+        elif state == "uncalibrated":
+            self.logger.info(
+                "no joint calibration: radians pass through unconverted "
+                "(expected pre-hardware — do NOT drive servos in this state)"
+            )
+        else:
+            # already said why nothing converts — don't repeat it from publish()
+            self._warned = True
+            self.logger.warn(
+                "PARTIAL joint calibration: bus IDs "
+                f"{missing} have no confirmed sign, so NOTHING converts and "
+                "radians are being published to a firmware reading raw counts. "
+                "Home the remaining joints before commanding motion."
+            )
 
     def publish(self, msg):
         if self.calib:
             converted = convert_positions(list(msg.position), self.calib, to_raw=True)
             if converted is not None:
                 msg.position = converted
+            elif not self._warned and self.logger is not None:
+                # _announce already covered a partial calib; reaching here with
+                # a full one means the MESSAGE was malformed (short array), a
+                # different fault that would otherwise be silent.
+                self._warned = True
+                self.logger.warn(
+                    f"conversion declined for a {len(msg.position)}-joint message; "
+                    "publishing radians unconverted"
+                )
         self.raw_pub.publish(msg)
 
 
@@ -108,7 +145,7 @@ class GaitNode(Node):
 
         raw_pub = self.create_publisher(JointState, "/joint_commands", 10)
         self.calib = self._load_calib()
-        adapter = _CountsAdapter(raw_pub, self.calib)
+        adapter = _CountsAdapter(raw_pub, self.calib, logger=self.get_logger())
         self.safe_pub = SafeJointCommandPublisher(
             node=self, limits=load_default_limits(), raw_publisher=adapter
         )
