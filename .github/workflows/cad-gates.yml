@@ -43,10 +43,20 @@ jobs:
         # degrading a gate into a weaker check.
         run: pip install numpy trimesh scipy networkx rtree manifold3d
 
+      - name: Runner resources
+        # The sweep is the memory-hungriest thing this repo runs. When it dies
+        # here, the first question is always "how much RAM did it have".
+        run: |
+          free -m
+          ulimit -a
+          nproc
+
       - name: Assembly fit sweep (leg_v6)
         # The ROM/fit authority. ~5.5 min on an M-series laptop; slower here.
+        # -u so the OK lines stream: Python block-buffers stdout off a TTY, so
+        # a killed run printed NOTHING and gave no clue how far it got.
         working-directory: hardware/cad/leg_v6
-        run: python check_fit.py --sweep
+        run: python -u check_fit.py --sweep
 
       - name: Shoe fit
         working-directory: hardware/cad/leg_v6
