@@ -73,30 +73,58 @@ def _load_cad_module(rel_dir: str, name: str):
 # --------------------------------------------------------------------------
 
 
-def test_left_and_right_have_opposite_inboard_sign():
-    for l_ in LEFT:
-        for r_ in RIGHT:
+def test_left_and_right_are_opposite_WITHIN_AN_END():
+    """Left/right oppose each other, but only end by end.
+
+    This compared every LEFT leg against every RIGHT leg, which held under the
+    translation premise and does not under the 180 deg rear yaw (#163): FL and
+    RR are both +1. The mirror is still a mirror -- it just cannot be applied
+    across the yaw.
+    """
+    for front, rear in ((("FL", "FR"), ("RL", "RR")),):
+        for pair in (front, rear):
+            a, c = pair
             assert (
-                DERIVED_HAA_INBOARD_SIGN[HAA_IDS[l_]]
-                == -DERIVED_HAA_INBOARD_SIGN[HAA_IDS[r_]]
-            )
+                DERIVED_HAA_INBOARD_SIGN[HAA_IDS[a]]
+                == -DERIVED_HAA_INBOARD_SIGN[HAA_IDS[c]]
+            ), pair
 
 
-def test_front_and_rear_share_a_sign():
-    """Horns all-forward => rear is a TRANSLATION, not a mirror."""
+def test_haa_inboard_sign_pairs_DIAGONALLY():
+    """The rear hip is a 180 deg YAW (#163), not a translation.
+
+    This test used to assert front == rear on the same side, which is what the
+    translation premise implied. It passed, and it was wrong. A rear leg's horn
+    faces REARWARD, so its foot swings the opposite way from the front leg
+    beside it: FL pairs with RR, FR with RL. That diagonal is the same pairing
+    #163 measured from the meshes by asking which corner takes which chirality
+    -- two independent routes to the same answer.
+    """
     assert (
         DERIVED_HAA_INBOARD_SIGN[HAA_IDS["FL"]]
-        == DERIVED_HAA_INBOARD_SIGN[HAA_IDS["RL"]]
+        == DERIVED_HAA_INBOARD_SIGN[HAA_IDS["RR"]]
     )
     assert (
         DERIVED_HAA_INBOARD_SIGN[HAA_IDS["FR"]]
-        == DERIVED_HAA_INBOARD_SIGN[HAA_IDS["RR"]]
+        == DERIVED_HAA_INBOARD_SIGN[HAA_IDS["RL"]]
+    )
+    # and NOT front==rear on a side, which is the premise that was wrong
+    assert (
+        DERIVED_HAA_INBOARD_SIGN[HAA_IDS["FL"]]
+        != DERIVED_HAA_INBOARD_SIGN[HAA_IDS["RL"]]
     )
 
 
-def test_urdf_sign_is_uniform_across_hips():
-    """Shaft is +x on all four, so raw-vs-URDF cannot differ between them."""
-    assert set(DERIVED_HAA_URDF_SIGN.values()) == {-1}
+def test_haa_urdf_sign_splits_FRONT_from_REAR():
+    """The yaw reverses the haa shaft, so raw-vs-URDF flips end to end.
+
+    Was `== {-1}` for all four, which followed from the translation premise and
+    is wrong. The URDF axis stays +x on all four; the SHAFT does not.
+    """
+    assert DERIVED_HAA_URDF_SIGN[HAA_IDS["FL"]] == -1
+    assert DERIVED_HAA_URDF_SIGN[HAA_IDS["FR"]] == -1
+    assert DERIVED_HAA_URDF_SIGN[HAA_IDS["RL"]] == +1
+    assert DERIVED_HAA_URDF_SIGN[HAA_IDS["RR"]] == +1
 
 
 def test_home_tick_matches_the_measured_homing_convention():
@@ -179,9 +207,13 @@ def test_measured_outboard_direction_matches_the_derived_table():
         mujoco.mj_forward(m, d)
         dy = float(d.xpos[b][1]) - y0
 
-        # +tick is a NEGATIVE rotation about +x (steps 1-3), so it moves the
-        # foot the other way from +haa.
-        tick_dy = -dy
+        # +tick is a negative rotation about the SHAFT. The shaft is +x at the
+        # front and -x at the rear (180 deg yaw, #163), so the sense of +tick
+        # relative to +haa flips end to end. Reading the end from the model
+        # rather than assuming it is what this test previously got wrong.
+        hip = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, f"{leg}_hip")
+        shaft_x = 1.0 if m.body_pos[hip][0] > 0 else -1.0
+        tick_dy = -shaft_x * dy
         side = 1 if y0 > 0 else -1
         inboard = (tick_dy * side) < 0
         expected = DERIVED_HAA_INBOARD_SIGN[HAA_IDS[leg]]
