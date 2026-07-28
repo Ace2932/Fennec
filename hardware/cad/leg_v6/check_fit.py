@@ -40,11 +40,118 @@ def servo_mesh():
     return m
 
 
+#: Rough bytes per (ray, triangle) candidate pair inside trimesh's pure-numpy
+#: ray engine: `barycentric` is (pairs, 3) float64 plus several (pairs,)
+#: arrays. Measured against the real thing rather than derived — a chunk of
+#: 2000 on servo.stl (42k faces) still peaked at 11.4 GB, which back-solves to
+#: about this.
+_BYTES_PER_PAIR = 56
+#: Memory budget for ONE contains() batch. Everything else in this gate is
+#: small, so this effectively sets the whole gate's peak.
+CONTAINS_BUDGET_BYTES = 500_000_000
+
+
+#: Seed for the ray retry below. Any fixed value works; what matters is that
+#: it is fixed.
+CONTAINS_SEED = 0
+
+
+def _contains_seeded(mesh, pts):
+    """mesh.contains(), made REPRODUCIBLE (#195).
+
+    trimesh casts a ray forward and backward and takes the parity. When the two
+    directions disagree and neither is free space, it recurses:
+
+        # try to run again with a new random vector
+        new_direction = util.unitize(np.random.random(3) - 0.5)
+
+    That draw is from numpy's GLOBAL RNG, so contains() returns DIFFERENT
+    ANSWERS ON IDENTICAL INPUT — measured 3-6 points of 3000 flipping, with no
+    two runs agreeing. Every verdict in this gate is a threshold on a count, so
+    a flipped surface-adjacent point can turn OK into HIT.
+
+    It is not the engine: embreex (embree) shows the same instability, because
+    the retry is in trimesh's parity logic, not the traversal. Seeding fixes it,
+    and as a bonus makes contains_chunked() bit-exact against the unbatched
+    call, which it was not before.
+
+    The global RNG state is saved and restored, so seeding here cannot reach
+    into anything else that draws from np.random.
+    """
+    state = np.random.get_state()
+    try:
+        np.random.seed(CONTAINS_SEED)
+        return mesh.contains(pts)
+    finally:
+        np.random.set_state(state)
+
+
+def contains_chunked(mesh, points, budget=CONTAINS_BUDGET_BYTES):
+    """mesh.contains() in bounded-memory batches (#178).
+
+    trimesh has no embree here, so the pure-numpy ray engine broadcasts
+    RAYS x TRIANGLES in one array. Against servo.stl that is:
+
+        24,000 query points x 42,166 faces = 1.01e9 elements
+        = 8.1 GB per float64 intermediate, ~17.6 GB live
+
+    Measured: that single call was 100% of this gate's 18 GB peak — every
+    other phase added 0.00 GB on top of it. Batching caps the intermediate at
+    chunk x faces instead of n x faces; at 2000 that is ~0.7 GB.
+
+    NOT bit-identical to one big call, and neither is the unbatched version to
+    ITSELF: trimesh's contains() returns different answers on identical input
+    run to run, ~0.15% of points (measured: 3-6 of 3000, no two runs agreeing).
+    The flipping points are surface-adjacent, where the docstring says the
+    behaviour is undefined. So batching costs no more reproducibility than
+    re-running already does — but that instability is a real property of this
+    gate and is tracked separately, because a verdict of "0 points inside"
+    resting on a check that flickers is worth knowing about.
+    """
+    pts = np.asarray(points)
+    # contains_points casts rays BOTH ways, so a batch of C points is 2C rays.
+    # Scaling the batch to the FACE COUNT is the point: servo.stl (42k faces)
+    # gets ~105 points per call, coax_hfe_plate (2.6k) gets ~1700, and any
+    # future mesh sizes itself. A fixed chunk tuned to one mesh is how this was
+    # 11 GB after the "fix".
+    chunk = max(32, int(budget / (2 * max(1, len(mesh.faces)) * _BYTES_PER_PAIR)))
+    if len(pts) <= chunk:
+        return _contains_seeded(mesh, pts)
+    return np.concatenate(
+        [_contains_seeded(mesh, pts[i:i + chunk])
+         for i in range(0, len(pts), chunk)])
+
+
+def min_clearance_chunked(mesh, points, chunk=2000):
+    """min(-signed_distance) in bounded-memory batches (#178).
+
+    trimesh.proximity.signed_distance materialises per-candidate arrays for the
+    WHOLE query at once. Measured: the ~20 calls sweep_checks makes, each on a
+    ~26k-point swept cloud, were 10.8 GB of the gate's peak — the single
+    largest consumer left after sample_points was batched.
+
+    Unlike contains(), this one IS exact under batching: min over batches is
+    min over the whole set, by definition. The only thing that varies is the
+    ~0.15% surface-adjacent instability contains() already has, which
+    signed_distance inherits for its SIGN — and these points are pre-filtered
+    to the outside, where the sign is stable.
+    """
+    pts = np.asarray(points)
+    if not len(pts):
+        return float('inf')
+    best = float('inf')
+    for i in range(0, len(pts), chunk):
+        d = -trimesh.proximity.signed_distance(mesh, pts[i:i + chunk])
+        if len(d):
+            best = min(best, float(d.min()))
+    return best
+
+
 def sample_points(m, n_surface=15000, n_volume=6000):
     surf, _ = trimesh.sample.sample_surface(m, n_surface, seed=0)
     lo, hi = m.bounds
     vol = np.random.default_rng(0).uniform(lo, hi, (n_volume * 4, 3))
-    vol = vol[m.contains(vol)][:n_volume]
+    vol = vol[contains_chunked(m, vol)][:n_volume]
     return np.vstack([surf, vol])
 
 
@@ -111,8 +218,7 @@ def _clearance_warn(target, p, label, floor_mm=1.0):
     <floor_mm. Cheap relative to the containment check already run."""
     if not len(p):
         return
-    d = -trimesh.proximity.signed_distance(target, p)
-    min_d = float(d.min())
+    min_d = min_clearance_chunked(target, p)
     if min_d < floor_mm:
         print(f'   WARN  {label}: clearance floor {min_d:.2f}mm (<{floor_mm:.1f}mm, '
               f'outside the r13 mask but a genuine near-miss — see LA-19)')
@@ -162,8 +268,8 @@ def sweep_checks(servo, pts0):
             np.radians(ang), [0, 0, 1])
         p = trimesh.transform_points(tib_pts, T)
         p = p[np.linalg.norm(p[:, :2] - [106.9, 0], axis=1) > 13]
-        inside_fem = femur.contains(p)
-        inside_arm = arm.contains(p)
+        inside_fem = contains_chunked(femur, p)
+        inside_arm = contains_chunked(arm, p)
         n = int(inside_fem.sum()) + int(inside_arm.sum())
         status = 'OK ' if n == 0 else 'HIT'
         if n and abs(ang) <= 109: bad = True   # hits beyond sw limit are the mech stop
@@ -195,7 +301,7 @@ def sweep_checks(servo, pts0):
             trimesh.transform_points(fem_asm, M), S)
         # exclude the designed disc/boss interface about the hfe X-axis
         p = p[np.linalg.norm(p[:, 1:] - [11.6, -9.5], axis=1) > 13]
-        n = int(coax.contains(p).sum())
+        n = int(contains_chunked(coax, p).sum())
         status = 'OK ' if n == 0 else 'HIT'
         if n and abs(ang) <= 86: bad = True   # hits beyond sw limit (86) document the mech stop (~93deg), same convention as kfe
         print(f'   {status} hfe {ang:+4d}deg: {n} pts')
@@ -247,7 +353,7 @@ def shoulder_checks(servo, pts0):
         # exclude the designed disc/boss interface about the haa Y-axis
         keep = np.sqrt((p[:, 0] - 39.05)**2 + p[:, 2]**2) > 13
         p = p[keep]
-        n = int(sh.contains(p).sum()) + int(pl.contains(p).sum())
+        n = int(contains_chunked(sh, p).sum()) + int(contains_chunked(pl, p).sum())
         status = 'OK ' if n == 0 else 'HIT'
         if n and abs(ang) <= 40: bad = True   # beyond 40 = documenting stops
         print(f'   {status} haa {ang:+4d}deg: {n} pts')
@@ -287,7 +393,7 @@ def _axis_scan(mesh, base, direction, t_lo, t_hi, r=1.0, n=60):
     for t in ts:
         c = np.asarray(base) + t * direction
         pts = np.vstack([c, c + r * u, c - r * u, c + r * v, c - r * v])
-        if mesh.contains(pts).any():
+        if contains_chunked(mesh, pts).any():
             blocked.append(t)
     return blocked
 
@@ -608,7 +714,7 @@ def insertion_checks(servo, pts0):
         # exclude the designed disc/boss interface about the hfe X-axis (same
         # r13 convention as the hip-pitch sweep -- legitimate seated contact)
         p = p[np.linalg.norm(p[:, 1:] - [11.6, -9.5], axis=1) > 13]
-        n = int(coax.contains(p).sum())
+        n = int(contains_chunked(coax, p).sum())
         status = 'OK ' if n == 0 else 'HIT'
         if n and t > 0: bad = True   # t=0 (seated) legitimately touches at the disc interfaces
         print(f'   {status} t=+{t:3d}mm: {n} pts')
@@ -868,7 +974,7 @@ def _bolt_clear(mesh, cx, cy, z_lo, z_hi, r):
     zmid = (z_lo + z_hi) / 2
     ring = np.column_stack([cx + (r + 1.2) * np.cos(ang),
                             cy + (r + 1.2) * np.sin(ang), np.full(8, zmid)])
-    ring_solid = int(mesh.contains(ring).sum())
+    ring_solid = int(contains_chunked(mesh, ring).sum())
     return (center == 0 and ring_solid >= 4), center, ring_solid
 
 
@@ -952,7 +1058,7 @@ def _surface_depth(mesh, ctr, n, reach=8.0, n_steps=320):
     on the same nominal face. Returns None if no entrance is found."""
     ts = np.linspace(0, 2 * reach, n_steps)
     pts = (ctr + reach * n)[None, :] - ts[:, None] * n[None, :]
-    inside = mesh.contains(pts)
+    inside = contains_chunked(mesh, pts)
     if not inside.any():
         return None
     return float(ts[np.argmax(inside)])   # first True index
@@ -966,7 +1072,7 @@ def main():
     for part_file, T, label in CASES:
         part = trimesh.load(part_file)
         pts = trimesh.transform_points(pts0, T)
-        inside = part.contains(pts)
+        inside = contains_chunked(part, pts)
         n = int(inside.sum())
         if n == 0:
             print(f'OK    {label}: 0 / {len(pts)} servo points inside {part_file}')
