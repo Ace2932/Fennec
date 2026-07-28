@@ -29,7 +29,26 @@ import check_fit as cf
 # the bound collapses hard once the leg rolls under the pack (inboard >15, which
 # the separate haa cap already forbids), so a coarse 10-deg grid there drags a
 # collapsed neighbour into every conservative bracket just inside the cap.
-HAAS = [-40, -30, -20, -15, -12, -10, -8, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40]
+#
+# REFINED AGAIN 2026-07-28 (#181). The band above was still too coarse across
+# two transitions, and conservative bracketing projects a step back across the
+# WHOLE span between samples, so a 2-deg gap with a 43-deg step behaves like a
+# cliff 2 deg wide. Measured on the previous grid (FL, worst over kfe):
+#
+#     haa -12 -> -10  ( 2 deg apart):  +43.3 deg step
+#     haa  -5 ->   0  ( 5 deg apart):   +9.6 deg step
+#
+# The second one is load-bearing: the trot peaks at +59.4 deg fold and only
+# fits because it commands haa EXACTLY 0.00 (see trot.py). One thousandth of a
+# degree inboard dropped the cap to 56.7 and clipped it. These extra samples
+# LOCALISE each crossing -- the steps are real geometry (the leg crossing an
+# obstacle edge), so the point is to stop projecting them across degrees of haa
+# the leg is actually clear in.
+#
+# NOT refined below -15: the haa cap forbids it, so those cells are only ever
+# reached as a clamped edge bracket and finer sampling there buys nothing.
+HAAS = [-40, -30, -20, -15, -12, -11.5, -11, -10.5, -10, -8, -5,
+        -4, -3, -2, -1, -0.5, 0, 5, 10, 15, 20, 25, 30, 35, 40]
 # S2 (review 2026-07-25): POSITIVE kfe is now swept. It was not, so every
 # kfe > 0 query extrapolated from the kfe=0 row — an unvalidated region inside a
 # safety gate. solve_side(knee_forward=True) produces positive kfe.
@@ -148,7 +167,8 @@ def main():
         pivot = [cf.HIP_FA if label[0] == "F" else -cf.HIP_FA,
                  cf.HIP_LAT if label[1] == "R" else -cf.HIP_LAT, cf.HIP_Z]
         print(f"\n== {label} ==   hfe contact-free interval, degrees")
-        print("   kfe \\ haa " + "".join(f"{h:>14d}" for h in HAAS))
+        # `g`, not `d`: the haa grid carries half-degree samples since #181
+        print("   kfe \\ haa " + "".join(f"{h:>14g}" for h in HAAS))
         for kfe in KFES:
             cells = []
             for haa in HAAS:

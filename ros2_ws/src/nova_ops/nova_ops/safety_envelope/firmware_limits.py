@@ -104,6 +104,104 @@ def convert_positions(
     return out if len(out) == N_JOINTS else None
 
 
+#: floats per envelope bucket: haa_raw_lo, haa_raw_hi, hfe_raw_lo, hfe_raw_hi
+HFE_ENV_STRIDE = 4
+
+#: bus IDs per leg, in the order the payload is emitted (FL, FR, RL, RR)
+_ENV_LEGS = (("FL", 1, 2), ("FR", 4, 5), ("RL", 7, 8), ("RR", 10, 11))
+
+
+def build_hfe_envelope_data(calib: Dict[int, JointHomeCalib]) -> List[float]:
+    """Posture-aware hfe backstop for the firmware, in RAW COUNTS (#142).
+
+    WHY THIS EXISTS. Loosening hfe to the mechanical +-86 moved the chassis
+    constraint entirely into the host (`wrapper._clamp_posture`), because the
+    constraint is posture-dependent and a per-joint scalar cannot express it.
+    That left the riser skirt and the belly pack protected by exactly one code
+    path. The Teensy's own table could not help: it is per joint, and the fold a
+    leg may safely take depends on where that leg's HIP is.
+
+    WHY NOT JUST A TIGHTER SCALAR. Because a scalar is permissive precisely
+    where the hazard is. Measured from the chassis gate, front leg:
+
+        haa +40 -> fold cap 47.2 deg      haa   0 -> 67.9
+        haa -15 -> fold cap 13.8 deg      haa -20 ->  9.7      haa -30 -> 0.5
+
+    Inboard haa tucks the leg under the belly where the LiPo sits, and the fold
+    cap collapses. The +50 scalar this replaces would happily pass a +50 fold at
+    haa -15, where the real cap is +13.8. A scalar that DID cover the legal haa
+    range would have to be +13.8, which deletes the gait (the trot peaks at
+    +59.4). So the backstop has to see posture, and this is the smallest thing
+    that does.
+
+    THE FIRMWARE STAYS DUMB. Everything is converted to raw counts HERE, by the
+    same `rad_to_raw` the limits table already uses. The Teensy does integer
+    comparisons on values it already has (`latched_cmd_position` holds all 12
+    targets in one pass), and needs no calibration, no trig, and no chassis
+    model. It also means this cannot disagree with the host about what a raw
+    count means -- there is one conversion, in one place.
+
+    CONSERVATIVE OVER kfe, EXACT OVER haa. The real envelope is 2-D in
+    (haa, kfe); this collapses the kfe axis by taking the tightest window over
+    every kfe in the table. So the firmware window is never LOOSER than the host
+    gate at any posture (the safety property, and there is a test for it over
+    both mounting signs), at the cost of being up to ~1.6 deg tighter at haa 0.
+    The trot fits with room; a 2-D table would cost message size and firmware
+    complexity to buy back degrees nothing uses.
+
+    Returns ``[]`` unless every haa and hfe joint is calibrated -- a partial
+    table would clamp some legs against a window built from a guessed home,
+    which is the #154 shape: a wrong command with a limit that agrees with it.
+    """
+    from ..rom_envelope import hfe_bounds
+    from ..rom_envelope_table import HAAS, KFES
+
+    needed = [jid for _, haa_id, hfe_id in _ENV_LEGS for jid in (haa_id, hfe_id)]
+    if not all(is_calibrated(calib.get(jid)) for jid in needed):
+        return []
+
+    n_buckets = len(HAAS) - 1
+    out: List[float] = [float(n_buckets)]
+    for leg, haa_id, hfe_id in _ENV_LEGS:
+        haa_c, hfe_c = calib[haa_id], calib[hfe_id]
+        rows = []
+        for i in range(n_buckets):
+            span = (HAAS[i], HAAS[i + 1])
+            # tightest window over BOTH ends of the haa span and every kfe --
+            # the firmware interpolates nothing, so the bucket must be valid
+            # everywhere inside it.
+            lo, hi = -1e9, 1e9
+            for haa_deg in span:
+                for kfe_deg in KFES:
+                    g_lo, g_hi = hfe_bounds(
+                        leg, math.radians(haa_deg), math.radians(kfe_deg)
+                    )
+                    lo, hi = max(lo, g_lo), min(hi, g_hi)
+            if lo > hi:  # fully blocked posture band -- pin the joint
+                lo = hi = 0.5 * (lo + hi)
+            a, b = rad_to_raw(lo, hfe_c), rad_to_raw(hi, hfe_c)
+            hfe_lo, hfe_hi = (a, b) if a <= b else (b, a)
+            ra, rb = (rad_to_raw(math.radians(d), haa_c) for d in span)
+            haa_lo, haa_hi = (ra, rb) if ra <= rb else (rb, ra)
+            rows.append([haa_lo, haa_hi, _clip(hfe_lo), _clip(hfe_hi)])
+
+        rows.sort(key=lambda r: r[0])
+        # extend the outer buckets to the full raw range: outside the swept haa
+        # grid the host clamps to the edge cell, so the firmware must too, and a
+        # gap would be a haa the firmware cannot classify at all.
+        rows[0][0] = RAW_MIN
+        rows[-1][1] = RAW_MAX
+        for prev, nxt in zip(rows, rows[1:]):  # close float seams exactly
+            nxt[0] = prev[1]
+        for r in rows:
+            out.extend(r)
+    return out
+
+
+def _clip(v: float) -> float:
+    return max(RAW_MIN, min(v, RAW_MAX))
+
+
 def calibration_state(calib: Dict[int, JointHomeCalib]):
     """Classify a calibration: ``(state, missing_ids)``. See #159.
 
