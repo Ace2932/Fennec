@@ -29,11 +29,23 @@ def test_haa_default_is_conservative_symmetric_15deg():
 
 
 def test_haa_asymmetric_when_sign_known():
-    """Filling HAA_INBOARD_SIGN unlocks 15-inboard / 40-outboard."""
+    """A CONFIRMED sign unlocks 15-inboard / 40-outboard.
+
+    Since #161 the unlock is keyed on the recorded observation, not on the
+    number: this used to assign HAA_INBOARD_SIGN directly, which now leaves the
+    hip conservative on purpose.
+    """
     old = dict(limits_mod.HAA_INBOARD_SIGN)
+    old_rec = dict(limits_mod.HAA_SIGN_CONFIRMATION)
     try:
-        limits_mod.HAA_INBOARD_SIGN[1] = +1  # +cmd = inboard
-        limits_mod.HAA_INBOARD_SIGN[4] = -1  # -cmd = inboard
+        for jid, sign in ((1, +1), (4, -1)):  # +1: +cmd = inboard
+            limits_mod.record_haa_confirmation(
+                jid,
+                sign=sign,
+                observed_utc="2026-07-27T18:00:00Z",
+                method="homing sweep",
+                assembly="leg_v6 rev2",
+            )
         lim = load_default_limits()
         j1 = lim.get(1)
         assert math.isclose(j1.upper, math.radians(15.0))
@@ -44,6 +56,8 @@ def test_haa_asymmetric_when_sign_known():
     finally:
         limits_mod.HAA_INBOARD_SIGN.clear()
         limits_mod.HAA_INBOARD_SIGN.update(old)
+        limits_mod.HAA_SIGN_CONFIRMATION.clear()
+        limits_mod.HAA_SIGN_CONFIRMATION.update(old_rec)
 
 
 # ---- raw table computation ---------------------------------------------

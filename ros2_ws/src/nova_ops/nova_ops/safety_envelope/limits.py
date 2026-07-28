@@ -60,12 +60,134 @@ class JointLimit:
 # closed 2026-07-06; signs pending hardware).
 HAA_INBOARD_SIGN: Dict[int, Optional[int]] = {1: None, 4: None, 7: None, 10: None}
 
+
+@dataclass(frozen=True)
+class HaaSignConfirmation:
+    """WHY a haa sign is believed — the observation behind the number (#161).
+
+    A sign is only as good as the assembly it was observed on: a servo swap or
+    a re-seat in a mirrored bracket can invert it with nothing to notice. The
+    record names the assembly so a stale confirmation is visible rather than
+    inferred.
+    """
+
+    sign: int  # +1 / -1, INBOARD sign in the servo command frame
+    observed_utc: str  # ISO-8601 UTC, when the motion was watched
+    method: str  # how — e.g. "homing: +200 counts, foot toward belly"
+    assembly: str  # which physical leg/servo the observation was made on
+
+
+#: Bus ID -> the confirmation behind HAA_INBOARD_SIGN[id], or None.
+HAA_SIGN_CONFIRMATION: Dict[int, Optional[HaaSignConfirmation]] = {
+    jid: None for jid in HAA_INBOARD_SIGN
+}
+
+
+class UnconfirmedSign(RuntimeError):
+    """A runtime haa sign is not backed by a recorded observation."""
+
+
+def record_haa_confirmation(
+    joint_id: int,
+    *,
+    sign: int,
+    observed_utc: str,
+    method: str,
+    assembly: str,
+) -> None:
+    """Populate one hip's sign TOGETHER WITH the observation behind it.
+
+    The only supported way to fill ``HAA_INBOARD_SIGN``. Filling it unlocks the
+    asymmetric 15-inboard / 40-outboard ROM, i.e. 40 deg of travel toward the
+    LiPo pack — a value that arrived by someone typing the derived table in
+    looks exactly like one that was watched on the robot, and the derivation
+    has been wrong before (#163 inverted both rear hips).
+
+    Validates everything BEFORE writing either dict, so a rejected call cannot
+    leave a sign without its record.
+    """
+    if joint_id not in HAA_INBOARD_SIGN:
+        raise ValueError(
+            f"joint {joint_id} is not a haa joint {sorted(HAA_INBOARD_SIGN)}"
+        )
+    if sign not in (1, -1):
+        raise ValueError(f"joint {joint_id}: sign must be +1 or -1, got {sign!r}")
+    fields = {"observed_utc": observed_utc, "method": method, "assembly": assembly}
+    for name, value in fields.items():
+        if not str(value).strip():
+            raise ValueError(
+                f"joint {joint_id}: {name} is required — a sign with no recorded "
+                "when/how/on-what is not a confirmation"
+            )
+    HAA_SIGN_CONFIRMATION[joint_id] = HaaSignConfirmation(sign=sign, **fields)
+    HAA_INBOARD_SIGN[joint_id] = sign
+
+
+def clear_haa_confirmation(joint_id: int) -> None:
+    """Drop a hip back to unconfirmed — servo swapped, bracket re-seated.
+
+    Takes the SIGN with it: keeping the sign would leave the hip on the wide
+    ROM under a record that no longer describes the hardware.
+    """
+    if joint_id not in HAA_INBOARD_SIGN:
+        raise ValueError(
+            f"joint {joint_id} is not a haa joint {sorted(HAA_INBOARD_SIGN)}"
+        )
+    HAA_SIGN_CONFIRMATION[joint_id] = None
+    HAA_INBOARD_SIGN[joint_id] = None
+
+
+def check_haa_sign_provenance() -> None:
+    """Raise unless every populated haa sign has a matching confirmation.
+
+    None is fine — that is the conservative symmetric ±15 state. What this
+    refuses is a sign with no observation behind it, or one that has drifted
+    from the observation it claims.
+    """
+    for jid, sign in HAA_INBOARD_SIGN.items():
+        record = HAA_SIGN_CONFIRMATION.get(jid)
+        if sign is None:
+            if record is not None:
+                raise UnconfirmedSign(
+                    f"joint {jid}: has a confirmation but no sign — "
+                    "use record_haa_confirmation() / clear_haa_confirmation()"
+                )
+            continue
+        if record is None:
+            raise UnconfirmedSign(
+                f"joint {jid}: sign {sign:+d} has no recorded confirmation. "
+                "Fill it with record_haa_confirmation() at homing — the "
+                "derived table is a prediction, not an observation."
+            )
+        if record.sign != sign:
+            raise UnconfirmedSign(
+                f"joint {jid}: sign {sign:+d} disagrees with its confirmation "
+                f"({record.sign:+d}, {record.observed_utc}, {record.assembly})"
+            )
+
+
 _HAA_INBOARD_CAP = math.radians(15.0)  # chassis-gate inboard cap
 _HAA_OUTBOARD_CAP = math.radians(40.0)  # chassis-gate outboard cap
 
 
-def _hip_abduction(joint_id: int) -> JointLimit:
+def confirmed_haa_sign(joint_id: int) -> Optional[int]:
+    """The sign, but ONLY if a matching observation is on record (#161).
+
+    This is what makes provenance load-bearing instead of decorative: the wide
+    ROM is unlocked by the CONFIRMATION, not by the number. A sign typed
+    straight into ``HAA_INBOARD_SIGN`` therefore buys nothing — the hip keeps
+    the conservative symmetric ±15 window, which is the fail-safe answer for
+    "we do not actually know which way this hip swings".
+    """
     sign = HAA_INBOARD_SIGN.get(joint_id)
+    record = HAA_SIGN_CONFIRMATION.get(joint_id)
+    if sign is None or record is None or record.sign != sign:
+        return None
+    return sign
+
+
+def _hip_abduction(joint_id: int) -> JointLimit:
+    sign = confirmed_haa_sign(joint_id)
     if sign is None:
         # unknown direction -> both ways get the inboard cap
         lower, upper = -_HAA_INBOARD_CAP, _HAA_INBOARD_CAP
@@ -127,27 +249,27 @@ def _thigh_flexion(front: bool) -> JointLimit:
     return JointLimit(
         lower=math.radians(lower),
         # DECIDED 2026-07-25 (issue #142): this stays MECHANICAL. The host posture
-    # gate is the sole chassis protection pre-homing.
-    #
-    # A firmware posture rule was evaluated and rejected -- not on effort, on
-    # measurement. The chassis tightness is entirely INBOARD (the belly pack: the
-    # bound drops from +66.3 at haa 0 to +57.0 at 1 deg inboard, +13.8 at 15),
-    # while outboard stays roomy (+66.1 at 1 deg, +46.8 at full 40 splay). The
-    # firmware reads /joint_commands in the SERVO frame, where which haa direction
-    # is inboard is exactly what HAA_INBOARD_SIGN leaves None until homing. So any
-    # firmware rule must key on |haa| and assume the inboard value BOTH ways --
-    # capping hfe at +57.0 from 1 deg onward, which clips the trot. A scalar and a
-    # sign-agnostic posture rule are forced to the same worst case, so neither can
-    # be simultaneously safe and non-clipping. Mechanical is the only option that
-    # is neither.
-    #
-    # ACCEPTED COST: a host-side bug that publishes a deep fold reaches the
-    # chassis with nothing beneath it. The Teensy protects the LINKAGE only.
-    # REVISIT AT HOMING: once HAA_INBOARD_SIGN is filled the firmware can tell
-    # inboard from outboard and a real posture rule becomes worthwhile -- same
-    # unlock as #145, do them together.
-    #
-    # RE-LOOSENED to mechanical once the precondition was actually met:
+        # gate is the sole chassis protection pre-homing.
+        #
+        # A firmware posture rule was evaluated and rejected -- not on effort, on
+        # measurement. The chassis tightness is entirely INBOARD (the belly pack: the
+        # bound drops from +66.3 at haa 0 to +57.0 at 1 deg inboard, +13.8 at 15),
+        # while outboard stays roomy (+66.1 at 1 deg, +46.8 at full 40 splay). The
+        # firmware reads /joint_commands in the SERVO frame, where which haa direction
+        # is inboard is exactly what HAA_INBOARD_SIGN leaves None until homing. So any
+        # firmware rule must key on |haa| and assume the inboard value BOTH ways --
+        # capping hfe at +57.0 from 1 deg onward, which clips the trot. A scalar and a
+        # sign-agnostic posture rule are forced to the same worst case, so neither can
+        # be simultaneously safe and non-clipping. Mechanical is the only option that
+        # is neither.
+        #
+        # ACCEPTED COST: a host-side bug that publishes a deep fold reaches the
+        # chassis with nothing beneath it. The Teensy protects the LINKAGE only.
+        # REVISIT AT HOMING: once HAA_INBOARD_SIGN is filled the firmware can tell
+        # inboard from outboard and a real posture rule becomes worthwhile -- same
+        # unlock as #145, do them together.
+        #
+        # RE-LOOSENED to mechanical once the precondition was actually met:
         # wrapper.publish() now applies rom_envelope.hfe_bounds() per leg BEFORE
         # these per-joint scalars, so the chassis constraint is enforced at the
         # choke point every publisher passes through -- including
