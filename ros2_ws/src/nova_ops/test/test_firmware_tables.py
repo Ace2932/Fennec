@@ -191,3 +191,65 @@ def test_a_partial_table_is_INDISTINGUISHABLE_to_the_firmware():
     part, _, _ = build_firmware_tables(calibration_from_doc(doc))
     assert len(part) == len(full) == 24        # same shape, same validity
     assert part != full                        # but not the same protection
+
+
+# ---- #188: where a runtime node gets its calibration ----------------------
+
+
+def test_params_win_when_they_carry_a_real_calibration(tmp_path):
+    """Deliberate bench override beats the artifact."""
+    from nova_ops.safety_envelope.calibration_io import resolve_calibration
+
+    f = tmp_path / "cal.yaml"
+    import yaml
+    f.write_text(yaml.safe_dump(_doc(home=1000)))
+
+    calib, source = resolve_calibration([2048.0] * 12, [1] * 12, str(f))
+    assert source == "params"
+    assert calib[1].home_raw == 2048.0        # params, not the file's 1000
+
+
+def test_all_zero_sign_is_the_DEFAULT_not_a_calibration(tmp_path):
+    """The bug this closes.
+
+    nova_locomotion declares urdf_sign [0]*12 and nothing ever set it, so it
+    read that as its calibration, got {} from build_calib, and published
+    RADIANS to a firmware reading raw counts. An all-zero sign vector is the
+    declared default; the artifact is the real source.
+    """
+    from nova_ops.safety_envelope.calibration_io import resolve_calibration
+
+    f = tmp_path / "cal.yaml"
+    import yaml
+    f.write_text(yaml.safe_dump(_doc(home=1234)))
+
+    calib, source = resolve_calibration([0.0] * 12, [0] * 12, str(f))
+    assert source.startswith("file:")
+    assert calib[1].home_raw == 1234.0
+
+
+def test_no_params_and_no_artifact_is_reported_as_NONE(tmp_path):
+    """Pre-homing. Must be distinguishable from an operator override — the two
+    look identical from outside without the source string."""
+    from nova_ops.safety_envelope.calibration_io import resolve_calibration
+
+    calib, source = resolve_calibration(
+        [0.0] * 12, [0] * 12, str(tmp_path / "missing.yaml"))
+    assert calib == {}
+    assert source == "none"
+
+
+def test_a_partially_signed_param_vector_still_counts_as_params(tmp_path):
+    """One observed sign is a real (if partial) calibration, and must not be
+    silently replaced by the file — that would discard an operator's work."""
+    from nova_ops.safety_envelope.calibration_io import resolve_calibration
+
+    import yaml
+    f = tmp_path / "cal.yaml"
+    f.write_text(yaml.safe_dump(_doc()))
+
+    signs = [0] * 12
+    signs[0] = 1
+    calib, source = resolve_calibration([2048.0] * 12, signs, str(f))
+    assert source == "params"
+    assert sorted(calib) == [1]

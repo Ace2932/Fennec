@@ -21,11 +21,19 @@ directions, and is PER JOINT (#154):
 
     raw = home_raw + urdf_sign * theta * RAW_PER_RAD
 
-from the `home_raw` / `urdf_sign` params, filled by servo homing. This
-was two GLOBAL scalars, which could not express the per-joint SIGN the
-limits path was already using — an inverted joint would have received a
-correctly-signed limit window and a wrong-signed command. Both paths now
-share firmware_limits.rad_to_raw/raw_to_rad, so they cannot diverge.
+from the homing calibration. This was two GLOBAL scalars, which could
+not express the per-joint SIGN the limits path was already using — an
+inverted joint would have received a correctly-signed limit window and a
+wrong-signed command. Both paths now share firmware_limits.rad_to_raw/
+raw_to_rad, so they cannot diverge.
+
+CALIBRATION SOURCE (#188): the homing ARTIFACT
+(~/.nova/calibration/servo_offsets_latest.yaml), with the home_raw /
+urdf_sign params as a bench override. It used to read the params alone
+and nothing ever set them — no launch file, no bringup profile — so this
+node ran permanently uncalibrated, publishing radians to a firmware
+reading raw counts. main.cpp truncates those to uint16, so 0.87 rad
+became raw 0: every joint commanded to one end of travel.
 
 Uncalibrated (any joint with urdf_sign 0) = radians pass straight
 through, unchanged, which is the pre-hardware state. All-or-nothing on
@@ -47,8 +55,11 @@ from nova_locomotion.controller import (
 )
 from nova_locomotion.gait.backlash import BacklashComp
 from nova_ops.joint_map import load_joint_id_map
+from nova_ops.safety_envelope.calibration_io import (
+    DEFAULT_CALIBRATION_PATH,
+    resolve_calibration,
+)
 from nova_ops.safety_envelope.firmware_limits import (
-    build_calib,
     calibration_state,
     convert_positions,
 )
@@ -135,8 +146,12 @@ class GaitNode(Node):
         # Per-joint homing calibration (#154). home_raw + urdf_sign per bus ID,
         # filled by servo homing. Empty = uncalibrated = radians pass straight
         # through, which is the pre-hardware state.
-        self.declare_parameter("home_raw", [0.0] * 12)  # WIRE-AT-CALIBRATION
+        # Params are an OVERRIDE, not the source (#188). All-zero urdf_sign is
+        # the declared default, not a calibration — read that way it left this
+        # node permanently uncalibrated. The homing artifact is the real source.
+        self.declare_parameter("home_raw", [0.0] * 12)
         self.declare_parameter("urdf_sign", [0] * 12)  # 0 = unknown
+        self.declare_parameter("calibration_path", DEFAULT_CALIBRATION_PATH)
 
         self.id_map = load_joint_id_map()
         self.controller = GaitController(ControllerParams(), BacklashComp())
@@ -159,11 +174,40 @@ class GaitNode(Node):
     # ---- subscriptions -------------------------------------------------
 
     def _load_calib(self):
-        """Bus ID -> JointHomeCalib from the ROS params. See build_calib()."""
-        return build_calib(
+        """Bus ID -> JointHomeCalib, from the params OR the homing artifact.
+
+        Used to read the params alone (#188). Nothing ever set them — no launch
+        file, no bringup profile — so this node ran permanently uncalibrated and
+        convert_positions() declined, publishing RADIANS to a firmware reading
+        raw counts. main.cpp truncates those to uint16, so 0.87 rad became raw
+        0: every joint commanded to one end of travel.
+
+        Homing does write a calibration (~/.nova/calibration/), it simply had no
+        reader. Params still win when set, so a bench override stays possible.
+        """
+        calib, source = resolve_calibration(
             list(self.get_parameter("home_raw").value or []),
             list(self.get_parameter("urdf_sign").value or []),
+            self.get_parameter("calibration_path").value,
         )
+        state, missing = calibration_state(calib)
+        if state == "active":
+            self.get_logger().info(
+                f"calibration from {source}: counts conversion is LIVE"
+            )
+        elif state == "partial":
+            self.get_logger().warn(
+                f"calibration from {source} is PARTIAL — bus IDs {missing} "
+                f"unhomed. NOTHING converts (all-or-nothing), so radians go to "
+                f"a firmware reading raw counts. Do not drive."
+            )
+        else:
+            self.get_logger().warn(
+                "no calibration (params unset and no homing artifact). Radians "
+                "pass through unconverted — expected before homing, NOT safe "
+                "to drive on."
+            )
+        return calib
 
     def _on_states(self, msg: JointState) -> None:
         self.safe_pub.on_joint_states(msg)  # envelope load window
