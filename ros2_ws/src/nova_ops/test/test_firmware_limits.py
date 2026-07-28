@@ -418,42 +418,45 @@ def test_firmware_window_is_NEVER_looser_than_the_host_gate(sign):
                 assert sel[3] <= host_hi + 1e-6, (leg, haa_deg, kfe_deg, sel)
 
 
-def test_the_trot_headroom_depends_on_haa_being_EXACTLY_zero():
-    """Pins a knife-edge in the HOST gate, found while building the backstop.
+def test_the_trot_has_a_SMALL_BUT_REAL_inboard_haa_tolerance():
+    """How much inboard haa drift the trot survives. MEASURED, and it is tight.
 
-    The chassis envelope is sampled on a coarse haa grid and bracketed
-    conservatively, so a 9.6 deg step between the haa -5 and haa 0 cells becomes
-    a cliff at zero:
+    History: the coarse haa grid put the nearest inboard sample at -5, so
+    conservative bracketing projected that cell's 56.7 cap across the whole
+    span and the gate appeared to clip the trot at haa -0.001 -- a 0.001 deg
+    knife-edge. #181 regenerated the table with samples at -1, -0.5 and the
+    real crossing showed up between -0.75 and -0.5:
 
-        haa +0.000 -> hfe cap 66.3   (the trot's +59.4 fits, 6.9 deg spare)
-        haa -0.001 -> hfe cap 56.7   (the trot is CLIPPED by 2.7 deg)
+        haa -1.000 -> cap 57.0   clips the trot's +59.4
+        haa -0.750 -> cap 57.0   clips
+        haa -0.500 -> cap 66.4   fits, +7.0 margin
+        haa  0.000 -> cap 66.3   fits, +6.9 margin
 
-    trot.py already notes it "fitted only because every pose commands haa
-    exactly 0.00". This records the consequence: any INBOARD drift -- backlash
-    compensation, IK noise, a body-pose command, a future balance controller --
-    puts the gate 2.7 deg inside the gait, mid-stride. Outboard is fine
-    (+0.001 -> 65.2); only inboard bites.
+    So the tolerance is ~0.5 deg, not zero -- 500x what the old table implied,
+    and still only about 6 servo counts (4096/2pi = 0.088 deg per count). Worth
+    knowing before first stand: the trot does not require haa to be bit-exact
+    zero, but it does require it not to drift half a degree inboard.
 
-    It is also why the firmware backstop cannot be bucketed usefully yet: any
-    bucket spanning [-5, 0] inherits 56.7 and clips the trot exactly as a scalar
-    would. Tracked separately; when the table is regenerated at finer haa
-    resolution this test should be revisited, not deleted.
+    Pinned so a future regeneration announces a change rather than silently
+    moving the margin. If the crossing moves OUTBOARD (tolerance shrinks) that
+    is a real regression; if it moves inboard, the trot got safer.
     """
     import math
 
     from nova_ops.rom_envelope import hfe_bounds
 
     TROT_PEAK = 59.4
-    at_zero = math.degrees(hfe_bounds("FL", 0.0, math.radians(-98.8))[1])
-    just_in = math.degrees(hfe_bounds("FL", math.radians(-0.001),
-                                      math.radians(-98.8))[1])
-    assert at_zero > TROT_PEAK, at_zero
-    assert just_in < TROT_PEAK, (
-        "the haa-0 cliff has moved -- if the envelope table was regenerated at "
-        "finer resolution this is good news, but the firmware backstop and the "
-        "trot's margin both assume this shape"
-    )
-    assert at_zero - just_in == pytest.approx(9.6, abs=0.2)
+    KFE = math.radians(-98.8)
+
+    def cap(haa_deg):
+        return math.degrees(hfe_bounds("FL", math.radians(haa_deg), KFE)[1])
+
+    assert cap(0.0) > TROT_PEAK, cap(0.0)
+    assert cap(-0.5) > TROT_PEAK, cap(-0.5)          # the tolerance is real
+    assert cap(-0.75) < TROT_PEAK, cap(-0.75)        # and it is bounded
+    assert cap(-1.0) < TROT_PEAK, cap(-1.0)
+    # the margin where it holds is worth having, not a rounding artefact
+    assert cap(-0.5) - TROT_PEAK > 5.0, cap(-0.5)
 
 
 def test_deep_inboard_haa_plus_deep_fold_is_REFUSED():

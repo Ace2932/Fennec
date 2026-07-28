@@ -372,11 +372,14 @@ def test_table_rows_are_LEG_LOCAL_not_pre_negated():
     leg-local the rear rows MIRROR the front rows (same sign, same side); if
     they ever come back pre-negated this fails.
     """
-    from nova_ops.rom_envelope_table import ENVELOPE
+    from nova_ops.rom_envelope_table import ENVELOPE, HAAS
 
+    i0 = HAAS.index(0)   # NOT a hardcoded index: the haa grid is refined from
+                         # time to time (#181), and a stale literal would keep
+                         # passing while silently checking a different posture
     for kfe in (-109, -50, 0):
-        f_lo, f_hi = ENVELOPE["FL"][kfe][8]   # haa index 8 == 0 deg
-        r_lo, r_hi = ENVELOPE["RL"][kfe][8]
+        f_lo, f_hi = ENVELOPE["FL"][kfe][i0]
+        r_lo, r_hi = ENVELOPE["RL"][kfe][i0]
         assert r_lo == pytest.approx(f_lo, abs=3.0), (kfe, f_lo, r_lo)
         assert r_hi == pytest.approx(f_hi, abs=3.0), (kfe, f_hi, r_hi)
 
@@ -385,7 +388,8 @@ def test_rear_rows_are_kfe_dependent_again():
     """The stale rear rows were flat across all ten kfe values -- the tell that
     they were an artefact of the backwards placement (the knee folded AWAY from
     the chassis, so kfe stopped mattering)."""
-    from nova_ops.rom_envelope_table import ENVELOPE, KFES
+    from nova_ops.rom_envelope_table import ENVELOPE, HAAS, KFES
 
-    his = [ENVELOPE["RL"][k][8][1] for k in KFES]
+    i0 = HAAS.index(0)
+    his = [ENVELOPE["RL"][k][i0][1] for k in KFES]
     assert max(his) - min(his) > 3.0, f"rear still flat across kfe: {his}"
