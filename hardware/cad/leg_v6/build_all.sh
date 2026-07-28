@@ -14,7 +14,11 @@ fi
 $OS -o knee_arm.stl knee_arm.scad
 $OS -o knee_bumper.stl knee_bumper.scad   # TPU collapse guard (backlog #15 B)
 $OS -o cable_clip.stl cable_clip.scad      # TPU cable clip (#18, AUD-10: was un-rendered)
-$OS -o strap.stl strap.scad                # TPU servo strap (AUD-10)
+$OS -o strap.stl strap.scad                # PA6-CF/PETG-CF servo retention plate (AUD-10)
+                                           # (#184: said "TPU servo strap" — wrong.
+                                           #  strap.scad specifies PA6-CF or PETG-CF,
+                                           #  2.5mm plate, ~100% infill. It is a rigid
+                                           #  zip-tied retainer, not an elastic strap.)
 $OS -o grommet_insert.stl grommet_insert.scad  # TPU flange grommet liner (#30, AUD-10)
 # (toe_profile.scad is a reference profile, empty top-level object -- not rendered)
 $OS -o shoulder.stl shoulder.scad

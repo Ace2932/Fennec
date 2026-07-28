@@ -28,7 +28,9 @@
 // opening (68..220 tibia az). Jogged 30.5 OUTBOARD like stock (stance
 // rationale: nova-proj/project-b2-cad-pass; costs ~0.6 N*m holding/hip).
 //
-// Print: tab face (-Z) down; support pillars under the blade slab.
+// MATERIAL BASIS (#184): PA6-CF. SOURCED in this file — the safety factors
+// below are computed for it (151/75 MPa dry/wet).
+// Print: PA6-CF, tab face (-Z) down; support pillars under the blade slab.
 
 include <leg_v6_common.scad>
 // toe_profile.scad (stock outline extraction) retired from the build —

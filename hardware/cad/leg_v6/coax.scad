@@ -67,7 +67,11 @@
 //     the pocket WIDTH is only 25.4mm (fits the 24.8 case + ~0.6, no room
 //     for a cable alongside). Harness plan #31.
 //
-// Print: rear face (+Y) down; supports under the yoke bridge span.
+// MATERIAL BASIS (#184): PA6-CF — INFERRED, NOT SOURCED. Nothing in this file
+// states a material. The inference is the leg batch: every part that mates to
+// this one (shoulder, shoulder_plate, coax_hfe_plate, knee_arm) is PA6-CF, and
+// this is the haa load path. CONFIRM before the first structural print.
+// Print: PA6-CF, rear face (+Y) down; supports under the yoke bridge span.
 //
 // ASSEMBLY RULE (backlog #18 / LA-14, --cable WARN gate LA-20): the HIP
 // service loop anchored at this part's tunnel-exit shrinks to ~60-79mm

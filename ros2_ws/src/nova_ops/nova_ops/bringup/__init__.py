@@ -22,6 +22,7 @@ PROFILES = {
             # micro_ros_agent runs detached via setup-jetson.md §14.7 setsid.
             # The launch file does NOT spawn it — it's started by ops, not by us.
             # We just include preflight here so you can validate the chain.
+            ("node", "nova_ops", "firmware_tables", {"_respawn": True}),
             ("launch", "nova_ops", "preflight.launch.py", {}),
         ],
     },
@@ -69,6 +70,13 @@ PROFILES = {
         "description": "Teensy bridge + gait + safety envelope + dashcam + IMU",
         "preflight": True,
         "actions": [
+            # FIRST, and before preflight: the Teensy boots with BOTH
+            # protection tables wide open (per-joint 0..4095, posture backstop
+            # off) and only the host can narrow them (#185). Listed ahead of
+            # preflight deliberately — ros2 launch does not guarantee start
+            # ORDER, so this is intent, not a guarantee, and #187's arming
+            # check has to tolerate the race with a wait window.
+            ("node", "nova_ops", "firmware_tables", {"_respawn": True}),
             ("launch", "nova_ops", "preflight.launch.py", {}),
             ("launch", "nova_ops", "dashcam.launch.py", {}),
             # robot_state_publisher — /robot_description + /tf for the 3D robot

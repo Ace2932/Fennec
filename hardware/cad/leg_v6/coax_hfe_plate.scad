@@ -56,7 +56,9 @@
 //     cap) takes over. See coax.scad for the full fastener writeup and the
 //     reachability proof in the fix report.
 //
-// PRINT: horn-seat face (x=HORN_SEAT) DOWN -- knee_arm.scad/shoulder_plate.
+// MATERIAL BASIS (#184): PA6-CF. SOURCED in this file — the support note below
+// names it in a print context.
+// PRINT: PA6-CF, horn-seat face (x=HORN_SEAT) DOWN -- knee_arm.scad/shoulder_plate.
 // scad doctrine (flat bed face = clean horn contact). The ear stands up off
 // the mid-band body; light support likely under its own overhang. PA6-CF,
 // 4 walls / 0.2 / 40%, print 1 (no mirror -- coax_hfe_plate_L.scad covers

@@ -14,7 +14,10 @@
 // Cables: plug before drop-in; tunnel exits the knee-side end wall at bay
 // level, wires run along the blade.
 //
-// Print: flat on the -Z face. NOTE (LA-6, 2026-07-11, issue #24, extended
+// MATERIAL BASIS (#184): PA6-CF. SOURCED in this file — the safety factors
+// below are computed for it (151/75 MPa dry/wet). Printing this in PETG-CF
+// would pass every geometric gate here (identical STL) and fail on the robot.
+// Print: PA6-CF, flat on the -Z face. NOTE (LA-6, 2026-07-11, issue #24, extended
 // 2026-07-11 per issue #24/LA-6 continuation): the underside is planarized/
 // ramped down to the fork's floor (SUB_FLOOR -26.6) for x >= SUB_X0 -- see
 // the SUB_X0/X1/X2 block below. This closes MOST of the old float, but NOT

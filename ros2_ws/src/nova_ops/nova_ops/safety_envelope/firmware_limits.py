@@ -202,6 +202,41 @@ def _clip(v: float) -> float:
     return max(RAW_MIN, min(v, RAW_MAX))
 
 
+def build_firmware_tables(calib: Dict[int, JointHomeCalib]):
+    """The firmware tables to publish. Returns ``(limits, envelope, state)``.
+
+    Either entry may be ``None``, meaning "do not publish this one", and the two
+    follow DIFFERENT rules because the two tables fail differently.
+
+    ``limits`` — published whenever ANY joint is calibrated. The per-joint table
+    is per-joint independent: ``build_joint_limits_data`` gives every calibrated
+    joint its real narrow window and leaves only the uncalibrated ones wide open
+    (0..4095), which is what the firmware already boots with. Withholding it
+    during a partial calibration would therefore strip real protection off the
+    joints that ARE homed in order to avoid an ambiguous status — a bad trade,
+    and the reverse of the safe default.
+
+    ``envelope`` — all-or-nothing, enforced by build_hfe_envelope_data itself.
+    This one is posture-COUPLED: a leg's fold window is selected by that leg's
+    haa, so a leg missing either joint cannot be bounded at all, and a table
+    built around a guessed home would clamp against the wrong hip.
+
+    THE CATCH THIS LEAVES, and why the state is returned rather than implied:
+    publishing a partial ``limits`` table increments the firmware's receive
+    counter exactly like a complete one, so "the firmware accepted a table" does
+    NOT mean "every joint is protected". The caller must surface `state` and
+    `missing` alongside, or a partially-armed robot reads as armed. See #187.
+    """
+    state, missing = calibration_state(calib)
+    if state == "uncalibrated":
+        return None, None, state
+    from .limits import load_default_limits
+
+    limits = build_joint_limits_data(load_default_limits(), calib)
+    envelope = build_hfe_envelope_data(calib) or None
+    return limits, envelope, state
+
+
 def calibration_state(calib: Dict[int, JointHomeCalib]):
     """Classify a calibration: ``(state, missing_ids)``. See #159.
 
