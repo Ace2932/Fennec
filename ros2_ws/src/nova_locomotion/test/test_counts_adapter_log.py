@@ -27,24 +27,30 @@ def _stub(name, **attrs):
 
 @pytest.fixture(scope="module")
 def adapter_cls():
-    """Import nova_locomotion.node with the ROS packages stubbed."""
-    if "rclpy" not in sys.modules:
-        _stub(
-            "rclpy",
-            init=lambda *a, **k: None,
-            spin=lambda *a, **k: None,
-            shutdown=lambda *a, **k: None,
-        )
-        _stub(
-            "rclpy.node",
-            Node=type("Node", (), {"__init__": lambda self, *a, **k: None}),
-        )
-        _stub("geometry_msgs")
-        _stub("geometry_msgs.msg", Twist=type("Twist", (), {}))
-        _stub("sensor_msgs")
-        _stub("sensor_msgs.msg", JointState=type("JointState", (), {}))
-        _stub("std_msgs")
-        _stub("std_msgs.msg", String=type("String", (), {}))
+    """Import nova_locomotion.node with the ROS packages stubbed.
+
+    NOT guarded on `"rclpy" not in sys.modules`. That guard assumed rclpy's
+    presence implied every OTHER ROS module was present too — false the moment
+    another test stubs rclpy first (test_preflight_firmware_tables does), at
+    which point this skipped creating geometry_msgs and the import blew up.
+    _stub() is setdefault, so calling them unconditionally is idempotent and
+    still defers to a real ROS install on the Jetson.
+    """
+    _stub("rclpy", init=lambda *a, **k: None, spin=lambda *a, **k: None,
+          shutdown=lambda *a, **k: None)
+    _stub("rclpy.node",
+          Node=type("Node", (), {"__init__": lambda self, *a, **k: None}))
+    _stub("rclpy.qos", QoSProfile=object, ReliabilityPolicy=object,
+          DurabilityPolicy=object, QoSDurabilityPolicy=object,
+          QoSReliabilityPolicy=object)
+    _stub("geometry_msgs")
+    _stub("geometry_msgs.msg", Twist=type("Twist", (), {}))
+    _stub("sensor_msgs")
+    _stub("sensor_msgs.msg", JointState=type("JointState", (), {}))
+    _stub("std_msgs")
+    _stub("std_msgs.msg", String=type("String", (), {}),
+          Bool=type("Bool", (), {}), Int32=type("Int32", (), {}),
+          Float32MultiArray=type("Float32MultiArray", (), {}))
 
     from nova_locomotion.node import _CountsAdapter
 
