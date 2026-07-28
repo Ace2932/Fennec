@@ -18,7 +18,9 @@
 //   FLANGE at the trunk end: 4x M3 from inside the trunk into heat-sets at
 //     (±51.75, z -33.05/-14.05) = the stock shell's own holes (measured);
 //     webs x ±51..55 tie flange to wall; 2x Ø12 cable grommets at (±32,-26).
-// Print: rear face down; tree supports under the flange span.
+// MATERIAL BASIS (#184): PA6-CF. SOURCED in this file — the cable-notch note
+// below calls this part's own material "abrasive PA6-CF".
+// Print: PA6-CF, rear face down; tree supports under the flange span.
 
 include <leg_v6_common.scad>
 

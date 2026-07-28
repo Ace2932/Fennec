@@ -6,7 +6,11 @@
 // the deck (4x M3 into its heat-sets). Removing the 4 deck screws + one
 // cable unplug drops the whole leg — the horn stays on this plate.
 // Sweep-safe by construction: every solid lives at y >= 17.75 or z >= 30.
-// Print: back face DOWN (perfect seat on the horn face, knee_arm doctrine)
+// MATERIAL BASIS (#184): PA6-CF — INFERRED, NOT SOURCED. Nothing in this file
+// states a material. Inferred from the leg batch and from knee_arm, whose
+// seating doctrine this part follows and which IS specified PA6-CF.
+// CONFIRM before the first structural print.
+// Print: PA6-CF, back face DOWN (perfect seat on the horn face, knee_arm doctrine)
 // -- the flange dips below the horn-seat plane, so "horn-seat face down"
 // is geometrically impossible; the achievable bed face is the back face.
 // rev 3 (2026-07-10): seat plane moved 17.2->17.75 (caliper gap fix — see
