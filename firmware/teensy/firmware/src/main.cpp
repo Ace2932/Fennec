@@ -10,6 +10,7 @@
 #include <Arduino.h>
 #include "feetech_bus.h"
 #include "ina226_telemetry.h"
+#include "hfe_envelope.h"
 #include "safety_state.h"
 
 // Joint count = 12 (4 legs × 3 joints). Names/frame_id stay empty in
@@ -324,6 +325,16 @@ inline void joint_limits_init_all() {
   }
 }
 
+// ---------------- Posture-aware hfe backstop (#142) ----------------
+// The per-joint table above protects the LINKAGE; it cannot protect the
+// CHASSIS, because how far a leg may fold depends on where that leg's HIP is.
+// The logic lives in hfe_envelope.h so the native suite can test it (the
+// micro-ROS build will not compile on a Mac, so anything left in this file is
+// unverified off the Jetson). See that header for the measurements and the
+// reason a scalar cap cannot do this job.
+nova::HfeEnvelope hfe_envelope;
+volatile uint32_t hfe_envelope_rx_count = 0;
+
 inline void slew_init_all() {
   for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) last_cmd_goal[i] = SLEW_UNINIT;
 }
@@ -340,6 +351,13 @@ void broadcast_servo_commands() {
 
   uint8_t ids[NOVA_JOINT_COUNT];
   uint16_t goals[NOVA_JOINT_COUNT];
+  uint16_t targets[NOVA_JOINT_COUNT];
+
+  // PASS 1 — per-joint clamp. Split out from the slew loop for #142: the
+  // posture clamp needs the WHOLE commanded vector (a leg's hfe window is
+  // chosen by that leg's haa), and it must see the haa the servos will
+  // actually be sent, not the raw request — so it runs after this clamp and
+  // before the slew limiter, which then ramps toward the corrected goal.
   for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
     ids[i] = SERVO_ID_BASE + i;
     double v = latched_cmd_position[i];
@@ -352,7 +370,16 @@ void broadcast_servo_commands() {
     // per-joint ROM clamp (host-published table; wide open until then)
     if (target < joint_limit_min[i]) target = joint_limit_min[i];
     if (target > joint_limit_max[i]) target = joint_limit_max[i];
+    targets[i] = target;
+  }
 
+  // PASS 2 — posture-aware chassis backstop (#142). No-op until the host has
+  // published an envelope.
+  hfe_envelope.apply(targets);
+
+  // PASS 3 — slew limit and write.
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    const uint16_t target = targets[i];
     uint16_t out;
     if (last_cmd_goal[i] == SLEW_UNINIT) {
       // ANTI-SNAP (clean-movement lane 2026-07-06, closes the boot-settle
@@ -482,6 +509,7 @@ rcl_publisher_t servo_temperature_pub;
 rcl_subscription_t joint_cmd_sub;
 rcl_subscription_t safety_clear_sub;
 rcl_subscription_t joint_limits_sub;
+rcl_subscription_t hfe_envelope_sub;
 
 std_msgs__msg__Int32 heartbeat_msg;
 std_msgs__msg__Int32 loop_max_msg;
@@ -516,6 +544,9 @@ sensor_msgs__msg__JointState joint_cmd_msg;
 // joint_limits sub: 24 floats = (min,max) raw per joint, bus-ID order
 std_msgs__msg__Float32MultiArray joint_limits_msg;
 float joint_limits_rx_buf[2 * NOVA_JOINT_COUNT];
+// hfe_envelope sub: 1 + 4 legs * N buckets * 4 floats, all raw counts (#142)
+std_msgs__msg__Float32MultiArray hfe_envelope_msg;
+float hfe_envelope_rx_buf[nova::HFE_ENV_MAX_FLOATS];
 
 // Backing storage for JointState arrays (pub + sub). Names + frame_id stay
 // empty for now — see header note.
@@ -561,6 +592,27 @@ void joint_limits_callback(const void* msgin) {
     joint_limit_max[i] = (uint16_t)m->data.data[2 * i + 1];
   }
   joint_limits_rx_count++;
+}
+
+// `hfe_envelope` callback — the posture-aware backstop table (#142). Same
+// whole-message discipline as joint_limits: validate everything BEFORE writing
+// anything, and reject the entire update on any fault. A half-applied envelope
+// would clamp some legs against the new table and some against the old, which
+// is worse than either table alone.
+//
+// The coverage check is the one that matters. HfeEnvelope::apply() looks up a
+// bucket by haa and silently declines to clamp if none matches, so a table with
+// a GAP would be a hole in the backstop at exactly the haa values inside the
+// gap — invisible at runtime. Requiring contiguous 0..4095 coverage per leg
+// means that hole cannot be installed in the first place.
+void hfe_envelope_callback(const void* msgin) {
+  const std_msgs__msg__Float32MultiArray* m =
+      (const std_msgs__msg__Float32MultiArray*)msgin;
+  // load() validates and REJECTS the whole table on any fault — a
+  // half-applied envelope would clamp some legs against the new table and some
+  // against the old, which is worse than either alone. Tested natively in
+  // test/test_hfe_envelope.
+  if (hfe_envelope.load(m->data.data, m->data.size)) hfe_envelope_rx_count++;
 }
 
 // /safety_clear sub callback — Bool; data=true requests a latch clear.
@@ -876,6 +928,19 @@ void setup() {
   joint_limits_msg.layout.dim.capacity = 0;
   joint_limits_msg.layout.data_offset  = 0;
 
+  RCCHECK(rclc_subscription_init_default(
+      &hfe_envelope_sub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+      "hfe_envelope"));
+  hfe_envelope_msg.data.data     = hfe_envelope_rx_buf;
+  hfe_envelope_msg.data.size     = 0;
+  hfe_envelope_msg.data.capacity = nova::HFE_ENV_MAX_FLOATS;
+  hfe_envelope_msg.layout.dim.data     = NULL;
+  hfe_envelope_msg.layout.dim.size     = 0;
+  hfe_envelope_msg.layout.dim.capacity = 0;
+  hfe_envelope_msg.layout.data_offset  = 0;
+
   joint_state_bind(&joint_states_msg, js_position, js_velocity, js_effort);
   joint_state_bind(&joint_cmd_msg,    cmd_position, cmd_velocity, cmd_effort);
   for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
@@ -883,8 +948,10 @@ void setup() {
     latched_cmd_position[i] = 0.0;
   }
 
-  // Executor sized for 3 subs: joint_commands + safety_clear + joint_limits.
-  RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
+  // Executor sized for 4 subs: joint_commands + safety_clear + joint_limits
+  // + hfe_envelope. This count MUST match the add_subscription calls below —
+  // rclc silently refuses the extra handle if it is short.
+  RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator));
   RCCHECK(rclc_executor_add_subscription(
       &executor, &joint_cmd_sub, &joint_cmd_msg,
       &joint_cmd_callback, ON_NEW_DATA));
@@ -894,6 +961,9 @@ void setup() {
   RCCHECK(rclc_executor_add_subscription(
       &executor, &joint_limits_sub, &joint_limits_msg,
       &joint_limits_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(
+      &executor, &hfe_envelope_sub, &hfe_envelope_msg,
+      &hfe_envelope_callback, ON_NEW_DATA));
 
   heartbeat_msg.data = 0;
   estop_msg.data = false;

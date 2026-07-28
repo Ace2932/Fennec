@@ -483,3 +483,48 @@ def test_deep_inboard_haa_plus_deep_fold_is_REFUSED():
             )
             return
     raise AssertionError("no bucket contains haa -15")
+
+
+def test_the_payload_FITS_the_firmware_buffer():
+    """Cross-seam check against the C++ constants, read from the header.
+
+    The bucket count comes from the haa grid, which gets refined (#181 took it
+    16 -> 24). The firmware declares a fixed capacity and REJECTS any table
+    with more buckets than that -- load() returns false, the backstop simply
+    never arms, and nothing on the robot says so. So the two have to be
+    compared, and the comparison has to read the real C++ value rather than a
+    number retyped into this test.
+    """
+    import pathlib
+    import re
+
+    hdr = (pathlib.Path(__file__).resolve().parents[4]
+           / "firmware" / "teensy" / "firmware" / "src" / "hfe_envelope.h")
+    if not hdr.exists():
+        pytest.skip("firmware header not present in this checkout")
+    text = hdr.read_text()
+
+    def const(name):
+        m = re.search(rf"{name}\s*=\s*(\d+)", text)
+        assert m, f"{name} not found in hfe_envelope.h"
+        return int(m.group(1))
+
+    max_buckets = const("HFE_ENV_MAX_BUCKETS")
+    legs = const("HFE_ENV_LEGS")
+    stride = const("HFE_ENV_STRIDE")
+
+    from nova_ops.safety_envelope.firmware_limits import (
+        HFE_ENV_STRIDE, build_hfe_envelope_data,
+    )
+
+    assert stride == HFE_ENV_STRIDE, "host and firmware disagree on the stride"
+    assert legs == 4
+
+    data = build_hfe_envelope_data(_full_calib())
+    n = int(data[0])
+    assert n <= max_buckets, (
+        f"the haa grid now needs {n} buckets but the firmware caps at "
+        f"{max_buckets} — it would reject the table and silently run with no "
+        f"chassis backstop. Raise HFE_ENV_MAX_BUCKETS in hfe_envelope.h."
+    )
+    assert len(data) <= 1 + legs * max_buckets * stride
