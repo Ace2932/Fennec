@@ -35,6 +35,10 @@ setup(
             "dashcam_node = nova_ops.dashcam.node:main",
             # `ros2 run nova_ops safety_counters` — placeholder /safety_envelope_counters publisher
             "safety_counters = nova_ops.safety_envelope.counters_node:main",
+            # `ros2 run nova_ops firmware_tables` — publishes the Teensy's
+            # per-joint ROM table + posture backstop (#185). Without it both
+            # stay at their wide-open boot defaults.
+            "firmware_tables = nova_ops.safety_envelope.tables_node:main",
             # `ros2 run nova_ops oled_status` — STUB OLED + LED status bridge to Arduino Nano via USB-serial
             "oled_status = nova_ops.oled_status.node:main",
             # `ros2 run nova_ops battery_shutdown_node` — /battery_low -> clean poweroff (§10, NOT allowed-to-crash)
