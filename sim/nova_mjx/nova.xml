@@ -84,7 +84,7 @@
         <inertial pos="0.00710 +0.02000 -0.00800" mass="0.0836" diaginertia="4.0990e-05 2.1200e-05 3.2550e-05"/>
         <geom type="capsule" fromto="0 0 0 0.0116 0.0338 -0.0095" size="0.013" class="viz"/>
         <body name="RL_upper" pos="0.0116 0.0338 -0.0095">
-          <joint name="RL_hfe" axis="0 1 0" range="-1.5010 0.8730" damping="0.643"/>
+          <joint name="RL_hfe" axis="0 1 0" range="-0.8730 1.5010" damping="0.643"/>
           <inertial pos="0.00000 +0.00650 -0.05070" mass="0.1219" diaginertia="7.4860e-05 6.6490e-05 2.6670e-05"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1069" size="0.013" class="viz"/>
           <body name="RL_lower" pos="0 0 -0.1069">
@@ -103,7 +103,7 @@
         <inertial pos="0.00710 -0.02000 -0.00800" mass="0.0836" diaginertia="4.0990e-05 2.1200e-05 3.2550e-05"/>
         <geom type="capsule" fromto="0 0 0 0.0116 -0.0338 -0.0095" size="0.013" class="viz"/>
         <body name="RR_upper" pos="0.0116 -0.0338 -0.0095">
-          <joint name="RR_hfe" axis="0 1 0" range="-1.5010 0.8730" damping="0.643"/>
+          <joint name="RR_hfe" axis="0 1 0" range="-0.8730 1.5010" damping="0.643"/>
           <inertial pos="0.00000 -0.00650 -0.05070" mass="0.1219" diaginertia="7.4860e-05 6.6490e-05 2.6670e-05"/>
           <geom type="capsule" fromto="0 0 0 0 0 -0.1069" size="0.013" class="viz"/>
           <body name="RR_lower" pos="0 0 -0.1069">
