@@ -38,6 +38,13 @@ KFE_TO_FOOT = (0.0, 0.0305, -0.1290)           # tibia length; y by reflect
 
 # joint limits (rad) — chassis gate ROM
 HAA_IN, HAA_OUT = 0.262, 0.698
+#: hfe caps, named by DIRECTION RELATIVE TO THE TRUNK, not by sign.
+#:   HFE_FOLD (0.873 = 50 deg) — TOWARD the trunk. The conservative chassis
+#:     scalar: worst case over the whole legal haa range (+51.7 at haa +40,
+#:     kfe -109; hardware/cad/chassis/hfe_envelope.py).
+#:   HFE_EXT  (1.501 = 86 deg) — AWAY from the trunk. Mechanical: leg
+#:     self-collision at 93 deg (LA-19) minus a 7 deg margin.
+#: These are NOT the URDF's numbers and deliberately so — see hfe_range().
 HFE_FOLD, HFE_EXT = 0.873, 1.501
 KFE = 1.9
 EFF_HIP, EFF_LEG = 2.9, 1.8                     # N*m stall torque (datasheet)
@@ -86,6 +93,41 @@ def haa_range(reflect):
     return f"{lo:.4f} {hi:.4f}"
 
 
+def hfe_range(sx):
+    """hfe joint range for a leg at fore-aft sign `sx`. END-KEYED, and it must be.
+
+    The MJCF hfe axis is "0 1 0" on all four legs, so canonical +hfe is the same
+    world rotation everywhere: all four feet swing REARWARD. That is TOWARD the
+    trunk at the front and AWAY from it at the rear. The conservative chassis cap
+    therefore lands on OPPOSITE SIGNS at the two ends:
+
+        FRONT (sx +1):  (-HFE_EXT, +HFE_FOLD)
+        REAR  (sx -1):  (-HFE_FOLD, +HFE_EXT)
+
+    This file used to emit `(-HFE_EXT, +HFE_FOLD)` for all four — the stock
+    symmetric assumption that #163/#164 disproved for the runtime gate and that
+    the sim never had applied to it. Measured cost of that, against the
+    posture-aware chassis bounds at haa 0 / kfe -109 (nova_ops.rom_envelope):
+
+        FRONT  gate allows toward-trunk +67.9, model stopped at +50.0
+               -> 17.9 deg TIGHTER than the robot: stride left on the table
+        REAR   gate allows toward-trunk -67.9, model stopped at -86.0
+               -> 18.1 deg LOOSER than the robot: the rear legs could fold
+                  into chassis the gate would refuse
+
+    Both wrong, by the same ~18 deg, in opposite directions — which is the
+    signature of a mirror applied as a translation.
+
+    WHY THE MODEL CARRIES THE CHASSIS CAP AT ALL, when the URDF carries the
+    mechanical +-86: on the robot the chassis constraint is enforced per posture
+    at runtime (rom_envelope + safety_envelope.wrapper). The sim has neither —
+    and its leg geoms are all class="viz" (contype 0), so a thigh passes through
+    the trunk box without a contact. This joint limit is the ONLY thing keeping
+    a learned gait out of the chassis. Do not "sync" it to the URDF's 86.
+    """
+    return (-HFE_EXT, HFE_FOLD) if sx > 0 else (-HFE_FOLD, HFE_EXT)
+
+
 def leg_body(name, sx, sy):
     # hx: the hfe axis sits HAA_TO_HFE[0] TOWARD THE TRUNK of the haa station
     # (#165) — -x at the front (sx +1), +x at the rear (sx -1). Per END, not
@@ -99,7 +141,7 @@ def leg_body(name, sx, sy):
         {inertial(LINK_I['hip'], sy)}
         <geom type="capsule" fromto="0 0 0 {hx:.4f} {hy:.4f} {HAA_TO_HFE[2]:.4f}" size="{R_THIGH}" class="viz"/>
         <body name="{name}_upper" pos="{hx:.4f} {hy:.4f} {HAA_TO_HFE[2]:.4f}">
-          <joint name="{name}_hfe" axis="0 1 0" range="{-HFE_EXT:.4f} {HFE_FOLD:.4f}" damping="{DAMP_LEG:.3f}"/>
+          <joint name="{name}_hfe" axis="0 1 0" range="{hfe_range(sx)[0]:.4f} {hfe_range(sx)[1]:.4f}" damping="{DAMP_LEG:.3f}"/>
           {inertial(LINK_I['upper'], sy)}
           <geom type="capsule" fromto="0 0 0 0 0 {HFE_TO_KFE[2]:.4f}" size="{R_THIGH}" class="viz"/>
           <body name="{name}_lower" pos="0 0 {HFE_TO_KFE[2]:.4f}">

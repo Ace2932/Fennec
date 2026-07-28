@@ -32,9 +32,22 @@ from etils import epath
 # derived from the neutral foot is branch-invariant; only the ACTION ORIGIN moves.
 #   elbow-back  (leg_ik knee_forward=False): hfe +0.600, kfe -1.200
 #   elbow-fwd   (leg_ik knee_forward=True) : hfe -0.728, kfe +1.200
-# Fold margin to the hfe stop differs a lot between them: elbow-back has 0.273 rad
-# (15.6 deg) to the +50 deg riser-skirt cap; elbow-fwd has 0.773 rad (44.3 deg) to
-# the -86 deg away-trunk limit. That margin is the step-up budget for stairs.
+# Fold margin to the hfe stop differs a lot between them, and since #144 it also
+# differs BY END, because the hfe range is end-keyed: toward-the-trunk is +hfe at
+# the front and -hfe at the rear, so the conservative +-50 chassis cap sits on
+# opposite signs (build_mjcf.hfe_range). Margins to the TOWARD-TRUNK cap:
+#
+#     elbow-back (hfe +34.4 deg)   FRONT 15.6 deg      REAR  51.6 deg
+#     elbow-fwd  (hfe -41.7 deg)   FRONT 91.7 deg      REAR   8.3 deg
+#
+# That margin is the step-up budget for stairs. NOTE what changed: this comment
+# used to read elbow-fwd's budget as 44.3 deg against "the -86 deg away-trunk
+# limit" — true for the FRONT legs, where -hfe is away from the trunk. At the
+# REAR, -hfe is INTO the trunk, and the real budget there is 8.3 deg, not 44.3.
+# The model previously allowed -86 at the rear too, which is 18.1 deg past where
+# the robot's posture-aware gate stops (nova_ops.rom_envelope, haa 0/kfe -109:
+# -67.9) — so a stair policy leaning on deep rear elbow-fwd fold was spending a
+# budget the hardware does not have.
 _ELBOW_BACK = (0.0, 0.600000000, -1.200000000)
 _ELBOW_FWD = (0.0, -0.728009933, 1.200000000)
 # per-leg elbow-forward flags in LEG_NAMES order (FL, FR, RL, RR)

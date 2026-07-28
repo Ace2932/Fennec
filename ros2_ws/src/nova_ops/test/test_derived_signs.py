@@ -154,17 +154,41 @@ def test_haa_ranges_are_exact_left_right_mirrors():
 
 
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
-def test_hfe_kfe_identical_across_all_four_legs():
-    """No fore-aft mirroring -- corroborates '4 identical translated legs'."""
+def test_pitch_AXES_identical_across_all_four_legs():
+    """No fore-aft mirroring of the pitch axes.
+
+    This asserted that the hfe/kfe RANGES were identical across all four legs,
+    to corroborate "4 identical translated legs" -- the premise #163 disproved
+    (the rear hip is a 180 deg YAW). The ranges stopped being identical for a
+    legitimate reason (#144): toward-the-trunk is +hfe at the front and -hfe at
+    the rear, so the conservative chassis cap sits on opposite signs, and hfe is
+    now a front/rear mirror by design.
+
+    The AXIS is the invariant that actually carries the claim, and it survives
+    untouched: all twelve pitch joints are "0 1 0". kfe, which has no chassis
+    cap, is still range-identical too.
+    """
     mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
     for joint in ("hfe", "kfe"):
-        seen = set()
+        axes = set()
         for leg in LEFT + RIGHT:
             j = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, f"{leg}_{joint}")
-            seen.add(tuple(round(v, 6) for v in m.jnt_range[j]))
-        assert len(seen) == 1, f"{joint} ranges differ across legs: {seen}"
+            axes.add(tuple(round(v, 6) for v in m.jnt_axis[j]))
+        assert axes == {(0.0, 1.0, 0.0)}, f"{joint} axes differ across legs: {axes}"
+
+    def rng(leg, joint):
+        j = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, f"{leg}_{joint}")
+        return tuple(round(v, 6) for v in m.jnt_range[j])
+
+    # kfe: no chassis cap, so still identical everywhere
+    assert len({rng(leg, "kfe") for leg in LEFT + RIGHT}) == 1
+
+    # hfe: front/rear MIRROR, not identical -- and not per-side either
+    assert rng("FL", "hfe") == rng("FR", "hfe")
+    assert rng("RL", "hfe") == rng("RR", "hfe")
+    assert rng("FL", "hfe") == tuple(-v for v in reversed(rng("RL", "hfe")))
 
 
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
@@ -293,21 +317,35 @@ def test_full_urdf_sign_table_covers_all_twelve_joints():
 
 
 @pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
-def test_pitch_ranges_identical_across_legs_supports_shared_front_rear_sign():
+def test_pitch_AXIS_not_range_is_what_supports_the_shared_front_rear_sign():
+    """The pitch sign is shared front/rear because the AXIS is, not the range.
+
+    This asserted range-identity across all four legs -- a duplicate of the
+    check above, and a non-sequitur besides: a LIMIT says nothing about the
+    raw-vs-URDF DIRECTION. It happened to hold while the model carried one
+    symmetric hfe range, and broke the moment the range became correctly
+    end-keyed (#144), which is the tell that it was corroborating the modelling
+    assumption rather than the sign.
+
+    What the sign actually rests on: the pitch axis is "0 1 0" in the BODY frame
+    on all four legs, so a given URDF angle is the same world rotation at both
+    ends -- which is why DERIVED_PITCH_URDF_SIGN splits by SIDE (the mirror
+    flips a lateral axis) and not by end.
+    """
     mujoco = pytest.importorskip("mujoco")
 
     m = mujoco.MjModel.from_xml_path(str(MJCF))
+    left_pitch = {HFE_IDS[leg] for leg in LEFT} | {KFE_IDS[leg] for leg in LEFT}
+    for jid, sign in DERIVED_PITCH_URDF_SIGN.items():
+        assert sign == (+1 if jid in left_pitch else -1), jid
+
     for joint in ("hfe", "kfe"):
-        seen = {
-            tuple(
-                round(v, 6)
-                for v in m.jnt_range[
-                    mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, f"{leg}_{joint}")
-                ]
+        for leg in LEFT + RIGHT:
+            j = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, f"{leg}_{joint}")
+            assert tuple(round(v, 6) for v in m.jnt_axis[j]) == (0.0, 1.0, 0.0), (
+                f"{leg}_{joint} axis is not body +y; the pitch sign derivation "
+                "assumes a lateral axis identical at both ends"
             )
-            for leg in LEFT + RIGHT
-        }
-        assert len(seen) == 1
 
 
 def test_cad_places_every_pitch_horn_inboard():

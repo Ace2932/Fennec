@@ -158,3 +158,93 @@ def test_urdf_and_mjcf_agree_on_the_hip_grid():
     upper_x = float(re.search(r'name="FL_upper" pos="(-?[0-9.]+)', xml).group(1))
     assert hip_x == pytest.approx(_prop(text, "body_half_x"), abs=1e-4)
     assert abs(upper_x) == pytest.approx(_prop(text, "hip_to_upper_x"), abs=1e-4)
+
+
+# ---- #144: the sim's hfe cap is the sim's ONLY chassis protection -----------
+#
+# On the robot the chassis constraint is enforced PER POSTURE at runtime
+# (nova_ops.rom_envelope + safety_envelope.wrapper), so the URDF can carry the
+# mechanical +-86 and be right. The sim has neither of those, and every leg geom
+# in nova.xml is class="viz" (contype 0) — a thigh passes through the trunk box
+# without generating a contact. So the hfe JOINT LIMIT is the only thing keeping
+# a learned gait out of the chassis, which makes it worth pinning here.
+
+
+def _mjcf_hfe_ranges():
+    xml = open(_MJCF).read()
+    out = {}
+    for leg in ("FL", "FR", "RL", "RR"):
+        m = re.search(rf'name="{leg}_hfe"[^/]*range="(-?[0-9.]+) (-?[0-9.]+)"', xml)
+        assert m, f"no hfe range for {leg}"
+        out[leg] = (float(m.group(1)), float(m.group(2)))
+    return out
+
+
+@pytest.mark.skipif(not os.path.exists(_MJCF), reason="generated MJCF not present")
+def test_mjcf_hfe_cap_is_END_KEYED_toward_the_trunk():
+    """Toward-the-trunk is +hfe at the FRONT and -hfe at the REAR.
+
+    The MJCF hfe axis is "0 1 0" on all four legs, so canonical +hfe is one
+    world rotation: all four feet swing rearward, which is toward the trunk at
+    the front and away at the rear. A single symmetric range therefore puts the
+    conservative cap on the front's toward-trunk side and the rear's AWAY side —
+    the stock symmetric assumption #163/#164 disproved for the runtime gate.
+    """
+    r = _mjcf_hfe_ranges()
+    for leg in ("FL", "FR"):
+        assert abs(r[leg][1]) < abs(r[leg][0]), (leg, r[leg])   # tight on +
+    for leg in ("RL", "RR"):
+        assert abs(r[leg][0]) < abs(r[leg][1]), (leg, r[leg])   # tight on -
+    # the two ends are mirror images, not independent numbers
+    assert r["FL"][1] == pytest.approx(-r["RL"][0])
+    assert r["FL"][0] == pytest.approx(-r["RL"][1])
+    assert r["FL"] == r["FR"] and r["RL"] == r["RR"]
+
+
+@pytest.mark.skipif(not os.path.exists(_MJCF), reason="generated MJCF not present")
+def test_sim_never_permits_a_fold_the_chassis_gate_would_REFUSE():
+    """The cross-seam check, and the one that catches the real bug.
+
+    A sim that allows a posture the robot's gate refuses trains a policy that
+    cannot transfer — and this is the fold direction that reaches the riser
+    skirt and the belly pack. Compared at the nominal gait posture (haa 0,
+    kfe -109), where both primary gaits run.
+
+    Measured before the fix: the rear legs were capped at -86.0 where the gate
+    stops at -67.9, i.e. 18.1 deg of fold into chassis the robot would refuse.
+    The front was the mirror error — 17.9 deg TIGHTER than the gate allows,
+    costing stride for nothing.
+    """
+    import math
+
+    from nova_ops.rom_envelope import hfe_bounds
+
+    r = _mjcf_hfe_ranges()
+    for leg, (lo, hi) in r.items():
+        g_lo, g_hi = hfe_bounds(leg, 0.0, math.radians(-109))
+        if leg[0] == "F":                      # toward trunk = +hfe
+            assert hi <= g_hi + 1e-9, (
+                f"{leg}: sim permits +{math.degrees(hi):.1f} deg toward the "
+                f"trunk, gate stops at +{math.degrees(g_hi):.1f}"
+            )
+        else:                                  # toward trunk = -hfe
+            assert lo >= g_lo - 1e-9, (
+                f"{leg}: sim permits {math.degrees(lo):.1f} deg toward the "
+                f"trunk, gate stops at {math.degrees(g_lo):.1f}"
+            )
+
+
+@pytest.mark.skipif(not os.path.exists(_MJCF), reason="generated MJCF not present")
+def test_the_OLD_symmetric_range_would_fail_that_check():
+    """Negative control. If a symmetric range passed, the test above proves
+    nothing — and symmetric is exactly what the file carried."""
+    import math
+
+    from nova_ops.rom_envelope import hfe_bounds
+
+    old_lo, old_hi = -1.5010, 0.8730          # what every leg used to get
+    g_lo, _ = hfe_bounds("RL", 0.0, math.radians(-109))
+    assert old_lo < g_lo, (
+        "the old symmetric rear range should violate the gate bound; if it "
+        "does not, this check has stopped discriminating"
+    )
