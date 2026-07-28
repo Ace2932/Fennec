@@ -51,6 +51,41 @@ _BYTES_PER_PAIR = 56
 CONTAINS_BUDGET_BYTES = 500_000_000
 
 
+#: Seed for the ray retry below. Any fixed value works; what matters is that
+#: it is fixed.
+CONTAINS_SEED = 0
+
+
+def _contains_seeded(mesh, pts):
+    """mesh.contains(), made REPRODUCIBLE (#195).
+
+    trimesh casts a ray forward and backward and takes the parity. When the two
+    directions disagree and neither is free space, it recurses:
+
+        # try to run again with a new random vector
+        new_direction = util.unitize(np.random.random(3) - 0.5)
+
+    That draw is from numpy's GLOBAL RNG, so contains() returns DIFFERENT
+    ANSWERS ON IDENTICAL INPUT — measured 3-6 points of 3000 flipping, with no
+    two runs agreeing. Every verdict in this gate is a threshold on a count, so
+    a flipped surface-adjacent point can turn OK into HIT.
+
+    It is not the engine: embreex (embree) shows the same instability, because
+    the retry is in trimesh's parity logic, not the traversal. Seeding fixes it,
+    and as a bonus makes contains_chunked() bit-exact against the unbatched
+    call, which it was not before.
+
+    The global RNG state is saved and restored, so seeding here cannot reach
+    into anything else that draws from np.random.
+    """
+    state = np.random.get_state()
+    try:
+        np.random.seed(CONTAINS_SEED)
+        return mesh.contains(pts)
+    finally:
+        np.random.set_state(state)
+
+
 def contains_chunked(mesh, points, budget=CONTAINS_BUDGET_BYTES):
     """mesh.contains() in bounded-memory batches (#178).
 
@@ -81,9 +116,10 @@ def contains_chunked(mesh, points, budget=CONTAINS_BUDGET_BYTES):
     # 11 GB after the "fix".
     chunk = max(32, int(budget / (2 * max(1, len(mesh.faces)) * _BYTES_PER_PAIR)))
     if len(pts) <= chunk:
-        return mesh.contains(pts)
+        return _contains_seeded(mesh, pts)
     return np.concatenate(
-        [mesh.contains(pts[i:i + chunk]) for i in range(0, len(pts), chunk)])
+        [_contains_seeded(mesh, pts[i:i + chunk])
+         for i in range(0, len(pts), chunk)])
 
 
 def min_clearance_chunked(mesh, points, chunk=2000):
