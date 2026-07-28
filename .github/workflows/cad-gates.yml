@@ -44,19 +44,26 @@ jobs:
         run: pip install numpy trimesh scipy networkx rtree manifold3d
 
       - name: Runner resources
-        # The sweep is the memory-hungriest thing this repo runs. When it dies
-        # here, the first question is always "how much RAM did it have".
+        # Recorded on purpose: the sweep below does NOT run here because it
+        # needs more memory than a hosted runner has, and that judgement should
+        # be re-checkable rather than folklore.
         run: |
           free -m
-          ulimit -a
           nproc
 
-      - name: Assembly fit sweep (leg_v6)
-        # The ROM/fit authority. ~5.5 min on an M-series laptop; slower here.
-        # -u so the OK lines stream: Python block-buffers stdout off a TTY, so
-        # a killed run printed NOTHING and gave no clue how far it got.
-        working-directory: hardware/cad/leg_v6
-        run: python -u check_fit.py --sweep
+      # NOT RUN HERE: check_fit.py --sweep, the ROM/fit authority.
+      # MEASURED peak RSS 19.08 GB (/usr/bin/time -l, full sweep, 315 s, 97 OK
+      # checks). A hosted ubuntu-latest runner has 16 GB, so it is OOM-killed
+      # ~110 s in — reproducibly, exit 143, and with block-buffered stdout it
+      # printed nothing at all on the way down.
+      # The memory is not the sample arrays (21k servo + 8k tibia points); it
+      # is repeated trimesh mesh.contains() across the pose loops. Fixing it is
+      # real work on a safety gate and belongs in its own change, not smuggled
+      # into the change that made the gates portable.
+      # Until then the sweep runs via hardware/cad/leg_v6/build_all.sh locally.
+      # Note what IS covered: #163 (the rear-hip transform) lives in the chassis
+      # gate, which runs here, and #165 is covered by test_urdf_sync in
+      # ros-pytest — the two bugs that motivated #166 are both gated.
 
       - name: Shoe fit
         working-directory: hardware/cad/leg_v6
