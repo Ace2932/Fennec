@@ -1,0 +1,94 @@
+name: cad-gates
+
+# The CAD fit gates, on every PR that touches CAD.
+#
+# WHY (#166): these gates are the only automated check on this project's
+# dominant failure mode — geometry where each part is individually correct and
+# the SEAM between them is wrong. #163 (rear hip placed as a translation
+# instead of a 180-degree yaw) and #165 (URDF carrying the stock hip grid) both
+# shipped, and both were caught by a human reading files, because the gates
+# could only run on one laptop: they read their reference meshes from the ROOT
+# repo via absolute /Users paths. Those inputs are vendored now
+# (hardware/cad/cad_assets.py), so the gates run anywhere.
+#
+# These run against the COMMITTED STLs, not freshly rendered ones — no OpenSCAD
+# here. That is deliberate: the committed STL is what gets printed, so it is the
+# thing worth gating. The residual gap is a .scad edited without re-rendering;
+# closing that needs an OpenSCAD render-and-compare job and is tracked
+# separately.
+
+on:
+  pull_request:
+    paths:
+      - 'hardware/cad/**'
+      - '.github/workflows/cad-gates.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'hardware/cad/**'
+      - '.github/workflows/cad-gates.yml'
+
+jobs:
+  leg-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install mesh deps
+        # trimesh's proximity/boolean paths pull scipy + rtree + manifold3d;
+        # installing them explicitly keeps a missing extra from silently
+        # degrading a gate into a weaker check.
+        run: pip install numpy trimesh scipy networkx rtree manifold3d
+
+      - name: Runner resources
+        # Recorded on purpose: the sweep below does NOT run here because it
+        # needs more memory than a hosted runner has, and that judgement should
+        # be re-checkable rather than folklore.
+        run: |
+          free -m
+          nproc
+
+      # NOT RUN HERE: check_fit.py --sweep, the ROM/fit authority.
+      # MEASURED peak RSS 19.08 GB (/usr/bin/time -l, full sweep, 315 s, 97 OK
+      # checks). A hosted ubuntu-latest runner has 16 GB, so it is OOM-killed
+      # ~110 s in — reproducibly, exit 143, and with block-buffered stdout it
+      # printed nothing at all on the way down.
+      # The memory is not the sample arrays (21k servo + 8k tibia points); it
+      # is repeated trimesh mesh.contains() across the pose loops. Fixing it is
+      # real work on a safety gate and belongs in its own change, not smuggled
+      # into the change that made the gates portable.
+      # Until then the sweep runs via hardware/cad/leg_v6/build_all.sh locally.
+      # Note what IS covered: #163 (the rear-hip transform) lives in the chassis
+      # gate, which runs here, and #165 is covered by test_urdf_sync in
+      # ros-pytest — the two bugs that motivated #166 are both gated.
+
+      - name: Shoe fit
+        working-directory: hardware/cad/leg_v6
+        run: python check_shoe.py
+
+      - name: Servo orientation gate
+        # Proves each servo seats only ONE way round — this is the evidence the
+        # derived hfe/kfe signs in nova_ops/safety_envelope/derived_signs.py
+        # rest on. Loosen an arm relief and the flipped servo starts fitting,
+        # which removes that evidence silently.
+        working-directory: hardware/cad/leg_v6
+        run: python servo_orientation_gate.py
+
+  chassis-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install mesh deps
+        run: pip install numpy trimesh scipy networkx rtree manifold3d
+
+      - name: Chassis fit gate
+        # Leg-vs-chassis interference, fastener families, posture ROM envelope.
+        working-directory: hardware/cad/chassis
+        run: python check_fit.py

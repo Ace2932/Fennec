@@ -104,9 +104,14 @@ point inside the designed part = the part cuts its counterpart. Cases:
 
 Exit 0 = clean, 1 = interference. Run via build_all.sh after every change.
 """
+import pathlib
 import sys
+
 import numpy as np
 import trimesh
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from cad_assets import LEG_V6, asset  # noqa: E402  (path insert must be first)
 
 from power_board_model import (power_board_mesh, logic_board_mesh, FLOOR_TOP_Z,
                                 STANDOFF_FLOOR_MM, LOGIC_BOARD_Z0, STACK_TOP_Z,
@@ -114,10 +119,13 @@ from power_board_model import (power_board_mesh, logic_board_mesh, FLOOR_TOP_Z,
 import power_board_model as pbm
 from trunk_build import BATT_BOSS_X, BATT_BOSS_Y, FOOT_XY
 
-NOVA = '/Users/afox/codebases/NOVA'
-TRUNK = f'{NOVA}/original_body_files/SM3_Frame_ChassisTrunk.stl'
-SERVO = f'{NOVA}/feetech_servo_models/converted_stl/servo.stl'
-LEG = f'{NOVA}/proj/hardware/cad/leg_v6'
+# Vendored / in-repo since #166. These were absolute /Users paths, two of them
+# into the ROOT repo (a different git repo), so this gate ran on exactly one
+# machine and never in CI — on the project whose dominant bug class is geometry
+# that is individually right and wrong at the seam.
+TRUNK = str(asset('SM3_Frame_ChassisTrunk.stl'))
+SERVO = str(asset('servo.stl'))
+LEG = str(LEG_V6)
 
 # measured / designed constants (trunk frame; riser_bay.scad + dimensions.md)
 WALL_TOP, PLATEAU_Z = 29.0, 46.91

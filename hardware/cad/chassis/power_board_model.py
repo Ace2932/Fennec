@@ -25,15 +25,22 @@ the fitment pre-flags:
 import json
 import re
 
+import pathlib
+import sys
+
 import trimesh
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from cad_assets import PROJ  # noqa: E402  (path insert must come first)
 
 T = trimesh.transformations.translation_matrix
 
-NOVA = '/Users/afox/codebases/NOVA'
-PCB_FILE = (f'{NOVA}/proj/hardware/pcb-mods/nova_pcb_v6_power_v2/'
-            'nova_pcb_v6_power_v2.kicad_pcb')
-LOGIC_PCB_FILE = (f'{NOVA}/proj/hardware/pcb-mods/nova_pcb_v6_logic/'
-                   'nova_pcb_v6_logic.kicad_pcb')
+# Both boards live IN this repo — the absolute prefix was habit, not a real
+# external dependency, but chassis/check_fit.py imports this module, so it
+# pinned the whole chassis gate to one machine (#166).
+_PCB = PROJ / 'hardware' / 'pcb-mods'
+PCB_FILE = str(_PCB / 'nova_pcb_v6_power_v2' / 'nova_pcb_v6_power_v2.kicad_pcb')
+LOGIC_PCB_FILE = str(_PCB / 'nova_pcb_v6_logic' / 'nova_pcb_v6_logic.kicad_pcb')
 
 # ---- verified board <-> trunk placement transform (do NOT re-derive) ------
 # trunk_x = local_x - TRUNK_DX ; trunk_y = local_y - TRUNK_DY ; no rotation.

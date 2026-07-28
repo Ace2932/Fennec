@@ -2,7 +2,15 @@
 # leg_v6 — render all 6 leg STLs (R + L of coax/femur/tibia)
 set -e
 cd "$(dirname "$0")"
-OS=/opt/homebrew/bin/openscad
+# Toolchain discovery (#166) — these were hardcoded to this project's author's
+# machine (/opt/homebrew/bin/openscad and ../../../.venv/bin/python), so the
+# script ran in exactly one place. Override either with an env var.
+VENV=../../../.venv/bin/python
+OS=${OPENSCAD:-$(command -v openscad || echo /opt/homebrew/bin/openscad)}
+PY=${PYTHON:-$( [ -x "$VENV" ] && echo "$VENV" || command -v python3 )}
+if [ ! -x "$OS" ] && ! command -v "$OS" >/dev/null 2>&1; then
+  echo "openscad not found (set OPENSCAD=/path/to/openscad)" >&2; exit 1
+fi
 $OS -o knee_arm.stl knee_arm.scad
 $OS -o knee_bumper.stl knee_bumper.scad   # TPU collapse guard (backlog #15 B)
 $OS -o cable_clip.stl cable_clip.scad      # TPU cable clip (#18, AUD-10: was un-rendered)
@@ -19,11 +27,11 @@ for p in femur tibia coax; do
   $OS -o ${p}_L.stl ${p}_L.scad
 done
 ls -la *_R.stl *_L.stl
-../../../.venv/bin/python ../mesh_health.py *_R.stl *_L.stl knee_arm.stl knee_bumper.stl shoulder.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl strap.stl grommet_insert.stl coax_hfe_plate.stl coax_hfe_plate_L.stl
-../../../.venv/bin/python check_fit.py --sweep
-../../../.venv/bin/python check_shoe.py
+$PY ../mesh_health.py *_R.stl *_L.stl knee_arm.stl knee_bumper.stl shoulder.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl strap.stl grommet_insert.stl coax_hfe_plate.stl coax_hfe_plate_L.stl
+$PY check_fit.py --sweep
+$PY check_shoe.py
 # Proves the hfe/kfe servos still seat only ONE way round. This is what backs
 # the derived hfe/kfe servo signs in nova_ops/safety_envelope/derived_signs.py:
 # loosen an arm relief and the flipped servo starts fitting, which silently
 # removes the evidence those signs rest on. Runs on the STLs rendered above.
-../../../.venv/bin/python servo_orientation_gate.py
+$PY servo_orientation_gate.py

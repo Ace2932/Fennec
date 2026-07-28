@@ -17,11 +17,19 @@ trimesh + the manifold3d engine (built for guaranteed-manifold output on
 manifold input), which is confirmed installed in .venv. Run:
   ../../../.venv/bin/python trunk_build.py
 """
+import pathlib
+import sys
+
 import numpy as np
 import trimesh
 
-TRUNK_STL = ('/Users/afox/codebases/NOVA/original_body_files/'
-             'SM3_Frame_ChassisTrunk.stl')
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from cad_assets import asset  # noqa: E402  (path insert must come first)
+
+# The stock trunk, already vendored for the URDF at nova_description/meshes.
+# chassis/check_fit.py imports this module, so the absolute path this replaces
+# pinned the whole chassis gate to one machine (#166).
+TRUNK_STL = str(asset('SM3_Frame_ChassisTrunk.stl'))
 OUT = 'trunk.stl'
 
 # ---- SET 1: battery mount, 6x M3 clearance through the floor ----------

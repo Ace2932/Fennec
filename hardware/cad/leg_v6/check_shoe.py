@@ -15,11 +15,19 @@ stance-plumb -36 deg; keyed by the toe_v2 pockets) and gates:
 Run after tibia geometry changes:  ../../../.venv/bin/python check_shoe.py
 Exit 0 = clean, 1 = fail. Called from build_all.sh.
 """
+import pathlib
 import sys
+
 import numpy as np
 import trimesh
 
-SHOE = '/Users/afox/codebases/NOVA/original_body_files/SM3_Foot.stl'
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from cad_assets import asset  # noqa: E402  (path insert must come first)
+
+# The stock foot, already vendored for the URDF at nova_description/meshes.
+# Was an absolute /Users path into the ROOT repo, which is a different git
+# repo — so this gate could only ever run on one laptop (#166).
+SHOE = str(asset('SM3_Foot.stl'))
 THETA = 54.0        # shoe band ctr 270 + 54 = 324 = -36 (stance-plumb)
 GAP_MEDIAN_MAX = 0.4
 

@@ -4,7 +4,14 @@
 # shoulder re-render + the leg_v6 gate run here too.
 set -e
 cd "$(dirname "$0")"
-OS=/opt/homebrew/bin/openscad
+# Toolchain discovery (#166) — these were hardcoded to this project's author's
+# machine, so the script ran in exactly one place. Override with an env var.
+VENV=../../../.venv/bin/python
+OS=${OPENSCAD:-$(command -v openscad || echo /opt/homebrew/bin/openscad)}
+PY=${PYTHON:-$( [ -x "$VENV" ] && echo "$VENV" || command -v python3 )}
+if [ ! -x "$OS" ] && ! command -v "$OS" >/dev/null 2>&1; then
+  echo "openscad not found (set OPENSCAD=/path/to/openscad)" >&2; exit 1
+fi
 $OS -o riser_bay.stl riser_bay.scad
 $OS -o spacer.stl spacer.scad
 $OS -o battery_pocket.stl battery_pocket.scad
@@ -24,7 +31,7 @@ $OS -o skid_rail.stl skid_rail.scad          # TPU belly skid rail x2 (#15, AUD-
 $OS -o ../leg_v6/shoulder.stl ../leg_v6/shoulder.scad
 $OS -o /tmp/trunk_preview.stl trunk.scad     # parametric spec sanity render only —
                                               # NOT the shipped trunk.stl (see below)
-../../../.venv/bin/python ../mesh_health.py head.stl head_ear.stl head_ear_L.stl l2_adapter.stl control_pod.stl jetson_case_mount.stl jetson_clamp_bar.stl oled_mount.stl neck_bracket.stl case_slot_grommet.stl lead_notch_grommet.stl skid_rail.stl riser_bay.stl spacer.stl battery_pocket.stl floor_plate.stl
+$PY ../mesh_health.py head.stl head_ear.stl head_ear_L.stl l2_adapter.stl control_pod.stl jetson_case_mount.stl jetson_clamp_bar.stl oled_mount.stl neck_bracket.stl case_slot_grommet.stl lead_notch_grommet.stl skid_rail.stl riser_bay.stl spacer.stl battery_pocket.stl floor_plate.stl
 ls -la riser_bay.stl spacer.stl battery_pocket.stl head.stl neck_bracket.stl floor_plate.stl jetson_case_mount.stl
 
 # DERIVED TRUNK (trunk.stl): stock Nova-SM3 trunk geometry + 10 modeled
@@ -42,9 +49,9 @@ ls -la riser_bay.stl spacer.stl battery_pocket.stl head.stl neck_bracket.stl flo
 # .py's own in-memory asserts (watertight, single body, positive volume —
 # the invariants that actually matter) are the real gate here and DO hard-
 # fail the build (no `|| true`) if the boolean itself goes wrong.
-../../../.venv/bin/python trunk_build.py
-../../../.venv/bin/python ../mesh_health.py trunk.stl || echo "KNOWN EXCEPTION (see build_all.sh comment above + trunk_build.py docstring): trunk.stl fails the strict post-reload watertight check at one pre-existing, hole-unrelated sliver cluster. Does not block the build; watch this line for a change in the finding."
+$PY trunk_build.py
+$PY ../mesh_health.py trunk.stl || echo "KNOWN EXCEPTION (see build_all.sh comment above + trunk_build.py docstring): trunk.stl fails the strict post-reload watertight check at one pre-existing, hole-unrelated sliver cluster. Does not block the build; watch this line for a change in the finding."
 
-../../../.venv/bin/python check_fit.py
+$PY check_fit.py
 echo "chassis gate clean — now re-gate leg_v6 (shoulder rev):"
-(cd ../leg_v6 && ../../../.venv/bin/python check_fit.py --sweep)
+(cd ../leg_v6 && $PY check_fit.py --sweep)

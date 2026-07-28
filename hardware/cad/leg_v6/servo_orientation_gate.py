@@ -68,9 +68,12 @@ import numpy as np
 import trimesh
 
 HERE = pathlib.Path(__file__).resolve().parent
-SERVO = (
-    HERE.parents[3] / "feetech_servo_models" / "converted_stl" / "servo.stl"
-)
+sys.path.insert(0, str(HERE.parent))
+from cad_assets import asset  # noqa: E402  (path insert must come first)
+
+# Was HERE.parents[3] / "feetech_servo_models" — relative, but still reaching
+# OUT of proj/ into the root repo, so it could not run in CI (#166). Vendored.
+SERVO = asset("servo.stl")
 
 # Mask the DESIGNED disc interface. Derived from the part, not inherited: the
 # horn/wheel discs are Oe20 (r=10), so anything past r=10 cannot be legitimate
