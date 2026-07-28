@@ -314,3 +314,169 @@ def test_a_short_array_would_have_been_180_degrees_off():
     err = rad_to_raw(0.6, good) - rad_to_raw(0.6, bad)
     assert err == pytest.approx(2048.0)
     assert math.degrees(2048.0 / RAW_PER_RAD) == pytest.approx(180.0, abs=0.5)
+
+
+# ---- #142: the posture-aware firmware backstop ----------------------------
+
+
+def _full_calib(sign=+1):
+    from nova_ops.safety_envelope.firmware_limits import JointHomeCalib
+
+    return {i: JointHomeCalib(home_raw=2048.0, urdf_sign=sign) for i in range(1, 13)}
+
+
+def test_hfe_envelope_is_empty_until_the_haa_and_hfe_joints_are_calibrated():
+    """No calibration -> no defined raw conversion -> publish nothing.
+
+    A partial table would be worse than none: the firmware would clamp some
+    legs against a window computed from a guessed home, which is the #154 shape
+    (a wrong command with a limit that agrees with it).
+    """
+    from nova_ops.safety_envelope.firmware_limits import build_hfe_envelope_data
+
+    assert build_hfe_envelope_data({}) == []
+    partial = _full_calib()
+    del partial[2]                                    # FL hfe uncalibrated
+    assert build_hfe_envelope_data(partial) == []
+
+
+def test_hfe_envelope_layout_and_raw_bounds():
+    from nova_ops.safety_envelope.firmware_limits import (
+        HFE_ENV_STRIDE, build_hfe_envelope_data,
+    )
+
+    data = build_hfe_envelope_data(_full_calib())
+    n = int(data[0])
+    assert n >= 8
+    assert len(data) == 1 + 4 * n * HFE_ENV_STRIDE
+    body = data[1:]
+    for i in range(0, len(body), HFE_ENV_STRIDE):
+        haa_lo, haa_hi, hfe_lo, hfe_hi = body[i:i + HFE_ENV_STRIDE]
+        assert 0.0 <= haa_lo < haa_hi <= 4095.0, (i, haa_lo, haa_hi)
+        assert 0.0 <= hfe_lo <= hfe_hi <= 4095.0, (i, hfe_lo, hfe_hi)
+
+
+def test_hfe_envelope_buckets_span_the_whole_raw_range_with_no_gaps():
+    """A gap is a hole in the backstop: a haa the firmware cannot classify."""
+    from nova_ops.safety_envelope.firmware_limits import (
+        HFE_ENV_STRIDE, build_hfe_envelope_data,
+    )
+
+    data = build_hfe_envelope_data(_full_calib())
+    n = int(data[0])
+    body = data[1:]
+    for leg in range(4):
+        buckets = [
+            body[(leg * n + b) * HFE_ENV_STRIDE:(leg * n + b) * HFE_ENV_STRIDE + 4]
+            for b in range(n)
+        ]
+        assert buckets[0][0] == 0.0, buckets[0]
+        assert buckets[-1][1] == 4095.0, buckets[-1]
+        for a, b in zip(buckets, buckets[1:]):
+            assert a[1] == pytest.approx(b[0]), (a, b)
+
+
+@pytest.mark.parametrize("sign", (+1, -1))
+def test_firmware_window_is_NEVER_looser_than_the_host_gate(sign):
+    """The safety property. A backstop that permits what the host refuses is
+    not a backstop — and this must hold for BOTH servo mounting directions,
+    since urdf_sign reverses which raw end is which."""
+    import math
+
+    from nova_ops.rom_envelope import hfe_bounds
+    from nova_ops.rom_envelope_table import HAAS, KFES
+    from nova_ops.safety_envelope.firmware_limits import (
+        HFE_ENV_STRIDE, build_hfe_envelope_data, rad_to_raw,
+    )
+
+    calib = _full_calib(sign)
+    data = build_hfe_envelope_data(calib)
+    n = int(data[0])
+    body = data[1:]
+    legs = ("FL", "FR", "RL", "RR")
+    haa_ids = (1, 4, 7, 10)
+    hfe_ids = (2, 5, 8, 11)
+
+    for li, (leg, haa_id, hfe_id) in enumerate(zip(legs, haa_ids, hfe_ids)):
+        for haa_deg in HAAS:
+            haa_raw = rad_to_raw(math.radians(haa_deg), calib[haa_id])
+            # the bucket the firmware would select
+            sel = None
+            for b in range(n):
+                o = (li * n + b) * HFE_ENV_STRIDE
+                if body[o] <= haa_raw <= body[o + 1]:
+                    sel = body[o:o + HFE_ENV_STRIDE]
+                    break
+            assert sel is not None, (leg, haa_deg, haa_raw)
+            for kfe_deg in KFES:
+                g_lo, g_hi = hfe_bounds(leg, math.radians(haa_deg),
+                                        math.radians(kfe_deg))
+                a = rad_to_raw(g_lo, calib[hfe_id])
+                b_ = rad_to_raw(g_hi, calib[hfe_id])
+                host_lo, host_hi = min(a, b_), max(a, b_)
+                assert sel[2] >= host_lo - 1e-6, (leg, haa_deg, kfe_deg, sel)
+                assert sel[3] <= host_hi + 1e-6, (leg, haa_deg, kfe_deg, sel)
+
+
+def test_the_trot_headroom_depends_on_haa_being_EXACTLY_zero():
+    """Pins a knife-edge in the HOST gate, found while building the backstop.
+
+    The chassis envelope is sampled on a coarse haa grid and bracketed
+    conservatively, so a 9.6 deg step between the haa -5 and haa 0 cells becomes
+    a cliff at zero:
+
+        haa +0.000 -> hfe cap 66.3   (the trot's +59.4 fits, 6.9 deg spare)
+        haa -0.001 -> hfe cap 56.7   (the trot is CLIPPED by 2.7 deg)
+
+    trot.py already notes it "fitted only because every pose commands haa
+    exactly 0.00". This records the consequence: any INBOARD drift -- backlash
+    compensation, IK noise, a body-pose command, a future balance controller --
+    puts the gate 2.7 deg inside the gait, mid-stride. Outboard is fine
+    (+0.001 -> 65.2); only inboard bites.
+
+    It is also why the firmware backstop cannot be bucketed usefully yet: any
+    bucket spanning [-5, 0] inherits 56.7 and clips the trot exactly as a scalar
+    would. Tracked separately; when the table is regenerated at finer haa
+    resolution this test should be revisited, not deleted.
+    """
+    import math
+
+    from nova_ops.rom_envelope import hfe_bounds
+
+    TROT_PEAK = 59.4
+    at_zero = math.degrees(hfe_bounds("FL", 0.0, math.radians(-98.8))[1])
+    just_in = math.degrees(hfe_bounds("FL", math.radians(-0.001),
+                                      math.radians(-98.8))[1])
+    assert at_zero > TROT_PEAK, at_zero
+    assert just_in < TROT_PEAK, (
+        "the haa-0 cliff has moved -- if the envelope table was regenerated at "
+        "finer resolution this is good news, but the firmware backstop and the "
+        "trot's margin both assume this shape"
+    )
+    assert at_zero - just_in == pytest.approx(9.6, abs=0.2)
+
+
+def test_deep_inboard_haa_plus_deep_fold_is_REFUSED():
+    """The failure this exists to catch: a host bug commanding the leg inboard
+    under the LiPo AND folded. The gate caps fold at +13.8 deg at haa -15."""
+    import math
+
+    from nova_ops.safety_envelope.firmware_limits import (
+        HFE_ENV_STRIDE, build_hfe_envelope_data, rad_to_raw,
+    )
+
+    calib = _full_calib(+1)
+    data = build_hfe_envelope_data(calib)
+    n = int(data[0])
+    body = data[1:]
+    haa_raw = rad_to_raw(math.radians(-15.0), calib[1])
+    bad_raw = rad_to_raw(math.radians(50.0), calib[2])   # what a +50 scalar allows
+    for b in range(n):
+        o = b * HFE_ENV_STRIDE
+        if body[o] <= haa_raw <= body[o + 1]:
+            assert not (body[o + 2] <= bad_raw <= body[o + 3]), (
+                "a +50 deg fold at haa -15 must be refused: the gate caps it "
+                "at +13.8 deg there, which is why a scalar cannot do this job"
+            )
+            return
+    raise AssertionError("no bucket contains haa -15")
