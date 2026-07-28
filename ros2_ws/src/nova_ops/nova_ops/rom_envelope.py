@@ -52,7 +52,9 @@ from nova_ops.rom_envelope_table import ENVELOPE, HAAS, KFES
 # measured gap, never as a substitute for regenerating the table.
 MARGIN_DEG = 0.0
 
-FRONT_ENDS = frozenset({"FL", "FR"})
+#: The ONE front/rear partition in this module. Everything end-keyed reads it —
+#: a second copy of this split is how a frame convention drifts out of sync with
+#: the sign that depends on it.
 REAR_ENDS = frozenset({"RL", "RR"})
 
 
@@ -67,9 +69,6 @@ def _bracket(vals, x):
             return (i, i)  # exact grid hit — no need to widen the bracket
     hi = next(i for i, v in enumerate(vals) if v >= x)
     return (hi - 1, hi)
-
-
-REAR_LEGS = ("RL", "RR")
 
 
 def _to_canonical(leg: str, lo: float, hi: float) -> Tuple[float, float]:
@@ -94,7 +93,7 @@ def _to_canonical(leg: str, lo: float, hi: float) -> Tuple[float, float]:
     permitting the folds that reach the riser and forbidding the harmless ones,
     which is strictly worse than the stale rows this replaced.
     """
-    if leg in REAR_LEGS:
+    if leg in REAR_ENDS:
         return -hi, -lo
     return lo, hi
 
@@ -127,7 +126,7 @@ def hfe_bounds(leg: Optional[str], haa: float, kfe: float) -> Tuple[float, float
     lo, hi = -1e9, 1e9
     for end in ends:
         e_lo, e_hi = _end_bounds(end, haa_deg, kfe_deg)
-        e_lo, e_hi = _to_canonical(end, e_lo, e_hi)   # leg-local -> canonical
+        e_lo, e_hi = _to_canonical(end, e_lo, e_hi)  # leg-local -> canonical
         lo, hi = max(lo, e_lo), min(hi, e_hi)
     # BACK OFF from the measured FIRST-CONTACT boundary. The table is raw
     # geometry — the angle at which the leg TOUCHES. A gate that permits poses
