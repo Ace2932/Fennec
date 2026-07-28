@@ -89,6 +89,35 @@ def calibration_from_doc(doc: dict) -> Dict[int, JointHomeCalib]:
     return build_calib(home, sign)
 
 
+def resolve_calibration(home_raw, urdf_sign, path: Optional[str] = None):
+    """Calibration for a runtime node, plus WHERE it came from (#188).
+
+    Returns ``(calib, source)``. Order:
+
+      1. ROS params, if they carry a real calibration. A joint is only
+         calibrated once its sign has been OBSERVED, so an all-zero
+         ``urdf_sign`` is the declared default, not a calibration — that is the
+         same reading ``build_calib`` already applies. Params win when set, so
+         bench work can override the artifact deliberately.
+      2. The homing artifact on disk. This is what homing actually writes and,
+         until #188, what nothing actually read: the params had no producer, so
+         a node relying on them ran permanently uncalibrated. On the command
+         path that means RADIANS published to a firmware reading raw counts.
+      3. Nothing, which is the honest pre-homing state.
+
+    `source` exists so the caller can say which it used. Two very different
+    situations — "an operator overrode the calibration" and "homing has never
+    run" — otherwise look identical from outside.
+    """
+    signs = list(urdf_sign or [])
+    if any(int(s) != 0 for s in signs):
+        return build_calib(list(home_raw or []), signs), "params"
+    calib = read_calibration(path)
+    if calib:
+        return calib, f"file:{path or DEFAULT_CALIBRATION_PATH}"
+    return {}, "none"
+
+
 def read_calibration(path: Optional[str] = None) -> Dict[int, JointHomeCalib]:
     """Load from disk. Missing file -> {} (the pre-homing state, not an error).
 
