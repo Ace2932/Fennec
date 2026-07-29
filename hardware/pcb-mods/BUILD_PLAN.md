@@ -60,12 +60,25 @@ ones."*
 
 Two things govern whether it actually struggles, and only one of them is the tip.
 
-- [ ] **Tip mass — verify what is on the shelf.** A chisel is probably owned
-      (2026-07-29), but the class matters: TS-C4 / TS-D24 (≈4 mm / 2.4 mm) is
-      the target. A TS-C1 1 mm chisel is barely better than the stock conical
-      into a plane-connected pad. The heat-set work uses an M3 insert tip
-      (`../../docs/checklists/print-batch.md`), so more than one tip exists —
-      check which.
+- [ ] **Tip mass — confirm the kit is on the shelf.** Target is a TS100/Pinecil
+      V2-compatible 6-pack carrying **TS-C4 + TS-D24** (LUMINZENLUX or
+      equivalent, ~$36): TS-C4 ≈4 mm bevel, TS-D24 ≈2.4 mm chisel. Class
+      matters — a TS-C1 1 mm chisel into a plane-connected pad is barely better
+      than the stock conical. The same kit's **threaded insert adapter** also
+      replaces the ad-hoc M3 heat-set tip used in
+      `../../docs/checklists/print-batch.md`, so one purchase covers PCB and
+      printed-part work.
+
+  **Tip per stage** (stages in §3):
+
+  | tip | use | stages |
+  |---|---|---|
+  | TS-ILS (fine long conical) | 0603 R/C, SOT-23, SOD-123 | 1–2 |
+  | TS-K (knife) | SOIC drag-solder, bridge wicking | 3 |
+  | TS-C4 (≈4 mm bevel) | **every plane-tied / high-current pad** — L1, SW1.2, Q1.3, U1.4, XT60/XT30, buck stations | 4, 6, 7, 8 |
+  | TS-D24 (≈2.4 mm chisel) | general THT — headers, JST, terminal blocks, electrolytics | 5, 8 |
+  | TS-J02 (bent fine) | tight rework, no straight-on access | any |
+  | threaded insert adapter | M3 heat-sets in printed parts (not PCB) | — |
 - [ ] **Supply voltage — the half that gets forgotten.** The Pinecil's power
       scales with input voltage; a 9–15 V USB brick delivers a fraction of the
       60–88 W the note above assumes, and no tip compensates for that. The
