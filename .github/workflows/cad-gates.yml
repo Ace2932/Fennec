@@ -100,3 +100,36 @@ jobs:
         # Leg-vs-chassis interference, fastener families, posture ROM envelope.
         working-directory: hardware/cad/chassis
         run: python check_fit.py
+
+  stl-freshness:
+    # Does every committed STL match the .scad that claims to produce it? (#176)
+    #
+    # The other jobs check the COMMITTED STLs, which is right — that is what
+    # gets printed. The hole is editing a .scad and not re-running build_all.sh:
+    # the gates then certify the OLD geometry while the source says something
+    # else, and nothing notices.
+    #
+    # CALIBRATED, not guessed. CI has OpenSCAD 2021.01 and the dev Mac has
+    # 2026.04.26 — five years apart — and 30 of 33 parts still agree to within
+    # 0.0006 mm, with volume and bbox effectively exact on every part. The gate
+    # is the p99 of sampled surface distance, not the max, because two parts
+    # deviated by ~1 mm on a handful of facets while volume and bbox were
+    # identical to four decimals; p99 ignores those and still trips at 0.605 mm
+    # on a real 1 mm edit. See check_stl_fresh.py for the full derivation.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install OpenSCAD + mesh deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends openscad
+          openscad --version
+          pip install numpy trimesh scipy networkx rtree manifold3d embreex
+
+      - name: Every committed STL matches its .scad
+        run: python -u hardware/cad/check_stl_fresh.py
