@@ -10,13 +10,21 @@ Output: hardware/cad/viewer/robot_viewer.html
 """
 import base64
 import json
+import pathlib
 import struct
+import sys
 
 import numpy as np
 import trimesh
 
-CAD = "/Users/afox/codebases/NOVA/proj/hardware/cad"
-ORIG = "/Users/afox/codebases/NOVA/original_body_files"
+#: this file lives at proj/hardware/cad/gen_viewer.py — resolve from it rather
+#: than from one laptop's checkout (#166). The stock meshes ORIG used to pull
+#: from the ROOT repo are vendored inside proj/; cad_assets owns that mapping.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from cad_assets import STOCK_MESHES  # noqa: E402  (path insert must come first)
+
+CAD = str(pathlib.Path(__file__).resolve().parent)
+ORIG = str(STOCK_MESHES)
 OUT = f"{CAD}/viewer/robot_viewer.html"
 
 HIP_FA, HIP_LAT, HIP_Z = 141.2, 39.05, 38.05
@@ -78,10 +86,12 @@ MESHES = {
     "l2ad": f"{CH}/l2_adapter.stl",
     "l2": f"{CH}/l2_ref.stl",
     "d456": f"{CH}/d456_ref.stl",
-    # --- electronics: Jetson case + cradle/cowl/clamps + E-stop/OLED pod ---
+    # --- electronics: Jetson case + cradle/clamps + E-stop/OLED pod ---
+    # jetson_cowl RETIRED 2026-07-10 (#41) — superseded by right-angle plug
+    # adapters. preview_assembly.py, check_fit.py and build_all.sh dropped it
+    # then; this file did not, and had been crashing on the absent STL since.
     "pod": f"{CH}/control_pod.stl",
     "jmount": f"{CH}/jetson_case_mount.stl",
-    "jcowl": f"{CH}/jetson_cowl.stl",
     "jcase": f"{CH}/jetson_case_ref.stl",
     "jbar": f"{CH}/jetson_clamp_bar.stl",
     "oled": f"{CH}/oled_mount.stl",
@@ -186,7 +196,6 @@ STATIC = [
     # electronics
     {"mesh": "pod", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [-70, 0, 55]},
     {"mesh": "jmount", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [0, 0, -15]},
-    {"mesh": "jcowl", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [0, -70, 0]},
     {"mesh": "jcase", "M": mat_list(CASE_M), "grp": "elec", "expl": [0, 0, 35]},
     {"mesh": "oled", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [-70, 30, 60]},
     {"mesh": "jbar", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [0, 0, 55]},
@@ -325,7 +334,7 @@ const COL={R:[.62,.70,.82],L:[.58,.66,.78],knee_arm:[.80,.62,.36],
   battery:[.75,.55,.30],floor:[.5,.56,.66],skid:[.85,.35,.30],
   head:[.62,.58,.74],ear_R:[.68,.60,.50],ear_L:[.68,.60,.50],neck:[.50,.62,.72],
   l2ad:[.72,.72,.50],l2:[.45,.55,.72],d456:[.70,.45,.55],
-  pod:[.50,.78,.70],jmount:[.80,.62,.36],jcowl:[.85,.42,.32],
+  pod:[.50,.78,.70],jmount:[.80,.62,.36],
   jcase:[.50,.56,.66],jbar:[.90,.55,.30],oled:[.40,.85,.55]};
 // ---------- build instance list ----------
 const P=[];               // {mesh,color,base(mat),expl(vec),grp,legParts?}
