@@ -244,6 +244,22 @@ Every insert site depth-probed in the built STLs:
       length to stay slack at ~39mm anchor separation (full kfe fold); HIP
       loop (coax-exit↔femur-x44) needs slack down to ~60-79mm across hfe.
       Zip only after confirming slack at the fold limit, not before.
+- [ ] **HAA loop too** — the `--cable` sweep covers all three loops, and the
+      HAA loop is also under the ≥80 mm spec everywhere: 56.7–62.0 mm across
+      the asymmetric envelope (15° inboard … 40° outboard). Two things make
+      it the easy one: excursion is only **5.26 mm** end to end, so slack
+      sized once is right everywhere; and its worst case (56.7 mm) is at
+      **+15° inboard**, which is exactly where runtime is clamped until the
+      haa sign is confirmed at homing. Dress it at full inboard.
+      Measured 2026-07-29; worst spans that run: KNEE 51.6, HIP 59.9,
+      HAA 56.7 mm. Only one sampled pose in the whole sweep meets spec
+      (HIP at hfe −93°, 80.7 mm) — treat ≥80 mm as aspirational, not a
+      thing you will hit.
+- [ ] Body-side dressing: the neck-bracket cable slot ↔ shoulder deck window
+      overlap is **+0.80 mm at worst** (chassis `check_fit` case 16, flagged
+      KNOWN TIGHT BOUNDARY 2026-07-16). Feed the head bundle through before
+      the neck bracket is finally bolted — it is not a slot you want to
+      thread a dressed bundle into afterwards.
 - [ ] Skid rails: key + CA/VHB under the tray
 - [ ] Breakaway fuses (#2): the masts are RETIRED → re-map the nylon-M3
       breakaway concept to the HEAD mount (4× M3 boss→bracket) so the head
