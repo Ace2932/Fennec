@@ -33,9 +33,11 @@
 // re-tune: CASE_SLOT widened to 9mm (y-49..-40, was y-51.5..-47) so it
 // actually clears the cable bundle, and the rounded_slot r dropped 4 -> 2.0
 // (<= half the new 9mm span) so the cut is exact-bounds again. This liner's
-// EDGE_Y/LEG_REACH below are re-tuned to the new bounds (grip check WARN
-// went from 34% to see build log / check_fit.py output for the current
-// figure).
+// EDGE_Y/LEG_REACH below are re-tuned to the new bounds. The edge-clip
+// figure is now 12% and the gate reports it as a NOTE, not a WARN: grip% is
+// an inverted proxy here, because most of this liner's volume is meant to be
+// exposed cable channel and bay air. Retention is the zip-tie tab. Do not
+// read a low percentage as a loose clip.
 //
 // ---- design: straight edge liner, not a closed-bore grommet ----------------
 // A full-perimeter ring (grommet_insert.scad's approach) would eat a
