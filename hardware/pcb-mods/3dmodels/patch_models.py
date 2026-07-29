@@ -3,6 +3,7 @@
 strips ALL model blocks inside the target footprints (they had none
 originally) before inserting, so it is safe to re-run with new offsets."""
 import re
+from pathlib import Path
 
 def model_sexpr(path, off, rot=(0,0,0), scale=(1,1,1)):
     return (f'\t\t(model "{path}"\n'
@@ -32,7 +33,7 @@ def strip_models(block):
         out = out[:m.start()] + out[e:]
 
 def patch(board, fpname, models):
-    s = open(board).read()
+    s = board.read_text()
     insert_text = ''.join(model_sexpr(*m) for m in models)
     count = 0
     pos = 0
@@ -46,14 +47,17 @@ def patch(board, fpname, models):
         s = s[:start] + newblock + s[end:]
         pos = start + len(newblock) + 1
         count += 1
-    open(board, 'w').write(s)
-    print(f"{board.split('/')[-1]}: {fpname} -> {count} footprints patched")
+    board.write_text(s)
+    print(f"{board.name}: {fpname} -> {count} footprints patched")
 
 K = "${KICAD9_3DMODEL_DIR}"
 P = "${KIPRJMOD}/../3dmodels"
 
-POWER = "/Users/afox/codebases/NOVA/proj/hardware/pcb-mods/nova_pcb_v6_power_v2/nova_pcb_v6_power_v2.kicad_pcb"
-LOGIC = "/Users/afox/codebases/NOVA/proj/hardware/pcb-mods/nova_pcb_v6_logic/nova_pcb_v6_logic.kicad_pcb"
+# Board paths resolve from this script's own location, so the script runs from
+# any checkout and any cwd: 3dmodels/ -> pcb-mods/ -> <board dir>/.
+PCB_MODS = Path(__file__).resolve().parent.parent
+POWER = PCB_MODS / "nova_pcb_v6_power_v2" / "nova_pcb_v6_power_v2.kicad_pcb"
+LOGIC = PCB_MODS / "nova_pcb_v6_logic" / "nova_pcb_v6_logic.kicad_pcb"
 
 # Buck station: two XT30 (pin1 rect pads at (-2.5,±5), pins along +x, lib native
 # orientation, model offset y = -footprint y) + 1x02 sense header at (8,∓1.27).
