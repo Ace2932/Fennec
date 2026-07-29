@@ -125,9 +125,22 @@ have to reach**.
 | **4** | **L1** (12×12 SMD inductor) | Last of the SMD. Plane-tied both sides → preheat + fat tip. Doing it before the fine-pitch work would mean preheating the board with SOICs already on. |
 | **5** | Low THT: J2, M1, JP1, J9, J10, J21, J8, J11, J20 (both boards) | Headers and JSTs seat flush; do them before the board stops sitting flat. |
 | **6** | SW1, SW2 terminal blocks | SW1.2 is a 14 A plane pad — preheat. Still low profile. |
-| **7** | XT30 ×8 + XT60 J1, buck stations U1–U4 | The bulk of the high-current THT. All preheat + fat tip. |
-| **8** | Q1 (TO-220), electrolytics C1–C9 | Tall. Q1.3 is a 14 A GND pad — preheat. Electrolytics are polarised and heat-sensitive: they go after the pads that need the board hot. |
+| **7** | XT30 ×8 + XT60 J1, buck stations U1–U4, **and Q1 (TO-220)** | The bulk of the high-current THT, plus Q1 — its pad 3 is a 14 A GND inject. All preheat + fat tip. **This is the last preheat stage; see the note below.** |
+| **8** | Electrolytics C1–C9 | Tall, polarised, and **temperature-rated ~105 °C — below the 100–130 °C board preheat.** They must go on after every preheat-requiring joint is done, which is why Q1 moved up to stage 7. |
 | **9** | Modules: U9–U11 (INA226), U6 (Teensy 4.1), U12 (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. |
+
+### All preheat work finishes at stage 7 — this constrains the order
+
+If preheat turns out to be needed (§2), it applies to **L1, SW1.2, Q1.3, U1.4,
+the XT30/XT60s and the buck stations** — stages 4, 6 and 7. Every one of those
+is done before an electrolytic goes on, because a ~105 °C-rated cap sitting on a
+board held at 100–130 °C is being stressed by the very step that is meant to
+protect the joint. Same logic for the plug-in modules in stage 9.
+
+So the rule is not "tall parts last" for its own sake: **the board must be free
+of anything temperature-limited for as long as it might still need to be hot.**
+If a preheat-requiring joint has to be redone later, take the electrolytics off
+first rather than preheating around them.
 
 **Do not populate: U5, U12 (power board).** See §4 — the reason changed.
 
