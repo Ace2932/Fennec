@@ -16,15 +16,14 @@
 // cut here is a plain (or countersunk) cylinder subtracted from the shell,
 // no nut-trap geometry needed in this file.
 //
-// SOURCE PATH: the task brief's own relative path ("../../../original_body
-// _files/...") only unwinds 3 levels from proj/hardware/cad/chassis/, which
-// lands in proj/ — original_body_files/ lives one level ABOVE proj/, at the
-// NOVA/ root (proj/ and original_body_files/ are siblings under NOVA/, see
-// proj/CLAUDE.md repo layout). The codebase's own precedent (leg_v5/coax.scad
-// ORIGINAL_STL, leg_v5_screwlock/*, etc.) always uses the ABSOLUTE path for
-// stock-mesh imports rather than a relative one, so this file follows that
-// convention instead of the (unreachable) relative path.
-TRUNK_STL = "/Users/afox/codebases/NOVA/original_body_files/SM3_Frame_ChassisTrunk.stl";
+// SOURCE PATH: the stock shell is VENDORED inside proj/, in the URDF's mesh
+// folder, so a relative import reaches it and this file no longer depends on
+// one laptop's checkout (#166). The comment that used to sit here argued the
+// opposite — that original_body_files/ lives above proj/, so a relative path
+// was "unreachable". That was true before the mesh was vendored; it is not
+// now. The vendored copy is byte-identical to the root-repo original.
+// OpenSCAD resolves this relative to THIS file, not the caller's cwd.
+TRUNK_STL = "../../../ros2_ws/src/nova_description/meshes/SM3_Frame_ChassisTrunk.stl";
 
 $fn = 48;
 EPS = 0.05;

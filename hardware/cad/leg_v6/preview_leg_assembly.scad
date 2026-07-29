@@ -1,10 +1,12 @@
 // Full RIGHT-leg v6 assembly preview: coax + femur + tibia + ghost servos.
 // Coax frame: haa = Y axis, +X outboard, leg hangs -Z.
 include <leg_v6_common.scad>
-// REAL servo mesh (spline moved to origin) — same geometry the fit gate uses
+// REAL servo mesh (spline moved to origin) — same geometry the fit gate uses,
+// from the vendored copy in proj/ rather than the ROOT repo (#166). Relative
+// to THIS file, so it renders on any checkout.
 module sts3215_real() {
     translate([-12.5, 0, 0])
-        import("/Users/afox/codebases/NOVA/feetech_servo_models/converted_stl/servo.stl", convexity = 6);
+        import("../assets/servo.stl", convexity = 6);
 }
 use <femur.scad>
 use <knee_arm.scad>

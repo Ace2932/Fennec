@@ -8,11 +8,16 @@ clustering + top/side ray casting (trimesh). The trunk is NOT a tub:
 floor slab + two side walls + four corner wedge ramps; ends are OPEN
 (closed at assembly by the v6 shoulder flanges).
 """
+import pathlib
+import sys
+
 import numpy as np
 import trimesh
 
-TRUNK = ('/Users/afox/codebases/NOVA/original_body_files/'
-         'SM3_Frame_ChassisTrunk.stl')
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from cad_assets import asset  # noqa: E402  (path insert must come first)
+
+TRUNK = str(asset('SM3_Frame_ChassisTrunk.stl'))
 
 
 def clusters(vals, tol=0.05, minc=30):
