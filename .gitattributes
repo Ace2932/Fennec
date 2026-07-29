@@ -1,6 +1,0 @@
-# The assembly-preview STLs are regenerable build artifacts (preview_assembly.py
-# output). Every branch rebuilds them, so a binary 3-way merge always conflicts.
-# Regenerate them from the merged part files instead of conflicting.
-# ONE-TIME per clone:  bash scripts/setup-git-drivers.sh
-hardware/cad/chassis/chassis_assembly_preview.stl merge=rebuild-preview
-hardware/cad/chassis/foot_assembly_preview.stl    merge=rebuild-preview

@@ -127,3 +127,11 @@ graphify-out/
 
 # stderr-redirect scratch files from sim training/eval runs
 sim/nova_mjx/*.err
+
+# Assembly-preview STLs — build artifacts, not source. `preview_assembly.py`
+# rebuilds both in ~2s from the part STLs, and trimesh output is not
+# byte-stable, so tracking them meant a dirty tree after every rebuild (and a
+# custom merge driver to stop the binary 3-way merges conflicting).
+hardware/cad/chassis/chassis_assembly_preview.stl
+hardware/cad/chassis/foot_assembly_preview.stl
+hardware/cad/leg_v6/leg_v6_assembly_preview.stl
