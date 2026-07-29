@@ -41,7 +41,13 @@ jobs:
         # trimesh's proximity/boolean paths pull scipy + rtree + manifold3d;
         # installing them explicitly keeps a missing extra from silently
         # degrading a gate into a weaker check.
-        run: pip install numpy trimesh scipy networkx rtree manifold3d
+        # embreex = Intel Embree bindings. trimesh picks it up automatically and
+        # falls back to a pure-numpy ray engine without it. That fallback has no
+        # spatial acceleration: it tests every ray against every triangle, which
+        # is what made the sweep an 18 GB job in #178. Measured with it:
+        # 334.7 s -> 104.5 s (3.2x), 4.17 GB -> 3.16 GB, and VERDICTS IDENTICAL
+        # line for line against the pure-numpy run.
+        run: pip install numpy trimesh scipy networkx rtree manifold3d embreex
 
       - name: Runner resources
         # Recorded on purpose: the sweep below does NOT run here because it
@@ -82,7 +88,13 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install mesh deps
-        run: pip install numpy trimesh scipy networkx rtree manifold3d
+        # embreex = Intel Embree bindings. trimesh picks it up automatically and
+        # falls back to a pure-numpy ray engine without it. That fallback has no
+        # spatial acceleration: it tests every ray against every triangle, which
+        # is what made the sweep an 18 GB job in #178. Measured with it:
+        # 334.7 s -> 104.5 s (3.2x), 4.17 GB -> 3.16 GB, and VERDICTS IDENTICAL
+        # line for line against the pure-numpy run.
+        run: pip install numpy trimesh scipy networkx rtree manifold3d embreex
 
       - name: Chassis fit gate
         # Leg-vs-chassis interference, fastener families, posture ROM envelope.

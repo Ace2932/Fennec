@@ -48,6 +48,14 @@ def servo_mesh():
 _BYTES_PER_PAIR = 56
 #: Memory budget for ONE contains() batch. Everything else in this gate is
 #: small, so this effectively sets the whole gate's peak.
+#:
+#: This exists for trimesh's PURE-NUMPY ray engine, which has no spatial
+#: acceleration and tests every ray against every triangle. With embreex
+#: installed trimesh uses Embree's BVH instead and never builds that array, so
+#: the batching is unnecessary there — but measured, removing it under embree
+#: saved 1% (103.4 s vs 104.5 s), because the remaining time is proximity
+#: queries and mesh loading, not contains(). Not worth an engine-aware branch,
+#: so this stays unconditional and simply costs nothing when embree is present.
 CONTAINS_BUDGET_BYTES = 500_000_000
 
 
