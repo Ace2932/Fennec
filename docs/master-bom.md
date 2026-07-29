@@ -105,14 +105,16 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 ## Soldering / tools — verify on shelf
 | Item | Status |
 |---|---|
-| Pinecil V2 iron | ✅ |
+| Pinecil V2 iron | ✅ — **drive it from the Kungber 30 V/10 A bench supply at ~24 V via the DC barrel, not a USB brick.** Its power scales with input voltage; on 9–15 V it delivers a fraction of 60–88 W and stalls on the plane-tied pads (`hardware/pcb-mods/BUILD_PLAN.md` §2) |
+| TS100/Pinecil tip kit (6-pack) | ✅ owned (LUMINZENLUX) — **TS-C4** ≈4 mm bevel + **TS-D24** ≈2.4 mm chisel + TS-K knife + TS-ILS + TS-J02 + **threaded insert adapter**. TS-C4 is the one for the 14 A plane-tied pads; the insert adapter covers the M3 heat-sets in `checklists/print-batch.md`. Tip-per-stage table in `hardware/pcb-mods/BUILD_PLAN.md` §2 |
+| Preheat (hotplate / IR) | ⬜ **none owned** — nothing on this list gets a board to 100–130 °C; the Etekcity IR gun measures it but cannot produce it. May not be needed once TS-C4 runs at 24 V — test on `Q1.3` before buying |
 | Thin solder 0.6-0.8 mm | ⬜ verify |
 | Flux | ✅ owned (BEEYUIHF) |
 | Solder wick (2-3mm braid) | ✅ received (Lesnow) — SMD bridge cleanup (sucker owned, but it's THT-only) |
 | Solder sucker | ✅ owned — THT desolder |
 | Crimpers | ✅ WGGE WG-015 (12-10 insulated lugs) · iCrimp (23-10 ferrules) · PEBA (dupont/JST) |
 | USB micro-B cable | ✅ owned (USC) |
-| Reflow hotplate + paste | 🚫 SKIP — 21 SMD parts all 0603/SOT-23/SOIC, hand-solder; no stencil; half-THT board anyway |
+| Reflow hotplate + paste | 🚫 SKIP — **34** SMD parts across both boards (24 power_v2 + 10 logic, counted from the `.kicad_pcb` files 2026-07-29, was written as "21 all 0603/SOT-23/SOIC"). Mostly 0603, but **not all small**: L1 is `L_12x12mm_H8mm`, a 12×12 power inductor plane-tied both sides, plus 2 SOIC (U8-8, U7-14). Skip still correct — hand-solder, no stencil, half-THT board — but L1 is the hardest joint on either board, so it is sequenced last of the SMD (`hardware/pcb-mods/BUILD_PLAN.md` §3 stage 4) |
 
 ## Bench / bring-up gear (Amazon — separate from robot BOM)
 Kungber 30V/10A supply · FNIRSI LCR-P1 tester · KeeYees logic analyzer · Chanzon 1Ω+4Ω

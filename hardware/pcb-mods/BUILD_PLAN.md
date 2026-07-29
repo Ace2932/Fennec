@@ -60,14 +60,14 @@ ones."*
 
 Two things govern whether it actually struggles, and only one of them is the tip.
 
-- [ ] **Tip mass — confirm the kit is on the shelf.** Target is a TS100/Pinecil
-      V2-compatible 6-pack carrying **TS-C4 + TS-D24** (LUMINZENLUX or
-      equivalent, ~$36): TS-C4 ≈4 mm bevel, TS-D24 ≈2.4 mm chisel. Class
-      matters — a TS-C1 1 mm chisel into a plane-connected pad is barely better
-      than the stock conical. The same kit's **threaded insert adapter** also
-      replaces the ad-hoc M3 heat-set tip used in
-      `../../docs/checklists/print-batch.md`, so one purchase covers PCB and
-      printed-part work.
+- [x] **Tip mass — DONE, kit owned** (confirmed 2026-07-29). LUMINZENLUX
+      TS100/Pinecil V2 6-pack: **TS-C4** ≈4 mm bevel, **TS-D24** ≈2.4 mm chisel,
+      TS-K knife, TS-ILS, TS-J02, plus a **threaded insert adapter**. TS-C4 is
+      the tip for the plane-tied pads. The insert adapter also replaces the
+      ad-hoc M3 heat-set tip in `../../docs/checklists/print-batch.md`, so the
+      same kit covers PCB and printed-part work. Logged in
+      `../../docs/master-bom.md`, which previously listed only "Pinecil V2
+      iron" — which is why this was an open question at all.
 
   **Tip per stage** (stages in §3):
 
@@ -198,11 +198,15 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
 
 ## 7. Open
 
-- [ ] Iron capability (§2), in this order — it is cheaper than it looks:
-      **(a)** identify the chisel tip already owned and confirm it is 4 mm-class,
-      **(b)** power the Pinecil from the Kungber bench supply at ~24 V rather
-      than a USB brick, **(c)** only then decide whether preheat is actually
-      needed. Steps (a) and (b) cost nothing. **Gates stage 6 onward.**
+- [x] ~~Tip: 4 mm-class chisel~~ **DONE** — TS-C4 owned (§2).
+- [ ] **Power the Pinecil from the Kungber supply at ~24 V** (DC barrel, not a
+      USB brick). Costs nothing, and TS-C4 on 12 V will still stall on a 14 A
+      plane pad — the tip stores heat, the supply replaces it. **Gates stage 6
+      onward.**
+- [ ] **Then test whether preheat is needed at all**, rather than buying for it:
+      TS-C4 at 24 V on `Q1.3` or `SW1.2`, and watch whether the joint wets in a
+      couple of seconds or the iron sags. The Etekcity IR gun reads what the pad
+      actually reaches. Only buy a hotplate if that test fails.
 - [ ] Confirm 0.6–0.8 mm solder actually on the shelf (`master-bom.md` says
       "verify").
 - [ ] Fix `master-bom.md`'s "21 SMD parts all 0603/SOT-23/SOIC" (§1).
