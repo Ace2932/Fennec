@@ -100,6 +100,10 @@ node_modules/
 *.f3z.backup
 *.bak
 *.tmp
+# ad-hoc exploded view of the HAA joint, kept locally. Imports the servo mesh
+# by absolute path, so it is machine-specific as written — see cad_assets and
+# leg_v6/preview_leg_assembly.scad for the portable form if it ever ships.
+hardware/cad/leg_v6/exploded_haa.scad
 
 # --- KiCad ---
 # per-user GUI state (window layout, last sheet)
