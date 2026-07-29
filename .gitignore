@@ -135,3 +135,11 @@ sim/nova_mjx/*.err
 hardware/cad/chassis/chassis_assembly_preview.stl
 hardware/cad/chassis/foot_assembly_preview.stl
 hardware/cad/leg_v6/leg_v6_assembly_preview.stl
+
+# Render-only 3D models kept on disk but deliberately NOT committed (#201):
+# ~31 MB that no board file references — the unused alternates named in
+# 3dmodels/README.md. The four models the v6 boards actually point at ARE
+# tracked. Delete these ignores if a board is ever repointed at one.
+hardware/pcb-mods/3dmodels/Teensy_4.1_Assembly.STEP
+hardware/pcb-mods/3dmodels/arduino_nano_esp32.step
+hardware/pcb-mods/3dmodels/arduino_nano_r4.step
