@@ -100,6 +100,10 @@ node_modules/
 *.f3z.backup
 *.bak
 *.tmp
+# ad-hoc exploded view of the HAA joint, kept locally. Imports the servo mesh
+# by absolute path, so it is machine-specific as written — see cad_assets and
+# leg_v6/preview_leg_assembly.scad for the portable form if it ever ships.
+hardware/cad/leg_v6/exploded_haa.scad
 
 # --- KiCad ---
 # per-user GUI state (window layout, last sheet)
@@ -135,3 +139,11 @@ sim/nova_mjx/*.err
 hardware/cad/chassis/chassis_assembly_preview.stl
 hardware/cad/chassis/foot_assembly_preview.stl
 hardware/cad/leg_v6/leg_v6_assembly_preview.stl
+
+# Render-only 3D models kept on disk but deliberately NOT committed (#201):
+# ~31 MB that no board file references — the unused alternates named in
+# 3dmodels/README.md. The four models the v6 boards actually point at ARE
+# tracked. Delete these ignores if a board is ever repointed at one.
+hardware/pcb-mods/3dmodels/Teensy_4.1_Assembly.STEP
+hardware/pcb-mods/3dmodels/arduino_nano_esp32.step
+hardware/pcb-mods/3dmodels/arduino_nano_r4.step
