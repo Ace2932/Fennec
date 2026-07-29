@@ -105,7 +105,9 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 ## Soldering / tools — verify on shelf
 | Item | Status |
 |---|---|
-| Pinecil V2 iron | ✅ — **drive it from the Kungber 30 V/10 A bench supply at ~24 V via the DC barrel, not a USB brick.** Its power scales with input voltage; on 9–15 V it delivers a fraction of 60–88 W and stalls on the plane-tied pads (`hardware/pcb-mods/BUILD_PLAN.md` §2) |
+| Pinecil V2 iron | ✅ — **what matters is supply VOLTAGE, not USB vs barrel.** The element is resistive, so power goes as V²: a 9–15 V brick delivers a fraction of the 60–88 W the plane-tied pads need. Two adequate supplies owned, see the two rows below |
+| ↳ Anker Nano II 65 W GaN (USB-C) | ✅ owned (May 2026) — negotiates **20 V / 3.25 A = 65 W**, inside the assumed band. Fine for stages 1–5 and general work. Needs a PD-capable C-to-C cable rated ≥3.25 A, not a charge-only lead |
+| ↳ Kungber 30 V/10 A bench supply | ✅ owned — **preferred for stages 6–8** (the 14 A plane-tied pads). Set ~24 V into the DC 5525 barrel: 24² / 20² ≈ **1.44×** the power of the 20 V PD path, for free. Respect the Pinecil's own DC max |
 | TS100/Pinecil tip kit (6-pack) | ✅ owned (LUMINZENLUX) — **TS-C4** ≈4 mm bevel + **TS-D24** ≈2.4 mm chisel + TS-K knife + TS-ILS + TS-J02 + **threaded insert adapter**. TS-C4 is the one for the 14 A plane-tied pads; the insert adapter covers the M3 heat-sets in `checklists/print-batch.md`. Tip-per-stage table in `hardware/pcb-mods/BUILD_PLAN.md` §2 |
 | Preheat (hotplate / IR) | ⬜ **none owned** — nothing on this list gets a board to 100–130 °C; the Etekcity IR gun measures it but cannot produce it. May not be needed once TS-C4 runs at 24 V — test on `Q1.3` before buying |
 | Thin solder 0.6-0.8 mm | ⬜ verify |

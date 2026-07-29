@@ -79,12 +79,16 @@ Two things govern whether it actually struggles, and only one of them is the tip
   | TS-D24 (≈2.4 mm chisel) | general THT — headers, JST, terminal blocks, electrolytics | 5, 8 |
   | TS-J02 (bent fine) | tight rework, no straight-on access | any |
   | threaded insert adapter | M3 heat-sets in printed parts (not PCB) | — |
-- [ ] **Supply voltage — the half that gets forgotten.** The Pinecil's power
-      scales with input voltage; a 9–15 V USB brick delivers a fraction of the
-      60–88 W the note above assumes, and no tip compensates for that. The
-      bench list already has a **Kungber 30 V/10 A supply** — run the iron's DC
-      barrel from it at ~24 V (respect the Pinecil's own max) and it reaches the
-      assumed ceiling. Do this before concluding the iron is inadequate.
+- [x] **Supply voltage — DONE, two adequate supplies owned.** The half that
+      gets forgotten: the element is resistive, so power goes as **V²**. What
+      matters is voltage, *not* USB vs barrel — a 65 W PD brick is fine, a
+      9–15 V one is not, and no tip compensates for the difference.
+      - **Anker Nano II 65 W GaN** (owned): negotiates 20 V / 3.25 A = 65 W,
+        inside the 60–88 W band the note above assumes. Good for stages 1–5.
+        Needs a PD C-to-C cable rated ≥3.25 A, not a charge-only lead.
+      - **Kungber 30 V/10 A** (owned): **prefer this for stages 6–8.** ~24 V
+        into the DC 5525 barrel is 24²/20² ≈ **1.44×** the 20 V PD power, free.
+        That headroom is exactly what the 14 A plane pads want.
 - [ ] **Preheat — still unsolved.** `master-bom.md` skips the reflow hotplate,
       so nothing on the BOM gets the board to 100–130 °C. The Etekcity IR gun
       can verify the temperature but cannot produce it. May prove unnecessary
@@ -199,14 +203,14 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
 ## 7. Open
 
 - [x] ~~Tip: 4 mm-class chisel~~ **DONE** — TS-C4 owned (§2).
-- [ ] **Power the Pinecil from the Kungber supply at ~24 V** (DC barrel, not a
-      USB brick). Costs nothing, and TS-C4 on 12 V will still stall on a 14 A
-      plane pad — the tip stores heat, the supply replaces it. **Gates stage 6
-      onward.**
-- [ ] **Then test whether preheat is needed at all**, rather than buying for it:
-      TS-C4 at 24 V on `Q1.3` or `SW1.2`, and watch whether the joint wets in a
-      couple of seconds or the iron sags. The Etekcity IR gun reads what the pad
-      actually reaches. Only buy a hotplate if that test fails.
+- [x] ~~Adequate supply~~ **DONE** — Anker 65 W PD (20 V) and Kungber bench
+      (~24 V) both owned. Use the Kungber for stages 6–8 (§2).
+- [ ] **Test whether preheat is needed at all** — do not buy for it first.
+      TS-C4 on the Kungber at ~24 V, onto `Q1.3` or `SW1.2`: does the joint wet
+      in a couple of seconds, or does the iron sag? The Etekcity IR gun reads
+      what the pad actually reaches. Only buy a hotplate if that test fails.
+      **This is now the only thing between here and stage 6, and it costs
+      nothing but a few minutes at the bench.**
 - [ ] Confirm 0.6–0.8 mm solder actually on the shelf (`master-bom.md` says
       "verify").
 - [ ] Fix `master-bom.md`'s "21 SMD parts all 0603/SOT-23/SOIC" (§1).
