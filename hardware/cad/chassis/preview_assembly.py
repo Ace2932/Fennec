@@ -9,17 +9,29 @@ parsed per-component geometry, not placeholders) + ENVELOPE boxes for the
 rest (Jetson+heatsink, L2 body, belly pack). Remaining boxes are still
 envelopes, not parts. The power board's real rear components (J1) still
 poke the trunk's rear corner slab on one side (the known trim finding,
-now board-accurate — see check_fit.py case 11). Run after any part change:
-  ../../../.venv/bin/python preview_assembly.py
+now board-accurate — see check_fit.py case 11). Run after any part change,
+from any directory:
+  .venv/bin/python hardware/cad/chassis/preview_assembly.py
+
+Reference meshes come from cad_assets (vendored inside proj/), not from the
+ROOT repo — see that module's docstring for why (#166).
 """
+import os
+import pathlib
+import sys
+
 import numpy as np
 import trimesh
 
-from power_board_model import power_board_mesh, logic_board_mesh
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from cad_assets import LEG_V6, asset  # noqa: E402  (path insert must come first)
+from power_board_model import power_board_mesh, logic_board_mesh  # noqa: E402
 
 T = trimesh.transformations.translation_matrix
-NOVA = '/Users/afox/codebases/NOVA'
-LEG = f'{NOVA}/proj/hardware/cad/leg_v6'
+#: this file's own directory — the chassis part STLs below are loaded by bare
+#: name, so main() chdir's here rather than depending on the caller's cwd (#166).
+HERE = pathlib.Path(__file__).resolve().parent
+LEG = str(LEG_V6)
 HIP_FA, HIP_LAT, HIP_Z = 141.2, 39.05, 38.05
 HFE, KFE = 40, 80          # stance: toe ~(140, -164) under the hip
 
@@ -36,7 +48,7 @@ def box(x0, x1, y0, y1, z0, z1):
 
 
 def leg_mesh():
-    servo = trimesh.load(f'{NOVA}/feetech_servo_models/converted_stl/servo.stl')
+    servo = trimesh.load(str(asset('servo.stl')))
     servo.apply_translation([-12.5, 0, 0])
     arm = trimesh.load(f'{LEG}/knee_arm.stl')
     arm.apply_transform(T([59, 0, 17.75]))  # rev 3 (2026-07-10): 17.2->17.75
@@ -44,7 +56,7 @@ def leg_mesh():
     # center shoe-local (0,7) -> the O7 post; theta = 54 EXACTLY (band ctr
     # 270 + 54 = stance-plumb -36; the toe_v2 key pockets now fix it).
     # dimensions.md SM3_Foot section; gate: leg_v6/check_shoe.py.
-    shoe = trimesh.load(f'{NOVA}/original_body_files/SM3_Foot.stl')
+    shoe = trimesh.load(str(asset('SM3_Foot.stl')))
     M_shoe = (T([129, 0, -30.5]) @ rot(54, [0, 0, 1]) @ T([0, -7.0, 0]))
     shoe.apply_transform(M_shoe)
     coax_pose = rot(-90, [0, 1, 0]) @ rot(90, [1, 0, 0])
@@ -70,7 +82,7 @@ def leg_mesh():
 def foot_preview():
     """toe_v2 <-> shoe closeup: tibia_R + SM3_Foot in tibia-local frame."""
     tib = trimesh.load(f'{LEG}/tibia_R.stl')
-    shoe = trimesh.load(f'{NOVA}/original_body_files/SM3_Foot.stl')
+    shoe = trimesh.load(str(asset('SM3_Foot.stl')))
     shoe.apply_transform(
         T([129, 0, -30.5]) @ rot(54, [0, 0, 1]) @ T([0, -7.0, 0]))
     asm = trimesh.util.concatenate([tib, shoe])
@@ -97,6 +109,11 @@ def leg_preview():
 
 
 def main():
+    # The chassis parts below are loaded by bare name, and the two chassis-dir
+    # previews are written by bare name. Both are now gitignored at an exact
+    # path, so running this from anywhere else would silently write an
+    # untracked preview into the wrong directory. Pin the cwd instead.
+    os.chdir(HERE)
     foot_preview()
     leg_preview()
     parts = [trimesh.load('trunk.stl'),   # DERIVED trunk: stock geom + 10 modeled fastener bores
