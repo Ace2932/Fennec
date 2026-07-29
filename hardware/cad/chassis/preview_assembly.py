@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build chassis_assembly_preview.stl — everything designed so far in one
+"""Build the assembly-preview STLs — everything designed so far in one
 mesh for CAD Viewer review: trunk + riser + shoulders + battery pocket +
 L2 mast + 4 legs (stance pose, inside chassis-safe ROM) + the REAL power
 board (power_board_model.power_board_mesh()) + the REAL logic board
@@ -78,8 +78,27 @@ def foot_preview():
     print('foot_assembly_preview.stl', asm.bounds.round(1).tolist())
 
 
+def leg_preview():
+    """One leg in the stance pose, for CAD Viewer review of the leg alone.
+
+    The file this replaces was committed whole in c693a20 and had no producer:
+    nothing in the repo could rebuild it, so it could never be gated for
+    freshness and silently drifted from the parts. Exporting leg_mesh() — the
+    same assembly main() already places four of — gives it a source.
+
+    Not the same geometry as the old file (that one was a different pose:
+    z-extent -257.8 vs -207.2, and 144,928 faces vs 82,536). This one is
+    whatever the current leg parts are in the HFE/KFE stance pose, which is
+    the point.
+    """
+    asm = leg_mesh()
+    asm.export(f'{LEG}/leg_v6_assembly_preview.stl')
+    print('leg_v6_assembly_preview.stl', asm.bounds.round(1).tolist())
+
+
 def main():
     foot_preview()
+    leg_preview()
     parts = [trimesh.load('trunk.stl'),   # DERIVED trunk: stock geom + 10 modeled fastener bores
              trimesh.load('riser_bay.stl'),
              trimesh.load('battery_pocket.stl'),
