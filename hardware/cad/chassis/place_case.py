@@ -26,10 +26,14 @@ neighbour. Decision context (caliper data 2026-07-07, dimensions.md 7748bd3):
 
 Run: ../../../.venv/bin/python place_case.py   (from chassis/)
 """
+import pathlib
+import sys
+
 import numpy as np
 import trimesh
 
-NOVA = '/Users/afox/codebases/NOVA'
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from cad_assets import PROJ  # noqa: E402  (path insert must come first)
 
 # ---- chosen placement (calipered case) ---------------------------------------
 CASE_L, CASE_W, CASE_H = 110.3, 93.9, 38.2
@@ -58,7 +62,8 @@ def main():
     print(f'  y [{y0:+.2f}, {y1:+.2f}]  (len {y1-y0:.2f})')
     print(f'  z [{z0:+.2f}, {z1:+.2f}]  (len {z1-z0:.2f})')
     # cross-check vs the oversize ref mesh centred the same way
-    m = trimesh.load(f'{NOVA}/proj/hardware/cad/chassis/jetson_case_ref.stl')
+    m = trimesh.load(str(PROJ / 'hardware' / 'cad' / 'chassis'
+                         / 'jetson_case_ref.stl'))
     bc = (m.bounds[0] + m.bounds[1]) / 2
     cx = (x0 + x1) / 2
     m.apply_translation([cx - bc[0], CASE_CY - bc[1], CASE_BOTTOM_Z - m.bounds[0][2]])

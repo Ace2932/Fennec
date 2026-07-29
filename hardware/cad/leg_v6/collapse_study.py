@@ -13,24 +13,27 @@ knee closest approach +42mm).
 This asks, per-part, what is the LOWEST world-z geometry across the fold ROM,
 and where the belly rails (trunk z -42.2) sit relative to it.
 Run: ../../../.venv/bin/python collapse_study.py"""
+import pathlib, sys
 import numpy as np, trimesh
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from cad_assets import LEG_V6, asset  # noqa: E402  (path insert must come first)
 T = trimesh.transformations.translation_matrix
 def rot(d, ax, p=None): return trimesh.transformations.rotation_matrix(np.radians(d), ax, p)
-NOVA='/Users/afox/codebases/NOVA'; LEG=f'{NOVA}/proj/hardware/cad/leg_v6'
+LEG=str(LEG_V6)
 HIP_FA,HIP_LAT,HIP_Z=141.2,39.05,38.05
 RAIL_Z=-42.2   # belly skid-rail bottom (world/trunk z), the designed drop-catch
 
 def load():
     P={}
     P['coax']=trimesh.load(f'{LEG}/coax_R.stl')
-    s=trimesh.load(f'{NOVA}/feetech_servo_models/converted_stl/servo.stl'); s.apply_translation([-12.5,0,0]); P['servo']=s
+    s=trimesh.load(str(asset('servo.stl'))); s.apply_translation([-12.5,0,0]); P['servo']=s
     P['femur']=trimesh.load(f'{LEG}/femur_R.stl')
     a=trimesh.load(f'{LEG}/knee_arm.stl'); a.apply_transform(T([59,0,17.75])); P['arm']=a  # rev 3: 17.2->17.75
     P['tibia']=trimesh.load(f'{LEG}/tibia_R.stl')
     # tibia_pad RETIRED 2026-07-07 (misplaced on the lateral blade face, never
     # built/gated — see tibia_pad.scad header) — dropped from the stack; the
     # tibia mesh above is the real lowest-blade geometry for this study.
-    sh=trimesh.load(f'{NOVA}/original_body_files/SM3_Foot.stl'); sh.apply_transform(T([129,0,-30.5])@rot(54,[0,0,1])@T([0,-7.0,0])); P['foot']=sh
+    sh=trimesh.load(str(asset('SM3_Foot.stl'))); sh.apply_transform(T([129,0,-30.5])@rot(54,[0,0,1])@T([0,-7.0,0])); P['foot']=sh
     return {k:np.asarray(trimesh.sample.sample_surface(v,3000,seed=0)[0]) for k,v in P.items()}
 
 PTS=load()

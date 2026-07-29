@@ -24,12 +24,18 @@ Run:  ../../../.venv/bin/python compute_inertials.py         # prints table + XA
 Deps: trimesh, numpy (proj/.venv).
 """
 
+import pathlib
+
 import numpy as np
 import trimesh
 
-NOVA = "/Users/afox/codebases/NOVA"
-LEG = f"{NOVA}/proj/hardware/cad/leg_v6"
-ORIG = f"{NOVA}/original_body_files"
+# Paths resolve from this file, not from one laptop's checkout (#166). The
+# stock foot mesh is already vendored in this package's own meshes/ — the old
+# ORIG reached out to the ROOT repo for a file sitting one directory away.
+_PKG = pathlib.Path(__file__).resolve().parents[1]  # .../src/nova_description
+_PROJ = pathlib.Path(__file__).resolve().parents[4]  # proj/
+LEG = str(_PROJ / "hardware" / "cad" / "leg_v6")
+ORIG = str(_PKG / "meshes")
 
 # ---- materials -------------------------------------------------------------
 # CALIBRATED 2026-07-13 from real prints (Bambu slicer estimate confirmed
