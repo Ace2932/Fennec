@@ -58,11 +58,25 @@ ones."*
 
 **The only iron on the BOM is exactly the iron that note says will struggle.**
 
-Needed before starting, neither currently listed:
-- [ ] **Fat chisel tip** for the Pinecil (TS-C4 / TS-D24 class). The stock fine
-      tip cannot deliver into a plane-connected pad.
-- [ ] **Preheat** — hotplate or IR. Even with a fat tip, the 14 A pads want the
-      board at 100–130 °C first.
+Two things govern whether it actually struggles, and only one of them is the tip.
+
+- [ ] **Tip mass — verify what is on the shelf.** A chisel is probably owned
+      (2026-07-29), but the class matters: TS-C4 / TS-D24 (≈4 mm / 2.4 mm) is
+      the target. A TS-C1 1 mm chisel is barely better than the stock conical
+      into a plane-connected pad. The heat-set work uses an M3 insert tip
+      (`../../docs/checklists/print-batch.md`), so more than one tip exists —
+      check which.
+- [ ] **Supply voltage — the half that gets forgotten.** The Pinecil's power
+      scales with input voltage; a 9–15 V USB brick delivers a fraction of the
+      60–88 W the note above assumes, and no tip compensates for that. The
+      bench list already has a **Kungber 30 V/10 A supply** — run the iron's DC
+      barrel from it at ~24 V (respect the Pinecil's own max) and it reaches the
+      assumed ceiling. Do this before concluding the iron is inadequate.
+- [ ] **Preheat — still unsolved.** `master-bom.md` skips the reflow hotplate,
+      so nothing on the BOM gets the board to 100–130 °C. The Etekcity IR gun
+      can verify the temperature but cannot produce it. May prove unnecessary
+      once tip + 24 V are sorted; the 14 A plane pads below are where it would
+      bite.
 
 ### Pads that need the fat tip + preheat
 
@@ -171,7 +185,11 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
 
 ## 7. Open
 
-- [ ] Buy the fat chisel tip + arrange preheat (§2). **Blocks stage 6 onward.**
+- [ ] Iron capability (§2), in this order — it is cheaper than it looks:
+      **(a)** identify the chisel tip already owned and confirm it is 4 mm-class,
+      **(b)** power the Pinecil from the Kungber bench supply at ~24 V rather
+      than a USB brick, **(c)** only then decide whether preheat is actually
+      needed. Steps (a) and (b) cost nothing. **Gates stage 6 onward.**
 - [ ] Confirm 0.6–0.8 mm solder actually on the shelf (`master-bom.md` says
       "verify").
 - [ ] Fix `master-bom.md`'s "21 SMD parts all 0603/SOT-23/SOIC" (§1).
