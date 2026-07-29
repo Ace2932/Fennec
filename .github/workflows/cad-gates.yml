@@ -133,3 +133,29 @@ jobs:
 
       - name: Every committed STL matches its .scad
         run: python -u hardware/cad/check_stl_fresh.py
+
+  generated-freshness:
+    # The same question for the artifacts check_stl_fresh CANNOT see: the ones
+    # built by Python rather than OpenSCAD. trunk.stl is in that gate's SKIP set
+    # by name; robot_viewer.html is not an STL and is in no build_all.sh.
+    #
+    # This is the hole that actually cost something. gen_viewer.py crashed on a
+    # part retired 2026-07-10 (#41) and stayed broken 18 days, while the
+    # committed robot_viewer.html kept opening fine and showing 2026-07-11
+    # geometry — 25 chassis/leg STLs changed underneath it and nothing noticed.
+    # A committed artifact proves its producer ran once, not that it still can.
+    #
+    # No OpenSCAD needed: both producers are pure Python.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install mesh deps
+        run: pip install numpy trimesh scipy networkx rtree manifold3d embreex
+
+      - name: Every committed python-built artifact matches its producer
+        run: python -u hardware/cad/check_generated_fresh.py
