@@ -218,9 +218,17 @@ Switch can be pulled from its case to save ~60 % volume inside the chassis.
   slot's cable-bearing edge, then zip-anchor the bundle to the
   grommet's strain-relief tab right where it enters the bay — so plug
   tension at the Jetson ports is relieved by the zip tie + grommet, not
-  carried by the port connectors themselves. **Blocked on a riser_bay.scad
-  fix** (see the grommet file's header FLAG) before the grommet actually
-  seats — verify at assembly, not just on paper.
+  carried by the port connectors themselves. **No longer blocked** — the
+  `riser_bay.scad` CASE_SLOT cut was fixed 2026-07-10 (slot widened
+  4.5 → 9 mm at y −49..−40, and `rounded_slot` r dropped 4 → 2.0, which was
+  over half the old short span and had blown the cut out past the deck's
+  own −Y edge). The chassis gate now clears the grommet against the cradle,
+  both clamp bars and the case envelope at 0 pts.
+  Still verify at assembly rather than on paper, for a reason the fix does
+  not address: **retention is the zip-tie tab, not the edge clip.** The
+  gate's 12% edge-clip figure is an inverted proxy (most of the liner's
+  volume is cable channel and bay air by design), so it says nothing about
+  grip. Check bundle fit and the drop-to-boards run with real cables.
 - Battery leads: 18 AWG silicone, exit the pack's REAR face behind the
   trunk end, rise through the shoulder-flange bottom notch (y ±10 →
   z 12) to the MRBF block on the floor plate (`../cad/chassis/README.md`)
