@@ -61,7 +61,7 @@ jobs:
         # is what made the sweep an 18 GB job in #178. Measured with it:
         # 334.7 s -> 104.5 s (3.2x), 4.17 GB -> 3.16 GB, and VERDICTS IDENTICAL
         # line for line against the pure-numpy run.
-        run: pip install numpy trimesh scipy networkx rtree manifold3d embreex
+        run: pip install -r hardware/cad/requirements.txt
 
       - name: Runner resources
         # Recorded on purpose: the sweep below does NOT run here because it
@@ -119,7 +119,7 @@ jobs:
         # is what made the sweep an 18 GB job in #178. Measured with it:
         # 334.7 s -> 104.5 s (3.2x), 4.17 GB -> 3.16 GB, and VERDICTS IDENTICAL
         # line for line against the pure-numpy run.
-        run: pip install numpy trimesh scipy networkx rtree manifold3d embreex
+        run: pip install -r hardware/cad/requirements.txt
 
       - name: Chassis fit gate
         # Leg-vs-chassis interference, fastener families, posture ROM envelope.
@@ -171,7 +171,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends openscad
           openscad --version
-          pip install numpy trimesh scipy networkx rtree manifold3d embreex
+          pip install -r hardware/cad/requirements.txt
 
       - name: Every committed STL matches its .scad
         run: python -u hardware/cad/check_stl_fresh.py
@@ -197,7 +197,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install mesh deps
-        run: pip install numpy trimesh scipy networkx rtree manifold3d embreex
+        run: pip install -r hardware/cad/requirements.txt
 
       - name: Every committed python-built artifact matches its producer
         run: python -u hardware/cad/check_generated_fresh.py

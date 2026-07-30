@@ -4,6 +4,20 @@
 
 Three tracks, deliberately split. **Full setup guide:** [`docs/cad-tooling.md`](../../docs/cad-tooling.md).
 
+**Python deps for the gates:** [`requirements.txt`](./requirements.txt) (#200) —
+
+```bash
+proj/.venv/bin/pip install -r hardware/cad/requirements.txt
+```
+
+That file is the *single* source: `cad-gates.yml` (all four jobs) and
+`ros-pytest.yml` both install from it. They used to carry hand-written lists,
+which drifted — `ros-pytest` was missing `mujoco` and `trimesh`, so 11
+CAD↔URDF↔MJCF guards **skipped** in CI while passing locally, green either way
+(#213). Add a dep there, not in a workflow. Note `embreex` is effectively
+required: without it trimesh silently drops to a pure-numpy ray engine and the
+fit sweep needs ~5 GB instead of ~3 GB (#178/#197).
+
 - **OpenSCAD functional legs — `leg_v6/`** — **CANONICAL leg design** (coax, femur + bolt-on knee arm, tibia, straps). Ground-up designed-for-assembly parts around the real STS3215 mesh: drop-in pockets, both-discs-bolted joints, cable management, vents, side dots; every build runs the real-mesh fit gate + pose-sweep collision checks (`leg_v6/check_fit.py`). See [`leg_v6/README.md`](./leg_v6/README.md). `leg_v5/` (shell-carve) + `leg_v5_screwlock/` are SUPERSEDED — kept for the shape-preserving carve technique and the stock-STL provenance; V2-V4 in [`archive/`](./archive/README.md).
 - **OnShape via [Jarvis OnShape MCP](https://github.com/ReshefElisha/jarvis-onshape-mcp)** (Claude Code plugin, ~60 tools + FeatureScript) — **chassis + multi-body kinematic assemblies**, anything with mate relationships, anything that imports reference STEPs (Jetson, L2, D456). Source of truth for the chassis/structural stack. (It lost the leg-link competition to V5 — original geometry mattered more than from-scratch brackets.)
 - **parametric-3d-printing skill** (`~/.claude/skills/parametric-3d-printing/`, CadQuery-based) — utility parts: cable guides, sensor adapters, mount brackets, panel cutouts, foot pads, strain reliefs, PCB carriers, riser towers, connector pockets, print-test coupons. Anything single-body or single-assembly.

@@ -58,7 +58,14 @@ jobs:
         #   envelope against the CAD gate's own numbers. Without trimesh that
         #   import raises and the tests skip — the guard on the ROS<->CAD seam,
         #   including the LA-20 cable envelope, silently not running.
-        run: pip install pytest pyyaml numpy mujoco trimesh scipy networkx rtree
+        run: |
+          # ONE source with the CAD gates (#200). This job needs the same
+          # geometry stack because test_derived_signs and
+          # test_cable_gate_envelope load hardware/cad/leg_v6/check_fit.py by
+          # path and read the MJCF. Keeping a second hand-written list here is
+          # exactly how they drifted apart and 11 guards started skipping (#213).
+          pip install -r hardware/cad/requirements.txt
+          pip install pytest pyyaml   # test-only, not needed by the CAD gates
 
       - name: Run package unit tests
         run: |

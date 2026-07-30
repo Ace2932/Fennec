@@ -1,0 +1,55 @@
+# CAD gate + geometry-test dependency set (#200).
+#
+# ONE source, installed by BOTH CI and the dev venv. Before this file the only
+# authoritative record was a `pip install` line inside cad-gates.yml, so the two
+# could drift silently in either direction — and they did: ros-pytest.yml was
+# missing mujoco and trimesh, which made 11 CAD<->URDF<->MJCF guards SKIP in CI
+# while passing locally, with a green tick either way (#213).
+#
+# Install:  proj/.venv/bin/pip install -r hardware/cad/requirements.txt
+#
+# NOT pinned, deliberately. Pinning here would freeze CI against a set nobody
+# re-tests; the versions proven on 2026-07-30 are recorded below instead, so a
+# regression can be bisected against a known-good set without pinning becoming
+# its own stale artifact. If a bump ever changes a VERDICT rather than a
+# runtime, pin it then and say why.
+#
+# Verified together 2026-07-30 (dev Mac, py3.12) — CAD gates + 273-test ROS suite:
+#   numpy 2.4.6 · trimesh 4.12.2 · scipy 1.17.1 · networkx 3.6.1 · rtree 1.4.1
+#   manifold3d 3.5.2 · embreex 4.4.0 · mujoco 3.10.0
+
+numpy
+trimesh
+
+# trimesh's proximity/boolean paths. Installed explicitly so a missing extra
+# cannot silently degrade a gate into a weaker check.
+scipy
+networkx
+rtree
+manifold3d
+
+# embreex = Intel Embree bindings. NOT optional in effect: trimesh picks it up
+# automatically and falls back to a pure-numpy ray engine without it — no
+# spatial acceleration, every ray against every triangle. That fallback is what
+# made the fit sweep an 18 GB job (#178). Measured with it: 334.7s -> 104.5s
+# (3.2x), 4.17 GB -> 3.16 GB, and VERDICTS IDENTICAL line for line (#197).
+# So omitting it is a performance and memory cliff, not a correctness one — but
+# a 5 GB gate on a 16 GB runner is how #178 got OOM-killed.
+embreex
+
+# mujoco: loads sim/nova_mjx/nova.xml for the CAD<->URDF<->MJCF cross-checks in
+# nova_ops/test_derived_signs.py and test_cable_gate_envelope.py. Those guard
+# the sign/frame seam that produced #163's backwards rear hip. Without it they
+# do not fail — they SKIP (#213).
+mujoco
+
+# ---------------------------------------------------------------------------
+# NOT pip-installable, and version-sensitive — record only:
+#
+# OpenSCAD. CI runs 2021.01 (apt), the dev Mac 2026.04.26. Five years apart, and
+# #176 CALIBRATED check_stl_fresh's tolerances against exactly that spread:
+# 30 of 33 parts agree to <=0.0006 mm, and the p99 surface metric exists because
+# three parts deviate ~1 mm on a handful of facets while volume and bbox stay
+# identical to four decimals. Change either side of that spread and re-derive
+# the tolerances rather than loosening them.
+# ---------------------------------------------------------------------------
