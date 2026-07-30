@@ -43,7 +43,17 @@ jobs:
           python-version: '3.11'
 
       - name: Install pytest
-        run: pip install pytest pyyaml numpy   # pyyaml: nova_ops.joint_map loads the joint-ID map YAML; numpy: nova_ops.lidar_selffilter mask
+        # pyyaml: nova_ops.joint_map loads the joint-ID map YAML
+        # numpy:  nova_ops.lidar_selffilter mask
+        # mujoco: NOT optional. test_derived_signs and test_cable_gate_envelope
+        #   guard the CAD<->URDF<->MJCF seam with `pytest.importorskip("mujoco")`.
+        #   Without the wheel those 11 tests SKIPPED here while passing locally,
+        #   so this job went green having never checked the seam — even though
+        #   the path filters above were deliberately widened to hardware/cad/**
+        #   and sim/** so a CAD edit WOULD trigger it. The trigger fired, the
+        #   guard skipped, the check reported success. test_derived_signs is the
+        #   guard for the sign/frame bug class (#163's backwards rear hip).
+        run: pip install pytest pyyaml numpy mujoco
 
       - name: Run package unit tests
         run: |
