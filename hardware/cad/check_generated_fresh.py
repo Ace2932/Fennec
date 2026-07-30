@@ -41,6 +41,7 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import base64
 import json
 import math
@@ -259,16 +260,56 @@ def check_copy(src: pathlib.Path, dst: pathlib.Path) -> bool:
     return ok
 
 
-def main() -> int:
+def main(argv=None) -> int:
+    # Selectors exist so CI can run the expensive artifact in its own job:
+    # regenerating rom_envelope_table.py replays the check_fit geometry sweep and
+    # takes ~6 min, against ~25 s for the other three combined.
+    #
+    # The cheap job uses --skip, NOT --only, on purpose. With --only on both
+    # jobs, a fifth artifact added to ARTIFACTS would land in NEITHER and be
+    # silently uncovered — the failure this whole gate exists to prevent. With
+    # --skip, anything new joins the default job automatically and someone has
+    # to opt it out deliberately.
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--only", nargs="+", metavar="NAME",
+                    help="check only these artifact filenames")
+    ap.add_argument("--skip", nargs="+", metavar="NAME", default=[],
+                    help="check everything EXCEPT these artifact filenames")
+    args = ap.parse_args(argv)
+
+    known = {a.name for a, _ in ARTIFACTS}
+    for name in list(args.only or []) + list(args.skip):
+        if name not in known:
+            print(f"error: {name!r} is not a known artifact. Known: "
+                  f"{sorted(known)}", file=sys.stderr)
+            return 2
+
+    selected = [(a, s) for a, s in ARTIFACTS
+                if (args.only is None or a.name in args.only)
+                and a.name not in args.skip]
+    chosen = {a.name for a, _ in selected}
+    dropped = [a.name for a, _ in ARTIFACTS if a.name not in chosen]
+
     print("-- python-built artifacts")
-    bad = sum(not check(a, s) for a, s in ARTIFACTS)
+    if dropped:
+        print(f"   (not in this run: {', '.join(dropped)})")
+    bad = sum(not check(a, s) for a, s in selected)
     print()
-    print("-- manually copied generated files")
-    bad += sum(not check_copy(s, d) for s, d in COPIES)
-    print()
+    # A copy is only meaningful alongside the artifact it came from.
+    copies = [(s, d) for s, d in COPIES
+              if s.name in {a.name for a, _ in selected}]
+    if copies:
+        print("-- manually copied generated files")
+        bad += sum(not check_copy(s, d) for s, d in copies)
+        print()
     if bad:
         print(f"FAIL: {bad} artifact(s) do not match their producer — rerun it "
               f"and commit the result")
+    elif dropped:
+        # Do NOT say "every artifact" when a subset ran. That sentence is the
+        # thing this gate exists to stop being said untruthfully.
+        print(f"OK: the {len(selected)} artifact(s) in this run match their "
+              f"producer ({len(dropped)} checked by another job)")
     else:
         print("OK: every committed python-built artifact matches its producer")
     return 1 if bad else 0
