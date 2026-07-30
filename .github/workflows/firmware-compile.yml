@@ -1,16 +1,25 @@
 name: firmware-compile
 
-# Compile-only smoke check for the Teensy 4.1 firmware on every PR + push to
-# main. Uses PlatformIO with NOVA_USE_MICRO_ROS disabled — micro_ros_platformio
-# only builds cleanly on Python 3.10 + ROS dev libs, which the Mac dev path
-# doesn't have. The Arduino-only build still exercises all device-side code
-# (feetech protocol/bus skeletons, INA226 wiring, ISR tick) — only the ROS 2
-# pub/sub stubs are gated out, which is fine for catching real regressions
-# (typos, header-include breakage, ABI shifts in lib_deps).
+# Compile checks for the Teensy 4.1 firmware, on every PR + push to main.
 #
-# Jetson is where we run the full micro-ROS build before flashing. This CI
-# job is a fast (~3 min) pre-merge filter, not a substitute for the Jetson
-# build.
+# TWO build jobs on purpose, because one of them is not enough:
+#
+#   arduino-only-build  -e teensy41_ci   ~3 min, NOVA_USE_MICRO_ROS undefined.
+#                       Fast pre-merge filter. Exercises the device-side code
+#                       (feetech protocol/bus, INA226, ISR tick).
+#   microros-build      -e teensy41      the env that actually flashes. Needed
+#                       because 488 of main.cpp's 1249 lines (39%) are inside
+#                       `#ifdef NOVA_USE_MICRO_ROS` and the fast job therefore
+#                       never compiles them (#190).
+#
+# The old comment here said the Arduino-only build "exercises all device-side
+# code ... which is fine for catching real regressions". True as far as it goes,
+# and it left 39% of the shipping firmware compiled by nothing in CI — the
+# Jetson build before flashing was the only thing covering it, by hand, at the
+# worst possible moment to discover a typo.
+#
+# The Jetson build is still the real integration step. It is no longer the FIRST
+# time the micro-ROS half gets compiled.
 
 on:
   pull_request:
@@ -56,6 +65,49 @@ jobs:
         working-directory: firmware/teensy/firmware
         if: success()
         run: pio run -e teensy41_ci --target size
+
+  microros-build:
+    # THE OTHER 39%. `teensy41_ci` leaves NOVA_USE_MICRO_ROS undefined, and 488
+    # of main.cpp's 1249 lines sit inside `#ifdef NOVA_USE_MICRO_ROS` — so the
+    # fast job above compiles 61% of the firmware that actually ships. A typo or
+    # header break in the micro-ROS half passed every check and only surfaced at
+    # the Jetson, by hand, when you were already trying to flash.
+    #
+    # Runs in the ros:humble container because micro_ros_platformio wants
+    # Python 3.10 + ROS dev libs, which is the reason it was excluded rather
+    # than an argument that it should stay excluded.
+    #
+    # If this proves slow or flaky, move it to `schedule` + `workflow_dispatch`
+    # rather than deleting it — a slow check on main beats no check at all.
+    runs-on: ubuntu-latest
+    container: ros:humble
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PlatformIO
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends python3-pip git
+          pip3 install --upgrade platformio
+
+      - name: Cache PlatformIO core + packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: pio-uros-${{ runner.os }}-${{ hashFiles('firmware/teensy/firmware/platformio.ini') }}
+          restore-keys: |
+            pio-uros-${{ runner.os }}-
+
+      - name: Build (full micro-ROS env — the one that flashes)
+        working-directory: firmware/teensy/firmware
+        run: pio run -e teensy41
+
+      - name: Report size
+        working-directory: firmware/teensy/firmware
+        if: success()
+        run: pio run -e teensy41 --target size
 
   native-unit-tests:
     # Host-run unit suites for the pure-logic modules (feetech wire protocol +
