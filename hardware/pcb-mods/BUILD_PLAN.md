@@ -30,9 +30,34 @@ stations (U1–U5), 5× CP\_Radial D12.5 (C1–C5), 3× CP\_Radial D10 (C6, C8, 
 **logic THT (8)** — Teensy 4.1 (U6), Arduino Nano (U12), IDC 2×06 (J20),
 1×07 (J10), 2× 1×02 (J9, J21), 1×03 jumper (JP1), JST-XH 3 (J11)
 
-### Two corrections to `master-bom.md`
+### Board size and which side everything is on
 
-Its reflow-skip line reads *"21 SMD parts all 0603/SOT-23/SOIC, hand-solder"*.
+Measured from `Edge.Cuts` and each footprint's own layer field:
+
+| board | outline | F.Cu | B.Cu |
+|---|---|---|---|
+| power_v2 | **112 × 90 mm** | 35 | **26** |
+| logic | **84 × 78 mm** | 19 | 3 (R3, R4, R5) |
+
+**power_v2 B.Cu (26)** — C1–C7, L1, Q2–Q4, R2–R9, R11–R16, U8
+**power_v2 F.Cu (35)** — C8, C9, C\_gs1, D1, H1–H4, J1–J8, J12–J14, J20, M1,
+Q1, R17, R\_gs1, SW1, SW2, U1–U5, U9–U12
+
+Three consequences that are easy to miss:
+
+- **Most of the SMD is on the BOTTOM** (20 of 24: all the 0603 R except R17/R\_gs1,
+  C7, U8, L1, Q2–Q4). Only D1, R17, R\_gs1, C\_gs1 are top-side SMD. Stages 1–4
+  therefore all work the bottom face; the first flip is at stage 5.
+- **The electrolytics are split** — C1–C6 bottom, C8/C9 top. "Electrolytics last"
+  applies to both faces.
+- **Top-side THT is soldered from the bottom face**, which by then carries 20 SMD
+  parts including L1 at 8 mm tall. This is a second, independent reason the
+  bottom-side electrolytics (C1–C6, 12.5 mm cans) must wait: they would block
+  iron access to the very pads at stage 8.
+
+### Two corrections to `master-bom.md` (applied there 2026-07-29)
+
+Its reflow-skip line read *"21 SMD parts all 0603/SOT-23/SOIC, hand-solder"*.
 
 1. **The count is 34**, not 21 (24 + 10 across both boards).
 2. **They are not all 0603/SOT-23/SOIC.** L1 is `L_12x12mm_H8mm` — a 12×12 mm
@@ -73,10 +98,10 @@ Two things govern whether it actually struggles, and only one of them is the tip
 
   | tip | use | stages |
   |---|---|---|
-  | TS-ILS (fine long conical) | 0603 R/C, SOT-23, SOD-123 | 1–2 |
+  | TS-ILS (fine long conical) | 0603 R/C, SOT-23, SOD-123 | 1–2, 5 |
   | TS-K (knife) | SOIC drag-solder, bridge wicking | 3 |
-  | TS-C4 (≈4 mm bevel) | **every plane-tied / high-current pad** — L1, SW1.2, Q1.3, U1.4, XT60/XT30, buck stations | 4, 6, 7, 8 |
-  | TS-D24 (≈2.4 mm chisel) | general THT — headers, JST, terminal blocks, electrolytics | 5, 8 |
+  | TS-C4 (≈4 mm bevel) | **every plane-tied / high-current pad** — L1, SW1.2, Q1.3, U1.4, XT60/XT30, buck stations | 4, 7, 8 |
+  | TS-D24 (≈2.4 mm chisel) | general THT — headers, JST, terminal blocks, electrolytics | 6, 9 |
   | TS-J02 (bent fine) | tight rework, no straight-on access | any |
   | threaded insert adapter | M3 heat-sets in printed parts (not PCB) | — |
 - [x] **Supply voltage — DONE, two adequate supplies owned.** The half that
@@ -84,16 +109,36 @@ Two things govern whether it actually struggles, and only one of them is the tip
       matters is voltage, *not* USB vs barrel — a 65 W PD brick is fine, a
       9–15 V one is not, and no tip compensates for the difference.
       - **Anker Nano II 65 W GaN** (owned): negotiates 20 V / 3.25 A = 65 W,
-        inside the 60–88 W band the note above assumes. Good for stages 1–5.
-        Needs a PD C-to-C cable rated ≥3.25 A, not a charge-only lead.
-      - **Kungber 30 V/10 A** (owned): **prefer this for stages 6–8.** ~24 V
+        inside the 60–88 W band the note above assumes. Fine for every stage
+        **except** the plane-tied joints at 4, 7 and 8 — use the bench supply
+        for those. Needs a PD C-to-C cable rated ≥3.25 A, not a charge-only lead.
+      - **Kungber 30 V/10 A** (owned): **prefer this for the plane-tied joints at stages 4, 7 and 8.** ~24 V
         into the DC 5525 barrel is 24²/20² ≈ **1.44×** the 20 V PD power, free.
         That headroom is exactly what the 14 A plane pads want.
-- [ ] **Preheat — still unsolved.** `master-bom.md` skips the reflow hotplate,
-      so nothing on the BOM gets the board to 100–130 °C. The Etekcity IR gun
-      can verify the temperature but cannot produce it. May prove unnecessary
-      once tip + 24 V are sorted; the 14 A plane pads below are where it would
-      bite.
+- [ ] **Preheat — unsolved, and CONDITIONAL. Do the bench test before buying.**
+      Nothing owned reaches 100–130 °C; the Etekcity IR gun measures it but
+      cannot produce it. May prove unnecessary once TS-C4 runs at 24 V.
+
+  **If it is needed, it has to be IR, not a contact hotplate.** Both faces of
+  power_v2 are populated (§1), so a flat plate can only heat a face that is
+  still bare:
+
+  | stage | needs preheat? | contact plate? |
+  |---|---|---|
+  | 1–4 (bottom SMD incl. L1) | L1 yes | ✅ top face still bare — lay it top-down |
+  | 7–8 (SW1.2, Q1.3, U1.4, XT30s) | yes, most of them | ❌ bottom populated **and** top carries tall connectors — it will not lie flat either way |
+
+  A contact plate therefore covers L1 and **not** the three 14 A pads, which are
+  the joints the warning is actually about. Candidate: **YIHUA 853A** IR station,
+  ~$85, 130×130 mm heated area (covers 112×90 with margin), 50–350 °C PID.
+  MHP30 (30×30) and MHP50 (50×50) are far too small for this board despite
+  being the usual hobby recommendations.
+
+  **Hot air is not a substitute.** It is localised and fights the same plane
+  conduction that makes these pads hard; preheat works by removing the gradient,
+  which needs bulk heating. A hot-air station (e.g. YIHUA 8786D, ~$70) is still
+  worth owning for **stage 3** SOIC rework and for harness heatshrink — just do
+  not buy it expecting the plane pads to improve.
 
 ### Pads that need the fat tip + preheat
 
@@ -116,26 +161,30 @@ flat on the bench for every later joint), **small thermal mass before large**
 plug-in modules last**, and **nothing that blocks access to a pad you still
 have to reach**.
 
-| stage | what | why here |
-|---|---|---|
-| **0** | Bare-board: continuity `VBAT`↔`VBAT_PROTECTED` open (SW1 not fitted), no `VBAT`–`GND` short | Cheapest possible fault-find. A plane short after 33 THT parts is a nightmare. |
-| **1** | 0603 R and C, both boards (23 parts) | Smallest, flattest, most numerous. Do them while the board is cold and bare. |
-| **2** | D1 (SOD-123F), Q2–Q4 (SOT-23), FB1 | Still small, still cold. Mind D1 polarity. |
-| **3** | U8 (SOIC-8), U7 (SOIC-14) | Fine-pitch, wants flux + drag or wick. Before anything tall gets in the way of the iron angle. |
-| **4** | **L1** (12×12 SMD inductor) | Last of the SMD. Plane-tied both sides → preheat + fat tip. Doing it before the fine-pitch work would mean preheating the board with SOICs already on. |
-| **5** | Low THT: J2, M1, JP1, J9, J10, J21, J8, J11, J20 (both boards) | Headers and JSTs seat flush; do them before the board stops sitting flat. |
-| **6** | SW1, SW2 terminal blocks | SW1.2 is a 14 A plane pad — preheat. Still low profile. |
-| **7** | XT30 ×8 + XT60 J1, buck stations U1–U4, **and Q1 (TO-220)** | The bulk of the high-current THT, plus Q1 — its pad 3 is a 14 A GND inject. All preheat + fat tip. **This is the last preheat stage; see the note below.** |
-| **8** | Electrolytics C1–C9 | Tall, polarised, and **temperature-rated ~105 °C — below the 100–130 °C board preheat.** They must go on after every preheat-requiring joint is done, which is why Q1 moved up to stage 7. |
-| **9** | Modules: U9–U11 (INA226), U6 (Teensy 4.1), U12 (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. |
+Side column is which face the **body** sits on. Grouped to keep flips to a
+minimum: bottom SMD, then top SMD, then THT.
 
-### All preheat work finishes at stage 7 — this constrains the order
+| stage | side | what | why here |
+|---|---|---|---|
+| **0** | — | Bare-board: continuity `VBAT`↔`VBAT_PROTECTED` open (SW1 not fitted), no `VBAT`–`GND` short | Cheapest possible fault-find. A plane short after 33 THT parts is a nightmare. |
+| **1** | **B** | Bottom 0603: R2–R9, R11–R16, C7 (+ logic R3–R5) | Smallest, flattest, most numerous, and all on one face — do them in one sitting with the top still bare. |
+| **2** | **B** | Q2–Q4 (SOT-23) | Same face, still small, still cold. |
+| **3** | **B** | U8 (SOIC-8) — and U7 (SOIC-14) on the logic board | Fine-pitch, wants flux + drag or wick. Before anything tall spoils the iron angle. **The stage most likely to want hot air for a bridge.** |
+| **4** | **B** | **L1** (12×12 SMD inductor) | Last of the bottom SMD. Plane-tied both sides → fat tip. Last stage where the top face is bare, so the last one a *contact* plate could serve (§2). |
+| **5** | **F** | Top SMD: D1 (SOD-123F), R17, R\_gs1, C\_gs1 (+ logic C1, FB1) | Flip once. Only 4 top-side SMD parts — mind D1 polarity. |
+| **6** | **F** | Low THT: J2, M1, J8, J20 (+ logic JP1, J9, J10, J21, J11, J20) | Headers and JSTs seat flush; do them before the board stops sitting flat. |
+| **7** | **F** | SW1, SW2 terminal blocks | SW1.2 is a 14 A plane pad. Still low profile, so do it before the tall connectors crowd the iron. |
+| **8** | **F** | XT30 ×8 + XT60 J1, buck stations U1–U4, **and Q1 (TO-220)** | The bulk of the high-current THT, plus Q1 — pad 3 is a 14 A GND inject. **Last preheat stage; see the note below.** Soldered from the bottom face, which already carries 20 SMD parts — hence C1–C6 must still be off. |
+| **9** | B + F | Electrolytics: C1–C6 (bottom), C8–C9 (top) | Tall, polarised, **~105 °C-rated — below the 100–130 °C board preheat.** After every preheat joint, and after stage 8 because the bottom cans would block access to stage 8's solder side. |
+| **10** | **F** | Modules: U9–U11 (INA226), U6 (Teensy 4.1), U12 (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. |
+
+### All preheat work finishes at stage 8 — this constrains the order
 
 If preheat turns out to be needed (§2), it applies to **L1, SW1.2, Q1.3, U1.4,
-the XT30/XT60s and the buck stations** — stages 4, 6 and 7. Every one of those
+the XT30/XT60s and the buck stations** — stages 4, 7 and 8. Every one of those
 is done before an electrolytic goes on, because a ~105 °C-rated cap sitting on a
 board held at 100–130 °C is being stressed by the very step that is meant to
-protect the joint. Same logic for the plug-in modules in stage 9.
+protect the joint. Same logic for the plug-in modules in stage 10.
 
 So the rule is not "tall parts last" for its own sake: **the board must be free
 of anything temperature-limited for as long as it might still need to be hot.**
@@ -190,7 +239,7 @@ Everything that leaves the power board. Gauges per `../wiring/README.md`
 | U9–U11 | INA226 breakout | I²C + shunt | plug-in modules, one per active rail | — |
 | U12 | INA226 breakout | — | **DNP** — arm rail telemetry | — |
 
-**Off-board modules to have in hand before stage 7:** 4× Pololu buck,
+**Off-board modules to have in hand before stage 8:** 4× Pololu buck,
 3× INA226 2 mΩ breakout, MRBF fuse block, Contura rocker, E-stop.
 
 Cable routing for these bundles — including the strain-relief and grommet
@@ -204,7 +253,7 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
 - After **stage 0** — no `VBAT`–`GND` short.
 - After **stage 4** — reflow-quality check on L1 and both SOICs before tall
   parts block the view. Wick any bridge now.
-- After **stage 8**, before **stage 9** — this is the last moment the board is
+- After **stage 9**, before **stage 10** — this is the last moment the board is
   a bare PCB. Run `pre-power-on-validation.md` §1c **connector mating audit
   (HARD GATE)** and §1e (connector polarity, buck variants, INA addressing)
   here. Fitting Teensy/Nano/INA modules first makes rework much worse.
@@ -217,18 +266,24 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
 
 - [x] ~~Tip: 4 mm-class chisel~~ **DONE** — TS-C4 owned (§2).
 - [x] ~~Adequate supply~~ **DONE** — Anker 65 W PD (20 V) and Kungber bench
-      (~24 V) both owned. Use the Kungber for stages 6–8 (§2).
+      (~24 V) both owned. Use the Kungber for stages 4, 7 and 8 (§2).
 - [ ] **Test whether preheat is needed at all** — do not buy for it first.
-      TS-C4 on the Kungber at ~24 V, onto `Q1.3` or `SW1.2`: does the joint wet
-      in a couple of seconds, or does the iron sag? The Etekcity IR gun reads
-      what the pad actually reaches. Only buy a hotplate if that test fails.
-      **This is now the only thing between here and stage 6, and it costs
-      nothing but a few minutes at the bench.**
+      TS-C4 on the Kungber at ~24 V. Start on `U1.4` (10 A, least severe of the
+      three), then `Q1.3` or `SW1.2` (14 A). Does the joint wet in ~3 s, or does
+      the tip temperature crater while you sit there at 10 s? The Etekcity IR gun
+      reads what the pad actually reaches. Sitting on a pad waiting is what lifts
+      pads and cooks laminate — that is the failure this is screening for.
+      **Only if it fails: the 853A IR preheater (§2), not a contact hotplate and
+      not hot air.** This is the only thing between here and stage 4, and it
+      costs nothing but a few minutes at the bench.
+- [ ] Hot-air station (§2) — independent of preheat. Buy when stage 3 (SOIC) or
+      harness heatshrink actually calls for it, not as a preheat substitute.
 - [ ] Confirm 0.6–0.8 mm solder actually on the shelf (`master-bom.md` says
       "verify").
-- [ ] Fix `master-bom.md`'s "21 SMD parts all 0603/SOT-23/SOIC" (§1).
+- [x] ~~Fix `master-bom.md`'s "21 SMD parts all 0603/SOT-23/SOIC"~~ **DONE**
+      2026-07-29 — corrected to 34 there, with the L1 caveat (§1).
 - [ ] Re-label `pre-power-on-validation.md` §9 — the 🔴 is stale (§4).
 - [ ] Decide socket vs direct-solder for U6/U12 on the logic board before
-      stage 9.
+      stage 10.
 
 _Inventory and nets read from the board files 2026-07-29._
