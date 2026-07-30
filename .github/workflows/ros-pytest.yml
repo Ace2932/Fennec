@@ -43,7 +43,22 @@ jobs:
           python-version: '3.11'
 
       - name: Install pytest
-        run: pip install pytest pyyaml numpy   # pyyaml: nova_ops.joint_map loads the joint-ID map YAML; numpy: nova_ops.lidar_selffilter mask
+        # pyyaml: nova_ops.joint_map loads the joint-ID map YAML
+        # numpy:  nova_ops.lidar_selffilter mask
+        # mujoco: NOT optional. test_derived_signs and test_cable_gate_envelope
+        #   guard the CAD<->URDF<->MJCF seam with `pytest.importorskip("mujoco")`.
+        #   Without the wheel those 11 tests SKIPPED here while passing locally,
+        #   so this job went green having never checked the seam — even though
+        #   the path filters above were deliberately widened to hardware/cad/**
+        #   and sim/** so a CAD edit WOULD trigger it. The trigger fired, the
+        #   guard skipped, the check reported success. test_derived_signs is the
+        #   guard for the sign/frame bug class (#163's backwards rear hip).
+        # trimesh+deps: test_derived_signs and test_cable_gate_envelope load
+        #   hardware/cad/leg_v6/check_fit.py by path to cross-check the ROS-side
+        #   envelope against the CAD gate's own numbers. Without trimesh that
+        #   import raises and the tests skip — the guard on the ROS<->CAD seam,
+        #   including the LA-20 cable envelope, silently not running.
+        run: pip install pytest pyyaml numpy mujoco trimesh scipy networkx rtree
 
       - name: Run package unit tests
         run: |
@@ -52,14 +67,18 @@ jobs:
           SRC=$(pwd)   # so cross-package imports (e.g. nova_locomotion's
                        # test_controller -> nova_ops.joint_map) resolve
           fail=0
-          # test_preflight imports rclpy (it's a ROS integration test that runs
-          # on the Jetson) — skip it in this no-ROS runner. Other nova_ops suites
-          # are pure logic and DO run here.
-          declare -A IGNORE=( [nova_ops]="--ignore=test/test_preflight.py" )
+          # NOTHING IS IGNORED HERE ANY MORE. test_preflight.py used to be
+          # skipped for importing rclpy transitively, and CLAUDE.md told you to
+          # skip it locally for the same reason — so it ran nowhere, and when
+          # #187 added FirmwareTablesCheck its hardcoded "expect 3 checks"
+          # assertion started failing with no one to see it. The checks now defer
+          # their ROS imports into run(), so the registry imports without a ROS
+          # install and the suite runs here. If you find yourself adding an
+          # --ignore back, you are re-creating that hole.
           for pkg in nova_ops nova_calibration nova_locomotion; do
             if [ -d "$pkg/test" ]; then
               echo "::group::$pkg"
-              ( cd "$pkg" && PYTHONPATH="$SRC/nova_ops:$SRC/nova_calibration:$SRC/nova_locomotion:." python -m pytest test/ -q ${IGNORE[$pkg]} ) || fail=1
+              ( cd "$pkg" && PYTHONPATH="$SRC/nova_ops:$SRC/nova_calibration:$SRC/nova_locomotion:." python -m pytest test/ -q ) || fail=1
               echo "::endgroup::"
             fi
           done

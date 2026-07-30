@@ -7,10 +7,6 @@ and are NOT checked) report present.
 Firmware contract (per firmware/teensy/firmware/README.md):
   bit i set = joint i+1 has answered at least one ping since boot
 """
-import rclpy
-from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
-from std_msgs.msg import Int32
-
 from .base import Check
 
 
@@ -25,6 +21,16 @@ class BusPingCheck(Check):
         return 'bus_ping'
 
     def run(self, node) -> 'CheckResult':
+        # ROS imports are deferred to run() ON PURPOSE: importing the check
+        # REGISTRY must not require a ROS runtime. checks/__init__ imports every
+        # check eagerly, so a module-scope `import rclpy` made
+        # `from nova_ops.preflight.checks import V1_CHECKS` fail anywhere rclpy is
+        # absent — which is why test_preflight.py was excluded from CI and from the
+        # documented local command, and therefore never ran at all (#187 follow-up).
+        import rclpy
+        from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
+        from std_msgs.msg import Int32
+
         # Wait for one message on /servo_present_mask.
         # rclpy doesn't have wait_for_message in Humble (added later), so
         # spin until callback fires or timeout.

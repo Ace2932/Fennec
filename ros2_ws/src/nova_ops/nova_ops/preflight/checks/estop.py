@@ -5,10 +5,6 @@ Must be False (released) for gait bringup to proceed.
 
 Per firmware contract: True = pressed/engaged, False = released.
 """
-import rclpy
-from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
-from std_msgs.msg import Bool
-
 from .base import Check
 
 
@@ -18,6 +14,16 @@ class EstopCheck(Check):
         return 'estop'
 
     def run(self, node) -> 'CheckResult':
+        # ROS imports are deferred to run() ON PURPOSE: importing the check
+        # REGISTRY must not require a ROS runtime. checks/__init__ imports every
+        # check eagerly, so a module-scope `import rclpy` made
+        # `from nova_ops.preflight.checks import V1_CHECKS` fail anywhere rclpy is
+        # absent — which is why test_preflight.py was excluded from CI and from the
+        # documented local command, and therefore never ran at all (#187 follow-up).
+        import rclpy
+        from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
+        from std_msgs.msg import Bool
+
         latest = {'val': None}
 
         def cb(msg):

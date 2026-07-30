@@ -22,11 +22,25 @@ on:
     paths:
       - 'hardware/cad/**'
       - '.github/workflows/cad-gates.yml'
+      # The vendored stock meshes live in the ROS package but are INPUTS to two
+      # gated producers: trunk_build.py and gen_viewer.py both reach them via
+      # cad_assets.STOCK_MESHES. Edit SM3_Frame_ChassisTrunk.stl or SM3_Foot.stl
+      # and trunk.stl / robot_viewer.html go stale — with the filter limited to
+      # hardware/cad/** this workflow would not even run. Same shape as the
+      # widening in ros-pytest.yml, and for the same reason.
+      - 'ros2_ws/src/nova_description/meshes/**'
   push:
     branches: [main]
     paths:
       - 'hardware/cad/**'
       - '.github/workflows/cad-gates.yml'
+      # The vendored stock meshes live in the ROS package but are INPUTS to two
+      # gated producers: trunk_build.py and gen_viewer.py both reach them via
+      # cad_assets.STOCK_MESHES. Edit SM3_Frame_ChassisTrunk.stl or SM3_Foot.stl
+      # and trunk.stl / robot_viewer.html go stale — with the filter limited to
+      # hardware/cad/** this workflow would not even run. Same shape as the
+      # widening in ros-pytest.yml, and for the same reason.
+      - 'ros2_ws/src/nova_description/meshes/**'
 
 jobs:
   leg-gates:
@@ -71,6 +85,17 @@ jobs:
         working-directory: hardware/cad/leg_v6
         run: python check_shoe.py
 
+      - name: Mesh health (printable leg parts)
+        # Watertight / single-body / positive-volume on every printable leg part.
+        # This ran ONLY from build_all.sh, which no workflow invokes — so the
+        # printability guard was never enforced in CI. It exits 1 on failure and
+        # always could; nothing was calling it.
+        working-directory: hardware/cad/leg_v6
+        run: |
+          python ../mesh_health.py *_R.stl *_L.stl knee_arm.stl knee_bumper.stl \
+            shoulder.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl \
+            strap.stl grommet_insert.stl coax_hfe_plate.stl coax_hfe_plate_L.stl
+
       - name: Servo orientation gate
         # Proves each servo seats only ONE way round — this is the evidence the
         # derived hfe/kfe signs in nova_ops/safety_envelope/derived_signs.py
@@ -100,6 +125,23 @@ jobs:
         # Leg-vs-chassis interference, fastener families, posture ROM envelope.
         working-directory: hardware/cad/chassis
         run: python check_fit.py
+
+      - name: Mesh health (printable chassis parts)
+        # Same guard as the leg job; also previously reachable only through
+        # build_all.sh, which CI never runs.
+        #
+        # trunk.stl is deliberately NOT in this list. build_all.sh:53 runs it
+        # with `|| echo "KNOWN EXCEPTION ..."` — a documented pre-existing sliver
+        # cluster that fails the strict post-reload watertight check. Excluding
+        # it here is honest; inheriting that `||` would mean a step that cannot
+        # fail, which is the thing this whole pass is closing.
+        working-directory: hardware/cad/chassis
+        run: |
+          python ../mesh_health.py head.stl head_ear.stl head_ear_L.stl \
+            l2_adapter.stl control_pod.stl jetson_case_mount.stl \
+            jetson_clamp_bar.stl oled_mount.stl neck_bracket.stl \
+            case_slot_grommet.stl lead_notch_grommet.stl skid_rail.stl \
+            riser_bay.stl spacer.stl battery_pocket.stl floor_plate.stl
 
   stl-freshness:
     # Does every committed STL match the .scad that claims to produce it? (#176)

@@ -9,9 +9,15 @@
 #   2. Hash the hex; bail if it matches the last-deployed hash unless
 #      DEPLOY_FORCE=1 (skip cycle if nothing changed — flashing kills
 #      the bus master so it's not free).
-#   3. SAFETY GUARD: refuse to deploy if the Jetson reports E-stop
-#      released and the gait controller is running. Operator must
-#      engage E-stop OR stop gait first.
+#   3. SAFETY GUARDS (two, independent): refuse to deploy if the gait
+#      controller is running, and refuse if the Jetson's E-stop is not
+#      confirmed engaged. Operator must stop gait / engage E-stop first.
+#      Both FAIL CLOSED as of 2026-07-30: if the state cannot be read at
+#      all, they refuse rather than warn-and-continue. That matters because
+#      step 5 below kills micro_ros_agent, so on a repeat deploy /estop is
+#      routinely unreadable — the old warn-and-continue made the guard inert
+#      exactly when it was needed. DEPLOY_FORCE=1 overrides both, which is
+#      what that flag is for.
 #   4. scp the hex to the Jetson.
 #   5. Kill the micro_ros_agent on the Jetson (it holds /dev/ttyACM0
 #      exclusively; teensy_loader_cli needs the device free).
@@ -94,13 +100,28 @@ cmd_deploy() {
     fi
 
     log "checking remote safety state..."
-    # Refuse if gait controller is running (motion during reboot = bad day)
-    if remote "pgrep -x gait_controller" >/dev/null 2>&1; then
+    # Refuse if gait controller is running (motion during reboot = bad day).
+    #
+    # rc is captured rather than tested inline: pgrep exits 1 for "no match" but
+    # 2/3 for its OWN errors, and `if remote "pgrep ..." >/dev/null 2>&1` folded
+    # those together — a pgrep that could not run read as "gait is not running"
+    # and the guard passed. Unknown is not the same as safe.
+    set +e
+    remote "pgrep -x gait_controller" >/dev/null 2>&1
+    gait_rc=$?
+    set -e
+    if [ "$gait_rc" -eq 0 ]; then
         if [ "$DEPLOY_FORCE" != "1" ]; then
             err "gait_controller is running on $JETSON_HOST. Stop it first, or DEPLOY_FORCE=1."
             exit 5
         fi
         warn "gait_controller running but DEPLOY_FORCE set; proceeding anyway"
+    elif [ "$gait_rc" -gt 1 ]; then
+        if [ "$DEPLOY_FORCE" != "1" ]; then
+            err "could not determine whether gait_controller is running (pgrep rc=$gait_rc). Refusing: this guard exists to stop motion during the post-flash reboot, and an unreadable state is not a safe one. DEPLOY_FORCE=1 to override."
+            exit 5
+        fi
+        warn "gait_controller state unknown (pgrep rc=$gait_rc) but DEPLOY_FORCE set; proceeding anyway"
     fi
 
     # Refuse if /estop reports released. Spec: "Refuse to deploy if
@@ -118,7 +139,14 @@ cmd_deploy() {
             exit 8
         fi
         if [ -z "$ESTOP_VAL" ]; then
-            warn "could not read /estop (agent down?); skipping E-stop guard"
+            # FAIL CLOSED. This used to warn and deploy anyway, which made the
+            # guard inert in the exact situation it is for: this script KILLS
+            # micro_ros_agent to free /dev/ttyACM0, so "agent down" is the normal
+            # state on a repeat deploy, and /estop is then unreadable every time.
+            # A guard whose whole purpose is preventing motion during the
+            # post-flash reboot must not treat "I cannot tell" as "safe".
+            err "could not read /estop on $JETSON_HOST (agent down, or firmware never flashed). Refusing: this guard prevents motion during the post-flash reboot and cannot confirm the E-stop is engaged. Engage the E-stop and start the agent, or DEPLOY_FORCE=1 to override deliberately."
+            exit 8
         fi
     fi
 
