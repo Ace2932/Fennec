@@ -105,14 +105,19 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 ## Soldering / tools — verify on shelf
 | Item | Status |
 |---|---|
-| Pinecil V2 iron | ✅ |
+| Pinecil V2 iron | ✅ — **what matters is supply VOLTAGE, not USB vs barrel.** The element is resistive, so power goes as V²: a 9–15 V brick delivers a fraction of the 60–88 W the plane-tied pads need. Two adequate supplies owned, see the two rows below |
+| ↳ Anker Nano II 65 W GaN (USB-C) | ✅ owned (May 2026) — negotiates **20 V / 3.25 A = 65 W**, inside the assumed band. Fine for every stage except the plane-tied joints at 4, 7 and 8. Needs a PD-capable C-to-C cable rated ≥3.25 A, not a charge-only lead |
+| ↳ Kungber 30 V/10 A bench supply | ✅ owned — **preferred for the plane-tied joints at stages 4, 7 and 8** (L1 and the 14 A pads). Set ~24 V into the DC 5525 barrel: 24² / 20² ≈ **1.44×** the power of the 20 V PD path, for free. Respect the Pinecil's own DC max |
+| TS100/Pinecil tip kit (6-pack) | ✅ owned (LUMINZENLUX) — **TS-C4** ≈4 mm bevel + **TS-D24** ≈2.4 mm chisel + TS-K knife + TS-ILS + TS-J02 + **threaded insert adapter**. TS-C4 is the one for the 14 A plane-tied pads; the insert adapter covers the M3 heat-sets in `checklists/print-batch.md`. Tip-per-stage table in `hardware/pcb-mods/BUILD_PLAN.md` §2 |
+| Preheat — **IR, not a hotplate** | ⬜ **none owned. CONDITIONAL BUY — run the bench test first.** Candidate: **YIHUA 853A** IR preheat station, ~$85–95, ceramic IR, 50–350 °C PID, **130×130 mm** heated area, 600 W. ⚠️ **"853A" is NOT a unique model number** — Aoyue 853A is a *quartz* unit, Aoyue 853A++ is a different programmable one, and Miumaeov/generic 853A are 450 W. **Buy by spec: IR/ceramic, ≥120×120 mm heated area, 50–350 °C closed-loop.** Do not link a listing here; eBay/Amazon item IDs rot — spec outlives the URL. **Must be IR, not a contact plate:** power_v2 is 112×90 mm with **both faces populated** (35 F.Cu / 26 B.Cu), so a flat plate only works while the contacting face is still bare — true up to stage 4, false for the 14 A pads at stages 7–8. MHP30 (30×30) and MHP50 (50×50) are far too small regardless. Test `U1.4` then `Q1.3` with TS-C4 at 24 V before spending |
+| Hot air rework station | ⬜ **none owned. Not a preheat substitute** — hot air is localised and fights the same plane conduction that makes those pads hard; it does not replace a bulk soak. Worth owning on its own merits: candidate **YIHUA 8786D** 2-in-1, ~$70. Motivated by **stage 3** (U8 SOIC-8 / U7 SOIC-14 — bridges and lifts, where wick + a THT-only sucker is thin cover) and by **harness dress** (heatshrink over 24 connector ends + TPU strain reliefs). Its bundled ~60 W iron is a downgrade from the Pinecil at 24 V — do not count it as capability |
 | Thin solder 0.6-0.8 mm | ⬜ verify |
 | Flux | ✅ owned (BEEYUIHF) |
 | Solder wick (2-3mm braid) | ✅ received (Lesnow) — SMD bridge cleanup (sucker owned, but it's THT-only) |
 | Solder sucker | ✅ owned — THT desolder |
 | Crimpers | ✅ WGGE WG-015 (12-10 insulated lugs) · iCrimp (23-10 ferrules) · PEBA (dupont/JST) |
 | USB micro-B cable | ✅ owned (USC) |
-| Reflow hotplate + paste | 🚫 SKIP — 21 SMD parts all 0603/SOT-23/SOIC, hand-solder; no stencil; half-THT board anyway |
+| Reflow hotplate + paste | 🚫 SKIP — **34** SMD parts across both boards (24 power_v2 + 10 logic, counted from the `.kicad_pcb` files 2026-07-29, was written as "21 all 0603/SOT-23/SOIC"). Mostly 0603, but **not all small**: L1 is `L_12x12mm_H8mm`, a 12×12 power inductor plane-tied both sides, plus 2 SOIC (U8-8, U7-14). Skip still correct — hand-solder, no stencil, half-THT board — but L1 is the hardest joint on either board, so it is sequenced last of the SMD (`hardware/pcb-mods/BUILD_PLAN.md` §3 stage 4) |
 
 ## Bench / bring-up gear (Amazon — separate from robot BOM)
 Kungber 30V/10A supply · FNIRSI LCR-P1 tester · KeeYees logic analyzer · Chanzon 1Ω+4Ω
