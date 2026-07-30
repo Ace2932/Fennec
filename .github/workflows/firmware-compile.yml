@@ -22,6 +22,7 @@ name: firmware-compile
 # time the micro-ROS half gets compiled.
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'firmware/teensy/firmware/**'
@@ -77,8 +78,33 @@ jobs:
     # Python 3.10 + ROS dev libs, which is the reason it was excluded rather
     # than an argument that it should stay excluded.
     #
-    # If this proves slow or flaky, move it to `schedule` + `workflow_dispatch`
-    # rather than deleting it — a slow check on main beats no check at all.
+    # ⚠ CURRENTLY FAILS, ON PURPOSE LEFT IN — and it found a real problem on its
+    # first run. `workflow_dispatch` only for now so it does not gate PRs or
+    # redden main while the fix is decided.
+    #
+    #   rcutils/src/time_unix.c:76: error: implicit declaration of function
+    #   'clock_gettime'   ->  Failed <<< rcutils
+    #
+    # ROOT CAUSE: `platform = teensy` in platformio.ini is UNPINNED. CI resolves
+    # toolchain-gccarmnoneeabi-teensy@1.150201.0 (GCC 15.2), where an implicit
+    # function declaration is an ERROR rather than a warning. micro_ros_platformio
+    # ships the clock_gettime DEFINITION (platform_code/arduino/clock_gettime.cpp)
+    # but rcutils compiles without a declaration in scope.
+    #
+    # So the micro-ROS build does not work against current tooling at all. It
+    # works on the Jetson only because that machine has an older cached
+    # toolchain — which means a fresh checkout there, or any platform update,
+    # breaks flashing. That is exactly the class of thing pinning lib_deps was
+    # meant to stop, and the platform was left unpinned.
+    #
+    # TO FIX (needs the Jetson's known-good versions, so not guessed here):
+    #   1. On the Jetson: `pio platform list` + `pio pkg list -e teensy41`
+    #   2. Pin `platform = teensy@<that version>` and/or
+    #      `platform_packages = platformio/toolchain-gccarmnoneeabi-teensy@<ver>`
+    #   3. Re-enable pull_request/push triggers below.
+    # Do NOT "fix" it with -Wno-error=implicit-function-declaration: that hides a
+    # real missing declaration in code that runs the servo bus.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container: ros:humble
     steps:
