@@ -147,3 +147,9 @@ hardware/cad/leg_v6/leg_v6_assembly_preview.stl
 hardware/pcb-mods/3dmodels/Teensy_4.1_Assembly.STEP
 hardware/pcb-mods/3dmodels/arduino_nano_esp32.step
 hardware/pcb-mods/3dmodels/arduino_nano_r4.step
+
+# Trained sim policies are INPUTS downloaded from Colab/Drive, not repo outputs —
+# see sim/nova_mjx/artifacts/policies/README.md. Binaries stay out; the README
+# that says what to drop there is tracked.
+sim/nova_mjx/artifacts/policies/*
+!sim/nova_mjx/artifacts/policies/README.md
