@@ -178,6 +178,45 @@ minimum: bottom SMD, then top SMD, then THT.
 | **9** | B + F | Electrolytics: C1–C6 (bottom), C8–C9 (top) | Tall, polarised, **~105 °C-rated — below the 100–130 °C board preheat.** After every preheat joint, and after stage 8 because the bottom cans would block access to stage 8's solder side. |
 | **10** | **F** | Modules: U9–U11 (INA226), U6 (Teensy 4.1), U12 (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. |
 
+### Per-stage parts, with VALUES
+
+Read out of the board files 2026-07-30. **The side column in the table above is
+power_v2**; the logic board is 19 top / 3 bottom (R3, R4, R5), so its parts are
+listed per stage below rather than by that column.
+
+Values matter more than references here: R2..R17 are eight different values in
+one 0603 reel family, and a swapped divider resistor moves a trip point rather
+than failing loudly.
+
+| stage | power_v2 | logic |
+|---|---|---|
+| **1** B 0603 | R2 100k · R3 22k · R4 11.3k · R5 10k · R6 12.1k · R7 10k · R8 10k · R9 10k · R11 4.7k · R12 4.7k · R13 10k · R14 470k · R15 1M · R16 100k · C7 100nF | R3 1k · R4 1k · R5 1k |
+| **2** B SOT-23 | Q2 · Q3 · Q4 — all BSS138 (`_cutoff` / `_estop` / `_jetcut`) | — |
+| **3** SOIC | U8 LM393 (**B**) | U7 74LVC125 (**F** — top side, not bottom) |
+| **4** B | L1 22 µH (SRR1260-220M) | — |
+| **5** F SMD | D1 BZT52C18 18 V zener · R17 10k · R_gs1 100k · C_gs1 0.47 µF | C1 100nF · FB1 600R ferrite · R1 22R · R2 1k · R6 1k · R7 10k |
+| **6** F low THT | J2 (UBEC 5V aux) · M1 (voltmeter tap) · J8 (servo-bus JST) · J20 (interboard) | J9 · J10 · J11 · J20 · J21 · JP1 |
+| **7** F | SW1 rocker · SW2 e-stop (screw terminals) | — |
+| **8** F high-current | J1 XT60 · J3–J7, J12, J13, J14 XT30 · U1–U4 buck stations · Q1 IRLB3034PBF | — |
+| **9** electrolytics | C1–C5 1000 µF 25 V (**B**) · C6 470 µF (**B**) · C8, C9 470 µF (**F**) | — |
+| **10** modules | U9–U11 INA226 | U6 Teensy 4.1 · U12 Arduino Nano |
+
+`C_gs1` 0.47 µF and `D1` are the Q1 gate-harden network (`order-list.md` §97-102,
+ordered 2026-06-22). Note that list still says "board edit still pending" — the
+edit is done; the parts are on the board.
+
+### Polarity and orientation — getting these wrong is destructive
+
+| part | the trap |
+|---|---|
+| **J1 XT60, J3–J7 / J12–J14 XT30** | **pad 1 = NEGATIVE, pad 2 = POSITIVE.** Verified from the nets: `J1.1 = BATT_NEG`, `J1.2 = VBAT`. Do **not** assume pad 1 is +. Match against the connector's flat side, not the pad number — this exact reversal has been caught before on this board. |
+| **C1–C9 electrolytics** | Polarised, and split across both faces (C1–C6 bottom, C8/C9 top), so "the stripe faces the same way" is not a single rule — check each against its own silk. |
+| **D1 BZT52C18** | Zener, SOD-123F. Cathode band. Backwards it clamps nothing and conducts the wrong way. |
+| **Q1 IRLB3034PBF** | TO-220-3. Its pad 3 is the 14 A GND inject; pad 1 is `Net-(D1-K)`, pad 2 is `BATT_NEG`. |
+| **U8 LM393 / U7 74LVC125** | SOIC pin-1 dot. **U7 is on the logic board TOP face**, U8 on the power board bottom — do not carry one assumption to the other. |
+| **U9–U11 INA226** | Off-board modules on a 4-pin header: `+3V3 / GND / SCL / SDA` at −5.08 / −2.54 / 0 / +2.54 mm. Rail current does NOT pass through the board. |
+| **U6 Teensy / U12 Nano** | Orientation set by the USB end. Socket if undecided — see §7. |
+
 ### All preheat work finishes at stage 8 — this constrains the order
 
 If preheat turns out to be needed (§2), it applies to **L1, SW1.2, Q1.3, U1.4,
@@ -238,6 +277,33 @@ Everything that leaves the power board. Gauges per `../wiring/README.md`
 | J20 | IDC 2×06 shrouded | `V5_AUX`, `GND`, `+3V3`, `BUS_SERVO`, `I2C_SDA`, `I2C_SCL`, `BATT_LOW` | **logic board**, 12-way ribbon across the ~20 mm mezzanine gap | ribbon |
 | U9–U11 | INA226 breakout | I²C + shunt | plug-in modules, one per active rail | — |
 | U12 | INA226 breakout | — | **DNP** — arm rail telemetry | — |
+
+### Logic board — what connects where
+
+Same source: nets read from `nova_pcb_v6_logic.kicad_pcb`.
+
+| ref | connector | pins → net | goes to |
+|---|---|---|---|
+| J20 | IDC 2×06 shrouded | 1,2=`V5_AUX` · 3,4,10,11,12=`GND` · 5=`+3V3` · 6=`BUS_SERVO` · 7=`I2C_SDA` · 8=`I2C_SCL` · 9=`BATT_LOW` | **power board J20**, 12-way ribbon across the ~20 mm mezzanine gap. Both ends are MALE box headers — without the cable the two boards are electrically disconnected. |
+| JP1 | 1×03 header | 1=`MASTER_A` · 2=`BUS_SIGNAL` · 3=`MASTER_B` | **bus-master select — verified by net, not by label.** `MASTER_A` → `J9.2` (FE-URT-1). `MASTER_B` → **`U7.3`, the 74LVC125 output** — i.e. Pattern B is Teensy *through the buffer*, not the Teensy pin directly. `BUS_SIGNAL` → `R1.1` (22 R series), `R7.2` (10k idle pull-up to +3V3), `U7.5`. **Jumper 2–3 = Pattern B (default). Jumper 1–2 = Pattern A** (bench/debug from the Jetson). |
+| J9 | 1×02 | 1=`GND` · 2=`MASTER_A` | FE-URT-1 USB-TTL adapter (Pattern A path) |
+| J10 | 1×07 | 1=`GND` · 2=`V5_AUX` · 3=`SPI_SCK_F` · 4=`SPI_MOSI_F` · 5=`OLED_RST_F` · 6=`OLED_DC_F` · 7=`OLED_CS_F` | SSD1331 OLED. Pin order matches the module (board reworked 2026-06-14 for it); R2–R6 are the 1k series protection on these lines. |
+| J11 | JST-XH 3 | 1=`V5_AUX` · 2=`GND` · 3=`LED_DATA` | WS2812B status strip |
+| J21 | 1×02 | 1→ **U6 pad T5 (Teensy pin 5)** · 2=`GND` | e-stop 2nd NC contact sense. Verified connected — not a dangling header. |
+
+### Assembly configuration — decide these before stage 10
+
+Three choices are made by how you populate, not by firmware. `pre-power-on-validation.md`
+§1e is the authority; this is the physical summary.
+
+1. **JP1 bus master.** 2–3 = Pattern B (default, Teensy drives). 2–1 = Pattern A.
+2. **INA226 I²C addresses.** U9/U10/U11 are three identical modules — address
+   straps distinguish the rails. Set them before fitting; they are not
+   distinguishable once installed.
+3. **Buck variants.** U1 = D42V110F7 (leg 7.5 V), U2 = D42V110F12 (hip 12 V),
+   U3 = D24V22F12 (L2 12 V), U4 = D42V55F12 (Jetson 12 V). Four different
+   modules in identical 2×XT30 stations — the silk is the only thing telling
+   them apart, and a swap puts 12 V on the 7.5 V servo rail.
 
 **Off-board modules to have in hand before stage 8:** 4× Pololu buck,
 3× INA226 2 mΩ breakout, MRBF fuse block, Contura rocker, E-stop.
