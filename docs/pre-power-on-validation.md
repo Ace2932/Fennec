@@ -224,7 +224,27 @@ this validates the *timing*, the real half-duplex risk.)
 - [ ] Single servo (ID ping) first, then full 12-servo chain — watch SYNC_WRITE (no-ACK broadcast)
       vs individual READs for collisions.
 
-## 🔵 9. Phase-4 arm rail (when populating U5 — NOT for current fab)
+## ✅ 9. Phase-4 arm rail — BOTH GAPS CLOSED ON v2 (verified 2026-07-30)
+
+> **The two gaps below, including the 🔴 safety one, are FIXED on the ordered
+> `nova_pcb_v6_power_v2` board.** Verified by reading pad nets straight out of
+> `nova_pcb_v6_power_v2.kicad_pcb`, not from a changelog:
+>
+> | gap as written below | actual on the ordered v2 |
+> |---|---|
+> | `V7V5_ARM` = `U5.4` only, single-pad net — "arm rail has no exit" | **`J14.2 = V7V5_ARM`.** The rail has an off-board XT30. |
+> | 🔴 `U5.EN` tied to `VBAT_PROTECTED` = always-on, ungated by e-stop/hardcut | **`U5.3 = EN_BUCKS`** — the same net as `U1.3`. Killed by e-stop Q3 **and** hardcut Q2. |
+>
+> So U5/U12 remain DNP **for scope — there is no arm yet — not for safety.**
+> That is a materially different instruction from the original text, which reads
+> as "populating this creates a pinch/crush hazard".
+>
+> Left the original analysis intact below rather than deleting it: it is the
+> record of why the v2 board was changed, and a red flag that quietly vanishes
+> teaches you to distrust the next one. Re-verify against the board file if you
+> ever fab a v3.
+
+### Original finding (2026-06-14, against the pre-v2 board — now historical)
 Found 2026-06-14 by `tools/board_health.py` + EN-gating audit. The arm buck U5
 (D42V55F7) is DNP. "Populate-and-go" is INACCURATE — it needs the fixes below.
 The current board (no arm) is unaffected: U5 empty = zero effect, DRC 0/0.
