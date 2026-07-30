@@ -93,13 +93,27 @@ COPIES = [
 VIEWER_ABS_TOL = 1e-3
 
 
+#: Producers that write MORE than their headline artifact. hfe_envelope.py now
+#: writes both copies of the ROM table (#219), which creates a trap for THIS
+#: gate: if regenerate() backed up only the headline file, running the gate
+#: would silently overwrite a hand-edited nova_ops copy and then report OK —
+#: the DRIFT check below would pass because the gate itself repaired the drift.
+#: Every file a producer touches has to be saved and restored.
+ALSO_WRITTEN = {
+    HERE / "chassis" / "rom_envelope_table.py": [
+        PROJ / "ros2_ws" / "src" / "nova_ops" / "nova_ops" / "rom_envelope_table.py",
+    ],
+}
+
+
 def regenerate(artifact: pathlib.Path, script: pathlib.Path) -> bytes:
-    """Run the producer, return what it wrote, and restore the committed file.
+    """Run the producer, return what it wrote, and restore EVERY file it touches.
 
     Restoring in `finally` matters: this gate runs against a real working tree,
-    and a crash mid-run must not leave the artifact rewritten.
+    and a crash mid-run must not leave anything rewritten.
     """
     original = artifact.read_bytes()
+    extras = {p: p.read_bytes() for p in ALSO_WRITTEN.get(artifact, [])}
     try:
         r = subprocess.run([sys.executable, str(script)],
                            cwd=str(script.parent),
@@ -110,6 +124,8 @@ def regenerate(artifact: pathlib.Path, script: pathlib.Path) -> bytes:
         return artifact.read_bytes()
     finally:
         artifact.write_bytes(original)
+        for path, data in extras.items():
+            path.write_bytes(data)
 
 
 def _matching_brace(s: str, start: int) -> int:
