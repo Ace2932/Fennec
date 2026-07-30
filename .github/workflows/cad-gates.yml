@@ -29,6 +29,12 @@ on:
       # hardware/cad/** this workflow would not even run. Same shape as the
       # widening in ros-pytest.yml, and for the same reason.
       - 'ros2_ws/src/nova_description/meshes/**'
+      # generated-freshness also regenerates the MJCF (build_mjcf.py) and
+      # compares the ROM envelope's manual copy in nova_ops. Same lesson as the
+      # meshes above: a gate's trigger must cover every file it READS, not just
+      # the directory it lives in.
+      - 'sim/nova_mjx/**'
+      - 'ros2_ws/src/nova_ops/nova_ops/rom_envelope_table.py'
   push:
     branches: [main]
     paths:
@@ -41,6 +47,12 @@ on:
       # hardware/cad/** this workflow would not even run. Same shape as the
       # widening in ros-pytest.yml, and for the same reason.
       - 'ros2_ws/src/nova_description/meshes/**'
+      # generated-freshness also regenerates the MJCF (build_mjcf.py) and
+      # compares the ROM envelope's manual copy in nova_ops. Same lesson as the
+      # meshes above: a gate's trigger must cover every file it READS, not just
+      # the directory it lives in.
+      - 'sim/nova_mjx/**'
+      - 'ros2_ws/src/nova_ops/nova_ops/rom_envelope_table.py'
 
 jobs:
   leg-gates:
@@ -199,5 +211,29 @@ jobs:
       - name: Install mesh deps
         run: pip install -r hardware/cad/requirements.txt
 
-      - name: Every committed python-built artifact matches its producer
-        run: python -u hardware/cad/check_generated_fresh.py
+      - name: Python-built artifacts match their producers (fast set)
+        # --skip, not --only: anything ADDED to ARTIFACTS later joins this job
+        # automatically. With --only on both jobs a new artifact would land in
+        # neither and be silently uncovered — the exact failure this gate exists
+        # to prevent.
+        run: python -u hardware/cad/check_generated_fresh.py --skip rom_envelope_table.py
+
+  rom-envelope-freshness:
+    # Split out of generated-freshness because it is ~15x the cost of the other
+    # three combined: regenerating rom_envelope_table.py replays the check_fit
+    # geometry sweep (~6 min vs ~25 s). Its own job so it runs in PARALLEL
+    # rather than serialising behind them — same coverage, same wall clock as
+    # the other long gates.
+    #
+    # Also carries the copy-equality check, since that copy is this artifact's.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install mesh deps
+        run: pip install -r hardware/cad/requirements.txt
+      - name: ROM envelope table matches its producer, and both copies agree
+        run: python -u hardware/cad/check_generated_fresh.py --only rom_envelope_table.py
