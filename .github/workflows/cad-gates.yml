@@ -29,6 +29,12 @@ on:
       # hardware/cad/** this workflow would not even run. Same shape as the
       # widening in ros-pytest.yml, and for the same reason.
       - 'ros2_ws/src/nova_description/meshes/**'
+      # generated-freshness also regenerates the MJCF (build_mjcf.py) and
+      # compares the ROM envelope's manual copy in nova_ops. Same lesson as the
+      # meshes above: a gate's trigger must cover every file it READS, not just
+      # the directory it lives in.
+      - 'sim/nova_mjx/**'
+      - 'ros2_ws/src/nova_ops/nova_ops/rom_envelope_table.py'
   push:
     branches: [main]
     paths:
@@ -41,6 +47,12 @@ on:
       # hardware/cad/** this workflow would not even run. Same shape as the
       # widening in ros-pytest.yml, and for the same reason.
       - 'ros2_ws/src/nova_description/meshes/**'
+      # generated-freshness also regenerates the MJCF (build_mjcf.py) and
+      # compares the ROM envelope's manual copy in nova_ops. Same lesson as the
+      # meshes above: a gate's trigger must cover every file it READS, not just
+      # the directory it lives in.
+      - 'sim/nova_mjx/**'
+      - 'ros2_ws/src/nova_ops/nova_ops/rom_envelope_table.py'
 
 jobs:
   leg-gates:
