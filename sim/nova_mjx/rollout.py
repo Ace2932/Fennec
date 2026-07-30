@@ -16,11 +16,18 @@ import argparse
 import functools
 import os
 import pickle
+import sys
 
 # Headless OpenGL for the render (Colab / servers have no X display). MUST be
 # set before `import mujoco`. setdefault so an explicit MUJOCO_GL still wins
 # (e.g. MUJOCO_GL=osmesa if EGL is unavailable).
-os.environ.setdefault("MUJOCO_GL", "egl")
+#
+# macOS has no EGL. Hardcoding "egl" made this script unrunnable on the dev Mac:
+#   RuntimeError: invalid value for environment variable MUJOCO_GL: egl
+# — raised at `import mujoco`, before any argument was parsed, so every local
+# attempt to render a rollout died instantly. Verified 2026-07-30; "glfw" renders
+# fine there. Linux/Colab keep EGL so headless runs are unchanged.
+os.environ.setdefault("MUJOCO_GL", "glfw" if sys.platform == "darwin" else "egl")
 
 import imageio
 import jax
