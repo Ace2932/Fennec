@@ -84,10 +84,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install PlatformIO
+      # NOT `pip install platformio`. micro_ros_platformio's build_dev_env
+      # sources PlatformIO's OWN virtualenv to run colcon:
+      #   . $PLATFORMIO_CORE_DIR/penv/bin/activate
+      # A system-pip install never creates that penv, so the dev-dependency
+      # build dies with "cannot open .../penv/bin/activate: No such file" after
+      # downloading ament/googletest. The official installer does create it.
+      - name: Install PlatformIO via the official installer (creates penv)
         run: |
-          apt-get update && apt-get install -y --no-install-recommends python3-pip git
-          pip3 install --upgrade platformio
+          apt-get update && apt-get install -y --no-install-recommends \
+            python3-venv python3-pip git curl cmake build-essential \
+            python3-colcon-common-extensions
+          curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py -o /tmp/get-platformio.py
+          python3 /tmp/get-platformio.py
+          echo "$HOME/.platformio/penv/bin" >> "$GITHUB_PATH"
 
       - name: Cache PlatformIO core + packages
         uses: actions/cache@v4
