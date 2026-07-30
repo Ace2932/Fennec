@@ -53,7 +53,12 @@ jobs:
         #   and sim/** so a CAD edit WOULD trigger it. The trigger fired, the
         #   guard skipped, the check reported success. test_derived_signs is the
         #   guard for the sign/frame bug class (#163's backwards rear hip).
-        run: pip install pytest pyyaml numpy mujoco
+        # trimesh+deps: test_derived_signs and test_cable_gate_envelope load
+        #   hardware/cad/leg_v6/check_fit.py by path to cross-check the ROS-side
+        #   envelope against the CAD gate's own numbers. Without trimesh that
+        #   import raises and the tests skip — the guard on the ROS<->CAD seam,
+        #   including the LA-20 cable envelope, silently not running.
+        run: pip install pytest pyyaml numpy mujoco trimesh scipy networkx rtree
 
       - name: Run package unit tests
         run: |
