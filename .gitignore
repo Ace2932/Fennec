@@ -153,3 +153,8 @@ hardware/pcb-mods/3dmodels/arduino_nano_r4.step
 # that says what to drop there is tracked.
 sim/nova_mjx/artifacts/policies/*
 !sim/nova_mjx/artifacts/policies/README.md
+
+# HFE mouth-study fit coupon (#221) — NOT a robot part. Regenerated in seconds
+# by hardware/cad/leg_v6/hfe_mouth_study.py from the gate-fresh STLs; committing
+# it would need a freshness gate for a throwaway coupon. The script is the record.
+hardware/cad/leg_v6/coax_hfe_mouth_coupon.stl
