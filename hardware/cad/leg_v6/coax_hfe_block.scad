@@ -40,6 +40,20 @@
 //
 // Geometry proof + negative control: hfe_block_study.py.
 //
+// FASTENERS: 2x M3x22 SHCS. MEASURED on the built STLs -- head seats at
+// x=57.1, tenon grip 13.1mm, the coax-side insert ends at x=37.6, so the bolt
+// spans 19.5mm; M3x20 is the bare minimum and leaves no seat margin. See
+// docs/fastener-schedule.md. Plus 4x M2.5x8 wheel screws (unchanged geometry,
+// wheel_couple_neg) -- those moved here from coax.scad with the boss.
+//
+// OPEN, worth a look before the first structural print: the root doubler that
+// came across with the arm was sized for the arm-to-BRIDGE junction, which no
+// longer exists on this part -- the block's root is now the tenon. Its two M3
+// head counterbores also pass through it. The doubler is almost certainly
+// still useful (it stiffens the arm carrying the boss) but its ORIGINAL
+// justification no longer applies, so it should be re-derived rather than
+// inherited.
+//
 // Print: PA6-CF, MATING FACE (x=SPLIT_X) DOWN — the tenon and boss then rise
 // as the only overhangs and the bearing faces land on the bed. Same material
 // and settings as the coax (4 walls / 40% / 0.2).
