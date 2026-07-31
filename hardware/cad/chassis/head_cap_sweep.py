@@ -47,11 +47,23 @@ at the HAA end and stay far from the head at any hfe). Reachable range:
         homing calibration) — tested for sensitivity even though it
         isn't legal ROM yet.
 """
+import sys
+
 import numpy as np
 import trimesh
 
 import check_fit as cf  # validated transforms — rot(), tf(), coax_to_trunk_bases(),
                           # leg_cloud()/load_leg_parts() pattern, HIP_FA/HIP_LAT/HIP_Z
+import cad_contains   # #195 -- installed in main(); check_fit sets up the path,
+                      # so this import has to follow it
+
+#: mm. FAIL floor on closest approach inside the LEGAL ROM (haa +-15). This is
+#: a REGRESSION detector, not a design limit: the measured minimum is 31.8mm
+#: (head, hfe=-51 kfe=+50 haa=-15), so 10mm sits ~3x below it and below even the
+#: 19.5mm seen at the not-yet-legal haa=+-40 cap. Anything under it means the
+#: packaging changed materially and somebody should look, not that the robot is
+#: about to hit itself.
+MIN_CLEARANCE_MM = 10.0
 
 rot, tf = cf.rot, cf.tf
 T = trimesh.transformations.translation_matrix
@@ -113,8 +125,13 @@ def positive_control(riser):
 
 
 def main():
+    cad_contains.install()   # #195 -- reproducible containment
     targets = load_targets()
-    assert positive_control(targets['riser']), 'pipeline sanity check failed -- fix before trusting results'
+    if not positive_control(targets['riser']):
+        print('FAIL: positive control did not reproduce the known riser graze. '
+              'The pipeline is broken, so a "no contact" result below would be '
+              'meaningless -- fix this before trusting anything else here.')
+        return 1
 
     print('\n-- containment sweep: hfe -35..-95 (1deg), kfe every 10deg, haa in (-15,0,15) --')
     HFE = range(-35, -96, -1)
@@ -170,13 +187,40 @@ def main():
     for name, (d, hfe, kfe, haa) in sorted(best40.items(), key=lambda kv: kv[1][0]):
         print(f'  {name:16s} min_dist={d:6.1f}mm at hfe={hfe:+4d} kfe={kfe:+4d} haa={haa:+5.1f}')
 
+    # VERDICT, derived from what was just measured.
+    #
+    # This block used to print "No first contact found anywhere ..." as a
+    # literal, unconditionally -- after the loop above had already printed any
+    # CONTACT lines it found. A regression would therefore have reported its own
+    # collisions and then declared there were none, which is worse than saying
+    # nothing. It also never returned non-zero, so wiring it into CI in that
+    # state would have bought a permanently-green tick. See #47.
     print('\n=== RESULT ===')
-    print('No first contact found anywhere in the front leg\'s structurally-reachable hfe range '
-          '(-35 to -95, beyond leg_v6\'s own measured -93deg self-collision stop). The leg\'s OWN '
-          'self-collision (femur assembly vs coax, leg_v6/check_fit.py LA-19: clean to 92.5deg, '
-          'first contact 93deg) binds before the head does at ANY tested pose -- head clearance is '
-          'no longer the limiting constraint post the 2026-07-07 head-forward redesign.')
+    worst_name, (worst_d, wh, wk, wa) = min(best.items(), key=lambda kv: kv[1][0])
+    bad = False
+    if any_hit:
+        bad = True
+        print('FAIL: contact inside the legal ROM (haa +-15). See the CONTACT '
+              'lines above for the exact poses.')
+    elif worst_d < MIN_CLEARANCE_MM:
+        bad = True
+        print(f'FAIL: closest approach {worst_d:.1f}mm ({worst_name} at '
+              f'hfe={wh:+d} kfe={wk:+d} haa={wa:+.1f}) is under the '
+              f'{MIN_CLEARANCE_MM:.0f}mm floor. No contact yet, but the packaging '
+              f'moved materially -- re-derive the floor deliberately or fix the '
+              f'clearance.')
+    else:
+        print(f'OK: no contact anywhere in the front leg\'s structurally-reachable '
+              f'hfe range (-35 to -95, beyond leg_v6\'s own measured -93deg '
+              f'self-collision stop), and closest approach is {worst_d:.1f}mm '
+              f'({worst_name}) against a {MIN_CLEARANCE_MM:.0f}mm floor.')
+        print('  The leg\'s OWN self-collision (femur assembly vs coax, '
+              'leg_v6/check_fit.py LA-19: clean to 92.5deg, first contact 93deg) '
+              'binds before the head does at any tested pose -- head clearance is '
+              'not the limiting constraint post the 2026-07-07 head-forward '
+              'redesign.')
+    return 1 if bad else 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

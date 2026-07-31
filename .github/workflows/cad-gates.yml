@@ -116,6 +116,31 @@ jobs:
         working-directory: hardware/cad/leg_v6
         run: python servo_orientation_gate.py
 
+  head-clearance:
+    # #47 (SAFETY): FINE front-leg <-> head clearance. This existed as a script
+    # since 2026-07 and was run by NOTHING -- no workflow, no build_all.sh. It
+    # was written to REPLACE case-4's head window, which #47 found was a silent
+    # no-op; the replacement then ran nowhere, so the same check failed twice in
+    # different ways. (#228 revived the in-gate window; this is the fine
+    # surface-distance measurement it cannot do.)
+    #
+    # Its own job rather than a step in chassis-gates: ~2m10s against that job's
+    # ~30s, same reason rom-envelope-freshness was split out -- parallel, not
+    # serialised behind a fast gate.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install mesh deps
+        run: pip install -r hardware/cad/requirements.txt
+
+      - name: Front leg vs head/L2/D456 clearance sweep
+        working-directory: hardware/cad/chassis
+        run: python -u head_cap_sweep.py
+
   chassis-gates:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -217,6 +242,15 @@ jobs:
         # neither and be silently uncovered — the exact failure this gate exists
         # to prevent.
         run: python -u hardware/cad/check_generated_fresh.py --skip rom_envelope_table.py
+
+      - name: Every CI gate that uses contains() seeds it
+        # #195 was propagated by hand three times and missed sites every time
+        # (chassis/check_fit, then check_shoe + servo_orientation_gate +
+        # hfe_envelope). Enforced here so the fourth omission is loud rather
+        # than silent. Entrypoints are DISCOVERED from build_all.sh, these
+        # workflows, and check_generated_fresh's producer table -- a gate added
+        # later is in scope without anyone remembering to add it.
+        run: python -u hardware/cad/check_seeding.py
 
   rom-envelope-freshness:
     # Split out of generated-freshness because it is ~15x the cost of the other

@@ -70,6 +70,7 @@ import trimesh
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 from cad_assets import asset  # noqa: E402  (path insert must come first)
+import cad_contains  # noqa: E402  (#195 -- installed in main())
 
 # Was HERE.parents[3] / "feetech_servo_models" — relative, but still reaching
 # OUT of proj/ into the root repo, so it could not run in CI (#166). Vendored.
@@ -137,6 +138,10 @@ def interference(mesh, pts, xform, axis_pt, axis):
 
 
 def main() -> int:
+    # #195: this gate casts into coax_R, the mesh with the highest measured
+    # contains() flicker rate (6/20 fresh processes), and its verdicts turn on
+    # sub-mm margins. See cad_contains.
+    cad_contains.install()
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--samples", type=int, default=15000)
     args = ap.parse_args()
