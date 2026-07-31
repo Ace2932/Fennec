@@ -1,12 +1,19 @@
 """Analytic 3-DOF kinematics for one NovaSM3 leg (pure math, no ROS/hardware).
 
-Chain matches nova_description: HAA (hip ab/ad, roll about +x) -> lateral hip
-offset d along the leg's +y -> HFE (hip flex, pitch about +y) -> femur a1 ->
-KFE (knee, pitch about +y) -> tibia a2 -> foot. All in the hip (HAA-axis) frame,
-metres / radians.
+Chain matches nova_description: HAA (hip ab/ad, roll about +x) -> a fixed
+drop of hip_to_upper_z BELOW the haa axis, then lateral hip offset d along
+the leg's +y -> HFE (hip flex, pitch about +y) -> femur a1 -> KFE (knee,
+pitch about +y) -> tibia a2 -> foot. All in the hip (HAA-axis) frame,
+metres / radians. #224: the z-drop term used to be silently folded to zero
+(nova.urdf.xacro's hip_to_upper_z, -9.5mm, was never carried into the
+planar-to-rolled transform below) — every one of URDF/MJCF/leg_ik was
+internally consistent and nothing cross-checked the solver against a
+ground-truth model (same shape of bug as #175). Fixed: "the hip (HAA-axis)
+frame" in the sentence above is now literally true (z=0 at the haa row) —
+before #224 it was a wish, not a fact, because the drop was missing.
 
-Convention (matches FK below): at angles (0,0,0) the leg points straight down,
-foot at (0, d, -(a1+a2)).
+Convention (matches FK below): at angles (0,0,0) the leg points straight
+down, foot at (0, d, -(a1 + a2 + hip_to_upper_z)).
 
 FK is the unambiguous reference; IK is the closed-form inverse and is validated
 by FK(IK(p)) == p round-trips in test_leg_kinematics.py — so a sign error in IK
@@ -33,6 +40,14 @@ class LegParams:
     # variant d=3.3 shelved until a balance controller exists.)
     femur: float = 0.1069  # a1 — HFE to KFE   MEASURED 2026-07-01 (STL bores, 106.9 mm)
     tibia: float = 0.1290  # a2 — KFE to foot  MEASURED 2026-07-01 (STL foot-post ctr)
+    # #224: haa->hfe z-drop, MAGNITUDE (applied as a drop below the haa axis
+    # in the post-roll frame). nova.urdf.xacro hip_to_upper_z = -0.0095
+    # (leg.macro.xacro:51) — MEASURED, sits BETWEEN the haa roll joint and
+    # the planar (hfe/kfe) linkage, so it was never a `d`-style lateral term
+    # and forward_kinematics omitted it entirely until now. Cross-checked
+    # against sim/nova_mjx/nova.xml (ground truth, independently authored)
+    # by test_urdf_sync.test_leg_ik_z_drop_matches_mjcf_FL_RR_grid.
+    hip_to_upper_z: float = 0.0095
     # joint limits (rad) = the CAD fit-gate ROM (2026-07-06, replaces the
     # TODO-CAD placeholders; single source: nova.urdf.xacro + limits.py):
     haa_range: float = 0.262  # ±15° conservative symmetric — the chassis
@@ -76,14 +91,18 @@ class Unreachable(ValueError):
 def forward_kinematics(theta, p: LegParams):
     """(haa, hfe, kfe) radians -> foot (x, y, z) in hip frame (metres)."""
     t1, t2, t3 = theta
-    a1, a2, d = p.femur, p.tibia, p.hip_offset
+    a1, a2, d, h = p.femur, p.tibia, p.hip_offset, p.hip_to_upper_z
     # planar (sagittal) reach, pitch about +y; straight-down at t2=t3=0
     px = -a1 * math.sin(t2) - a2 * math.sin(t2 + t3)
     pz_plane = -(a1 * math.cos(t2) + a2 * math.cos(t2 + t3))  # negative = down
+    # #224: the planar linkage origin sits h BELOW the haa axis in the
+    # post-roll frame (nova.urdf.xacro hip_to_upper_z), so what actually
+    # rolls with the haa joint is (d, pz_plane - h), not (d, pz_plane).
+    u = pz_plane - h
     # HAA roll about +x rotates (y, z); x carries the sagittal reach
     x = px
-    y = d * math.cos(t1) - pz_plane * math.sin(t1)
-    z = d * math.sin(t1) + pz_plane * math.cos(t1)
+    y = d * math.cos(t1) - u * math.sin(t1)
+    z = d * math.sin(t1) + u * math.cos(t1)
     return (x, y, z)
 
 
@@ -95,16 +114,22 @@ def inverse_kinematics(foot, p: LegParams, knee_forward: bool = True):
     (caller checks against p.*_range); see within_limits().
     """
     x, y, z = foot
-    a1, a2, d = p.femur, p.tibia, p.hip_offset
+    a1, a2, d, h = p.femur, p.tibia, p.hip_offset, p.hip_to_upper_z
 
     # --- HAA (roll) ---
+    # (y, z) is (d, u) rotated by t1 (u = pz_plane - h, the post-roll-frame
+    # linkage origin's z — see forward_kinematics). Solving for t1 from
+    # (y, z) is UNCHANGED by #224: d is untouched, and this circle solve
+    # never referenced pz_plane directly, only the rotated pair.
     yz2 = y * y + z * z
     if yz2 < d * d:
         raise Unreachable(f"foot inside hip offset: |yz|={math.sqrt(yz2):.4f} < d={d}")
-    r = math.sqrt(yz2 - d * d)  # = -pz_plane (>=0)
-    pz_plane = -r
-    t1 = math.atan2(z, y) - math.atan2(pz_plane, d)
+    r = math.sqrt(yz2 - d * d)  # = -u (>=0)
+    u = -r
+    t1 = math.atan2(z, y) - math.atan2(u, d)
     t1 = math.atan2(math.sin(t1), math.cos(t1))  # wrap to [-pi, pi]
+    # #224: undo the roll-frame shift to recover the planar (hfe/kfe) target.
+    pz_plane = u + h
 
     # --- planar 2-link (femur a1, tibia a2) for HFE/KFE ---
     px = x

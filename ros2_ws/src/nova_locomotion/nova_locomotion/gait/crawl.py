@@ -40,7 +40,9 @@ _SIGN_Y = {"FL": 1.0, "FR": -1.0, "RL": 1.0, "RR": -1.0}
 class CrawlParams:
     step_length: float = 0.05  # total fore-aft foot travel (m)
     step_height: float = 0.025  # swing apex lift (m)
-    stand_height: float = 0.190  # nominal hip-to-foot drop (m), = trot/choreo (#150)
+    # #224: 0.190 -> 0.1995 (+ hip_to_upper_z, 9.5mm), same physical stance —
+    # see trot.TrotParams.stand_height for the derivation.
+    stand_height: float = 0.1995  # nominal hip-to-foot drop (m), = trot/choreo (#150)
     stand_y: float = 0.0643  # lateral foot offset = hip_offset (stock stance)
     duty: float = 0.8  # stance fraction — 4x0.2 swing + 4x0.05 four-stance gaps
     shift_amp: float = 0.018  # CoM pre-shift amplitude per axis (m), 15-20 mm class

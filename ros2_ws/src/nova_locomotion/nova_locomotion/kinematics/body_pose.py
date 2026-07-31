@@ -75,7 +75,13 @@ class BodyPoseParams:
     # neutral_anchors() must subtract fore-aft.
     hip_to_upper_x: float = 0.0116
     half_y: float = 0.03905
-    stand_height: float = 0.18  # hip-to-foot drop (matches TrotParams/ChoreoParams)
+    # #224: 0.18 -> 0.1895 (+ hip_to_upper_z, 9.5mm). leg_ik's z fix made the
+    # solver honest about the haa->hfe drop it used to omit; the OLD solver
+    # was already placing the physical foot 9.5mm deeper than this number
+    # claimed (it hit its own un-dropped z target exactly, but the TRUE
+    # chain has the drop). Same physical stance as before -- only the
+    # number that produces it changed.
+    stand_height: float = 0.1895  # hip-to-foot drop (matches TrotParams/ChoreoParams)
     stand_y: float = (
         0.0643  # foot outboard of HAA = LegParams.hip_offset (stock stance)
     )

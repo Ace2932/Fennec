@@ -12,11 +12,13 @@ Mapping (URDF xacro property -> LegParams field):
   |lower_to_foot_z|  -> tibia
 """
 
+import math
 import os
 import re
 import pytest
 
-from nova_locomotion.kinematics.leg_ik import LegParams
+from nova_locomotion.kinematics.leg_ik import LegParams, forward_kinematics
+
 
 # nova_description URDF, relative to this test file
 _URDF = os.path.normpath(
@@ -237,7 +239,6 @@ def test_sim_never_permits_a_fold_the_chassis_gate_would_REFUSE():
     The front was the mirror error — 17.9 deg TIGHTER than the gate allows,
     costing stride for nothing.
     """
-    import math
 
     from nova_ops.rom_envelope import hfe_bounds
 
@@ -260,7 +261,6 @@ def test_sim_never_permits_a_fold_the_chassis_gate_would_REFUSE():
 def test_the_OLD_symmetric_range_would_fail_that_check():
     """Negative control. If a symmetric range passed, the test above proves
     nothing — and symmetric is exactly what the file carried."""
-    import math
 
     from nova_ops.rom_envelope import hfe_bounds
 
@@ -270,3 +270,115 @@ def test_the_OLD_symmetric_range_would_fail_that_check():
         "the old symmetric rear range should violate the gate bound; if it "
         "does not, this check has stopped discriminating"
     )
+
+
+# ---- #224: the haa->hfe z-drop leg_ik.forward_kinematics silently omitted ---
+#
+# nova.urdf.xacro's hip_to_upper_z = -0.0095 (leg.macro.xacro:51) sits BETWEEN
+# the HAA roll joint and the planar (hfe/kfe) linkage: the linkage origin is
+# 9.5mm BELOW the haa axis in the post-roll frame, not AT it. leg_ik's FK
+# folded the whole lateral offset into one scalar `d` along the un-rotated
+# +y and never carried this z term — same shape of bug as #175 (a seam where
+# every file, URDF/MJCF/leg_ik, was internally consistent and nothing
+# cross-checked the solver against a ground-truth model). This is that
+# cross-check, generalized to z: FL (front/left) and RR (rear/right) cover
+# both mirrors (front/rear hip_to_upper_x sign, #223; left/right haa sign,
+# solve_side) against sim/nova_mjx/nova.xml — an independently authored
+# MuJoCo model whose build_mjcf.py HAA_TO_HFE already carries the real
+# z-drop (-0.0095), so it is ground truth here, not another copy of the bug.
+#
+# Sign map (mujoco qpos -> leg_ik canonical angle), measured by perturbing
+# each joint in the MJCF and comparing the induced foot-delta direction
+# against leg_ik's own FK (scratchpad measurement, not committed):
+# solver_angle = qpos for FL/RL; haa negated + canonical-y flipped for
+# FR/RR; hfe/kfe are +1 (identity) on every leg.
+#
+# The MJCF's hip_to_upper_x is a SEPARATE, x-only seam (already fixed at the
+# body_pose boundary by #223): it is a per-END (front -x / rear +x) constant
+# offset on the child body, invariant under the haa roll because roll is
+# about +x. Subtracting it (read off the MJCF itself, not hardcoded) isolates
+# the y/z drop this test checks — leaving it in would make this test
+# re-litigate #223 and could tempt a "fix" that double-counts it by adding x
+# to the solver too.
+#
+# Pre-fix failure (measured): ~9.5mm z error at haa=0, tolerance 0.5mm.
+
+
+def _mjcf_upper_x(xml: str, leg: str) -> float:
+    m = re.search(rf'name="{leg}_upper" pos="(-?[0-9.]+)', xml)
+    assert m, f"no {leg}_upper body in MJCF"
+    return float(m.group(1))
+
+
+_MJCF_LEG_SIGN = {
+    # leg: (haa_sign, canonical_y_flip) -- solver_angle = sign * mujoco_qpos;
+    # hfe/kfe are identity (+1) on every leg, so they are not in this table.
+    "FL": (1.0, 1.0),
+    "RR": (-1.0, -1.0),
+}
+
+
+@pytest.mark.skipif(not os.path.exists(_MJCF), reason="generated MJCF not present")
+def test_leg_ik_z_drop_matches_mjcf_FL_RR_grid():
+    """#224 guard. Would have caught #224 (this bug) AND #175 (the fore-aft
+    pitch-station seam) — both are 'every file agrees with itself, nothing
+    checks the solver against the model' bugs, and this is the first test in
+    the suite that actually loads the ground-truth MJCF and compares it
+    against leg_ik's FK, not just against another hand-copied constant."""
+    mujoco = pytest.importorskip("mujoco")
+
+    xml = open(_MJCF).read()
+    model = mujoco.MjModel.from_xml_path(_MJCF)
+    data = mujoco.MjData(model)
+
+    def jid(name):
+        return mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
+
+    def bid(name):
+        return mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name)
+
+    def foot_rel_haa_anchor(leg):
+        haa_id = jid(f"{leg}_haa")
+        foot_id = bid(f"{leg}_foot")
+        return data.xpos[foot_id].copy() - data.xanchor[haa_id].copy()
+
+    def set_leg_qpos(leg, haa, hfe, kfe):
+        for suffix, val in (("haa", haa), ("hfe", hfe), ("kfe", kfe)):
+            data.qpos[model.jnt_qposadr[jid(f"{leg}_{suffix}")]] = val
+
+    P = LegParams()
+    haa_deg = (-15, 0, 15, 40)
+    hfe_deg = (-40, 0, 30)
+    kfe_deg = (0, 80)
+    tol = 0.5e-3  # 0.5 mm
+
+    checked = 0
+    for leg in ("FL", "RR"):
+        haa_sign, y_flip = _MJCF_LEG_SIGN[leg]
+        ux = _mjcf_upper_x(xml, leg)  # per-END x offset, #223's seam, not this one
+        for hd in haa_deg:
+            for pd in hfe_deg:
+                for kd in kfe_deg:
+                    t1, t2, t3 = math.radians(hd), math.radians(pd), math.radians(kd)
+                    solver = forward_kinematics((t1, t2, t3), P)
+
+                    mujoco.mj_resetData(model, data)
+                    data.qpos[0:3] = 0.0
+                    data.qpos[3:7] = [1.0, 0.0, 0.0, 0.0]  # identity root
+                    set_leg_qpos(leg, haa_sign * t1, t2, t3)
+                    mujoco.mj_forward(model, data)
+                    raw = foot_rel_haa_anchor(leg)
+                    model_canon = (raw[0] - ux, y_flip * raw[1], raw[2])
+
+                    for axis, (a, b) in enumerate(zip(model_canon, solver)):
+                        assert abs(a - b) < tol, (
+                            leg,
+                            hd,
+                            pd,
+                            kd,
+                            axis,
+                            model_canon,
+                            solver,
+                        )
+                    checked += 1
+    assert checked == 2 * len(haa_deg) * len(hfe_deg) * len(kfe_deg)

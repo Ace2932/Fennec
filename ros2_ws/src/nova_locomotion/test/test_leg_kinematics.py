@@ -25,8 +25,11 @@ def _close(a, b, tol=1e-6):
 
 
 def test_neutral_pose_is_straight_down():
+    # #224: the foot sits hip_to_upper_z BELOW the haa axis in addition to
+    # the femur+tibia reach — the old expected value silently assumed that
+    # drop was zero (it wasn't; it was just missing from FK).
     foot = forward_kinematics((0.0, 0.0, 0.0), P)
-    assert _close(foot, (0.0, P.hip_offset, -(P.femur + P.tibia)))
+    assert _close(foot, (0.0, P.hip_offset, -(P.femur + P.tibia + P.hip_to_upper_z)))
 
 
 def test_fk_ik_roundtrip_grid():
@@ -102,8 +105,8 @@ def test_hfe_window_is_posture_aware_and_end_specific():
     # ends are constrained in opposite directions
     front_lo, front_hi = hfe_bounds("FL", 0.0, kfe)
     rear_lo, rear_hi = hfe_bounds("RL", 0.0, kfe)
-    assert front_hi < rear_hi   # front is the one capped going toward-trunk
-    assert rear_lo > front_lo   # rear is the one capped going the other way
+    assert front_hi < rear_hi  # front is the one capped going toward-trunk
+    assert rear_lo > front_lo  # rear is the one capped going the other way
 
     # an unknown leg cannot know its end -> conservative INTERSECTION
     u_lo, u_hi = hfe_bounds(None, 0.0, kfe)
@@ -111,10 +114,15 @@ def test_hfe_window_is_posture_aware_and_end_specific():
 
 
 def test_workspace_reach_matches_links():
-    """Max straight-leg reach equals a1+a2 along -z (knee straight)."""
+    """Max straight-leg reach equals a1+a2+hip_to_upper_z along -z (knee straight).
+
+    #224: the reach now includes the haa->hfe z-drop — the leg's actual
+    farthest-down point is hip_to_upper_z past the femur+tibia extension,
+    not at it (the drop was previously omitted from FK, not physically
+    absent)."""
     foot = forward_kinematics((0.0, 0.0, 0.0), P)
     reach = math.hypot(foot[0], foot[2])  # sagittal distance from hip in x-z
-    assert abs(reach - (P.femur + P.tibia)) < 1e-9
+    assert abs(reach - (P.femur + P.tibia + P.hip_to_upper_z)) < 1e-9
 
 
 def test_solve_side_mirrors_haa_only():

@@ -35,7 +35,7 @@ ITEMS = [
 M = sum(m for _,m,_,_ in ITEMS)
 Mx = sum(m*x for _,m,x,_ in ITEMS)
 com_x = Mx/M
-BASE = 141.2                           # fore-aft support half-span (hips/feet)
+BASE = 129.6  # #224: feet anchor at the pitch station (haa station minus hip_to_upper_x), since #223
 print(f"{'mass (g)':>10} {'x (mm)':>8}  item")
 for nm,m,x,note in ITEMS:
     print(f"{m:>10.0f} {x:>8.1f}  {nm:<28} {note}")
