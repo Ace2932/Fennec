@@ -229,7 +229,104 @@ def _clearance_warn(target, p, label, floor_mm=1.0):
     min_d = min_clearance_chunked(target, p)
     if min_d < floor_mm:
         print(f'   WARN  {label}: clearance floor {min_d:.2f}mm (<{floor_mm:.1f}mm, '
-              f'outside the r13 mask but a genuine near-miss — see LA-19)')
+              f'outside the designed-contact mask but a genuine near-miss — see LA-19)')
+
+
+# ---------------------------------------------------------------------------
+# Designed-contact mask (#226, 2026-07-31) -- replaces the old bare "r > 13".
+#
+# WHY A MASK AT ALL: the bolted disc/boss interfaces at a joint axis overlap BY
+# DESIGN, so an unmasked containment sweep reads blocked at every step and says
+# nothing. Excluding them is correct. Two rules make the exclusion honest, and
+# both were learned by shipping a part that could not be assembled:
+#
+#  1. RADIUS IS 10.3, NOT 13.  Measured 2026-07-31 across both rotation sweeps:
+#     the designed overlap tops out at r = 10.00 EXACTLY (kfe 3.31..10.00, hfe
+#     0.67..10.00, identical at every angle). r=13 was 3mm of gratuitous blind
+#     spot -- and that annulus is where the #67 horn-bolt regression (BCD r=7)
+#     hid, which cost a redesign.
+#
+#  2. ROTATION SWEEPS ONLY.  The justification is symmetry: a rotationally-
+#     symmetric interface cannot be created OR resolved by rotating about its
+#     own axis, so masking it discards no information. TRANSLATION has no such
+#     symmetry -- a stub nested in a bore is untroubled by rotation and utterly
+#     trapped by translation. #226 is exactly that failure: the mask was copied
+#     onto the +Y insertion sweep ("same r13 convention as the hip-pitch
+#     sweep"), where it swallowed the Ø19 outboard boss (r 0.7..9.5, x 51.6..
+#     56.0) that stops the HFE joint assembling. The gate reported CLEAN for
+#     its entire existence, on a part Aiden then printed and could not build.
+#     insertion_checks() therefore masks NOTHING; see its docstring.
+#
+# Rule 2 is enforced, not just documented: mask_invariance_check() re-tests the
+# masked points and fails if the masked overlap MOVES across the sweep, so a
+# future edit cannot quietly park an interference inside the mask the way the
+# boss did.
+#
+# It measures the ENVELOPE of the masked overlap, not its point COUNT. Counting
+# was tried first and is far too blunt: designed contact contributes a ~380pt
+# baseline carrying ~10% surface-sampling noise, so deliberately widening the
+# mask until it swallowed a REAL collision (the hfe mech stop at +-95/100deg)
+# moved the count only 10% -> 15% and the check stayed quiet. Measured on the
+# same planted case, the envelope is not swamped, because designed contact sits
+# in a FIXED (r, axial) box and interference has to push a corner of it:
+#
+#     mask r=10.3 (sound)   drift: r_max 0.00mm, ax_min 0.00mm, ax_max 0.02mm
+#     mask r=20.0 (planted) drift: r_max 10.00mm, ax_min 0.00mm, ax_max 39.66mm
+#
+# ~500x separation instead of 1.5x. The threshold below sits 50x above the
+# observed noise and 10x below the observed signal.
+DESIGNED_CONTACT_R = 10.3
+MASK_DRIFT_MM = 1.0
+#: Points allowed to overlap at the SEATED pose (t=0) of the insertion sweep.
+#: Measured 0 on the current geometry. Raising this is a deliberate act that
+#: needs a reason in the commit, not a knob to turn when the gate goes red.
+SEATED_OVERLAP_EXPECTED = 0
+
+
+def mask_invariance_check(envelopes, label):
+    """Assert the designed-contact mask is hiding designed contact.
+
+    `envelopes` = per-sweep-step (n, r_max, axial_min, axial_max) of the points
+    the mask excluded that were actually inside the target. Designed contact is
+    rotation-invariant: the same interface overlaps the same way at every
+    angle, so its envelope is fixed to within sampling noise. An envelope that
+    MOVES means the masked region contains something the sweep is genuinely
+    travelling through -- i.e. the mask is concealing interference, and every
+    'OK' this sweep printed is worth nothing.
+    """
+    live = [e for e in envelopes if e[0] > 0]
+    if not live:
+        return False        # nothing masked -> nothing to justify
+    if len(live) < 2:
+        # Drift is a spread across steps; one step has no spread and would
+        # report a flat 0.00mm -- an "OK" that checked nothing. Say so instead.
+        print(f'   NOTE  {label}: only {len(live)} sweep step masked anything, '
+              f'so invariance is INCONCLUSIVE here (a single sample cannot '
+              f'drift). Not evidence the mask is sound.')
+        return False
+    arr = np.array([e[1:] for e in live], dtype=float)
+    drift = arr.max(axis=0) - arr.min(axis=0)
+    ns = [e[0] for e in live]
+    if drift.max() > MASK_DRIFT_MM:
+        print(f'   MASK  {label}: the masked-out overlap MOVES across the sweep '
+              f'(drift r_max {drift[0]:.2f}mm, axial {drift[1]:.2f}/{drift[2]:.2f}mm '
+              f'> {MASK_DRIFT_MM}mm). That is not designed contact, it is '
+              f'interference hiding inside the r{DESIGNED_CONTACT_R} mask, so this '
+              f'sweep\'s OK verdicts are void. See #226.')
+        return True
+    print(f'   OK    {label}: masked-out overlap fixed to '
+          f'{drift.max():.2f}mm across the sweep ({min(ns)}..{max(ns)} pts) '
+          f'-- consistent with designed contact')
+    return False
+
+
+def _mask_envelope(inside, radial, axial):
+    """(n, r_max, axial_min, axial_max) of the masked points that are inside."""
+    n = int(inside.sum())
+    if n == 0:
+        return (0, 0.0, 0.0, 0.0)
+    return (n, float(radial[inside].max()),
+            float(axial[inside].min()), float(axial[inside].max()))
 
 
 def sweep_checks(servo, pts0):
@@ -259,8 +356,10 @@ def sweep_checks(servo, pts0):
                          trimesh.transform_points(pts0, rot_z180())])
     T_knee = trimesh.transformations.translation_matrix([106.9, 0, 0])
     print('-- knee fold sweep (tibia+servo vs femur+knee_arm)')
-    print('   (points within r13 of the joint axis excluded: the bolted')
-    print('    disc/boss interfaces overlap BY DESIGN, rotation-symmetric)')
+    print(f'   (points within r{DESIGNED_CONTACT_R} of the joint axis excluded: the bolted')
+    print('    disc/boss interfaces overlap BY DESIGN, rotation-symmetric.')
+    print('    The exclusion is re-tested for invariance below -- see #226)')
+    kfe_masked = []
     # LA-19c: kfe=0 added -- this is where the named r13-14 near-miss sits.
     # NAMED (2026-07-11, cross-section probe): the closest approach is the
     # TIBIA pocket-block underside (SLAB_Z0/FLOOR_BOT, z=-22.2, a flat
@@ -274,8 +373,17 @@ def sweep_checks(servo, pts0):
     for ang in [-109, -90, -60, 0, 60, 90, 109, 118]:  # sw limit 1.9rad=109; 118 = measured mech stop (expect HIT, documents it)
         T = T_knee @ trimesh.transformations.rotation_matrix(
             np.radians(ang), [0, 0, 1])
-        p = trimesh.transform_points(tib_pts, T)
-        p = p[np.linalg.norm(p[:, :2] - [106.9, 0], axis=1) > 13]
+        p_all = trimesh.transform_points(tib_pts, T)
+        r_all = np.linalg.norm(p_all[:, :2] - [106.9, 0], axis=1)
+        near = r_all <= DESIGNED_CONTACT_R
+        p = p_all[~near]
+        # envelope what the mask throws away, so mask_invariance_check() can
+        # prove it is designed contact and not a hidden obstruction (#226).
+        # kfe axis is Z -> axial coordinate is z.
+        pm = p_all[near]
+        kfe_masked.append(_mask_envelope(
+            contains_chunked(femur, pm) | contains_chunked(arm, pm),
+            r_all[near], pm[:, 2]))
         inside_fem = contains_chunked(femur, p)
         inside_arm = contains_chunked(arm, p)
         n = int(inside_fem.sum()) + int(inside_arm.sum())
@@ -298,6 +406,7 @@ def sweep_checks(servo, pts0):
          @ rot_z180()
          @ trimesh.transformations.rotation_matrix(np.pi/2, [0, 1, 0]))
     print('-- hip pitch sweep (femur assembly vs coax+coax_hfe_plate)')
+    hfe_masked = []
     # LA-19a: extended past the sw limit (86) to ±90/95/100 to pin the mech
     # stop, same pattern as the kfe sweep's 109/118. Measured (2026-07-11,
     # 0.5deg-resolution bisection): clean through ±92.5deg, first contact at
@@ -305,16 +414,26 @@ def sweep_checks(servo, pts0):
     for ang in [-100, -95, -90, -86, -60, -30, 30, 60, 86, 90, 95, 100]:
         S = rot_about(ang, [1, 0, 0], [33.8, 11.6, -9.5])
         # place femur (M), then rotate about the hfe axis (S)
-        p = trimesh.transform_points(
+        p_all = trimesh.transform_points(
             trimesh.transform_points(fem_asm, M), S)
-        # exclude the designed disc/boss interface about the hfe X-axis
-        p = p[np.linalg.norm(p[:, 1:] - [11.6, -9.5], axis=1) > 13]
+        # exclude the designed disc/boss interface about the hfe X-axis, and
+        # keep the excluded points so the exclusion can be justified (#226)
+        # hfe axis is X -> axial coordinate is x
+        r_all = np.linalg.norm(p_all[:, 1:] - [11.6, -9.5], axis=1)
+        near = r_all <= DESIGNED_CONTACT_R
+        p, pm = p_all[~near], p_all[near]
+        hfe_masked.append(_mask_envelope(
+            contains_chunked(coax, pm), r_all[near], pm[:, 0]))
         n = int(contains_chunked(coax, p).sum())
         status = 'OK ' if n == 0 else 'HIT'
         if n and abs(ang) <= 86: bad = True   # hits beyond sw limit (86) document the mech stop (~93deg), same convention as kfe
         print(f'   {status} hfe {ang:+4d}deg: {n} pts')
         if n == 0 and abs(ang) <= 86:
             _clearance_warn(coax, p, f'hfe {ang:+4d}deg vs coax')
+    print('-- designed-contact mask invariance (#226: the mask must hide only '
+          'designed contact) --')
+    bad = mask_invariance_check(kfe_masked, 'kfe fold mask') or bad
+    bad = mask_invariance_check(hfe_masked, 'hfe pitch mask') or bad
     return bad
 
 
@@ -701,7 +820,30 @@ def insertion_checks(servo, pts0):
     housing's own pocket wall blocks -X; the integral outboard arm blocks
     +X). Real assembly: femur approaches from behind the coax (+Y), slides
     forward (-Y) to seat, wheel bolts to the integral outboard boss, THEN
-    coax_hfe_plate bolts on to capture the horn."""
+    coax_hfe_plate bolts on to capture the horn.
+
+    #226 (2026-07-31) -- THIS SWEEP MASKS NOTHING, AND MUST NOT.
+    It used to drop every point within r13 of the hfe axis, inheriting the
+    rotation sweeps' designed-contact mask verbatim ("same r13 convention as
+    the hip-pitch sweep"). That convention does not transfer. The rotation
+    mask is justified by SYMMETRY -- a rotationally-symmetric interface can
+    be neither created nor resolved by rotating about its own axis, so
+    discarding it discards nothing. A TRANSLATION has no such symmetry: a
+    stub nested in a bore is perfectly happy under rotation and completely
+    trapped under translation, which is precisely the geometry an insertion
+    sweep exists to interrogate. The mask therefore deleted this gate's own
+    subject.
+
+    What it hid, measured: the Ø19 integral OUTBOARD boss, r 0.7..9.5 (well
+    inside r13), x 51.6..56.0, ploughing the femur hub over 24mm of travel --
+    327 points across t=4..24mm, reported as a clean 0. Aiden printed the
+    part; it will not assemble.
+
+    And the mask was never even load-bearing: at t=0 (seated) it suppresses
+    ZERO points, so the "legitimate seated contact" it was justified by does
+    not exist in this pose. It was pure loss. Designed seated contact, if a
+    future revision has any, is handled by the t=0 exemption below -- which
+    is asserted, not assumed, so it cannot become the next hiding place."""
     bad = False
     coax = trimesh.load('coax_R.stl')   # plate OFF -- this is the state the
                                          # femur must be insertable/removable in
@@ -716,16 +858,46 @@ def insertion_checks(servo, pts0):
          @ trimesh.transformations.rotation_matrix(np.pi / 2, [0, 1, 0]))
     seated = trimesh.transform_points(fem_asm, M)
     print('-- #53 insertion sweep (femur+HFE-servo assembly vs coax, plate OFF, +Y) --')
-    for t in range(0, 72, 4):
+    print('   (NO radial mask -- see #226 in the docstring; a translation sweep '
+          'cannot mask its own axis)')
+    blocked_t = []
+    for t in range(0, 72, 2):
         p = seated.copy()
         p[:, 1] += t
-        # exclude the designed disc/boss interface about the hfe X-axis (same
-        # r13 convention as the hip-pitch sweep -- legitimate seated contact)
-        p = p[np.linalg.norm(p[:, 1:] - [11.6, -9.5], axis=1) > 13]
-        n = int(contains_chunked(coax, p).sum())
+        inside = contains_chunked(coax, p)
+        n = int(inside.sum())
         status = 'OK ' if n == 0 else 'HIT'
-        if n and t > 0: bad = True   # t=0 (seated) legitimately touches at the disc interfaces
-        print(f'   {status} t=+{t:3d}mm: {n} pts')
+        # t=0 (seated) may legitimately touch at the disc interfaces, so it is
+        # exempt from the travel test -- but the exemption is bounded by a
+        # DECLARED expectation rather than being open-ended. Measured today the
+        # seated pose overlaps by 0 points, so any overlap at all is new and
+        # must be justified by whoever introduces it, not absorbed silently.
+        # (An earlier revision of this block only printed a NOTE here while the
+        # comment claimed it "asserted" the exemption -- a WARN wearing an
+        # assertion's label, which is the exact thing this gate exists to stop.)
+        if t == 0 and n > SEATED_OVERLAP_EXPECTED:
+            bad = True
+            print(f'SEAT  t=0 (seated): {n} pts overlap, expected '
+                  f'<={SEATED_OVERLAP_EXPECTED}. Either the seat pose is wrong -- '
+                  f'in which case every later step is measured from a bad origin '
+                  f'-- or a real disc interface was introduced, in which case '
+                  f'raise SEATED_OVERLAP_EXPECTED deliberately and say why.')
+        if n and t > 0:
+            bad = True
+            blocked_t.append(t)
+            # name the obstruction: where it is in (r, x) is what tells you
+            # WHICH feature to change. #226 was found exactly this way.
+            q = p[inside]
+            r = np.linalg.norm(q[:, 1:] - [11.6, -9.5], axis=1)
+            print(f'   {status} t=+{t:3d}mm: {n} pts  r {r.min():5.2f}..{r.max():5.2f}'
+                  f'  x {q[:, 0].min():6.2f}..{q[:, 0].max():6.2f}')
+        else:
+            print(f'   {status} t=+{t:3d}mm: {n} pts')
+    if blocked_t:
+        print(f'BLOCK insertion sweep: the femur+HFE-servo assembly cannot be '
+              f'withdrawn -- obstructed over t=+{min(blocked_t)}..+{max(blocked_t)}mm '
+              f'({len(blocked_t)} of {len(range(2, 72, 2))} travel steps). The joint '
+              f'does not assemble. See #226.')
     return bad
 
 
