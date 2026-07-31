@@ -90,18 +90,37 @@ def contains_seeded(mesh, points):
         np.random.set_state(state)
 
 
-def install():
+def install(announce=True):
     """Make every Trimesh.contains() call in this process reproducible.
 
     Idempotent. Returns True if it patched, False if already installed.
+
+    ASSERTS that the patch actually took, and says so on stdout. Without that
+    this is an invariant nothing can observe: if a future trimesh turns
+    `contains` into a property or descriptor, the assignment below would still
+    "succeed" while every call site kept using the unseeded original, and the
+    gate would go green having silently lost its reproducibility. A silent
+    installer is indistinguishable from an absent one -- the same failure this
+    module exists to remove, so it is checked rather than assumed.
     """
     global _installed
     if _installed:
         return False
+    if not callable(getattr(trimesh.Trimesh, 'contains', None)):
+        raise RuntimeError(
+            'trimesh.Trimesh.contains is not a plain callable on this version '
+            f'({trimesh.__version__}) -- the #195 seeding patch would not take. '
+            'Re-derive the patch point before trusting any gate verdict.')
     trimesh.Trimesh.contains = contains_seeded
+    if trimesh.Trimesh.contains is not contains_seeded:
+        raise RuntimeError('#195 seeding patch did not take -- refusing to run '
+                           'a gate whose verdicts would be non-reproducible.')
     _installed = True
+    if announce:
+        print(f'   contains() seeding ACTIVE (#195, seed={CONTAINS_SEED}, '
+              f'trimesh {trimesh.__version__})')
     return True
 
 
 def is_installed():
-    return _installed
+    return _installed and trimesh.Trimesh.contains is contains_seeded
