@@ -131,7 +131,20 @@ BRIDGE_Z0  = 7.4;                            // femur disc sweep tops at 6.35; r
 // corollary that the key must be CLOSED both ways (a compression-only key
 // cannot react peel), hence the shrink on y0/y1/z0/z1 and flush only at x1.
 //
-// See hfe_block_study.py for the geometry proof and its negative control.
+// MOUTH RULED OUT (#221 candidate F, retired with hfe_mouth_study.py). Before
+// C, the idea was to keep the cap architecture and cut a rear MOUTH so the
+// horn could slide out sideways. Measured with the mask removed: 4,477 hits,
+// of which 2,339 are on the O19 INTEGRAL OUTBOARD boss -- not on the cap at
+// all, so no mouth cut anywhere in the cap could ever reach them. The mouth
+// cannot work, and not by a margin a better mouth closes. Recorded here
+// because the study that proved it is retired.
+//
+// The geometry proof for THIS joint (and its negative control: at equal boss/
+// bore radii the two graze at r 9.47..9.49 and both the femur and the block
+// read trapped) lived in hfe_block_study.py, also retired -- check_fit's
+// insertion_checks + removable_member_checks now gate the same properties
+// against the shipped STLs, which is strictly better than a study that
+// rebuilds them.
 SPLIT_X     = ARM_OUT_X0;        // 56.2 -- block mating plane
 BOSS_X0     = FEMUR_MID - WHEEL_Z0;   // 51.55 = the femur wheel contact face
 BOSS_X0_CLR = BOSS_X0 - 2;            // bore starts a little inboard of it

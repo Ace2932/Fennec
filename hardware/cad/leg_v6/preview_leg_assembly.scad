@@ -16,7 +16,7 @@ use <coax.scad>
 HFE_Y = 11.6; HFE_Z = -9.5; FEMUR_MID = 33.8; FEMUR_LEN = 106.9;
 
 coax_v6();
-color([0.9,0.8,0.3]) import("coax_hfe_plate.stl");  // #53 fix: bolt-on inboard HFE arm
+color([0.9,0.8,0.3]) import("coax_hfe_block.stl");  // #226 option C: bolt-on OUTBOARD HFE arm
 color([0.2,0.4,1,0.45])  // haa servo ghost
   rotate([0,-90,0]) rotate([90,0,0]) sts3215_real();
 
