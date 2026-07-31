@@ -66,6 +66,14 @@ class BodyPoseParams:
     # instance-tree; nova.urdf.xacro body_half_x/_y — the xacro rounds
     # the lateral half to 0.0390, the measured value is 39.05 mm).
     half_x: float = 0.1412
+    # #175: leg_ik.solve_side() solves the planar IK from the HFE (pitch) axis,
+    # not the HAA station — nova.urdf.xacro's hip_to_upper_x (0.0116) runs
+    # TOWARD THE TRUNK from the haa station at BOTH ends (front and rear,
+    # per the rear's 180° yaw — see nova.urdf.xacro comments ~lines 72-100).
+    # half_x above is honestly the haa station (name-matched to body_half_x);
+    # this is the extra step to the pitch axis that hip_mounts()/
+    # neutral_anchors() must subtract fore-aft.
+    hip_to_upper_x: float = 0.0116
     half_y: float = 0.03905
     stand_height: float = 0.18  # hip-to-foot drop (matches TrotParams/ChoreoParams)
     stand_y: float = (
@@ -74,10 +82,15 @@ class BodyPoseParams:
 
 
 def hip_mounts(p: BodyPoseParams) -> Dict[str, Vec3]:
-    """{leg: HAA mount (x, y, z)} in the BODY frame (hip-row plane z=0)."""
+    """{leg: leg-plane anchor (x, y, z)} in the BODY frame (hip-row plane z=0).
+
+    Fore-aft anchored at the HFE (pitch) axis — where leg_ik.solve_side()
+    actually solves from — not the HAA station: #175. hip_to_upper_x is
+    toward the trunk at both ends, so SIDE_SIGN_X handles the per-end flip
+    automatically (see BodyPoseParams.hip_to_upper_x)."""
+    x = p.half_x - p.hip_to_upper_x
     return {
-        leg: (SIDE_SIGN_X[leg] * p.half_x, SIDE_SIGN_Y[leg] * p.half_y, 0.0)
-        for leg in LEGS
+        leg: (SIDE_SIGN_X[leg] * x, SIDE_SIGN_Y[leg] * p.half_y, 0.0) for leg in LEGS
     }
 
 
@@ -86,10 +99,13 @@ def neutral_anchors(p: BodyPoseParams) -> Dict[str, Vec3]:
     under the leg columns (stock stance, ~207 mm track), stand_height
     below the hip row. foot_targets(BodyPose(), anchors) returns the
     identity stance (0, stand_y, -stand_height) canonical — the same
-    target trot.py and choreo/stand.py use."""
+    target trot.py and choreo/stand.py use.
+
+    Fore-aft anchored at the pitch axis, matching hip_mounts(): #175."""
+    x = p.half_x - p.hip_to_upper_x
     return {
         leg: (
-            SIDE_SIGN_X[leg] * p.half_x,
+            SIDE_SIGN_X[leg] * x,
             SIDE_SIGN_Y[leg] * (p.half_y + p.stand_y),
             -p.stand_height,
         )
