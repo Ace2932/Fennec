@@ -112,6 +112,7 @@ import trimesh
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from cad_assets import LEG_V6, asset  # noqa: E402  (path insert must be first)
+import cad_contains  # noqa: E402  (#195 propagation -- installed in main())
 
 from power_board_model import (power_board_mesh, logic_board_mesh, FLOOR_TOP_Z,
                                 STANDOFF_FLOOR_MM, LOGIC_BOARD_Z0, STACK_TOP_Z,
@@ -950,6 +951,13 @@ def neck_slot_shoulder_window_check():
 
 def main():
     bad = False
+    # #195 PROPAGATION (2026-07-31). trimesh's contains() resolves ambiguous
+    # parity with a draw from the GLOBAL RNG, so it can answer differently on
+    # identical input and can shift when an unrelated earlier check consumes
+    # RNG. leg_v6's gate pinned this in #195; this file never did, and it casts
+    # into shoulder.stl, which is one of the two meshes measured to actually
+    # flicker (1/3000 points over 12 calls). See cad_contains for the numbers.
+    cad_contains.install()
     riser = trimesh.load('riser_bay.stl')
     trunk = trimesh.load(TRUNK)
     pocket = trimesh.load('battery_pocket.stl')
