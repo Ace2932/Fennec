@@ -277,6 +277,10 @@ def _clearance_warn(target, p, label, floor_mm=1.0):
 # observed noise and 10x below the observed signal.
 DESIGNED_CONTACT_R = 10.3
 MASK_DRIFT_MM = 1.0
+#: Points allowed to overlap at the SEATED pose (t=0) of the insertion sweep.
+#: Measured 0 on the current geometry. Raising this is a deliberate act that
+#: needs a reason in the commit, not a knob to turn when the gate goes red.
+SEATED_OVERLAP_EXPECTED = 0
 
 
 def mask_invariance_check(envelopes, label):
@@ -293,6 +297,13 @@ def mask_invariance_check(envelopes, label):
     live = [e for e in envelopes if e[0] > 0]
     if not live:
         return False        # nothing masked -> nothing to justify
+    if len(live) < 2:
+        # Drift is a spread across steps; one step has no spread and would
+        # report a flat 0.00mm -- an "OK" that checked nothing. Say so instead.
+        print(f'   NOTE  {label}: only {len(live)} sweep step masked anything, '
+              f'so invariance is INCONCLUSIVE here (a single sample cannot '
+              f'drift). Not evidence the mask is sound.')
+        return False
     arr = np.array([e[1:] for e in live], dtype=float)
     drift = arr.max(axis=0) - arr.min(axis=0)
     ns = [e[0] for e in live]
@@ -856,14 +867,21 @@ def insertion_checks(servo, pts0):
         inside = contains_chunked(coax, p)
         n = int(inside.sum())
         status = 'OK ' if n == 0 else 'HIT'
-        # t=0 (seated) may legitimately touch at the disc interfaces. ASSERT
-        # that exemption rather than trusting it: if seated overlaps, the seat
-        # pose itself is wrong and every later step is measured from a bad
-        # origin, so say so instead of silently absorbing it.
-        if n and t == 0:
-            print(f'   NOTE t=0 (seated): {n} pts overlap -- designed disc/boss '
-                  f'contact is expected here, but verify it is the interface and '
-                  f'not a seat-pose error')
+        # t=0 (seated) may legitimately touch at the disc interfaces, so it is
+        # exempt from the travel test -- but the exemption is bounded by a
+        # DECLARED expectation rather than being open-ended. Measured today the
+        # seated pose overlaps by 0 points, so any overlap at all is new and
+        # must be justified by whoever introduces it, not absorbed silently.
+        # (An earlier revision of this block only printed a NOTE here while the
+        # comment claimed it "asserted" the exemption -- a WARN wearing an
+        # assertion's label, which is the exact thing this gate exists to stop.)
+        if t == 0 and n > SEATED_OVERLAP_EXPECTED:
+            bad = True
+            print(f'SEAT  t=0 (seated): {n} pts overlap, expected '
+                  f'<={SEATED_OVERLAP_EXPECTED}. Either the seat pose is wrong -- '
+                  f'in which case every later step is measured from a bad origin '
+                  f'-- or a real disc interface was introduced, in which case '
+                  f'raise SEATED_OVERLAP_EXPECTED deliberately and say why.')
         if n and t > 0:
             bad = True
             blocked_t.append(t)
