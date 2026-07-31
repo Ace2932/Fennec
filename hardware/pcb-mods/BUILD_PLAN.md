@@ -72,7 +72,9 @@ accordingly.
 
 ## 2. Tooling — the one real gap
 
-Owned (`master-bom.md`): Pinecil V2, flux, 0.6–0.8 mm solder, wick, sucker.
+Owned (`master-bom.md`): Pinecil V2, flux, wick, sucker. ⚠️ **Solder is NOT confirmed** —
+master-bom still lists it as `⬜ verify`, and its **alloy is recorded nowhere**. See §2a and
+the 🔴 item in §7; it blocks stage 1 and it sets every temperature in §2a.
 
 `pre-power-on-validation.md` §1d records the trap: `VBAT_PROTECTED` (PWR.Cu)
 and `GND` (GND.Cu) are **solid pad-connected planes**, deliberately — the
@@ -112,9 +114,11 @@ Two things govern whether it actually struggles, and only one of them is the tip
         inside the 60–88 W band the note above assumes. Fine for every stage
         **except** the plane-tied joints at 4, 7 and 8 — use the bench supply
         for those. Needs a PD C-to-C cable rated ≥3.25 A, not a charge-only lead.
-      - **Kungber 30 V/10 A** (owned): **prefer this for the plane-tied joints at stages 4, 7 and 8.** ~24 V
-        into the DC 5525 barrel is 24²/20² ≈ **1.44×** the 20 V PD power, free.
-        That headroom is exactly what the 14 A plane pads want.
+      - **Kungber 30 V/10 A** (owned): **prefer this for the plane-tied joints at stages 4, 7 and 8.**
+        **24.0 V** into the DC 5525 barrel is 24²/20² ≈ **1.44×** the 20 V PD power, free.
+        That headroom is exactly what the 14 A plane pads want. ⚠️ **24 V is the Pinecil V2's
+        DC ceiling** (barrel 12–24 V, 24 V/5 A) and this is a 30 V supply — dial it down and
+        confirm on the display before plugging in; current limit ≥4 A. Details in §2a.
 - [ ] **Preheat — unsolved, and CONDITIONAL. Do the bench test before buying.**
       Nothing owned reaches 100–130 °C; the Etekcity IR gun measures it but
       cannot produce it. May prove unnecessary once TS-C4 runs at 24 V.
