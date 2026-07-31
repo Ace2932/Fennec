@@ -39,7 +39,11 @@ class TrotParams:
     # Not a trade: the straighter stance IMPROVES capacity (hold 2.80 -> 3.03x
     # the per-leg share, lift power 0.692 -> 0.744 W at 2 cm/s). At 73 deg of knee
     # bend it is nowhere near the singular region.
-    stand_height: float = 0.190  # nominal hip-to-foot drop (m) — 81% of measured
+    # #224: 0.190 -> 0.1995 (+ hip_to_upper_z, 9.5mm) — leg_ik's z fix made
+    # the solver honest about the haa->hfe drop; physically the foot was
+    # already landing 9.5mm deeper than 0.190 claimed, so this keeps the
+    # commanded stance unchanged, not deepened.
+    stand_height: float = 0.1995  # nominal hip-to-foot drop (m) — 81% of measured
     # full reach (femur 106.9 + tibia 129.0 = 235.9 mm), knee bent ~81°. OK.
     stand_y: float = 0.0643  # lateral foot offset = hip_offset (m), stock stance
     duty: float = 0.5  # fraction of cycle in stance (0.5 = trot)

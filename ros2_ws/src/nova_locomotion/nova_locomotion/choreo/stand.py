@@ -64,7 +64,12 @@ class ChoreoParams:
     # height when it starts walking. Side benefit -- it widens the crouch envelope
     # the translated knee config had collapsed: stand 19.0 -> lie 17.08 is 1.92 cm
     # of travel, up from 0.92.
-    stand_z: float = 0.190  # nominal stand (81% reach)
+    # #224: 0.190 -> 0.1995 (+ hip_to_upper_z, 9.5mm) — leg_ik's z fix made
+    # the solver honest about the haa->hfe drop it used to omit. Verified
+    # the achieved hfe/kfe angles are bit-for-bit unchanged (same physical
+    # pose, only the honest z number that reaches it), so every angle in
+    # this file's comments below is still accurate.
+    stand_z: float = 0.1995  # nominal stand (81% reach)
     # RAISED 2026-07-25 (knee config corrected to TRANSLATED, leg_ik.KNEE_FORWARD).
     #
     # Under the X-config these were 0.150 / 0.140, where the front legs took the
@@ -85,8 +90,11 @@ class ChoreoParams:
     # ASYMMETRIC crouch — only the FRONT pair is skirt-limited; the rear pair
     # folds away from the trunk and keeps its full -86° room, which is also how a
     # dog actually sits. See docs/knee-config-analysis.md.
-    crouch_z: float = 0.1755  # front hfe +47.0°, kfe -84.3°
-    lie_z: float = 0.1708  # deepest inside the +50° skirt cap: front hfe +49.0°
+    # #224: crouch_z/lie_z each +0.0095 (hip_to_upper_z) for the same reason
+    # as stand_z above — verified the achieved hfe/kfe are unchanged, so the
+    # angle figures in the comments (and the envelope numbers below) still hold.
+    crouch_z: float = 0.1850  # front hfe +47.0°, kfe -84.3°
+    lie_z: float = 0.1803  # deepest inside the +50° skirt cap: front hfe +49.0°
 
 
 # Canonical foot-space keyframes, PER LEG (2026-07-25). They used to be one
