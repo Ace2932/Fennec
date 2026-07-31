@@ -153,6 +153,115 @@ Two things govern whether it actually struggles, and only one of them is the tip
 
 ---
 
+## 2a. Iron temperature and Pinecil V2 setup
+
+The tip table above says *which* tip. This says *how hot*, and how to actually get
+the iron there. Verified against Pine64's Pinecil docs and the IronOS settings
+reference on 2026-07-31 — but IronOS menu wording shifts between releases, so
+trust the on-device help text over this table if they disagree.
+
+### First: which solder alloy
+
+**`master-bom.md` records diameter (0.6–0.8 mm) but not alloy, and §7 still has
+"confirm solder on the shelf" open.** Every number below depends on it, so settle
+this before setting a temperature.
+
+**Use leaded (Sn63Pb37) for both boards** unless you have a reason not to:
+
+- It melts at **183 °C** vs SAC305's **217–220 °C**, so every joint happens
+  ~35 °C cooler — and the whole difficulty here is getting heat *into* a plane.
+- The **logic board is HASL-lead** (§ the JLC order spec), so its pads are already
+  tin-lead. Lead-free wire onto lead-plated pads makes a mixed alloy — it works,
+  but there is no reason to take it.
+- The power board is ENIG, which is happy with either.
+
+If you only own SAC305, everything below shifts **+30 °C** and the plane-tied pads
+get materially harder — that alone could decide the preheat question in §7.
+
+### Temperature by stage
+
+Leaded first, lead-free in brackets. These are *tip setpoints*, not pad temperatures.
+
+| stages | parts | tip | setpoint |
+|---|---|---|---|
+| 1, 2, 5 | 0603, SOT-23, SOD-123F | TS-ILS | **320 °C** (350) |
+| 3 | U8 SOIC-8, U7 SOIC-14 — drag/wick | TS-K | **330 °C** (355) |
+| **4, 7, 8** | **L1, SW1.2, Q1.3, U1.4, XT30/XT60, buck stations** | **TS-C4** | **380–400 °C** (400) |
+| 6 | headers, JST, IDC | TS-D24 | **330 °C** (355) |
+| 9 | electrolytics — **≤3 s per lead** | TS-D24 | **340 °C** (360) |
+| 10 | module headers / sockets | TS-D24 | **330 °C** (355) |
+
+**Do not go above 400 °C.** Past that the flux flashes off before it can wet,
+tip plating degrades quickly, and you get *worse* joints, not faster ones.
+
+**The counter-intuitive bit, and the one that matters for stages 4/7/8:** a hotter
+tip is *gentler* than a cooler one on these pads. Damage is time-at-temperature at
+the laminate, not tip setpoint. 400 °C for 3 s puts far less heat into the board
+than 340 °C for 15 s spent waiting for a joint that never quite flows. §7 already
+names this failure — *"sitting on a pad waiting is what lifts pads and cooks
+laminate"* — and the fix is more tip temperature and less dwell, not less of both.
+
+**Technique for the plane-tied pads** (this is worth as much as the wattage):
+tin the tip first so there is a molten thermal bridge, land the TS-C4's **bevel
+face flat** on the pad for maximum contact area, and feed solder into the
+tip/pad junction — not onto the tip. Contact area is the actual bottleneck once
+you have 88 W behind you.
+
+### Supply — set the Kungber to 24.0 V, not higher
+
+Pinecil **V2's DC5525 barrel is rated 12–24 V, 24 V–5 A maximum**, and it reaches
+24 V without any PCB modification. Its published range is **18–88 W**, and 88 W is
+**24 V at 3.66 A**.
+
+> ⚠️ The Kungber is a **30 V/10 A** supply. **24 V is the Pinecil V2's ceiling, not
+> a suggestion** — dial it to 24.0 V and confirm on the display before plugging the
+> iron in. Set the current limit to **≥4 A** so the supply does not fold back into
+> CC mode mid-joint, which would silently cost you the power you set all this up for.
+
+| supply | gives | use for |
+|---|---|---|
+| Kungber bench, **24.0 V** into DC5525 | up to 88 W | **stages 4, 7, 8** (L1 + the 14 A pads) |
+| Anker Nano II 65 W GaN, USB-C PD | 20 V / 3.25 A = 65 W | every other stage |
+
+The Anker needs a PD C-to-C cable rated ≥3.25 A — a charge-only lead will
+quietly negotiate something lower. (V2 also *unofficially* does PD 3.1 EPR at
+28 V/140 W with a certified EPR cable; you do not need it, and 24 V from the
+bench supply is the known-good path.)
+
+### IronOS settings — what to change
+
+Navigation, with the tip fitted, from the main screen:
+
+- **Button nearest the TIP** → enter soldering mode.
+- **Button nearest the USB end** → enter the settings menu.
+- **Hold the tip-side button while soldering** → boost.
+- **Hold the tip-side button on the main screen** → temperature adjust.
+
+| menu | setting | set to | why |
+|---|---|---|---|
+| Power | **Power source** | **DC** | On the bench supply. This sets a 10 V cutoff instead of a per-cell battery cutoff — leave it on a cell count and the iron may cut out or clamp power. |
+| Power | **Power limit** | **88 W** on the Kungber | The average wattage the iron targets. On USB-PD it is automatically the *lower* of this and the supply's advertised wattage, so 88 W is safe to leave set — the Anker will still cap itself at 65 W. |
+| Power | **PD Mode** / **PD timeout** | leave default | Only touch these if a charger misbehaves; PD timeout exists for QC-charger compatibility. |
+| Soldering | **Boost temp** | **420 °C** | Your reserve for a 14 A pad that will not wet. Held, not latched — a few seconds, then back off. |
+| Soldering | **Temp change long** | 25 °C (optional) | You will be moving between 320 and 400 °C repeatedly across stages; the default 10 °C step makes that tedious. |
+
+### This gives §7's preheat test a pass/fail number
+
+§7 says to test `U1.4` first, then `Q1.3`/`SW1.2`, before buying anything. Run it
+as: **TS-C4, Kungber at 24.0 V, tip 400 °C, leaded solder.**
+
+- **Pass** — the joint wets and fills in **≤3–4 s**. No preheat needed; skip the
+  853A entirely.
+- **Fail** — still not flowing at **~10 s**, or the Etekcity IR gun shows the pad
+  itself stuck below **~185 °C** (the leaded liquidus; ~220 °C if you are on
+  SAC305). The plane is winning. That is the trigger to buy the IR preheater —
+  and only then.
+
+Measure the *pad*, not the tip: the tip will happily read 400 °C while the pad
+sits at 150 °C, and that gap is the entire problem this test is screening for.
+
+---
+
 ## 3. Population order
 
 Ordering rules, in priority: **low profile before tall** (the board must sit
@@ -176,7 +285,7 @@ minimum: bottom SMD, then top SMD, then THT.
 | **7** | **F** | SW1, SW2 terminal blocks | SW1.2 is a 14 A plane pad. Still low profile, so do it before the tall connectors crowd the iron. |
 | **8** | **F** | XT30 ×8 + XT60 J1, buck stations U1–U4, **and Q1 (TO-220)** | The bulk of the high-current THT, plus Q1 — pad 3 is a 14 A GND inject. **Last preheat stage; see the note below.** Soldered from the bottom face, which already carries 20 SMD parts — hence C1–C6 must still be off. |
 | **9** | B + F | Electrolytics: C1–C6 (bottom), C8–C9 (top) | Tall, polarised, **~105 °C-rated — below the 100–130 °C board preheat.** After every preheat joint, and after stage 8 because the bottom cans would block access to stage 8's solder side. |
-| **10** | **F** | Modules: U9–U11 (INA226), U6 (Teensy 4.1), U12 (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. |
+| **10** | **F** | Modules: **U9–U12** (INA226 ×4 — see §4, U12 is the L2 monitor), U6 (Teensy 4.1), U12-logic (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. Note `U12` names *different* parts on the two boards: INA226 on power, Arduino Nano on logic. |
 
 ### Per-stage parts, with VALUES
 
@@ -199,11 +308,19 @@ than failing loudly.
 | **7** F | SW1 rocker · SW2 e-stop (screw terminals) | — |
 | **8** F high-current | J1 XT60 · J3–J7, J12, J13, J14 XT30 · U1–U4 buck stations · Q1 IRLB3034PBF | — |
 | **9** electrolytics | C1–C5 1000 µF 25 V (**B**) · C6 470 µF (**B**) · C8, C9 470 µF (**F**) | — |
-| **10** modules | U9–U11 INA226 | U6 Teensy 4.1 · U12 Arduino Nano |
+| **10** modules | U9 INA226 leg 0x40 · U10 hip 0x41 · U11 Jetson 0x44 · **U12 L2 0x45** | U6 Teensy 4.1 · U12 Arduino Nano |
 
 `C_gs1` 0.47 µF and `D1` are the Q1 gate-harden network (`order-list.md` §97-102,
 ordered 2026-06-22). Note that list still says "board edit still pending" — the
 edit is done; the parts are on the board.
+
+⚠️ **Fit the values in the table, not the ones in the older notes.** Several
+places (the Notion build log's "Pending board edit", early review text) still say
+*R17 = 100 Ω, D1 = BZT52C15 (15 V)*. **As built and as ordered: `R17` = 10k,
+`D1` = BZT52C18 (18 V).** The 2026-06-18 analysis rejected 100 Ω outright — clamp
+= Vz + Iz·Zz, so a 33 V spike gives 100 Ω → ~21 V, **over the IRLB3034's 20 V
+Vgs limit**; 10 k → 18.04 V. Also note `C_gs1` is marked **"474" = 470 nF**;
+a part marked "470" is 47 pF and gives you no soft-start at all.
 
 ### Polarity and orientation — getting these wrong is destructive
 
@@ -212,7 +329,7 @@ edit is done; the parts are on the board.
 | **J1 XT60, J3–J7 / J12–J14 XT30** | **pad 1 = NEGATIVE, pad 2 = POSITIVE.** Verified from the nets: `J1.1 = BATT_NEG`, `J1.2 = VBAT`. Do **not** assume pad 1 is +. Match against the connector's flat side, not the pad number — this exact reversal has been caught before on this board. |
 | **C1–C9 electrolytics** | Polarised, and split across both faces (C1–C6 bottom, C8/C9 top), so "the stripe faces the same way" is not a single rule — check each against its own silk. |
 | **D1 BZT52C18** | Zener, SOD-123F. Cathode band. Backwards it clamps nothing and conducts the wrong way. |
-| **Q1 IRLB3034PBF** | TO-220-3. Its pad 3 is the 14 A GND inject; pad 1 is `Net-(D1-K)`, pad 2 is `BATT_NEG`. |
+| **Q1 IRLB3034PBF** | TO-220-3. Its pad 3 is the 14 A GND inject; pad 1 is `Net-(D1-K)`, pad 2 is `BATT_NEG`. **⚠️ The TO-220 TAB is bonded to the drain = `BATT_NEG`, not GND** — and `SW1` switches only the positive rail, so the tab is live whenever the pack is plugged in, switch off included. Bolting it to a grounded chassis or a shared heatsink shorts drain→source and **silently, permanently bypasses reverse-polarity protection**. Mount isolated or free-standing; if it is ever heatsinked, mica/silpad + shoulder bush and **meter tab-to-GND for an open** first. |
 | **U8 LM393 / U7 74LVC125** | SOIC pin-1 dot. **U7 is on the logic board TOP face**, U8 on the power board bottom — do not carry one assumption to the other. |
 | **U9–U11 INA226** | Off-board modules on a 4-pin header: `+3V3 / GND / SCL / SDA` at −5.08 / −2.54 / 0 / +2.54 mm. Rail current does NOT pass through the board. |
 | **U6 Teensy / U12 Nano** | Orientation set by the USB end. Socket if undecided — see §7. |
@@ -230,7 +347,8 @@ of anything temperature-limited for as long as it might still need to be hot.**
 If a preheat-requiring joint has to be redone later, take the electrolytics off
 first rather than preheating around them.
 
-**Do not populate: U5, U12 (power board).** See §4 — the reason changed.
+**Do not populate: U5 (power board).** See §4 — the reason changed.
+**U12 DOES get populated** as the L2 rail monitor at 0x45 — also §4.
 
 ---
 
@@ -245,9 +363,31 @@ pad nets straight out of `nova_pcb_v6_power_v2.kicad_pcb`:
 | "arm rail has no exit — `V7V5_ARM` = `U5.4` only, single-pad net" | **`J14.2 = V7V5_ARM`.** The rail has an off-board XT30. |
 | "🔴 arm buck is UNGATED — `U5.EN` tied to `VBAT_PROTECTED` = always-on" | **`U5.3 = EN_BUCKS`**, byte-for-byte the same net as `U1.3`. Gated by e-stop Q3 **and** hardcut Q2. |
 
-So U5/U12 are **DNP for scope, not for safety** — there is no arm yet. That is
+So U5 is **DNP for scope, not for safety** — there is no arm yet. That is
 a materially different instruction from "populating this is a crush hazard",
 and §9 should be re-labelled rather than left to frighten the next reader.
+
+### ⚠️ But U12 is a different case — POPULATE IT (corrected 2026-07-31)
+
+**U12 is not an arm part any more.** Grouping it with U5 above is stale, and
+following it would leave a rail unmonitored:
+
+- All four INA226 slots are **electrically identical** — pads 4/5/6/7 =
+  `I2C_SDA` / `I2C_SCL` / `+3V3` / `GND`. Nothing about the U12 footprint is
+  arm-specific; current sense is off-board through the module's own terminals
+  either way.
+- The 4th INA was **reassigned to the L2 LiDAR rail on 2026-06-30** (commit
+  `5fc5eba`) — L2 is live, nav-critical and brownout-sensitive, whereas an INA on
+  the DNP arm rail would read nothing.
+- **The firmware already expects it.** `platformio.ini:41` has
+  `-D NOVA_INA226_L2` **enabled**, `ina226_telemetry.h:26` declares
+  `INA226_ADDR_L2 = 0x45`, and `/power_rails` was widened 9 → 12 floats with
+  L2 v/a/w at `[9..11]`. Leave U12 empty and those three publish nothing.
+- You own **4 modules and no spares** — the 4th is not a shelf spare, it is this.
+
+**Action:** fit U12 at stage 10, bead it to **0x45 (A0 + A1 → VS)**, and wire its
+`IN+`/`IN−` inline in the **L2 12 V** harness. The arm, when it exists, gets a
+**5th** module at 0x46 on the same bus — no board change.
 
 ---
 
@@ -276,7 +416,8 @@ Everything that leaves the power board. Gauges per `../wiring/README.md`
 | M1 | 1×02 header | `VBAT_PROTECTED` / `GND` | pack-voltage monitor tap | 22 AWG |
 | J20 | IDC 2×06 shrouded | `V5_AUX`, `GND`, `+3V3`, `BUS_SERVO`, `I2C_SDA`, `I2C_SCL`, `BATT_LOW` | **logic board**, 12-way ribbon across the ~20 mm mezzanine gap | ribbon |
 | U9–U11 | INA226 breakout | I²C + shunt | plug-in modules, one per active rail | — |
-| U12 | INA226 breakout | — | **DNP** — arm rail telemetry | — |
+| — | **TVS clamps, no footprint** | across `V7V5_LEG`, `V12_HIP`, `V12_L2` | **Off-board by design** — a sweep of every power schematic and the `.kicad_pcb` finds **zero** `SMBJ` parts; `D1` is the only diode on the board. Solder **2× SMBJ8.5A** across the `V7V5_LEG` injection pigtails, **1× SMBJ13A** on `V12_HIP`, optional **1× SMBJ13A** on `V12_L2`. **Cathode band → +.** Not optional: e-stop regen can drive `V7V5_LEG` to ~21 V against 25 V bulk caps. Heat-shrink each. | inline |
+| U12 | INA226 breakout | I²C + shunt | **POPULATE — L2 12 V rail monitor @ 0x45** (§4). `IN±` inline in the L2 harness, same as U9–U11. Silk still says "arm"; the firmware says L2. | — |
 
 ### Logic board — what connects where
 
@@ -297,16 +438,20 @@ Three choices are made by how you populate, not by firmware. `pre-power-on-valid
 §1e is the authority; this is the physical summary.
 
 1. **JP1 bus master.** 2–3 = Pattern B (default, Teensy drives). 2–1 = Pattern A.
-2. **INA226 I²C addresses.** U9/U10/U11 are three identical modules — address
-   straps distinguish the rails. Set them before fitting; they are not
-   distinguishable once installed.
+2. **INA226 I²C addresses.** U9–U12 are **four** identical modules — address
+   straps are the only thing distinguishing the rails. Set them before fitting;
+   they are not distinguishable once installed.
+   **leg `0x40`** (default, no bead moved) · **hip `0x41`** (A0→VS) ·
+   **Jetson `0x44`** (A1→VS) · **L2 `0x45`** (A0+A1→VS). Map to your module's own
+   silk legend — do not assume pad order.
 3. **Buck variants.** U1 = D42V110F7 (leg 7.5 V), U2 = D42V110F12 (hip 12 V),
    U3 = D24V22F12 (L2 12 V), U4 = D42V55F12 (Jetson 12 V). Four different
    modules in identical 2×XT30 stations — the silk is the only thing telling
    them apart, and a swap puts 12 V on the 7.5 V servo rail.
 
 **Off-board modules to have in hand before stage 8:** 4× Pololu buck,
-3× INA226 2 mΩ breakout, MRBF fuse block, Contura rocker, E-stop.
+**4× INA226 2 mΩ breakout** (leg/hip/Jetson/**L2** — §4; you own exactly 4 and no
+spares), MRBF fuse block, Contura rocker, E-stop.
 
 Cable routing for these bundles — including the strain-relief and grommet
 detail — is in `../wiring/README.md` §"Strain relief + routing notes". The

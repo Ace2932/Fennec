@@ -106,7 +106,10 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 - [ ] **U9–U12 INA226 modules** — board connects I2C+power only (`4=SDA, 5=SCL, 6=VCC, 7=GND`).
       Confirm (a) module header order matches your dupont wiring, (b) **a unique I2C address per module via the
       A0/A1 solder bead — see the §1e table** (4 modules on one bus = must differ, or collision).
-      **⚠️ Current-sense path — PCB has NO shunt (R13/R14 removed):** rail current must pass through each
+      **⚠️ Current-sense path — PCB has NO shunt** (the shunt resistors that once sat at R13/R14 were
+      deleted — ⚠️ **those designators have since been REUSED for live safety-chain parts: `R13` = 10k
+      e-stop pull-up `EN_SW`↔`V5_AUX`, `R14` = 470k hardcut hysteresis. Both MUST be populated.**
+      Do not read this line as "leave R13/R14 off"): rail current must pass through each
       module's IN+/IN− screw terminals (onboard 2 mΩ), wired **inline in the harness**: source → IN+ → IN− → load.
       **Hip (J7) / Jetson (J12) / L2 (J13) = single XT30 → clean full-current insertion. Leg (0x40) stars into
       4× XT30 (J3–J6) ON the PCB → NO single total-leg-current point** — insert at U1 buck VOUT (cut VOUT→plane)
