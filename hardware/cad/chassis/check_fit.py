@@ -365,6 +365,34 @@ def tf(pts, M):
     return trimesh.transform_points(pts, M)
 
 
+def near_bbox(pts, target, margin=0.5):
+    """Pre-filter `pts` to the ones that could possibly be inside `target`.
+
+    #47 REDUX (2026-07-31). The crouch sweep used to hand-type a literal bbox
+    per target as a speed pre-filter before target.contains(). A pre-filter is
+    lossless only if it is a SUPERSET of the target's own bounding box -- a
+    point outside that box cannot be inside the mesh, but a point the window
+    drops while the box still contains it is evidence thrown away.
+
+    Six of the seven hand-typed windows were supersets. The seventh, `head`,
+    was not: window x100..146 / |y|<40 / z82..130 against a head spanning
+    x71..160 / |y|<=60 / z84..132.5 -- clipping the target by 43mm in x and
+    40mm in y. Measured across all 1120 sweep poses it admitted ZERO points,
+    so the head-vs-leg check had never once executed. #47 diagnosed exactly
+    this in 2026-07 and the fix was to write head_cap_sweep.py BESIDE it; the
+    dead window itself was left in place and kept reporting green.
+
+    Deriving the window from the target instead of typing it removes the whole
+    failure mode: it cannot clip, it cannot go stale when geometry moves, and
+    it is FASTER here (every superset window admitted more points than the
+    real bbox does). `margin` only guards float edge effects on the boundary.
+    """
+    lo, hi = target.bounds
+    m = np.asarray(pts)
+    keep = np.all((m >= lo - margin) & (m <= hi + margin), axis=1)
+    return m[keep]
+
+
 # ---- LA-22a: mirrored-LEFT shoulder sweep -----------------------------------
 def left_shoulder_sweep_check():
     """leg_v6/check_fit.py's shoulder_checks() only ever swept the RIGHT leg
@@ -1028,6 +1056,11 @@ def main():
     print('   chassis-safe: hfe FRONT -50..+50 / REAR -86..+50 sw AND '
           'inboard haa <= 15 sw')
     worst = 0
+    # per-target survivor tally: a target that admits ZERO points at every pose
+    # contributed nothing to this verdict, and must say so rather than pass
+    # quietly. That silence is what let #47's dead head window sit green.
+    seen = {k: 0 for k in ('riser', 'pocket', 'pack', 'rails',
+                           'head', 'bracket', 'camera')}
     for hfe in (-86, -45, 0, 45, 50, 55, 70, 86):
         for kfe in (-109, -55, 0, 55, 109):
             cloud = leg_cloud(hfe, kfe)
@@ -1045,35 +1078,14 @@ def main():
                              [HIP_FA if label[0] == 'F' else -HIP_FA,
                               HIP_LAT if label[1] == 'R' else -HIP_LAT, HIP_Z])
                     p = tf(tf(cloud, base), Sx)
-                    for tname, target, near in (
-                        ('riser', riser,
-                         p[(np.abs(p[:, 0]) < 70) & (np.abs(p[:, 1]) < 58)
-                           & (p[:, 2] > 25) & (p[:, 2] < 75)]),
-                        ('pocket', pocket,
-                         p[(np.abs(p[:, 0]) < 95) & (np.abs(p[:, 1]) < 35)
-                           & (p[:, 2] > -45) & (p[:, 2] < 5)]),
-                        ('pack', pack,
-                         p[(np.abs(p[:, 0]) < 90) & (np.abs(p[:, 1]) < 30)
-                           & (p[:, 2] > -40) & (p[:, 2] < 1)]),
-                        ('rails', rails,
-                         p[(np.abs(p[:, 0]) < 90) & (np.abs(p[:, 1]) < 30)
-                           & (p[:, 2] > -46) & (p[:, 2] < -35)]),
-                        # fwd head: crown/boss/column x108..145, pillar x128..138
-                        ('head', head,
-                         p[(p[:, 0] > 100) & (p[:, 0] < 146)
-                           & (np.abs(p[:, 1]) < 40) & (p[:, 2] > 82)
-                           & (p[:, 2] < 130)]),
-                        # neck bracket: base x107..150 y+-21, wall to z106
-                        ('bracket', bracket,
-                         p[(p[:, 0] > 100) & (p[:, 0] < 152)
-                           & (np.abs(p[:, 1]) < 24) & (p[:, 2] > 78)
-                           & (p[:, 2] < 108)]),
-                        # D456 body x136..173, z87..125, y+-62
-                        ('camera', cam,
-                         p[(p[:, 0] > 130) & (p[:, 0] < 176)
-                           & (np.abs(p[:, 1]) < 63) & (p[:, 2] > 84)
-                           & (p[:, 2] < 126)]),
-                    ):
+                    # windows are DERIVED from each target's own bounds, never
+                    # hand-typed -- see near_bbox() and #47 REDUX
+                    for tname, target in (('riser', riser), ('pocket', pocket),
+                                          ('pack', pack), ('rails', rails),
+                                          ('head', head), ('bracket', bracket),
+                                          ('camera', cam)):
+                        near = near_bbox(p, target)
+                        seen[tname] += len(near)
                         if not len(near):
                             continue
                         worst = max(worst, len(near))
@@ -1087,7 +1099,18 @@ def main():
                             print(f'   HIT {label} haa{haa:+d} hfe{hfe:+d} '
                                   f'kfe{kfe:+d} vs {tname}: {n} pts  '
                                   f'(beyond sw limit — documents the stop)')
-    print(f'   sweep done (max {worst} near-riser pts in any pose)')
+    # NB `worst` is the max over ALL targets, not riser -- the old message said
+    # "near-riser" and printed the pocket window's number.
+    print(f'   sweep done (max {worst} in-window pts for any target in any pose)')
+    print('   per-target points admitted across the sweep: '
+          + ', '.join(f'{k}={v}' for k, v in seen.items()))
+    dead = [k for k, v in seen.items() if v == 0]
+    if dead:
+        print(f'   NOTE {len(dead)} of {len(seen)} targets admitted NO points at any '
+              f'pose ({", ".join(dead)}) -- the leg never enters their bounds in '
+              f'this ROM, so their "no contact" result asserts nothing. Stated '
+              f'explicitly because a dead check is indistinguishable from a '
+              f'passing one otherwise (#47).')
 
     # ---- 6. battery pocket + pack ------------------------------------------------
     pp = sample(pocket, 8000, 2000)
