@@ -202,10 +202,16 @@ names this failure — *"sitting on a pad waiting is what lifts pads and cooks
 laminate"* — and the fix is more tip temperature and less dwell, not less of both.
 
 **Technique for the plane-tied pads** (this is worth as much as the wattage):
-tin the tip first so there is a molten thermal bridge, land the TS-C4's **bevel
-face flat** on the pad for maximum contact area, and feed solder into the
-tip/pad junction — not onto the tip. Contact area is the actual bottleneck once
-you have 88 W behind you.
+tin the tip first so there is a molten thermal bridge, land the **largest flat
+face of the tip** against the pad for maximum contact area, and feed solder into
+the tip/pad junction — not onto the tip. Contact area is the actual bottleneck
+once you have 88 W behind you.
+
+> ⚠️ `master-bom.md` and §2 both describe TS-C4 as a *"≈4 mm bevel"*. In the usual
+> TS100 naming a `C`-prefix tip is a **chisel** and `BC` is the bevel/hoof, so the
+> kit's actual geometry is worth one look before stage 4. It does not change which
+> tip to use — TS-C4 is the fattest one either way — only how you present it:
+> chisel → flat face down, bevel → the elliptical face down. Maximise contact.
 
 ### Supply — set the Kungber to 24.0 V, not higher
 
@@ -489,12 +495,44 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
       costs nothing but a few minutes at the bench.
 - [ ] Hot-air station (§2) — independent of preheat. Buy when stage 3 (SOIC) or
       harness heatshrink actually calls for it, not as a preheat substitute.
-- [ ] Confirm 0.6–0.8 mm solder actually on the shelf (`master-bom.md` says
-      "verify").
+- [ ] 🔴 **BLOCKING — confirm solder exists, and confirm its ALLOY.**
+      `master-bom.md` still reads `Thin solder 0.6-0.8 mm | ⬜ verify`, so it is not
+      established that there is any solder in the building. Worse, **no doc records
+      the alloy**, and every setpoint in §2a hangs off it: leaded Sn63Pb37 melts at
+      183 °C, SAC305 at 217–220 °C, which is a **+30 °C shift on every stage** and
+      makes the plane-tied pads materially harder — it could decide the preheat
+      question on its own. Recommendation is **leaded**: the logic board is
+      HASL-lead, so its pads are already tin-lead. Check the drawer before stage 1.
+- [ ] 🔴 **Q1 SOA check — was written as a pre-fab gate, and fab happened without it.**
+      `STATUS.md` and `order-list.md` §131-135 both mark the gate-harden design
+      *"SOA-gated … BENCH-VALIDATE transient (scope) before fab"*. Soft-start puts
+      ½CV² ≈ **0.77 J** through Q1 in its linear region during the ~5–15 ms ramp,
+      which must sit inside the IRLB3034's 10 ms SOA. **No scope is owned** (Rigol
+      DHO804 deferred to Phase 5) and the documented fallback — a 10/22/47 Ω 2–3 W
+      **precharge resistor — does not appear in any ✅ ordered list.**
+      Not a soldering blocker; it is a **first-pack-hot-plug** blocker.
+      - First power-on is from a current-limited 0.5 A bench supply
+        (`pre-power-on-validation.md` §3), which never creates that inrush — this
+        defers the risk, it does not clear it.
+      - **Owned mitigation:** the Chanzon **1 Ω + 4 Ω** power resistors on the
+        bench-gear list. A 2-stage connect through the 4 Ω caps peak inrush near
+        4.2 A at 16.8 V and dissipates the 0.77 J in the resistor, not the FET.
+        ⚠️ Their wattage rating is **not recorded** — confirm before relying on it.
+      - Only a scope measurement actually clears the gate.
+- [ ] Confirm the TS-C4's real tip geometry (chisel vs bevel — see §2a). Cosmetic;
+      affects presentation angle only.
 - [x] ~~Fix `master-bom.md`'s "21 SMD parts all 0603/SOT-23/SOIC"~~ **DONE**
       2026-07-29 — corrected to 34 there, with the L1 caveat (§1).
-- [ ] Re-label `pre-power-on-validation.md` §9 — the 🔴 is stale (§4).
-- [ ] Decide socket vs direct-solder for U6/U12 on the logic board before
-      stage 10.
+- [x] ~~Re-label `pre-power-on-validation.md` §9 — the 🔴 is stale.~~ **DONE** — §9 now
+      reads "✅ BOTH GAPS CLOSED ON v2 (verified 2026-07-30)" with the original text
+      kept beneath it as the record. Verified 2026-07-31.
+- [x] ~~Decide socket vs direct-solder for U6/U12 on the logic board.~~ **DECIDED —
+      SOCKET.** `order-list.md:80` records **Teensy/Nano sockets (PPTC241 / PPTC151)
+      ✅ ORDERED 2026-06-22**. Both modules are debug-swappable; do not solder them
+      down. Cut the Teensy's `VUSB`↔`VIN` pad *before* seating it.
+- [x] ~~Confirm XT30 quantity (~18 mating pairs).~~ **COUNTED from the board file
+      2026-07-31: 16 mating halves needed** — 8 board connectors (J3–J7, J12–J14)
+      plus 8 across the four populated buck stations (U1–U4, 2× XT30 each). 18 only
+      if U5 is ever fitted. Board side is XT30U-**M**, so the cables carry females.
 
 _Inventory and nets read from the board files 2026-07-29._
