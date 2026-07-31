@@ -26,6 +26,7 @@ import numpy as np
 import trimesh
 
 import check_fit as cf
+import cad_contains   # (#195 -- installed in main(); path set up by check_fit)
 
 # CANONICAL: + = OUTBOARD, - = inboard. FINE near the inboard belly-pack edge:
 # the bound collapses hard once the leg rolls under the pack (inboard >15, which
@@ -154,6 +155,12 @@ def edge(label, base, pivot, tgts, haa, kfe, direction):
 
 
 def main():
+    # #195: this is a GENERATED-ARTIFACT PRODUCER, not just a gate -- CI
+    # regenerates rom_envelope_table.py from it and compares. A producer whose
+    # output can shift run to run turns a freshness check into a coin flip in
+    # both directions: false STALE on an untouched tree, and a real staleness
+    # masked by a lucky match. Seed before computing anything.
+    cad_contains.install()
     # Inputs are loaded by bare name via check_fit (chassis STLs), so this has
     # to run from this directory. chdir HERE rather than at module scope:
     # verify_rom_envelope.py imports this module, and an import that silently

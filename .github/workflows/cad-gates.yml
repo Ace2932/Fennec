@@ -218,6 +218,15 @@ jobs:
         # to prevent.
         run: python -u hardware/cad/check_generated_fresh.py --skip rom_envelope_table.py
 
+      - name: Every CI gate that uses contains() seeds it
+        # #195 was propagated by hand three times and missed sites every time
+        # (chassis/check_fit, then check_shoe + servo_orientation_gate +
+        # hfe_envelope). Enforced here so the fourth omission is loud rather
+        # than silent. Entrypoints are DISCOVERED from build_all.sh, these
+        # workflows, and check_generated_fresh's producer table -- a gate added
+        # later is in scope without anyone remembering to add it.
+        run: python -u hardware/cad/check_seeding.py
+
   rom-envelope-freshness:
     # Split out of generated-freshness because it is ~15x the cost of the other
     # three combined: regenerating rom_envelope_table.py replays the check_fit

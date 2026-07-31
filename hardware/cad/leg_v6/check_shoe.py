@@ -23,6 +23,7 @@ import trimesh
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from cad_assets import asset  # noqa: E402  (path insert must come first)
+import cad_contains  # noqa: E402  (#195 -- installed in main())
 
 # The stock foot, already vendored for the URDF at nova_description/meshes.
 # Was an absolute /Users path into the ROOT repo, which is a different git
@@ -58,6 +59,7 @@ def sample(m, n_surface=15000, n_volume=6000):
 
 
 def main():
+    cad_contains.install()   # #195 -- reproducible containment
     shoe = trimesh.load(SHOE)
     pts_local = sample(shoe)
     # inner-face points, in SHOE frame: core band about crescent ctr (0,7)
