@@ -393,19 +393,19 @@ def sweep_checks(servo, pts0):
         if n == 0 and abs(ang) <= 109:
             _clearance_warn(femur, p, f'kfe {ang:+4d}deg vs femur')
             _clearance_warn(arm, p, f'kfe {ang:+4d}deg vs knee_arm')
-    # #53 fix (2026-07-11): coax's inboard HFE arm is now a separate bolt-on
-    # (coax_hfe_plate.scad) -- union it into the "coax" solid used for the
-    # SEATED hip-pitch sweep (both parts are defined in the same coax world
-    # frame at identity, no transform needed to combine them).
+    # #226 option C: the inboard arm is INTEGRAL now, and the removable member
+    # is the OUTBOARD block -- union THAT into the "coax" solid for the SEATED
+    # hip-pitch sweep, since the assembled leg carries it (both parts are
+    # defined in the same coax world frame at identity, no transform needed).
     coax = trimesh.util.concatenate([trimesh.load('coax_R.stl'),
-                                      trimesh.load('coax_hfe_plate.stl')])
+                                      trimesh.load('coax_hfe_block.stl')])
     fem_asm = np.vstack([trimesh.sample.sample_surface(femur, 5000, seed=0)[0],
                          trimesh.sample.sample_surface(arm, 1500, seed=0)[0],
                          trimesh.transform_points(pts0, rot_z180())])
     M = (trimesh.transformations.translation_matrix([33.8, 11.6, -9.5])
          @ rot_z180()
          @ trimesh.transformations.rotation_matrix(np.pi/2, [0, 1, 0]))
-    print('-- hip pitch sweep (femur assembly vs coax+coax_hfe_plate)')
+    print('-- hip pitch sweep (femur assembly vs coax+coax_hfe_block)')
     hfe_masked = []
     # LA-19a: extended past the sw limit (86) to ±90/95/100 to pin the mech
     # stop, same pattern as the kfe sweep's 109/118. Measured (2026-07-11,
@@ -445,9 +445,9 @@ def shoulder_checks(servo, pts0):
     bad = False
     sh = trimesh.load('shoulder.stl')
     pl = trimesh.load('shoulder_plate.stl')
-    # #53 fix (2026-07-11): coax's inboard HFE arm is now coax_hfe_plate.scad
+    # #226 option C: removable member is the outboard block (see sweep_checks)
     coax = trimesh.util.concatenate([trimesh.load('coax_R.stl'),
-                                      trimesh.load('coax_hfe_plate.stl')])
+                                      trimesh.load('coax_hfe_block.stl')])
     femur = trimesh.load('femur_R.stl')
     tibia = trimesh.load('tibia_R.stl')
     arm = trimesh.load('knee_arm.stl')
@@ -809,18 +809,19 @@ def insertion_checks(servo, pts0):
     U (integral inboard arm + bridge + integral outboard arm) -- the femur+
     HFE-servo assembly had NO insertion path (this exact sweep, run against
     the pre-fix geometry, was blocked essentially across the whole travel).
-    With the inboard arm now a separate bolt-on (coax_hfe_plate.scad),
-    verify the assembly can be removed/inserted with the plate OFF: place
-    it at its seated pose, sweep it AWAY along the real insertion axis, and
-    assert clean (no mid-travel block) all the way out.
+    #226 option C (2026-07-31): the removable member is the OUTBOARD block
+    now, so "with the removable part off" means coax_R.stl itself -- the
+    outboard arm has left for coax_hfe_block.scad. Verify the assembly can be
+    removed/inserted in that state: place it at its seated pose, sweep it AWAY
+    along the real insertion axis, and assert clean all the way out.
 
-    Insertion axis (found by testing all 6 +-X/Y/Z directions on the fixed
-    geometry, see coax.scad's own header): +Y (rearward), NOT axial +-X --
-    both X directions stay solid-blocked even with the arm gone (the HAA
-    housing's own pocket wall blocks -X; the integral outboard arm blocks
-    +X). Real assembly: femur approaches from behind the coax (+Y), slides
-    forward (-Y) to seat, wheel bolts to the integral outboard boss, THEN
-    coax_hfe_plate bolts on to capture the horn.
+    INSERTION AXIS IS NOW +X (2026-07-31). It used to be +Y, and this
+    docstring used to record "+X blocked by the integral outboard arm" as the
+    reason. Option C makes that arm removable, which is exactly what opens +X:
+    measured 0 points over t=2..50mm. Real assembly: femur enters axially from
+    outboard (-X to seat), THEN the block slides on (-X) and its 2x M3
+    retention bolts are driven from +X open air -- the driver access the
+    inboard cap never had.
 
     #226 (2026-07-31) -- THIS SWEEP MASKS NOTHING, AND MUST NOT.
     It used to drop every point within r13 of the hfe axis, inheriting the
@@ -857,13 +858,13 @@ def insertion_checks(servo, pts0):
          @ rot_z180()
          @ trimesh.transformations.rotation_matrix(np.pi / 2, [0, 1, 0]))
     seated = trimesh.transform_points(fem_asm, M)
-    print('-- #53 insertion sweep (femur+HFE-servo assembly vs coax, plate OFF, +Y) --')
+    print('-- #226 insertion sweep (femur+HFE-servo vs coax, BLOCK OFF, +X) --')
     print('   (NO radial mask -- see #226 in the docstring; a translation sweep '
           'cannot mask its own axis)')
     blocked_t = []
     for t in range(0, 72, 2):
         p = seated.copy()
-        p[:, 1] += t
+        p[:, 0] += t          # +X: axial, see the docstring
         inside = contains_chunked(coax, p)
         n = int(inside.sum())
         status = 'OK ' if n == 0 else 'HIT'
@@ -1059,17 +1060,23 @@ HEATSET_L = 6.2    # bore depth: 5.7 insert + 0.5 seat
 # RIGHT cap gets 1 marker dot (LA-2 convention); LEFT gets 2 (the base dot,
 # mirrored, plus its own 2nd disambiguation dot -- see coax_hfe_plate_L.
 # scad's header).
+# #226 option C (2026-07-31): retargeted from the retired inboard cap to the
+# OUTBOARD block. Two M3 now instead of one, bored -X from the mortise blind
+# end (x=MORT_X0=43.8) into the grown bridge, driven from +X open air -- so
+# `axis` (blind end -> exterior) is +X on the R part and -X on the mirrored L.
+# That access is the whole reason the removable member moved outboard: the cap
+# had 0.8-4.5mm of driver run where 15-20mm was needed.
 FASTENER_GROUPS = [
-    dict(cap_part='coax_hfe_plate.stl', stub_part='coax_R.stl',
-         holes=[(15.9, 24.0, 10.4)], axis=(0, 1, 0),
-         bore_d=M3_CLEAR, head_d=5.5, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
+    dict(cap_part='coax_hfe_block.stl', stub_part='coax_R.stl',
+         holes=[(43.8, 5.0, 12.5), (43.8, 18.0, 12.5)], axis=(1, 0, 0),
+         bore_d=M3_CLEAR, head_d=6.0, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
          dot_off=(0, 1.4),
-         dots=[(14.1, 7.15, -8.0, 0, -1, 0)]),
-    dict(cap_part='coax_hfe_plate_L.stl', stub_part='coax_L.stl',
+         dots=[(60.15, 21.6, -21.5, 1, 0, 0)]),
+    dict(cap_part='coax_hfe_block_L.stl', stub_part='coax_L.stl',
          dot_off=(0, 1.4),
-         holes=[(-15.9, 24.0, 10.4)], axis=(0, 1, 0),
-         bore_d=M3_CLEAR, head_d=5.5, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
-         dots=[(-14.1, 7.15, -8.0, 0, -1, 0), (-14.1, 7.15, -11.0, 0, -1, 0)]),
+         holes=[(-43.8, 5.0, 12.5), (-43.8, 18.0, 12.5)], axis=(-1, 0, 0),
+         bore_d=M3_CLEAR, head_d=6.0, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
+         dots=[(-60.15, 21.6, -21.5, -1, 0, 0), (-60.15, 21.6, -18.5, -1, 0, 0)]),
 ]
 
 
