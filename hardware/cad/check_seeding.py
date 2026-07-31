@@ -91,6 +91,11 @@ def discover_entrypoints():
 
 def main() -> int:
     entry = discover_entrypoints()
+    # drop self BEFORE counting -- see the note in the loop. Reporting a total
+    # that includes a file the scan skips is a number that does not mean what
+    # it says, which is the whole genre of bug this file belongs to.
+    me = pathlib.Path(__file__).resolve()
+    entry = {k: v for k, v in entry.items() if v.resolve() != me}
     if not entry:
         print('FAIL: discovered no gate entrypoints -- the parser is broken, '
               'which would make this check silently vacuous')
@@ -98,18 +103,15 @@ def main() -> int:
 
     print(f'-- contains() seeding gate (#195/#229): {len(entry)} CI entrypoints '
           f'discovered --')
+    # NB self is already excluded above. Wiring this into the workflow made its
+    # own regex discover it, and it then matched BOTH of its own search strings:
+    # it "calls contains()" because the literal '.contains(' appears in the
+    # matcher below, and it is "seeded" because it names cad_contains in its
+    # messages. Both true of the text, neither true of the behaviour -- a
+    # fabricated OK about itself, which is the exact reading error this gate
+    # exists to catch.
     bad = []
-    me = pathlib.Path(__file__).resolve()
     for rel, path in sorted(entry.items()):
-        if path.resolve() == me:
-            # Wiring this into the workflow made its own regex discover it, and
-            # it then matched BOTH its own search strings: it "calls contains()"
-            # because the literal '.contains(' appears in the matcher below, and
-            # it is "seeded" because it names cad_contains in its messages. Both
-            # true of the text, neither true of the behaviour -- a fabricated OK
-            # about itself, which is the exact reading error this gate exists to
-            # catch. Exclude it rather than let it pad the pass count.
-            continue
         src = path.read_text()
         if '.contains(' not in src:
             print(f'   n/a   {rel}: does not call contains()')
