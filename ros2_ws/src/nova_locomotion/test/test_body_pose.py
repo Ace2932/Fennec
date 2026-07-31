@@ -95,15 +95,20 @@ def test_pure_roll_antisymmetric_left_right():
 def test_pure_pitch_antisymmetric_front_rear():
     # +pitch lowers the nose => front targets rise, rear targets deepen
     # (same second-order common-mode as roll; lever = anchor |x|)
+    # #175: the anchor's fore-aft lever is the PITCH-axis station
+    # (half_x - hip_to_upper_x), not the haa station (half_x alone) —
+    # hip_mounts()/neutral_anchors() anchor fore-aft at the axis leg_ik
+    # actually solves from.
     q = 0.15
     targets = foot_targets(BodyPose(pitch=q), A, P)
     n = -P.stand_height
     common = (math.cos(q) - 1.0) * n
+    lever = P.half_x - P.hip_to_upper_x
     dz_f = targets["FL"][2] - n
     dz_r = targets["RL"][2] - n
     assert dz_f > 0 > dz_r
-    assert dz_f == pytest.approx(+math.sin(q) * P.half_x + common)
-    assert dz_r == pytest.approx(-math.sin(q) * P.half_x + common)
+    assert dz_f == pytest.approx(+math.sin(q) * lever + common)
+    assert dz_r == pytest.approx(-math.sin(q) * lever + common)
     # left-right symmetric under pure pitch (canonical frames)
     assert targets["FL"] == pytest.approx(targets["FR"])
     assert targets["RL"] == pytest.approx(targets["RR"])

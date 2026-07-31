@@ -147,6 +147,28 @@ def test_mjcf_pitch_axis_station_matches_the_CAD_and_is_keyed_PER_END():
 
 
 @pytest.mark.skipif(
+    not os.path.exists(_URDF),
+    reason="nova_description URDF not present in this checkout",
+)
+def test_body_pose_anchors_the_leg_plane_at_the_pitch_axis_not_the_haa_station():
+    """#175: leg_ik.solve_side() solves the planar IK from the HFE (pitch) axis,
+    not the HAA station — but body_pose.hip_mounts() anchored fore-aft at
+    half_x alone (the haa station), so commanded foot targets landed ~11.6mm/end
+    (23.2mm across the stance) outboard of where leg_ik actually solves relative
+    to. Assert against the URDF's own pitch-station identity (body_half_x minus
+    hip_to_upper_x) — the same one test_urdf_pitch_axis_station_matches_the_CAD
+    pins to the CAD — not a hardcoded 0.1296."""
+    from nova_locomotion.kinematics.body_pose import BodyPoseParams, hip_mounts
+
+    text = open(_URDF).read()
+    expected = _prop(text, "body_half_x") - _prop(text, "hip_to_upper_x")
+
+    mounts = hip_mounts(BodyPoseParams())
+    for leg, (x, y, z) in mounts.items():
+        assert abs(x) == pytest.approx(expected, abs=1e-4), (leg, x, expected)
+
+
+@pytest.mark.skipif(
     not (os.path.exists(_MJCF) and os.path.exists(_URDF)),
     reason="URDF or generated MJCF not present in this checkout",
 )
@@ -192,9 +214,9 @@ def test_mjcf_hfe_cap_is_END_KEYED_toward_the_trunk():
     """
     r = _mjcf_hfe_ranges()
     for leg in ("FL", "FR"):
-        assert abs(r[leg][1]) < abs(r[leg][0]), (leg, r[leg])   # tight on +
+        assert abs(r[leg][1]) < abs(r[leg][0]), (leg, r[leg])  # tight on +
     for leg in ("RL", "RR"):
-        assert abs(r[leg][0]) < abs(r[leg][1]), (leg, r[leg])   # tight on -
+        assert abs(r[leg][0]) < abs(r[leg][1]), (leg, r[leg])  # tight on -
     # the two ends are mirror images, not independent numbers
     assert r["FL"][1] == pytest.approx(-r["RL"][0])
     assert r["FL"][0] == pytest.approx(-r["RL"][1])
@@ -222,12 +244,12 @@ def test_sim_never_permits_a_fold_the_chassis_gate_would_REFUSE():
     r = _mjcf_hfe_ranges()
     for leg, (lo, hi) in r.items():
         g_lo, g_hi = hfe_bounds(leg, 0.0, math.radians(-109))
-        if leg[0] == "F":                      # toward trunk = +hfe
+        if leg[0] == "F":  # toward trunk = +hfe
             assert hi <= g_hi + 1e-9, (
                 f"{leg}: sim permits +{math.degrees(hi):.1f} deg toward the "
                 f"trunk, gate stops at +{math.degrees(g_hi):.1f}"
             )
-        else:                                  # toward trunk = -hfe
+        else:  # toward trunk = -hfe
             assert lo >= g_lo - 1e-9, (
                 f"{leg}: sim permits {math.degrees(lo):.1f} deg toward the "
                 f"trunk, gate stops at {math.degrees(g_lo):.1f}"
@@ -242,7 +264,7 @@ def test_the_OLD_symmetric_range_would_fail_that_check():
 
     from nova_ops.rom_envelope import hfe_bounds
 
-    old_lo, old_hi = -1.5010, 0.8730          # what every leg used to get
+    old_lo, old_hi = -1.5010, 0.8730  # what every leg used to get
     g_lo, _ = hfe_bounds("RL", 0.0, math.radians(-109))
     assert old_lo < g_lo, (
         "the old symmetric rear range should violate the gate bound; if it "
