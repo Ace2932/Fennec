@@ -53,3 +53,8 @@ mujoco
 # identical to four decimals. Change either side of that spread and re-derive
 # the tolerances rather than loosening them.
 # ---------------------------------------------------------------------------
+
+# shapely: NOT a CI-gate dep — used only by leg_v6/hfe_mouth_study.py (#221)
+# to build the mouth wedge polygon. Recorded because a committed script with
+# an unrecorded dependency is #200's exact gap.
+shapely
