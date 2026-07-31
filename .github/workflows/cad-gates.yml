@@ -116,6 +116,31 @@ jobs:
         working-directory: hardware/cad/leg_v6
         run: python servo_orientation_gate.py
 
+  head-clearance:
+    # #47 (SAFETY): FINE front-leg <-> head clearance. This existed as a script
+    # since 2026-07 and was run by NOTHING -- no workflow, no build_all.sh. It
+    # was written to REPLACE case-4's head window, which #47 found was a silent
+    # no-op; the replacement then ran nowhere, so the same check failed twice in
+    # different ways. (#228 revived the in-gate window; this is the fine
+    # surface-distance measurement it cannot do.)
+    #
+    # Its own job rather than a step in chassis-gates: ~2m10s against that job's
+    # ~30s, same reason rom-envelope-freshness was split out -- parallel, not
+    # serialised behind a fast gate.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install mesh deps
+        run: pip install -r hardware/cad/requirements.txt
+
+      - name: Front leg vs head/L2/D456 clearance sweep
+        working-directory: hardware/cad/chassis
+        run: python -u head_cap_sweep.py
+
   chassis-gates:
     runs-on: ubuntu-latest
     timeout-minutes: 45
