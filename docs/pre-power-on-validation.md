@@ -238,7 +238,12 @@ this validates the *timing*, the real half-duplex risk.)
 > | `V7V5_ARM` = `U5.4` only, single-pad net — "arm rail has no exit" | **`J14.2 = V7V5_ARM`.** The rail has an off-board XT30. |
 > | 🔴 `U5.EN` tied to `VBAT_PROTECTED` = always-on, ungated by e-stop/hardcut | **`U5.3 = EN_BUCKS`** — the same net as `U1.3`. Killed by e-stop Q3 **and** hardcut Q2. |
 >
-> So U5/U12 remain DNP **for scope — there is no arm yet — not for safety.**
+> So **U5** remains DNP **for scope — there is no arm yet — not for safety.**
+> ⚠️ **U12 is a different case and DOES get populated** (corrected 2026-07-31): the 4th INA226
+> was reassigned to the **L2 LiDAR rail at 0x45** on 2026-06-30, and `-D NOVA_INA226_L2` is
+> enabled in `platformio.ini` with `/power_rails[9..11]` carrying L2 v/a/w. All four INA slots
+> are electrically identical. Leaving U12 empty makes those three publish nothing.
+> See `hardware/pcb-mods/BUILD_PLAN.md` §4.
 > That is a materially different instruction from the original text, which reads
 > as "populating this creates a pinch/crush hazard".
 >

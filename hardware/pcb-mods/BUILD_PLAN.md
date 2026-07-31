@@ -16,7 +16,7 @@ disagreement is called out.
 
 | board | footprints | SMD | THT | mech | DNP |
 |---|---|---|---|---|---|
-| `nova_pcb_v6_power_v2` | 61 | 24 | 33 | 4 | U5, U12 |
+| `nova_pcb_v6_power_v2` | 61 | 24 | 33 | 4 | U5, U12 *(board flags; **U12 IS populated** — §4)* |
 | `nova_pcb_v6_logic` | 22 | 10 | 8 | 4 | — |
 
 **power_v2 SMD (24)** — 16× R 0603, 2× C 0603, 3× SOT-23 (Q2 Q3 Q4),
@@ -337,7 +337,7 @@ a part marked "470" is 47 pF and gives you no soft-start at all.
 | **D1 BZT52C18** | Zener, SOD-123F. Cathode band. Backwards it clamps nothing and conducts the wrong way. |
 | **Q1 IRLB3034PBF** | TO-220-3. Its pad 3 is the 14 A GND inject; pad 1 is `Net-(D1-K)`, pad 2 is `BATT_NEG`. **⚠️ The TO-220 TAB is bonded to the drain = `BATT_NEG`, not GND** — and `SW1` switches only the positive rail, so the tab is live whenever the pack is plugged in, switch off included. Bolting it to a grounded chassis or a shared heatsink shorts drain→source and **silently, permanently bypasses reverse-polarity protection**. Mount isolated or free-standing; if it is ever heatsinked, mica/silpad + shoulder bush and **meter tab-to-GND for an open** first. |
 | **U8 LM393 / U7 74LVC125** | SOIC pin-1 dot. **U7 is on the logic board TOP face**, U8 on the power board bottom — do not carry one assumption to the other. |
-| **U9–U11 INA226** | Off-board modules on a 4-pin header: `+3V3 / GND / SCL / SDA` at −5.08 / −2.54 / 0 / +2.54 mm. Rail current does NOT pass through the board. |
+| **U9–U12 INA226** | Off-board modules on a 4-pin header: `+3V3 / GND / SCL / SDA` at −5.08 / −2.54 / 0 / +2.54 mm. Rail current does NOT pass through the board. |
 | **U6 Teensy / U12 Nano** | Orientation set by the USB end. Socket if undecided — see §7. |
 
 ### All preheat work finishes at stage 8 — this constrains the order
@@ -421,7 +421,7 @@ Everything that leaves the power board. Gauges per `../wiring/README.md`
 | J2 | 1×03 header | `VBAT_PROTECTED` / `GND` / `V5_AUX` | aux tap | 22 AWG |
 | M1 | 1×02 header | `VBAT_PROTECTED` / `GND` | pack-voltage monitor tap | 22 AWG |
 | J20 | IDC 2×06 shrouded | `V5_AUX`, `GND`, `+3V3`, `BUS_SERVO`, `I2C_SDA`, `I2C_SCL`, `BATT_LOW` | **logic board**, 12-way ribbon across the ~20 mm mezzanine gap | ribbon |
-| U9–U11 | INA226 breakout | I²C + shunt | plug-in modules, one per active rail | — |
+| U9–U11 | INA226 breakout | I²C + shunt | plug-in modules — leg 0x40 / hip 0x41 / Jetson 0x44 | — |
 | — | **TVS clamps, no footprint** | across `V7V5_LEG`, `V12_HIP`, `V12_L2` | **Off-board by design** — a sweep of every power schematic and the `.kicad_pcb` finds **zero** `SMBJ` parts; `D1` is the only diode on the board. Solder **2× SMBJ8.5A** across the `V7V5_LEG` injection pigtails, **1× SMBJ13A** on `V12_HIP`, optional **1× SMBJ13A** on `V12_L2`. **Cathode band → +.** Not optional: e-stop regen can drive `V7V5_LEG` to ~21 V against 25 V bulk caps. Heat-shrink each. | inline |
 | U12 | INA226 breakout | I²C + shunt | **POPULATE — L2 12 V rail monitor @ 0x45** (§4). `IN±` inline in the L2 harness, same as U9–U11. Silk still says "arm"; the firmware says L2. | — |
 
