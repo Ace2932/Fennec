@@ -901,6 +901,119 @@ def insertion_checks(servo, pts0):
     return bad
 
 
+# ---------------------------------------------------------------------------
+# REMOVABLE-MEMBER INSTALLABILITY (#226 follow-up, 2026-07-31)
+#
+# THE STEP NOTHING MODELLED. Four gates covered this joint -- the insertion
+# sweep, the horn-bolt channels, the #67 fastener gate, the orientation gate --
+# and all four were green on a part that cannot be built. The reason is that
+# every one of them checked something OTHER than the step that actually fails:
+#
+#   insertion_checks   sweeps the FEMUR, with the cap OFF
+#   horn_bolt_checks   scans bolt CHANNELS through the stub
+#   #67 fastener gate  checks the cap's heat-set is reachable and backed
+#   orientation gate   proves the servo seats one way round
+#
+# Nobody ever swept the CAP. Measured 2026-07-31, coax_hfe_plate is blocked in
+# all six axes -- against the seated femur AND against a bare coax, in the
+# current revision AND in the pre-#7-fix one. Its seated pose is legitimate
+# (boolean intersection with the coax is 0.0 mm3), so it is a valid final
+# position with no way to reach it: a ship in a bottle. That is exactly what
+# Aiden reported from the bench ("doesn't really slide in") -- not a tolerance
+# problem, no path at all.
+#
+# CRITERION. A keyed member is SUPPOSED to be constrained in most directions;
+# that is what a key does. The failure is having NO free direction. So this
+# passes if AT LEAST ONE axis is clear across the whole travel, and fails only
+# when the member is enclosed on every one. Along its true install axis a
+# slip-fit part slides out cleanly from t=0, so "clear" means zero blocked
+# steps, not "few".
+#
+# LIMIT, stated because it bounds the verdict: rigid-body TRANSLATION along six
+# axes. It does not model rotation, compound paths, or elastic snap-fit. A part
+# this gate passes is installable; a part it fails might still go in with a
+# twist -- but nothing in this joint is designed to, and the printed part did
+# not.
+REMOVABLE_MEMBERS = [
+    # (member, side, obstacles that are already in place when it is installed)
+    ('coax_hfe_plate.stl', 'R', 'coax_R.stl'),
+    ('coax_hfe_plate_L.stl', 'L', 'coax_L.stl'),
+]
+INSTALL_DIRS = [('+X', (1, 0, 0)), ('-X', (-1, 0, 0)),
+                ('+Y', (0, 1, 0)), ('-Y', (0, -1, 0)),
+                ('+Z', (0, 0, 1)), ('-Z', (0, 0, -1))]
+
+
+def _seated_obstacles(side, servo, pts0):
+    """Everything already in place when the removable member goes on.
+
+    The femur+HFE-servo is seated first (coax.scad's own documented order), so
+    the member has to reach its seat past a loaded joint, not an empty one.
+    """
+    sx = 1.0 if side == 'R' else -1.0
+    mirror = np.eye(4)
+    mirror[0, 0] = sx
+    M = (mirror
+         @ trimesh.transformations.translation_matrix([33.8, 11.6, -9.5])
+         @ rot_z180()
+         @ trimesh.transformations.rotation_matrix(np.pi / 2, [0, 1, 0]))
+    femur = trimesh.load(f'femur_{side}.stl')
+    femur.apply_transform(M if side == 'R' else M @ mirror)
+    srv = servo.copy()
+    srv.apply_transform(M @ rot_z180())
+    return [('femur', femur), ('servo', srv)], sx
+
+
+def removable_member_checks(servo, pts0):
+    print('-- removable-member installability (#226: the step no gate modelled) --')
+    bad = False
+    for member_file, side, coax_file in REMOVABLE_MEMBERS:
+        member = trimesh.load(member_file)
+        pts = trimesh.sample.sample_surface(member, 12000, seed=0)[0]
+        obstacles, sx = _seated_obstacles(side, servo, pts0)
+        obstacles = [('coax', trimesh.load(coax_file))] + obstacles
+
+        free, report = [], []
+        for label, d in INSTALL_DIRS:
+            v = np.array(d, float) * np.array([sx, 1.0, 1.0])
+            blocked = []
+            for t in range(2, 42, 2):
+                p = pts + v * t
+                if any(int(contains_chunked(ob, p).sum()) for _, ob in obstacles):
+                    blocked.append(t)
+            if blocked:
+                report.append(f'{label} blocked {blocked[0]}..{blocked[-1]}mm')
+            else:
+                free.append(label)
+        if free:
+            print(f'   OK    {member_file}: installable along {", ".join(free)}')
+        else:
+            bad = True
+            print(f'TRAP  {member_file}: enclosed on ALL {len(INSTALL_DIRS)} axes with '
+                  f'the femur+servo seated -- it has a valid seat and no way to '
+                  f'reach it. Cannot be assembled at any tolerance. See #226.')
+            print(f'        ({"; ".join(report)})')
+
+    # SELF-TEST: a member parked clear of everything must read installable, or
+    # this gate is stuck-on-fail and its TRAP verdicts mean nothing.
+    ctrl = trimesh.load(REMOVABLE_MEMBERS[0][0])
+    ctrl.apply_transform(trimesh.transformations.translation_matrix([0, 120, 0]))
+    cpts = trimesh.sample.sample_surface(ctrl, 4000, seed=0)[0]
+    coax = trimesh.load('coax_R.stl')
+    free_ctrl = [lab for lab, d in INSTALL_DIRS
+                 if not any(int(contains_chunked(coax, cpts + np.array(d, float) * t).sum())
+                            for t in range(2, 42, 2))]
+    if len(free_ctrl) != len(INSTALL_DIRS):
+        bad = True
+        print(f'   FAIL  self-test: a member parked 120mm clear read as blocked on '
+              f'{len(INSTALL_DIRS) - len(free_ctrl)} axes -- this gate is broken, '
+              f'ignore its verdicts above')
+    else:
+        print(f'   OK    self-test: a member parked clear reads installable on all '
+              f'{len(INSTALL_DIRS)} axes (gate is not stuck-on-fail)')
+    return bad
+
+
 # #67 fix (2026-07-12): mount-hardware gate for the coax_hfe cap's fastener.
 # A prior attempt against this same joint (rejected, never merged) added a
 # FASTENER_GROUPS mechanism with genuinely axis-general MERGE/dot checks but
@@ -1270,6 +1383,8 @@ def main():
         bad = sweep_checks(servo, pts0) or bad
     if '--insertion' in sys.argv or do_sweep:
         bad = insertion_checks(servo, pts0) or bad
+    if '--removable' in sys.argv or do_sweep:
+        bad = removable_member_checks(servo, pts0) or bad
     if '--shoulder' in sys.argv or do_sweep:
         bad = shoulder_checks(servo, pts0) or bad
     if '--through' in sys.argv or do_sweep:
