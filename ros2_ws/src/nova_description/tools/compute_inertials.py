@@ -101,7 +101,7 @@ LINKS = [
         "hip",
         [
             (f"{LEG}/coax_R.stl", RHO_LEG, True),
-            (f"{LEG}/coax_hfe_plate.stl", RHO_LEG, False),
+            (f"{LEG}/coax_hfe_block.stl", RHO_LEG, False),
         ],
         R_HIP,
         np.zeros(3),

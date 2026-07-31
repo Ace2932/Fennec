@@ -24,14 +24,14 @@ $OS -o grommet_insert.stl grommet_insert.scad  # TPU flange grommet liner (#30, 
 $OS -o shoulder.stl shoulder.scad
 $OS -o shoulder_plate.stl shoulder_plate.scad
 $OS -o shoulder_plate_L.stl shoulder_plate_L.scad
-$OS -o coax_hfe_plate.stl coax_hfe_plate.scad        # #53 fix: bolt-on inboard HFE arm
-$OS -o coax_hfe_plate_L.stl coax_hfe_plate_L.scad
+$OS -o coax_hfe_block.stl coax_hfe_block.scad        # #226 option C: bolt-on OUTBOARD HFE arm
+$OS -o coax_hfe_block_L.stl coax_hfe_block_L.scad
 for p in femur tibia coax; do
   $OS -o ${p}_R.stl ${p}.scad
   $OS -o ${p}_L.stl ${p}_L.scad
 done
 ls -la *_R.stl *_L.stl
-$PY ../mesh_health.py *_R.stl *_L.stl knee_arm.stl knee_bumper.stl shoulder.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl strap.stl grommet_insert.stl coax_hfe_plate.stl coax_hfe_plate_L.stl
+$PY ../mesh_health.py *_R.stl *_L.stl knee_arm.stl knee_bumper.stl shoulder.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl strap.stl grommet_insert.stl coax_hfe_block.stl coax_hfe_block_L.stl
 $PY check_fit.py --sweep
 $PY check_shoe.py
 # Proves the hfe/kfe servos still seat only ONE way round. This is what backs

@@ -278,9 +278,14 @@ def _clearance_warn(target, p, label, floor_mm=1.0):
 DESIGNED_CONTACT_R = 10.3
 MASK_DRIFT_MM = 1.0
 #: Points allowed to overlap at the SEATED pose (t=0) of the insertion sweep.
-#: Measured 0 on the current geometry. Raising this is a deliberate act that
-#: needs a reason in the commit, not a knob to turn when the gate goes red.
-SEATED_OVERLAP_EXPECTED = 0
+#: RAISED 0 -> 600 for #226 option C, deliberately and with the reason:
+#: the inboard arm is INTEGRAL now, so the horn is genuinely captured at the
+#: seat -- a real disc interface that the retired cap architecture did not
+#: have (with the cap off, the old geometry overlapped by exactly 0). Measured
+#: 483 pts on the option-C build; 600 leaves headroom for surface-sampling
+#: noise while still catching a materially different seat.
+#: This is the knob that assertion exists to make someone turn ON PURPOSE.
+SEATED_OVERLAP_EXPECTED = 600
 
 
 def mask_invariance_check(envelopes, label):
@@ -393,19 +398,19 @@ def sweep_checks(servo, pts0):
         if n == 0 and abs(ang) <= 109:
             _clearance_warn(femur, p, f'kfe {ang:+4d}deg vs femur')
             _clearance_warn(arm, p, f'kfe {ang:+4d}deg vs knee_arm')
-    # #53 fix (2026-07-11): coax's inboard HFE arm is now a separate bolt-on
-    # (coax_hfe_plate.scad) -- union it into the "coax" solid used for the
-    # SEATED hip-pitch sweep (both parts are defined in the same coax world
-    # frame at identity, no transform needed to combine them).
+    # #226 option C: the inboard arm is INTEGRAL now, and the removable member
+    # is the OUTBOARD block -- union THAT into the "coax" solid for the SEATED
+    # hip-pitch sweep, since the assembled leg carries it (both parts are
+    # defined in the same coax world frame at identity, no transform needed).
     coax = trimesh.util.concatenate([trimesh.load('coax_R.stl'),
-                                      trimesh.load('coax_hfe_plate.stl')])
+                                      trimesh.load('coax_hfe_block.stl')])
     fem_asm = np.vstack([trimesh.sample.sample_surface(femur, 5000, seed=0)[0],
                          trimesh.sample.sample_surface(arm, 1500, seed=0)[0],
                          trimesh.transform_points(pts0, rot_z180())])
     M = (trimesh.transformations.translation_matrix([33.8, 11.6, -9.5])
          @ rot_z180()
          @ trimesh.transformations.rotation_matrix(np.pi/2, [0, 1, 0]))
-    print('-- hip pitch sweep (femur assembly vs coax+coax_hfe_plate)')
+    print('-- hip pitch sweep (femur assembly vs coax+coax_hfe_block)')
     hfe_masked = []
     # LA-19a: extended past the sw limit (86) to ±90/95/100 to pin the mech
     # stop, same pattern as the kfe sweep's 109/118. Measured (2026-07-11,
@@ -445,9 +450,9 @@ def shoulder_checks(servo, pts0):
     bad = False
     sh = trimesh.load('shoulder.stl')
     pl = trimesh.load('shoulder_plate.stl')
-    # #53 fix (2026-07-11): coax's inboard HFE arm is now coax_hfe_plate.scad
+    # #226 option C: removable member is the outboard block (see sweep_checks)
     coax = trimesh.util.concatenate([trimesh.load('coax_R.stl'),
-                                      trimesh.load('coax_hfe_plate.stl')])
+                                      trimesh.load('coax_hfe_block.stl')])
     femur = trimesh.load('femur_R.stl')
     tibia = trimesh.load('tibia_R.stl')
     arm = trimesh.load('knee_arm.stl')
@@ -809,18 +814,19 @@ def insertion_checks(servo, pts0):
     U (integral inboard arm + bridge + integral outboard arm) -- the femur+
     HFE-servo assembly had NO insertion path (this exact sweep, run against
     the pre-fix geometry, was blocked essentially across the whole travel).
-    With the inboard arm now a separate bolt-on (coax_hfe_plate.scad),
-    verify the assembly can be removed/inserted with the plate OFF: place
-    it at its seated pose, sweep it AWAY along the real insertion axis, and
-    assert clean (no mid-travel block) all the way out.
+    #226 option C (2026-07-31): the removable member is the OUTBOARD block
+    now, so "with the removable part off" means coax_R.stl itself -- the
+    outboard arm has left for coax_hfe_block.scad. Verify the assembly can be
+    removed/inserted in that state: place it at its seated pose, sweep it AWAY
+    along the real insertion axis, and assert clean all the way out.
 
-    Insertion axis (found by testing all 6 +-X/Y/Z directions on the fixed
-    geometry, see coax.scad's own header): +Y (rearward), NOT axial +-X --
-    both X directions stay solid-blocked even with the arm gone (the HAA
-    housing's own pocket wall blocks -X; the integral outboard arm blocks
-    +X). Real assembly: femur approaches from behind the coax (+Y), slides
-    forward (-Y) to seat, wheel bolts to the integral outboard boss, THEN
-    coax_hfe_plate bolts on to capture the horn.
+    INSERTION AXIS IS NOW +X (2026-07-31). It used to be +Y, and this
+    docstring used to record "+X blocked by the integral outboard arm" as the
+    reason. Option C makes that arm removable, which is exactly what opens +X:
+    measured 0 points over t=2..50mm. Real assembly: femur enters axially from
+    outboard (-X to seat), THEN the block slides on (-X) and its 2x M3
+    retention bolts are driven from +X open air -- the driver access the
+    inboard cap never had.
 
     #226 (2026-07-31) -- THIS SWEEP MASKS NOTHING, AND MUST NOT.
     It used to drop every point within r13 of the hfe axis, inheriting the
@@ -857,13 +863,13 @@ def insertion_checks(servo, pts0):
          @ rot_z180()
          @ trimesh.transformations.rotation_matrix(np.pi / 2, [0, 1, 0]))
     seated = trimesh.transform_points(fem_asm, M)
-    print('-- #53 insertion sweep (femur+HFE-servo assembly vs coax, plate OFF, +Y) --')
+    print('-- #226 insertion sweep (femur+HFE-servo vs coax, BLOCK OFF, +X) --')
     print('   (NO radial mask -- see #226 in the docstring; a translation sweep '
           'cannot mask its own axis)')
     blocked_t = []
     for t in range(0, 72, 2):
         p = seated.copy()
-        p[:, 1] += t
+        p[:, 0] += t          # +X: axial, see the docstring
         inside = contains_chunked(coax, p)
         n = int(inside.sum())
         status = 'OK ' if n == 0 else 'HIT'
@@ -898,6 +904,119 @@ def insertion_checks(servo, pts0):
               f'withdrawn -- obstructed over t=+{min(blocked_t)}..+{max(blocked_t)}mm '
               f'({len(blocked_t)} of {len(range(2, 72, 2))} travel steps). The joint '
               f'does not assemble. See #226.')
+    return bad
+
+
+# ---------------------------------------------------------------------------
+# REMOVABLE-MEMBER INSTALLABILITY (#226 follow-up, 2026-07-31)
+#
+# THE STEP NOTHING MODELLED. Four gates covered this joint -- the insertion
+# sweep, the horn-bolt channels, the #67 fastener gate, the orientation gate --
+# and all four were green on a part that cannot be built. The reason is that
+# every one of them checked something OTHER than the step that actually fails:
+#
+#   insertion_checks   sweeps the FEMUR, with the cap OFF
+#   horn_bolt_checks   scans bolt CHANNELS through the stub
+#   #67 fastener gate  checks the cap's heat-set is reachable and backed
+#   orientation gate   proves the servo seats one way round
+#
+# Nobody ever swept the CAP. Measured 2026-07-31, coax_hfe_plate is blocked in
+# all six axes -- against the seated femur AND against a bare coax, in the
+# current revision AND in the pre-#7-fix one. Its seated pose is legitimate
+# (boolean intersection with the coax is 0.0 mm3), so it is a valid final
+# position with no way to reach it: a ship in a bottle. That is exactly what
+# Aiden reported from the bench ("doesn't really slide in") -- not a tolerance
+# problem, no path at all.
+#
+# CRITERION. A keyed member is SUPPOSED to be constrained in most directions;
+# that is what a key does. The failure is having NO free direction. So this
+# passes if AT LEAST ONE axis is clear across the whole travel, and fails only
+# when the member is enclosed on every one. Along its true install axis a
+# slip-fit part slides out cleanly from t=0, so "clear" means zero blocked
+# steps, not "few".
+#
+# LIMIT, stated because it bounds the verdict: rigid-body TRANSLATION along six
+# axes. It does not model rotation, compound paths, or elastic snap-fit. A part
+# this gate passes is installable; a part it fails might still go in with a
+# twist -- but nothing in this joint is designed to, and the printed part did
+# not.
+REMOVABLE_MEMBERS = [
+    # (member, side, obstacles that are already in place when it is installed)
+    ('coax_hfe_block.stl', 'R', 'coax_R.stl'),
+    ('coax_hfe_block_L.stl', 'L', 'coax_L.stl'),
+]
+INSTALL_DIRS = [('+X', (1, 0, 0)), ('-X', (-1, 0, 0)),
+                ('+Y', (0, 1, 0)), ('-Y', (0, -1, 0)),
+                ('+Z', (0, 0, 1)), ('-Z', (0, 0, -1))]
+
+
+def _seated_obstacles(side, servo, pts0):
+    """Everything already in place when the removable member goes on.
+
+    The femur+HFE-servo is seated first (coax.scad's own documented order), so
+    the member has to reach its seat past a loaded joint, not an empty one.
+    """
+    sx = 1.0 if side == 'R' else -1.0
+    mirror = np.eye(4)
+    mirror[0, 0] = sx
+    M = (mirror
+         @ trimesh.transformations.translation_matrix([33.8, 11.6, -9.5])
+         @ rot_z180()
+         @ trimesh.transformations.rotation_matrix(np.pi / 2, [0, 1, 0]))
+    femur = trimesh.load(f'femur_{side}.stl')
+    femur.apply_transform(M if side == 'R' else M @ mirror)
+    srv = servo.copy()
+    srv.apply_transform(M @ rot_z180())
+    return [('femur', femur), ('servo', srv)], sx
+
+
+def removable_member_checks(servo, pts0):
+    print('-- removable-member installability (#226: the step no gate modelled) --')
+    bad = False
+    for member_file, side, coax_file in REMOVABLE_MEMBERS:
+        member = trimesh.load(member_file)
+        pts = trimesh.sample.sample_surface(member, 12000, seed=0)[0]
+        obstacles, sx = _seated_obstacles(side, servo, pts0)
+        obstacles = [('coax', trimesh.load(coax_file))] + obstacles
+
+        free, report = [], []
+        for label, d in INSTALL_DIRS:
+            v = np.array(d, float) * np.array([sx, 1.0, 1.0])
+            blocked = []
+            for t in range(2, 42, 2):
+                p = pts + v * t
+                if any(int(contains_chunked(ob, p).sum()) for _, ob in obstacles):
+                    blocked.append(t)
+            if blocked:
+                report.append(f'{label} blocked {blocked[0]}..{blocked[-1]}mm')
+            else:
+                free.append(label)
+        if free:
+            print(f'   OK    {member_file}: installable along {", ".join(free)}')
+        else:
+            bad = True
+            print(f'TRAP  {member_file}: enclosed on ALL {len(INSTALL_DIRS)} axes with '
+                  f'the femur+servo seated -- it has a valid seat and no way to '
+                  f'reach it. Cannot be assembled at any tolerance. See #226.')
+            print(f'        ({"; ".join(report)})')
+
+    # SELF-TEST: a member parked clear of everything must read installable, or
+    # this gate is stuck-on-fail and its TRAP verdicts mean nothing.
+    ctrl = trimesh.load(REMOVABLE_MEMBERS[0][0])
+    ctrl.apply_transform(trimesh.transformations.translation_matrix([0, 120, 0]))
+    cpts = trimesh.sample.sample_surface(ctrl, 4000, seed=0)[0]
+    coax = trimesh.load('coax_R.stl')
+    free_ctrl = [lab for lab, d in INSTALL_DIRS
+                 if not any(int(contains_chunked(coax, cpts + np.array(d, float) * t).sum())
+                            for t in range(2, 42, 2))]
+    if len(free_ctrl) != len(INSTALL_DIRS):
+        bad = True
+        print(f'   FAIL  self-test: a member parked 120mm clear read as blocked on '
+              f'{len(INSTALL_DIRS) - len(free_ctrl)} axes -- this gate is broken, '
+              f'ignore its verdicts above')
+    else:
+        print(f'   OK    self-test: a member parked clear reads installable on all '
+              f'{len(INSTALL_DIRS)} axes (gate is not stuck-on-fail)')
     return bad
 
 
@@ -946,17 +1065,27 @@ HEATSET_L = 6.2    # bore depth: 5.7 insert + 0.5 seat
 # RIGHT cap gets 1 marker dot (LA-2 convention); LEFT gets 2 (the base dot,
 # mirrored, plus its own 2nd disambiguation dot -- see coax_hfe_plate_L.
 # scad's header).
+# #226 option C (2026-07-31): retargeted from the retired inboard cap to the
+# OUTBOARD block. Two M3 now instead of one, bored -X from the mortise blind
+# end (x=MORT_X0=43.8) into the grown bridge, driven from +X open air -- so
+# `axis` (blind end -> exterior) is +X on the R part and -X on the mirrored L.
+# That access is the whole reason the removable member moved outboard: the cap
+# had 0.8-4.5mm of driver run where 15-20mm was needed.
 FASTENER_GROUPS = [
-    dict(cap_part='coax_hfe_plate.stl', stub_part='coax_R.stl',
-         holes=[(15.9, 24.0, 10.4)], axis=(0, 1, 0),
-         bore_d=M3_CLEAR, head_d=5.5, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
-         dot_off=(0, 1.4),
-         dots=[(14.1, 7.15, -8.0, 0, -1, 0)]),
-    dict(cap_part='coax_hfe_plate_L.stl', stub_part='coax_L.stl',
-         dot_off=(0, 1.4),
-         holes=[(-15.9, 24.0, 10.4)], axis=(0, 1, 0),
-         bore_d=M3_CLEAR, head_d=5.5, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
-         dots=[(-14.1, 7.15, -8.0, 0, -1, 0), (-14.1, 7.15, -11.0, 0, -1, 0)]),
+    dict(cap_part='coax_hfe_block.stl', stub_part='coax_R.stl',
+         holes=[(43.8, 5.0, 11.5), (43.8, 18.0, 11.5)], axis=(1, 0, 0),
+         bore_d=M3_CLEAR, head_d=6.0, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
+         # 3.0, not the cap's old 1.4: that offset was sized to a 1.4mm-wide
+         # wall, and it sits INSIDE this d=3 dot's own 1.5mm radius -- the refs
+         # land in the dimple and the depth cancels to 0.00mm. The gusset face
+         # is 32mm in y and 13.4 in z, so real undisturbed refs exist here.
+         dot_off=(3.0, 3.0),
+         dots=[(62.3, 19.6, 6.0, 1, 0, 0)]),
+    dict(cap_part='coax_hfe_block_L.stl', stub_part='coax_L.stl',
+         dot_off=(3.0, 3.0),
+         holes=[(-43.8, 5.0, 11.5), (-43.8, 18.0, 11.5)], axis=(-1, 0, 0),
+         bore_d=M3_CLEAR, head_d=6.0, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
+         dots=[(-62.3, 19.6, 6.0, -1, 0, 0), (-62.3, 19.6, 1.0, -1, 0, 0)]),
 ]
 
 
@@ -1270,6 +1399,8 @@ def main():
         bad = sweep_checks(servo, pts0) or bad
     if '--insertion' in sys.argv or do_sweep:
         bad = insertion_checks(servo, pts0) or bad
+    if '--removable' in sys.argv or do_sweep:
+        bad = removable_member_checks(servo, pts0) or bad
     if '--shoulder' in sys.argv or do_sweep:
         bad = shoulder_checks(servo, pts0) or bad
     if '--through' in sys.argv or do_sweep:
