@@ -8,14 +8,28 @@ the weakest joint on the leg (#61). This study asks: can the inboard arm be a
 front half-C with a rear MOUTH, so femur+servo+horn slide in from behind and
 the cap stops existing?
 
-MEASURED ANSWER (three failed hypotheses on the way — see #221 for the full
-trail): yes, geometrically. The transiting body is the SERVO HORN DISC (mesh
-radius ~12.8, so Ø~25.6 — NB coax.scad's HORN_OD=20 does not describe the mesh
-horn; the mesh is authority). The validated mouth: rear sector ±92 deg about
-+Y, radial r 10.4 -> rim, through the full cap x-extent 11.8..19.4. All four
-horn-bolt bosses (r=7) survive; the margin variant shrunk 0.8 mm BLOCKS, so
-the mouth floor clears the metal horn rim by <1 mm — a first-article
-measurement, not a foregone conclusion.
+RETRACTED 2026-07-31 (#226). This file used to answer "yes, geometrically" and
+call candidate F validated. That verdict was produced by a sweep that masked
+every point within R_EXCL=10.3 of the HFE axis — on a TRANSLATION sweep, where
+such a mask is never legitimate. See check_fit.py's DESIGNED_CONTACT_R block
+for why: the rotation sweeps' mask is justified by symmetry (a rotationally
+symmetric interface can be neither created nor resolved by rotating about its
+own axis), and translation has no such symmetry. A stub nested in a bore is
+untroubled by rotation and completely trapped by translation.
+
+Measured with the mask removed: the sweep carries 4,442 hits, not 35, spanning
+x 13.60..56.00 and r 0.12..10.29 across t=+2..+24mm. Two separate obstructions
+were inside the mask the whole time — the mouth floor itself (the mouth is cut
+only from r=10.4 outward, so everything below it survives) and the Ø19 integral
+OUTBOARD boss at x 51.55..56.00, which is not on the cap at all and which no
+mouth in the cap can relieve.
+
+So: the mouth does not admit the femur+servo unit, the coupon is not a valid
+fit test for it, and #221's candidate F is void. What survives from the study
+is the geometry it named — the transiting body is the SERVO HORN DISC (mesh
+radius ~12.8, so Ø~25.6; NB coax.scad's HORN_OD=20 does not describe the mesh
+horn, the mesh is authority) — and the four horn-bolt bosses at r=7, which the
+±92 deg sector does clear.
 
 THE COUPON THIS EXPORTS IS NOT A ROBOT PART. It is boolean'd from the two
 committed STLs (cap fused on, then the mouth cut), so it carries cap remnants
@@ -28,10 +42,15 @@ CONVENTIONS THIS ENCODES (each was violated once during the study and produced
 a confident wrong answer — do not "simplify" them away):
   * the servo mesh INCLUDES the mounted horn + bottom wheel; the horn is
     always on the servo, so every sweep must run horn-on
-  * designed contact (horn/wheel discs, r<=10.0 about the HFE axis) must be
-    excluded or every direction reads blocked at t=2mm
   * sweep the COMBINED femur+servo assembly along the real insertion axis
     (+Y withdraw), not the servo alone in six directions
+  * NO RADIAL MASK on this sweep. The retracted convention was "designed
+    contact (r<=10.0 about the HFE axis) must be excluded or every direction
+    reads blocked at t=2mm". That is true of the six-direction servo-only
+    test it was written for, and false here — masking it is what produced the
+    retracted verdict above. If the assembly genuinely has a withdrawal path,
+    the count reaches zero on its own; needing a mask to reach zero IS the
+    finding.
 
 Run:  ../../../.venv/bin/python hfe_mouth_study.py
 Writes coax_hfe_mouth_coupon.stl next to this file (gitignored — regenerable
@@ -50,7 +69,8 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 HFE_YZ = np.array([11.6, -9.5])   # HFE axis in (y, z); axis runs along X
-R_EXCL = 10.3                     # designed contact is r<=10.0 exactly
+# NB there is deliberately no R_EXCL any more (#226). It was 10.3, and removing
+# it is what turned this study's verdict from "validated" to "void".
 OUT = HERE / "coax_hfe_mouth_coupon.stl"
 
 # The validated candidate ("F" in #221). G = F shrunk 0.8mm/4deg BLOCKS, so
@@ -109,17 +129,37 @@ def main() -> int:
     assert coupon.is_watertight, "coupon not watertight"
 
     asm = assembly_points(cf)
+    # NO radial mask (#226) -- see the docstring. A clear withdrawal path drives
+    # this to zero unaided; needing a mask to reach zero is itself the finding.
     bad = 0
+    cap_hits = boss_hits = 0
     for t in range(2, 72, 2):
         p = asm.copy()
         p[:, 1] += t
-        p = p[np.linalg.norm(p[:, 1:] - HFE_YZ, axis=1) > R_EXCL]
-        bad += int(coupon.contains(p).sum())
-    # 35 pts = the 0.1mm sliver between R_EXCL and MOUTH_R_IN; anything well
-    # beyond that means the candidate regressed.
-    print(f"insertion sweep residue: {bad} pts (validated baseline ~35)")
-    if bad > 120:
-        print("FAIL: mouth no longer admits the femur+servo unit")
+        inside = coupon.contains(p)
+        n = int(inside.sum())
+        bad += n
+        if n:
+            q = p[inside]
+            r = np.linalg.norm(q[:, 1:] - HFE_YZ, axis=1)
+            # x<25 is the cap/mouth region a redesigned mouth could relieve;
+            # x>50 is the INTEGRAL outboard boss, which is not on the cap at
+            # all and which no mouth in the cap can ever reach.
+            cap_hits += int((q[:, 0] < 25).sum())
+            boss_hits += int((q[:, 0] > 50).sum())
+            print(f"   t=+{t:3d}mm: {n:5d} pts  r {r.min():5.2f}..{r.max():5.2f}"
+                  f"  x {q[:, 0].min():6.2f}..{q[:, 0].max():6.2f}")
+    print(f"insertion sweep residue: {bad} pts "
+          f"({cap_hits} in the cap/mouth region x<25, "
+          f"{boss_hits} on the integral outboard boss x>50)")
+    if bad:
+        print("FAIL: the mouth does not admit the femur+servo unit.")
+        if boss_hits:
+            print(f"      {boss_hits} of those hits are the Ø19 INTEGRAL outboard "
+                  f"boss (x>50), which is not part of the cap -- no mouth cut in "
+                  f"the cap can relieve it. Cutting a better mouth cannot fix "
+                  f"this joint; see #226 options C/D.")
+        print("      Not exporting a coupon that cannot accept the part.")
         return 1
 
     for ang in (45, 135, -135, -45):
@@ -141,7 +181,6 @@ def main() -> int:
     for t in range(2, 30, 2):
         p = asm.copy()
         p[:, 1] += t
-        p = p[np.linalg.norm(p[:, 1:] - HFE_YZ, axis=1) > R_EXCL]
         ctrl += int(base.contains(p).sum())
     print(f"control (un-mouthed base): {ctrl} pts blocked")
     if ctrl == 0:
@@ -149,7 +188,21 @@ def main() -> int:
         return 1
 
     coupon.export(OUT)
-    print(f"wrote {OUT.name}  ({coupon.volume/1000:.1f} cm3, watertight)")
+    # Verify what was WRITTEN, not what was in memory. Measured 2026-07-31: an
+    # earlier export landed translated +41.7mm in x (file bounds x[25.6,104.0]
+    # vs the in-memory union's x[-16.0,62.3]), volume preserved, so every
+    # in-memory assertion above still passed. A structural census run against
+    # the file then queried empty space and read "0 material everywhere". Root
+    # cause not yet identified — so check the artifact rather than trust it.
+    back = trimesh.load(OUT)
+    d = np.abs(back.bounds - coupon.bounds).max()
+    if d > 0.01:
+        print(f"FAIL: exported STL does not match the mesh it came from — "
+              f"bounds moved {d:.2f}mm (in-memory {coupon.bounds.tolist()}, "
+              f"file {back.bounds.tolist()})")
+        return 1
+    print(f"wrote {OUT.name}  ({coupon.volume/1000:.1f} cm3, watertight, "
+          f"bounds verified after reload)")
     return 0
 
 
