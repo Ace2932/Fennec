@@ -140,15 +140,20 @@ BOSS_BORE_R = 10.0;              // boss r9.5 + 0.5. At EQUAL radii the boss and
                                  // and the block read trapped (measured -- it is
                                  // hfe_block_study's negative control).
 GROW_X0     = 40.0;              // bridge grows over x GROW_X0..SPLIT_X ...
-GROW_Z1     = 18.0;              // ... to here, to host the mortise. MEASURED
-                                 // headroom: growing to z=24 still leaves 7.76mm
-                                 // to shoulder+plate across the full +-40deg haa
-                                 // sweep, so this is free space.
-MORT_X0 = 43.8;  MORT_Y0 = 0.0;   MORT_Z0 = 9.0;
-MORT_Y1 = 23.2;  MORT_Z1 = 16.0;  // mortise; x1 = SPLIT_X (open at the face)
+GROW_Z1     = 16.0;              // ... to here, to host the mortise. CORRECTED
+                                 // from 18.0: at 18 the grown bridge HITS the
+                                 // shoulder at haa -40 (66 pts, inside the +-40
+                                 // limit). An earlier headroom probe said 7.76mm
+                                 // clear, but it sampled x 50..62 while the
+                                 // growth is actually built over x 40..56.2 --
+                                 // it measured a different volume than the one
+                                 // built. 16.0 measures 0 pts at every swept
+                                 // haa angle.
+MORT_X0 = 43.8;  MORT_Y0 = 0.0;   MORT_Z0 = 9.5;
+MORT_Y1 = 23.2;  MORT_Z1 = 13.5;   // 2.1mm wall below, 2.5 above  // mortise; x1 = SPLIT_X (open at the face)
 CLR_TENON  = 0.15;               // same convention as CLR_KEY
 BOLT_YS    = [5.0, 18.0];        // 2x M3 retention, cyclic 133/2 = 66 N each
-BOLT_Z     = 12.5;               // vs ~175-245 N wet pull-out -> SF 2.6-3.7
+BOLT_Z     = 11.5;               // vs ~175-245 N wet pull-out -> SF 2.6-3.7
 
 // #53 BLOCKER fix (2026-07-11): the coax's femur yoke was a rigid closed U
 // (integral inboard arm + bridge + integral outboard arm) -- no removable

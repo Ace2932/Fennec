@@ -278,9 +278,14 @@ def _clearance_warn(target, p, label, floor_mm=1.0):
 DESIGNED_CONTACT_R = 10.3
 MASK_DRIFT_MM = 1.0
 #: Points allowed to overlap at the SEATED pose (t=0) of the insertion sweep.
-#: Measured 0 on the current geometry. Raising this is a deliberate act that
-#: needs a reason in the commit, not a knob to turn when the gate goes red.
-SEATED_OVERLAP_EXPECTED = 0
+#: RAISED 0 -> 600 for #226 option C, deliberately and with the reason:
+#: the inboard arm is INTEGRAL now, so the horn is genuinely captured at the
+#: seat -- a real disc interface that the retired cap architecture did not
+#: have (with the cap off, the old geometry overlapped by exactly 0). Measured
+#: 483 pts on the option-C build; 600 leaves headroom for surface-sampling
+#: noise while still catching a materially different seat.
+#: This is the knob that assertion exists to make someone turn ON PURPOSE.
+SEATED_OVERLAP_EXPECTED = 600
 
 
 def mask_invariance_check(envelopes, label):
@@ -937,8 +942,8 @@ def insertion_checks(servo, pts0):
 # not.
 REMOVABLE_MEMBERS = [
     # (member, side, obstacles that are already in place when it is installed)
-    ('coax_hfe_plate.stl', 'R', 'coax_R.stl'),
-    ('coax_hfe_plate_L.stl', 'L', 'coax_L.stl'),
+    ('coax_hfe_block.stl', 'R', 'coax_R.stl'),
+    ('coax_hfe_block_L.stl', 'L', 'coax_L.stl'),
 ]
 INSTALL_DIRS = [('+X', (1, 0, 0)), ('-X', (-1, 0, 0)),
                 ('+Y', (0, 1, 0)), ('-Y', (0, -1, 0)),
@@ -1068,15 +1073,19 @@ HEATSET_L = 6.2    # bore depth: 5.7 insert + 0.5 seat
 # had 0.8-4.5mm of driver run where 15-20mm was needed.
 FASTENER_GROUPS = [
     dict(cap_part='coax_hfe_block.stl', stub_part='coax_R.stl',
-         holes=[(43.8, 5.0, 12.5), (43.8, 18.0, 12.5)], axis=(1, 0, 0),
+         holes=[(43.8, 5.0, 11.5), (43.8, 18.0, 11.5)], axis=(1, 0, 0),
          bore_d=M3_CLEAR, head_d=6.0, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
-         dot_off=(0, 1.4),
-         dots=[(60.15, 21.6, -21.5, 1, 0, 0)]),
+         # 3.0, not the cap's old 1.4: that offset was sized to a 1.4mm-wide
+         # wall, and it sits INSIDE this d=3 dot's own 1.5mm radius -- the refs
+         # land in the dimple and the depth cancels to 0.00mm. The gusset face
+         # is 32mm in y and 13.4 in z, so real undisturbed refs exist here.
+         dot_off=(3.0, 3.0),
+         dots=[(62.3, 19.6, 6.0, 1, 0, 0)]),
     dict(cap_part='coax_hfe_block_L.stl', stub_part='coax_L.stl',
-         dot_off=(0, 1.4),
-         holes=[(-43.8, 5.0, 12.5), (-43.8, 18.0, 12.5)], axis=(-1, 0, 0),
+         dot_off=(3.0, 3.0),
+         holes=[(-43.8, 5.0, 11.5), (-43.8, 18.0, 11.5)], axis=(-1, 0, 0),
          bore_d=M3_CLEAR, head_d=6.0, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
-         dots=[(-60.15, 21.6, -21.5, -1, 0, 0), (-60.15, 21.6, -18.5, -1, 0, 0)]),
+         dots=[(-62.3, 19.6, 6.0, -1, 0, 0), (-62.3, 19.6, 1.0, -1, 0, 0)]),
 ]
 
 

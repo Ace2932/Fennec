@@ -58,11 +58,11 @@ ARM_OUT_X1  = ARM_OUT_X0 + ARM_THK;      // 60.2
 SPLIT_X     = ARM_OUT_X0;
 BOSS_X0     = FEMUR_MID - WHEEL_Z0;      // 51.55
 
-MORT_X0 = 43.8;  MORT_Y0 = 0.0;   MORT_Z0 = 9.0;
-MORT_Y1 = 23.2;  MORT_Z1 = 16.0;
+MORT_X0 = 43.8;  MORT_Y0 = 0.0;   MORT_Z0 = 9.5;
+MORT_Y1 = 23.2;  MORT_Z1 = 13.5;
 CLR_TENON = 0.15;
 BOLT_YS = [5.0, 18.0];
-BOLT_Z  = 12.5;
+BOLT_Z  = 11.5;
 M3_CLEAR_D = 3.4;
 SHCS_HEAD_D = 6.0;
 SHCS_HEAD_H = 3.2;
@@ -114,8 +114,15 @@ module coax_hfe_block_R() {
         }
 
         // side marker: 1 dot = RIGHT (the _L wrapper adds a 2nd, 3mm away in z)
-        translate([ARM_OUT_X1 - EPS, HFE_Y + 10, HFE_Z - 12]) rotate([0, -90, 0])
-            cylinder(d = 3, h = 0.8);
+        // ON THE GUSSET'S OUTBOARD FACE (x=62.3), not the arm's. Two earlier
+        // sites failed the depth gate at 0.00mm: y+10/z-12 sat at r=15.6
+        // against a 16 rim so the dimple spilled off the edge, and y+8/z-8
+        // landed on a WHEEL-SCREW COUNTERBORE, which had already recessed the
+        // face -- probed flat, so the dot cut air. This face measures flat at
+        // 62.30 across a +-1.4mm neighbourhood. Cut starts outside so it
+        // breaks the surface.
+        translate([62.3 + 0.4, HFE_Y + 8, 6.0]) rotate([0, -90, 0])
+            cylinder(d = 3, h = 1.2);
     }
 }
 

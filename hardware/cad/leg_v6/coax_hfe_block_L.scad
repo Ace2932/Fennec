@@ -8,7 +8,7 @@ use <coax_hfe_block.scad>
 // part it lands at world x=-60.2 with the same y/z and the same (mirrored)
 // cut direction — it comes along for free via `mirror(...) block_R()`, no
 // separate handling needed.
-// 2nd dot: SAME face, offset 3mm in z (z=-18.5) so 1-vs-2 dots reads
+// 2nd dot: SAME face, offset 5mm in z (z=-12.5) so 1-vs-2 dots reads
 // unambiguously and neither dimple falls inside the other's d=3 (r=1.5)
 // radius. Both sit well clear of the wheel-screw BCD and the tenon.
 // NB the cut STARTS OUTSIDE the face (x = -60.2 - 0.4) and runs 1.2 so it
@@ -18,6 +18,6 @@ use <coax_hfe_block.scad>
 // dimple.
 difference() {
     mirror([1, 0, 0]) coax_hfe_block_R();
-    translate([-60.2 - 0.4, 21.6, -18.5]) rotate([0, 90, 0])
+    translate([-62.3 - 0.4, 19.6, 1.0]) rotate([0, 90, 0])
         cylinder(d = 3, h = 1.2);
 }
