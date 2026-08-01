@@ -138,7 +138,7 @@ model missed (real bay = full case width).
    3. tibia↔femur anytime; 4. shoulder last. Servicing hfe = pull haa servo.
 Keep 2-3 spare horn discs (hard falls can strip a spline).
 
-### Cable dressing (backlog #18 — `cable_clip.scad`, TPU 95A, print 24)
+### Cable dressing (backlog #18 — `cable_clip.scad`, TPU 95A, 20 installed = 5 per leg × 4)
 Each flex zone gets a **clip at BOTH loop ends** (the existing zip tie
 threads the leg's Ø3.2 pair AND the clip's matching holes — no leg mods):
 - HIP loop (haa+hfe flex): coax tunnel-exit pair + femur x44 pair

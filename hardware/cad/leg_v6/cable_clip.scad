@@ -1,5 +1,5 @@
 // =============================================================================
-// V6 CABLE CLIP (TPU 95A — print 24: 20 install + 4 spares)
+// V6 CABLE CLIP (TPU 95A — 20 INSTALLED: 5 per leg x 4. Spares to taste.)
 //
 // COUNT CORRECTED 2026-07-31. This header read "print 20: 16 install + spares",
 // which was right when the file was written (2026-07-06): 4 clips per leg, the
@@ -7,6 +7,15 @@
 // 2026-07-16 — a 5th clip per leg — and the Install list below was updated to
 // "5 per leg" while this line was not. 5 x 4 legs = 20 INSTALLED, so printing 20
 // leaves zero spares. Keeping the author's original 4-spare allowance -> 24.
+//
+// REWORDED 2026-08-01 — second correction to this one line in two days, so the
+// fix is to the FORM of the claim, not just its value. "24" was a TOTAL (20 + 4
+// spares); the batch actually run was 27 (20 + 7), and the line went stale again
+// off a spare count nobody is obliged to match. Only the 20 is derived from
+// anything: 5 stations per leg x 4 legs, sourced from the Install list below.
+// Spares are a judgement call, so this line no longer quotes a total and cannot
+// drift when the next batch differs. What was printed lives in the build record,
+// not here: 27 on 2026-08-01, see docs/checklists/print-batch.md.
 // =============================================================================
 // Backlog #18 (2026-07-06): haa +/-40 / kfe +/-109 at trot = ~1e5 flex
 // cycles/hour and quadruped harnesses classically die at the hip — the
