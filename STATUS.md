@@ -30,11 +30,22 @@ resolutions are marked inline rather than deleted.
 
 **Verified clean this pass** (read from the board file, not assumed):
 
-- **Mounting-hole keepouts are real AND effective.** All four H1–H4 have 7 mm-dia keepouts on
-  all four copper layers (`copperpour: not_allowed`). Those keepouts allow tracks, so that alone
-  proves nothing — scanned all **334 track segments and 62 vias**: **zero copper within 3.5 mm
-  of any hole centre.** Brass M3×20 standoffs are safe on all four, no nylon needed.
-  (H1 is `BATT_NEG` — a standoff shorting it to logic-side GND would be a dead short across Q1.)
+- **Mounting-hole keepouts are real AND effective — proven against the actual fill.** All four
+  H1–H4 have 7 mm-dia keepouts on all four copper layers (`copperpour: not_allowed`). That rule
+  alone proves nothing, since it still permits tracks. Three checks, all clear:
+  **334 track segments + 62 vias** — none within 3.5 mm; **168 component pads** — none within
+  3.5 mm; and, the one that actually matters, **the poured copper itself**: 196 sample points
+  (centre plus r = 1/2/3/3.4 mm × 12 directions, per hole) tested point-in-polygon against all
+  **45 filled polygons** — **zero covered**. Closest pour vertex to any hole centre is
+  **3.483 mm**, i.e. the fill boundary tracing the keepout edge exactly.
+  (H1 is `BATT_NEG` — a standoff bridging it to logic-side GND would be a dead short across Q1.)
+  - ⚠️ **Consequence nobody had written down: do NOT put a flat washer under these standoffs.**
+    The clear copper circle is **6.97 mm** diameter. A DIN125 M3 washer is **7.0 mm OD** — it
+    overhangs the pour edge, and with the 3.2 mm hole / 3 mm screw play it will definitely sit
+    on copper on one side. Solder mask is then the only insulation under a clamped fastener,
+    which is not what mask is rated for. **Brass M3×20 standoff directly on the board is fine**
+    (hex ~5.5 mm A/F, 6.35 mm across corners → ~0.3 mm radial clearance). If you want a washer,
+    use nylon or one with OD ≤ 6.9 mm.
 - **All 9 AMASS XT connectors** still pad1 = − / pad2 = +. The 2026-06-29 fix held.
 - **XT30 mating halves needed = 16** (8 board connectors J3–J7/J12–J14, plus 8 across the four
   populated buck stations U1–U4 at 2 each); 18 if U5 is ever fitted. This closes the

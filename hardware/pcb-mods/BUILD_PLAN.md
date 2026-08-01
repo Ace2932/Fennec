@@ -202,8 +202,11 @@ Leaded first, lead-free in brackets. These are *tip setpoints*, not pad temperat
 | 9 | electrolytics — **≤3 s per lead** | TS-D24 | **340 °C** (360) |
 | 10 | module headers / sockets | TS-D24 | **330 °C** (355) |
 
-**Do not go above 400 °C.** Past that the flux flashes off before it can wet,
-tip plating degrades quickly, and you get *worse* joints, not faster ones.
+**Do not set a WORKING temperature above 400 °C.** Past that the flux flashes off
+before it can wet, tip plating degrades quickly, and you get *worse* joints, not
+faster ones. **The 420 °C boost below is the deliberate exception** — it is held
+for a few seconds on one stubborn pad, not dialled in and left there. Keep the
+distinction: 400 °C is the ceiling you *work* at, 420 °C is a momentary reserve.
 
 **The counter-intuitive bit, and the one that matters for stages 4/7/8:** a hotter
 tip is *gentler* than a cooler one on these pads. Damage is time-at-temperature at

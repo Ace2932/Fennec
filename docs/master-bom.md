@@ -94,7 +94,7 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 | Wire 22 AWG solid | I2C / EN / sense | ✅ owned (TUOFENG) — solid, solder don't crimp |
 | Ring terminals 12-10 AWG / 5/16" (M8) | MRBF fuse-block wiring | ✅ received (AIRIC 50pc; crimp w/ WGGE yellow station) |
 | Heat-shrink assortment | every XT / TVS / fuse joint | ✅ owned (Ginsco 580pc) |
-| M3 standoffs ~20 mm | mezzanine board-to-board | ✅ received (PATIKIL brass M3×20 ×50; safe on all 4 holes — 7mm copper keepout) |
+| M3 standoffs ~20 mm | mezzanine board-to-board | ✅ received (PATIKIL brass M3×20 ×50; safe on all 4 holes — 7 mm copper keepout, **verified 2026-07-31 against the actual pour**: 196 sample points inside the keepouts, zero poured copper, closest fill vertex 3.483 mm). ⚠️ **No flat washer under these** — the clear circle is **6.97 mm** and a DIN125 M3 washer is **7.0 mm OD**, so it lands on the pour edge (H1 = `BATT_NEG`) with only solder mask between. Standoff hex is 6.35 mm across corners = ~0.3 mm clearance, fine bare. Nylon or ≤6.9 mm OD if you must |
 | M3 screws/nuts/washers | board → chassis | ✅ owned (Fgruh 1220pc) |
 | M3 standoffs 20 mm | power board → floor plate (bucks + de-cased switch live underneath — chassis README §9) | ✅ use the M3×20 ×50 already received (line 97). Corrected 16→20mm 2026-07-09: the ordered Ø10×17 C1–C5 caps need the 20mm gap to clear the floor (check_fit case 11). |
 | Right-angle USB-C (USB 3.x) cable | D456 → Jetson (straight plug doesn't fit the periscope bracket gap) | 🛒 order |
