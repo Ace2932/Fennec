@@ -1048,6 +1048,63 @@ def removable_member_checks(servo, pts0):
 # mortise mouth, and hand estimates for it span 15 MPa to yielding. That is an
 # open question for a real load check, and this gate does not answer it -- it
 # only stops the section shrinking without anyone noticing.
+# ZIP-BORE CAPTURE (#226 review follow-up). A cable tie in a bore whose wall is
+# missing is not retained -- it can escape sideways. coax.scad's own header flags
+# that its front-pad bore runs past the exterior wall ("a thin slot on the
+# exterior face, not a fully round hole") and accepts it, because closing the gap
+# means growing the wall outboard into a KNOWN femur-rim graze. That acceptance
+# lived only in a comment; this makes it a declared number that goes red if it
+# worsens.
+#
+# MEASURED FIRST, and it corrected two of my own assumptions:
+#   * the tibia is NOT better than the coax -- both read 155 deg open. This is a
+#     consistent design choice across the strap joints, not a coax defect.
+#   * a naive "the bore must be closed" check would be WRONG. These are through-
+#     bores that deliberately cross the servo cavity, so mid-length stations read
+#     up to 235 deg open on correct geometry. Asserting closure everywhere would
+#     fire on a part that is fine -- the same class of error this file exists to
+#     catch.
+# So the check is at the ENTRY face only, which is where the tie is actually
+# retained, with the observed 155 deg declared as the accepted state.
+ZIP_ENTRY_MAX_OPEN_DEG = 160.0
+ZIP_BORES = [
+    # (label, part, bore axis, entry point, probe radius)
+    ('coax +x front-pad', 'coax_R.stl', (0, 1, 0), (15.60, -18.5, -31.0), 2.5),
+    ('coax -x front-pad', 'coax_R.stl', (0, 1, 0), (-15.60, -18.5, -31.0), 2.5),
+    ('tibia +y strap',    'tibia_R.stl', (0, 0, 1), (31.0, 15.60, -20.0), 2.5),
+    ('tibia -y strap',    'tibia_R.stl', (0, 0, 1), (31.0, -15.60, -20.0), 2.5),
+]
+
+
+def _open_arc(mesh, axis, ctr, r, n=72):
+    axis = np.asarray(axis, float); axis /= np.linalg.norm(axis)
+    e1 = np.cross(axis, [0, 0, 1.0])
+    e1 = e1 / np.linalg.norm(e1) if np.linalg.norm(e1) > 1e-6 else np.array([0, 1.0, 0])
+    e2 = np.cross(axis, e1)
+    ring = np.array([np.asarray(ctr, float) + r * (np.cos(a) * e1 + np.sin(a) * e2)
+                     for a in np.linspace(0, 2 * np.pi, n, endpoint=False)])
+    return 360.0 * int((~contains_chunked(mesh, ring)).sum()) / n
+
+
+def zip_capture_checks():
+    print('-- zip-bore capture at the ENTRY face (#226 follow-up) --')
+    bad = False
+    cache = {}
+    for label, part, axis, entry, r in ZIP_BORES:
+        if part not in cache:
+            cache[part] = trimesh.load(part)
+        arc = _open_arc(cache[part], axis, np.asarray(entry, float)
+                        + np.asarray(axis, float) * 1.0, r)
+        if arc > ZIP_ENTRY_MAX_OPEN_DEG:
+            bad = True
+            print(f'OPEN  {label}: entry wall {arc:.0f}deg open (> '
+                  f'{ZIP_ENTRY_MAX_OPEN_DEG:.0f}) -- the tie is not retained here')
+        else:
+            print(f'   OK    {label}: entry wall {arc:.0f}deg open '
+                  f'(accepted <= {ZIP_ENTRY_MAX_OPEN_DEG:.0f})')
+    return bad
+
+
 MIN_SECTION_MM = 1.5          # the boss-wall floor docs/fastener-schedule uses
 JOINT_SECTIONS = [
     ('mortise floor',   (50.0, 11.6,  9.4), (0, 0, -1), 'tenon bears on this'),
@@ -1462,6 +1519,7 @@ def main():
         bad = removable_member_checks(servo, pts0) or bad
     if '--sections' in sys.argv or do_sweep:
         bad = joint_section_checks() or bad
+        bad = zip_capture_checks() or bad
     if '--shoulder' in sys.argv or do_sweep:
         bad = shoulder_checks(servo, pts0) or bad
     if '--through' in sys.argv or do_sweep:
