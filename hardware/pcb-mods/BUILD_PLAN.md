@@ -205,6 +205,11 @@ means the joint moved while freezing or was heat-starved. It is a defect signatu
 not a finish preference — and it is the **opposite** of SAC305, where a correct
 joint is legitimately dull. Do not carry that habit over.
 
+⚠️ **"After the flux is cleaned off" is a precondition, not a throwaway clause.**
+The owned flux is *no-clean*, whose cured residue is glossy — so an uncleaned board
+does not withhold the verdict, it **forges a passing one**. See the next subsection;
+it is the reason there is now an explicit clean-and-inspect step at all.
+
 ⚠️ **The diameter is 1 mm, not the 0.6–0.8 mm `master-bom.md` originally specced**,
 and it cuts both ways along the stage split already in §3. 1 mm carries **~2.8× the
 solder per mm of feed**, which:
@@ -217,10 +222,69 @@ solder per mm of feed**, which:
 Fix is technique, not a second spool: **tin the tip and place** on the 0603s rather
 than feeding wire, and keep U7/U8 to flux + drag/wick where the wire barely touches.
 
-**1.8 % rosin core is standard, but it flashes off fast at 380–400 °C.** Carry
-separate flux (pen or paste) for stages 4/7/8 and the U7/U8 drag — core flux alone
-is gone before the joint wets at those temperatures, and that reads as "the plane is
-winning" when it is actually flux starvation.
+**1.8 % rosin core is standard, but it flashes off fast at 380–400 °C.** The
+separate flux below is mandatory for stages 4/7/8 and the U7/U8 drag — core flux
+alone is gone before the joint wets at those temperatures, and that reads as "the
+plane is winning" when it is actually flux starvation.
+
+### The flux — CONFIRMED 2026-08-01: BEEYUIHF, lead-free / no-clean / non-conductive
+
+Label claims, not a datasheet; form, volume and IPC classification are unrecorded.
+
+**"Lead-free" does not mean incompatible with Sn63Pb37.** It describes the *flux* —
+formulated to stay active up to SAC305's 217–220 °C. Leaded joints happen ~35 °C
+cooler, so the flux is over-specified for this build, never under-. Activation is
+~150–200 °C and every stage here runs a 320–400 °C tip, so it is fully spent inside
+the joint. No purchase, no substitution.
+
+**Stage 1 needs it too — and the reason is technique, not temperature.** The rule
+above (mandatory at 4/7/8) is about flux *burning off*. Stage 1 loses it a different
+way: §2a prescribes **tin the tip and place** on the 0603s because 1 mm wire
+over-delivers on a 0.8 mm pad. But core flux lives *inside the wire* and deploys
+where the wire melts — and tip-carry melts it **on the tip**, so the flux flashes off
+up there and what reaches the pad is bare solder carrying nothing. The technique that
+solves the diameter problem creates a flux-starvation problem. Per 0603:
+
+1. Dab flux on both pads.
+2. Tack one end with the tip-carried blob, ~1 s. Part is now anchored, tweezers free.
+3. Second end: **feed fresh wire** into the joint — core flux fires right there. This
+   is the cleaner of the two joints.
+4. Reflow end 1 with a touch of fresh wire so both ends match.
+
+**"Non-conductive + no-clean" closes the R4/R6 leakage question.** `R4` 11.3k and
+`R6` 12.1k are the trip-point divider, so residue leakage across a leg would move a
+protection threshold rather than fail loudly. Run the number: a 1 % shift needs
+~1.1 MΩ in parallel with the 11.3k leg. Cured no-clean residue sits orders of
+magnitude above that. Not a concern.
+
+#### ⚠️ What it does open: the residue forges a PASS
+
+Cured no-clean residue is **glossy**. The correctness criterion for eutectic solder
+is **shiny**. So a film of clear residue over a dull, grainy, heat-starved joint
+**reads as a good joint**.
+
+This is the failure mode worth naming, because it is not "you cannot tell" — it is a
+confident wrong answer, biased in the PASS direction, on the one criterion this
+document relies on. It defeats exactly the defect (moved while freezing, or
+heat-starved) that the shiny rule exists to catch.
+
+**So the verdict is only available after cleaning. Per stage, before moving on:**
+
+1. Flood the stage's joints with **99 % IPA** — not 70 %; the water in rubbing
+   alcohol dries slowly and leaves its own residue on the high-Z nets.
+2. Brush (acid brush or an old toothbrush).
+3. **Blot with a lint-free wipe.** Do not skip this — IPA *dissolves* rosin, so
+   flooding without wicking it up smears a thin haze over a **wider** area than the
+   original blob. On the divider that is worse than leaving it alone.
+4. Repeat until the wipe comes away clean.
+5. *Now* judge shiny. Rework anything dull or grainy before the next stage — not at
+   the end, when the board no longer sits flat and the pad is behind a tall part.
+
+Second-order, and specific to this combination: a lead-free-rated flux run at leaded
+temps leaves **peripheral** residue — squeezed outside the joint, never hotter than
+60–100 °C — less fully spent than the flux inside it. No-clean is only inert once
+heat-activated. On a machine that vibrates and collects dust, that is the residue
+worth removing even though the joints themselves are fine.
 
 ### Temperature by stage
 
@@ -380,6 +444,12 @@ flat on the bench for every later joint), **small thermal mass before large**
 (a preheated board makes small parts harder, not easier), **heat-sensitive and
 plug-in modules last**, and **nothing that blocks access to a pad you still
 have to reach**.
+
+**Every stage ends with clean → inspect → rework, before the next one starts** (§2a).
+Not a tidiness step: the flux is no-clean and its residue is glossy, so shiny — the
+whole correctness criterion — cannot be read until the board is cleaned. Deferring it
+to the end also defeats the ordering rules above, because by then the pad you need to
+redo is behind a tall part on a board that no longer sits flat.
 
 Side column is which face the **body** sits on. Grouped to keep flips to a
 minimum: bottom SMD, then top SMD, then THT.
@@ -606,6 +676,21 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
       specced — helps stages 4/7/8, hinders 1/3, and the fix is tin-the-tip-and-place
       rather than a second spool (§2a). Eutectic ⇒ **shiny is the correctness
       criterion**; dull/grainy after cleaning is a defect signature.
+- [x] ✅ **Flux confirmed 2026-08-01 — BEEYUIHF, lead-free / no-clean / non-conductive.**
+      "Lead-free" is about the flux, not compatibility: it stays active to 217–220 °C
+      and every joint here is cooler, so it is over-specified, never under-. No buy.
+      Two things it changed (§2a): separate flux is now mandatory at **stage 1** as
+      well as 4/7/8 — tin-the-tip-and-place strands the core flux on the tip, so the
+      pad gets bare solder — and non-conductive residue closes the R4/R6 divider
+      leakage question (a 1 % trip shift needs ~1.1 MΩ across the 11.3k leg).
+- [ ] 🟡 **99 % IPA + brush + lint-free wipes — verify on shelf BEFORE stage 1.**
+      Found missing 2026-08-01: this plan asserted the shiny criterion three times as
+      valid *"after the flux is cleaned off"*, but contained **no cleaning step**, had
+      **no inspection step at any stage**, and `master-bom.md` listed **no cleaner**.
+      The criterion was unreachable as written. Worse with a *no-clean* flux, whose
+      cured residue is glossy — so an uncleaned board does not withhold the verdict,
+      it returns a **false PASS** over a dull joint. Clean-then-inspect is now an
+      explicit per-stage step in §2a. 70 % rubbing alcohol does not substitute.
 - [ ] 🔴 **Q1 SOA check — was written as a pre-fab gate, and fab happened without it.**
       `STATUS.md` and `order-list.md` §131-135 both mark the gate-harden design
       *"SOA-gated … BENCH-VALIDATE transient (scope) before fab"*. Soft-start puts

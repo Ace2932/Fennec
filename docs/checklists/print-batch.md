@@ -79,7 +79,7 @@ the (now-chamfered) battery-lead notch, same family as `case_slot_grommet`.
 |---|---|
 | PA6-CF (DRY 80 °C/10 h; no anneal — §3) | coax, femur, tibia, knee_arm, shoulder, shoulder_plate (+L variants), strap ×4, **`head`**, **`neck_bracket`**, **`battery_pocket`** (#24 2026-07-10: stays PA6-CF — belly crush guard over the LiPo, puncture=fire #15; impact toughness > flatness) — 4 walls / 40 % / gyroid (**AUDITED** `neck_bracket_analysis.py`: faceplant SF ~12; ⚠ the L2-scan **vibration/resonance** is a stiffness concern, unverified — modal check on the first print) |
 | PETG-CF | riser_bay, floor_plate, **`head_ear` ×2** (split off the head 2026-07-07 — prints FLAT, low-warp. Bolts to the head ear-pad; OPTIONAL per the WiFi-antenna decision #32. **MATERIAL 2026-07-13: plain PETG or ASA — NOT a CF filament.** The ear is an antenna mast; carbon fiber is conductive at 2.4/5 GHz and detunes/absorbs the whip (several dB). Rigid low-loss dielectric holds the mast stiff with no RF penalty. If the ears end up pure styling, any filament is fine. **YAWED +45° edge-on to the L2** (`head_ear.scad EAR_YAW`, occlusion_ear.py): blocked LiDAR arc 28.5°→13.8°/ear, ~29° total FoV recovered; ears lean back. First-article: check base stiffness on the longer cantilever), **`l2_adapter`** (FLAT bottom-down, ~6 g; PA6-CF also fine — it carries the L2 mass so PA6-CF preferred if in stock), **`control_pod`** (COLUMN-FACE-DOWN, ~24 g; rear-top E-stop + OLED mount) |
-| TPU 95A | ✅ **SM3_Foot shoe ×4+1 PRINTED** (STOCK geometry — crush-zone v2 still waits for first-article fit, #20) · ✅ **skid_rail ×2 PRINTED** · ✅ **knee_bumper ×4+1 PRINTED** (backlog #15 B, replaced the retired ~~tibia_pad~~ — wraps the tibia knee-block, U opening up) · ⬜ cable_clip ×24 (20 install + 4 spares — corrected 2026-07-31) · ⬜ **grommet_insert ×6** · ⬜ **case_slot_grommet** (#41 follow-up, -Y CASE_SLOT edge liner) · ⬜ **lead_notch_grommet ×2** (AUD-12b, 2026-07-10 — battery-lead notch edge liner, one per shoulder/trunk end) |
+| TPU 95A | ✅ **SM3_Foot shoe ×4+1 PRINTED** (STOCK geometry — crush-zone v2 still waits for first-article fit, #20) · ✅ **skid_rail ×2 PRINTED** · ✅ **knee_bumper ×4+1 PRINTED** (backlog #15 B, replaced the retired ~~tibia_pad~~ — wraps the tibia knee-block, U opening up) · ✅ **cable_clip ×27 PRINTED 2026-08-01** (20 install + 7 spares; batch printed ahead of the §4 first-article step — see the anchor-topology note in §1b) · ⬜ **grommet_insert ×6** · ⬜ **case_slot_grommet** (#41 follow-up, -Y CASE_SLOT edge liner) · ⬜ **lead_notch_grommet ×2** (AUD-12b, 2026-07-10 — battery-lead notch edge liner, one per shoulder/trunk end) |
 
 ### 1b. TPU print status — measured, 2026-07-31
 
@@ -91,17 +91,58 @@ The `~100 g` budget in §0 checks out: the full set is **~102 g**.
 | SM3_Foot shoe (`original_body_files/SM3_Foot.stl`) | 5 | 3.6 | ~22 | ✅ printed |
 | knee_bumper | 5 | 6.5 | ~40 | ✅ printed |
 | skid_rail | 2 | 4.7 | ~11 | ✅ printed |
-| cable_clip | 24 | 0.85 | ~25 | ⬜ 20 install (5/leg) + 4 spares |
+| cable_clip | 27 | 0.85 | ~28 | ✅ printed 2026-08-01 — 20 install (5/leg) + 7 spares |
 | grommet_insert | 6 | 0.40 | ~3 | ⬜ hold for LA-25 press test |
 | case_slot_grommet | 1 | 0.55 | ~1 | ⬜ |
 | lead_notch_grommet | 2 | 0.24 | ~1 | ⬜ |
 
-**~73 g printed, ~29 g remaining.** There is no large TPU job left on this project —
-the biggest single TPU part is a 6.5 cm³ knee_bumper. Print the **cable_clip ×24**
-alongside harness dress (24 connector ends need strain relief); hold the 6
-`grommet_insert` until **one** has passed the §5 LA-25 press test (BARREL_OD 12.2,
-split-ring, fit explicitly unproven) — batching six before that test is what the
-first-article doctrine in §4 exists to prevent.
+**~101 g printed, ~5 g remaining** (updated 2026-08-01). There is no large TPU job
+left on this project — the biggest single TPU part is a 6.5 cm³ knee_bumper, and
+every one of those is printed. Remaining: **1× `case_slot_grommet`, 2×
+`lead_notch_grommet`, 6× `grommet_insert`** ≈ 5 g total.
+
+Still hold the 6 `grommet_insert` until **one** has passed the §5 LA-25 press test
+(BARREL_OD 12.2 into a nominal Ø12 hole = 0.2 mm diametral interference, likely
+inside FDM/TPU noise, and the axial slit makes it a split ring so retention is
+spring-back rather than interference). Print **one**, press it into the printed
+shoulder's Ø12 flange hole, tug it; grow `BARREL_OD` in the `.scad` if it spins
+free — never re-drill the flange. ⚠️ `lead_notch_grommet` is 0.24 g; preview the
+plate before sending, because slicers drop islands that small.
+
+#### ⚠️ Anchor-topology check the clip batch skipped
+
+The 27 clips were printed ahead of §4's 2-off first article, so this is now a
+**fit check on parts in hand** rather than a print decision. It is worth doing
+before the harness goes on, because it changes install, not the print.
+
+The clip's own zip holes are **Ø3.4 on a Z axis at y = ±5** (`cable_clip.scad:91`),
+i.e. straight down through the flat base at **10 mm spacing** — which is exactly
+`zip_pair_neg`'s default (`leg_v6_common.scad:343`, `spacing = 10`, axis Z). Three
+of the five per-leg stations are that: **femur x44, femur x84, tibia x58.** Those
+match by construction.
+
+The other two stations are **not the same kind of anchor**:
+
+| station | source | geometry |
+|---|---|---|
+| coax tunnel-exit | `coax.scad:600` | `translate([sx*7, 17, -36]) rotate([0, sx*90, 0])` — **axis X**, one hole per ∓X side wall, **14 mm apart** |
+| coax HAA connector-bay | `coax.scad:636` | `translate([sx*7, 19, -27]) rotate([0, sx*90, 0])` — same pattern at a different (y,z) |
+
+Both punch **sideways through opposite walls** starting inside an already-open
+void — deliberately, so a tie can be looped (a blind pocket cannot). But a tie
+threaded through those cannot also thread the clip's vertical base holes: the axes
+are perpendicular and the spacings differ (14 vs 10). **That is 2 of 5 stations per
+leg = 8 of the 20 installed clips.**
+
+What is *not* established: whether the clip still works there as a tie-clamped
+saddle (a tie crossing the void could press bundle-into-clip without threading the
+clip at all), and whether an 18 × 16 mm clip physically fits the tunnel void
+(grid-probed clean gap at that z-band is x[−9, 9] = 18 mm wide). Both are bench
+questions against a printed coax — and the coax was redesigned since
+(#234/#235/#240), so they belong to the **#226 first article**, not to a re-print.
+Fallback if it does not fit: those two stations revert to what they were designed
+as before the clip existed — a plain tie wrapping the bundle against the wall pair,
+losing the bell-mouth bend control at the hip crossing only.
 
 The `SM3_Foot` shoe is **not modelled in this repo** — it is stock upstream geometry
 at `original_body_files/SM3_Foot.stl`. `leg_v6/check_shoe.py` gates its fit against
@@ -155,8 +196,14 @@ Every insert site depth-probed in the built STLs:
 ## 4. Wave 1 — first article (~450 g, doctrine: before batching)
 
 - [ ] 1× RIGHT leg set (coax_R, femur_R, tibia_R, knee_arm), 1× shoulder,
-      1× shoulder_plate pair, 1× shoe, 1× skid_rail, 2× cable_clip,
+      1× shoulder_plate pair, 1× shoe, 1× skid_rail, ~~2× cable_clip~~,
       1× knee_bumper, 1× strap
+      — ⚠️ the TPU items here are **already printed in batch** (shoe ×5,
+      skid_rail ×2, knee_bumper ×5, **cable_clip ×27**), so for those the
+      first-article step is spent. What it would have caught is now a fit check
+      against the printed rigid parts instead — see the anchor-topology note in
+      §1b for the one that matters (2 of 5 clip stations per leg use a
+      perpendicular anchor).
 - [ ] 1× head + 1× neck_bracket + 1× l2_adapter + 2× head_ear (FIT-CHECK — prove
       the L2 Ø51 + D456 ±47.5 patterns vs the real parts; the ear feet bolt to
       the pad; the L2 adapter tongue slides under the crown lip)
