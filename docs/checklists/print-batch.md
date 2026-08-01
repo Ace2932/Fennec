@@ -79,25 +79,25 @@ the (now-chamfered) battery-lead notch, same family as `case_slot_grommet`.
 |---|---|
 | PA6-CF (DRY 80 °C/10 h; no anneal — §3) | coax, femur, tibia, knee_arm, shoulder, shoulder_plate (+L variants), strap ×4, **`head`**, **`neck_bracket`**, **`battery_pocket`** (#24 2026-07-10: stays PA6-CF — belly crush guard over the LiPo, puncture=fire #15; impact toughness > flatness) — 4 walls / 40 % / gyroid (**AUDITED** `neck_bracket_analysis.py`: faceplant SF ~12; ⚠ the L2-scan **vibration/resonance** is a stiffness concern, unverified — modal check on the first print) |
 | PETG-CF | riser_bay, floor_plate, **`head_ear` ×2** (split off the head 2026-07-07 — prints FLAT, low-warp. Bolts to the head ear-pad; OPTIONAL per the WiFi-antenna decision #32. **MATERIAL 2026-07-13: plain PETG or ASA — NOT a CF filament.** The ear is an antenna mast; carbon fiber is conductive at 2.4/5 GHz and detunes/absorbs the whip (several dB). Rigid low-loss dielectric holds the mast stiff with no RF penalty. If the ears end up pure styling, any filament is fine. **YAWED +45° edge-on to the L2** (`head_ear.scad EAR_YAW`, occlusion_ear.py): blocked LiDAR arc 28.5°→13.8°/ear, ~29° total FoV recovered; ears lean back. First-article: check base stiffness on the longer cantilever), **`l2_adapter`** (FLAT bottom-down, ~6 g; PA6-CF also fine — it carries the L2 mass so PA6-CF preferred if in stock), **`control_pod`** (COLUMN-FACE-DOWN, ~24 g; rear-top E-stop + OLED mount) |
-| TPU 95A | ✅ **SM3_Foot shoe ×4+1 PRINTED** (STOCK geometry — crush-zone v2 still waits for first-article fit, #20) · ✅ **skid_rail ×2 PRINTED** · ✅ **knee_bumper ×4+1 PRINTED** (backlog #15 B, replaced the retired ~~tibia_pad~~ — wraps the tibia knee-block, U opening up) · ⬜ cable_clip ×20 · ⬜ **grommet_insert ×6** · ⬜ **case_slot_grommet** (#41 follow-up, -Y CASE_SLOT edge liner) · ⬜ **lead_notch_grommet ×2** (AUD-12b, 2026-07-10 — battery-lead notch edge liner, one per shoulder/trunk end) |
+| TPU 95A | ✅ **SM3_Foot shoe ×4+1 PRINTED** (STOCK geometry — crush-zone v2 still waits for first-article fit, #20) · ✅ **skid_rail ×2 PRINTED** · ✅ **knee_bumper ×4+1 PRINTED** (backlog #15 B, replaced the retired ~~tibia_pad~~ — wraps the tibia knee-block, U opening up) · ⬜ cable_clip ×24 (20 install + 4 spares — corrected 2026-07-31) · ⬜ **grommet_insert ×6** · ⬜ **case_slot_grommet** (#41 follow-up, -Y CASE_SLOT edge liner) · ⬜ **lead_notch_grommet ×2** (AUD-12b, 2026-07-10 — battery-lead notch edge liner, one per shoulder/trunk end) |
 
 ### 1b. TPU print status — measured, 2026-07-31
 
 Volumes measured from the STLs (trimesh), mass at TPU 95A ρ ≈ 1.21 g/cm³, solid.
-The `~100 g` budget in §0 checks out: the full set is **~98 g**.
+The `~100 g` budget in §0 checks out: the full set is **~102 g**.
 
 | part | qty | ea cm³ | set g | status |
 |---|---|---|---|---|
 | SM3_Foot shoe (`original_body_files/SM3_Foot.stl`) | 5 | 3.6 | ~22 | ✅ printed |
 | knee_bumper | 5 | 6.5 | ~40 | ✅ printed |
 | skid_rail | 2 | 4.7 | ~11 | ✅ printed |
-| cable_clip | 20 | 0.85 | ~21 | ⬜ |
+| cable_clip | 24 | 0.85 | ~25 | ⬜ 20 install (5/leg) + 4 spares |
 | grommet_insert | 6 | 0.40 | ~3 | ⬜ hold for LA-25 press test |
 | case_slot_grommet | 1 | 0.55 | ~1 | ⬜ |
 | lead_notch_grommet | 2 | 0.24 | ~1 | ⬜ |
 
-**~73 g printed, ~25 g remaining.** There is no large TPU job left on this project —
-the biggest single TPU part is a 6.5 cm³ knee_bumper. Print the **cable_clip ×20**
+**~73 g printed, ~29 g remaining.** There is no large TPU job left on this project —
+the biggest single TPU part is a 6.5 cm³ knee_bumper. Print the **cable_clip ×24**
 alongside harness dress (24 connector ends need strain relief); hold the 6
 `grommet_insert` until **one** has passed the §5 LA-25 press test (BARREL_OD 12.2,
 split-ring, fit explicitly unproven) — batching six before that test is what the

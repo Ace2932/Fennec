@@ -1,5 +1,12 @@
 // =============================================================================
-// V6 CABLE CLIP (TPU 95A — print 20: 16 install + spares)
+// V6 CABLE CLIP (TPU 95A — print 24: 20 install + 4 spares)
+//
+// COUNT CORRECTED 2026-07-31. This header read "print 20: 16 install + spares",
+// which was right when the file was written (2026-07-06): 4 clips per leg, the
+// HIP and KNEE loops with two ends each. LA-29 then added the HAA loop on
+// 2026-07-16 — a 5th clip per leg — and the Install list below was updated to
+// "5 per leg" while this line was not. 5 x 4 legs = 20 INSTALLED, so printing 20
+// leaves zero spares. Keeping the author's original 4-spare allowance -> 24.
 // =============================================================================
 // Backlog #18 (2026-07-06): haa +/-40 / kfe +/-109 at trot = ~1e5 flex
 // cycles/hour and quadruped harnesses classically die at the hip — the
