@@ -84,6 +84,8 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | Leg STS3215 ×12 active | ⬜ verify count; top-up 2-3 if short |
 | LiPo: Ovonic 4S 6000mAh 120C ×2 | ✅ owned (note: 6000mAh/120C, not 4000mAh) |
 | PA6-CF filament | ✅ |
+| **TPU 95A filament** | ✅ **on hand — confirmed 2026-07-31 by having printed with it** (foot shoes ×5, knee_bumper ×5, skid_rail ×2). Was contradicted across three docs: `work-schedule.md` said ✅, `checklists/print-batch.md` §0 had it as an open question, and this table listed only PA6-CF. **~73 g of the ~98 g TPU set is now printed; ~25 g remains** (cable_clip ×20 + grommets) — see `print-batch.md` §1b. External spool only, **AMS will not feed TPU** |
+| PETG-CF filament | ⬜ **unknown** — `print-batch.md` §0 still asks "PETG-CF spool on hand?". Needed for `riser_bay` / `floor_plate` / `head_ear`; the fallback is all-PA6 with warp risk on the 127 mm riser lid |
 
 ## Harness + assembly consumables (mostly Amazon — NOT yet bought)
 The off-board side is 25+ wired connections; this category was unspeced until 2026-06-13.
