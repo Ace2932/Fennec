@@ -475,6 +475,17 @@ module coax_v6() {
         // pads" above) -- so the outboard side is left open (a thin slot on
         // the exterior face over the bore's length, not a fully round hole
         // there) rather than reinforced into that collision. This mirrors
+        // LOAD DIRECTION RESOLVED (2026-07-31, measured): the opening faces
+        // exactly OUTBOARD ([+1,0,0] on the +x bore, [-1,0,0] on the -x,
+        // 158deg arc; the tibia's two are the same, [0,+-1,0]). The strap lies
+        // flat on the pocket rim and its hole is coaxial with this bore, so the
+        // CLAMP force acts ALONG the bore axis -- there is no radial component
+        // pushing the tie outboard. The only radial load is the tie's own turn
+        // as the loop closes, which pulls it INBOARD toward the loop centre,
+        // against the intact 205deg of wall. So the open side does not see the
+        // retention load, and this trade is sound for the reason it needed to
+        // be. The residual cost is ASSEMBLY, not service: an UNCINCHED tie can
+        // fall sideways out of the slot while being threaded.
         // strap_pilot_neg()'s own precedent -- its outboard/non-cavity side
         // is thin too ("not the safety-critical direction") -- just more so
         // here, because this wall started thinner. Genuine through-bore
