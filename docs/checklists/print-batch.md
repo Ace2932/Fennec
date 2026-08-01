@@ -92,21 +92,42 @@ The `~100 g` budget in §0 checks out: the full set is **~102 g**.
 | knee_bumper | 5 | 6.5 | ~40 | ✅ printed |
 | skid_rail | 2 | 4.7 | ~11 | ✅ printed |
 | cable_clip | 27 | 0.85 | ~28 | ✅ printed 2026-08-01 — 20 install (5/leg) + 7 spares |
-| grommet_insert | 6 | 0.40 | ~3 | ⬜ hold for LA-25 press test |
+| grommet_insert | 11 (LA-25 ladder) | 0.40 / 0.43 / 0.46 | ~5.9 | ⬜ 1× OD 12.2 (negative control) + 5× **12.7** (tracked default) + 5× 13.2 — see the ladder note below |
 | case_slot_grommet | 1 | 0.55 | ~1 | ⬜ |
 | lead_notch_grommet | 2 | 0.24 | ~1 | ⬜ |
 
-**~101 g printed, ~5 g remaining** (updated 2026-08-01). There is no large TPU job
+**~101 g printed, ~7 g remaining** (updated 2026-08-01). There is no large TPU job
 left on this project — the biggest single TPU part is a 6.5 cm³ knee_bumper, and
 every one of those is printed. Remaining: **1× `case_slot_grommet`, 2×
-`lead_notch_grommet`, 6× `grommet_insert`** ≈ 5 g total.
+`lead_notch_grommet`, 11× `grommet_insert` (the LA-25 OD ladder)** ≈ 7 g total.
+Was "~5 g / 6× grommet_insert" — the ladder replaced the flat 6-off, see below.
 
-Still hold the 6 `grommet_insert` until **one** has passed the §5 LA-25 press test
-(BARREL_OD 12.2 into a nominal Ø12 hole = 0.2 mm diametral interference, likely
-inside FDM/TPU noise, and the axial slit makes it a split ring so retention is
-spring-back rather than interference). Print **one**, press it into the printed
-shoulder's Ø12 flange hole, tug it; grow `BARREL_OD` in the `.scad` if it spins
-free — never re-drill the flange. ⚠️ `lead_notch_grommet` is 0.24 g; preview the
+**`grommet_insert` — print the LA-25 OD LADDER, not 6 identical.** The old advice
+here ("print one at 12.2, grow `BARREL_OD` if it spins free") pointed at the wrong
+fix, because 12.2 is not a tolerance miss — **it cannot grip at any print accuracy.**
+The slit is 2.0 mm of arc, so closing it shrinks the barrel diameter by
+`SLIT/π = 0.637 mm`, while the design interference into a nominal Ø12 hole is only
+**0.200 mm**. The ring swallows the whole interference by closing a fraction of its
+gap and never reaches hoop compression; the only restoring force is the C-section's
+bending stiffness in Shore-95A TPU. **Hoop engagement begins at
+`12.0 + SLIT/π = 12.637`** — so creeping to 12.3 or 12.4 stays inside the dead band.
+
+Default moved **12.2 → 12.7** in `grommet_insert.scad` on that analysis (smallest
+value in the engaged regime; still a hypothesis, not a press-test result). Print
+**1× 12.2 + 5× 12.7 + 5× 13.2** ≈ 5.9 g:
+
+- **12.2 is the negative control** — it should spin free. If it grips, the analysis
+  is wrong and the other two rungs are oversized.
+- 5 of each candidate because 4 install + 1 spare, and **the TPU spool changeover
+  is the expensive step, not the filament** — whichever rung wins, no second job.
+- `openscad -D BARREL_OD=<od> -o <out>.stl grommet_insert.scad` regenerates any rung.
+- `BORE` stays 9.0 on all three, so bundle clearance is unaffected; only the wall
+  thickens (1.60 / 1.85 / 2.10 mm). `FLG_OD` untouched → flange-face clearances hold.
+
+Never re-drill the flange. ⚠️ The press test needs a printed PA6-CF Ø12 hole and
+there are **no first-article prints yet** (`STATUS.md`) — cheapest unblock is a
+scrap coupon with a few Ø12 holes in the wave-1 PA6-CF job, so LA-25 clears without
+test-fitting into a real shoulder. ⚠️ `lead_notch_grommet` is 0.24 g; preview the
 plate before sending, because slicers drop islands that small.
 
 #### ⚠️ Anchor-topology check the clip batch skipped
@@ -242,11 +263,17 @@ Every insert site depth-probed in the built STLs:
       boss edge, so a screwdriver body swinging next to the seated 19mm boss is
       tight. First-article: confirm the driver actually reaches the near case
       screws with the parent boss in place (else strictly follow servos-first).
-- [ ] **LA-25 first-article: grommet_insert press-test.** BARREL_OD 12.2 into
-      the nominal Ø12 flange hole is only 0.2mm interference (likely inside
-      FDM/TPU noise) and the axial slit makes it a split ring — press one
-      in, tug-test retention; grow `BARREL_OD` in `grommet_insert.scad` if
-      loose.
+- [ ] **LA-25 first-article: grommet_insert OD ladder press-test.** Not a
+      tolerance check — the split ring means the original 12.2 cannot grip at
+      any print accuracy: closing the 2.0mm slit shrinks the diameter by
+      `SLIT/π = 0.637mm` against only 0.200mm of design interference, so it
+      never reaches hoop compression. **Engagement starts at 12.637.** Press
+      all three rungs into the printed Ø12 hole in one sitting and tug-test:
+      **12.2 must spin free** (negative control — if it grips, the analysis is
+      wrong), then take the lowest of 12.7 / 13.2 that holds. Set the winner as
+      `BARREL_OD` in `grommet_insert.scad` and regenerate the STL. Never
+      re-drill the flange. Needs a printed PA6-CF Ø12 hole — add a scrap coupon
+      to the wave-1 job rather than test-fitting into a real shoulder.
 - [ ] **LA-26 first-article: shoulder_plate 3.1mm dowel holes.** Test-fit an
       M3 in the 2 diagonal "dowel" flange holes before committing — FDM
       often prints small holes 0.1–0.3mm undersize; bump to 3.2–3.3 in
