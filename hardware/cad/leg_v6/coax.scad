@@ -163,7 +163,8 @@ GROW_Z1     = 16.0;              // ... to here, to host the mortise. CORRECTED
                                  // built. 16.0 measures 0 pts at every swept
                                  // haa angle.
 MORT_X0 = 46.4;  MORT_Y0 = 0.0;   MORT_Z0 = 9.5;
-MORT_Y1 = 23.2;  MORT_Z1 = 13.5;   // 2.1mm wall below, 2.5 above  // mortise; x1 = SPLIT_X (open at the face)
+MORT_Y1 = 23.2;  MORT_Z1 = 13.5;   // 2.1mm wall below, 2.5 above
+MORT_RIB_Y0 = 10.1;  MORT_RIB_Y1 = 13.1;   // central rib: halves the floor span  // mortise; x1 = SPLIT_X (open at the face)
 CLR_TENON  = 0.15;               // same convention as CLR_KEY
 BOLT_YS    = [5.0, 18.0];        // 2x M3 retention, cyclic 133/2 = 66 N each
 BOLT_Z     = 11.5;               // vs ~175-245 N wet pull-out -> SF 2.6-3.7
@@ -538,8 +539,25 @@ module coax_v6() {
         // MORTISE for the block's tenon: open at the mating face (x = SPLIT_X),
         // blind at MORT_X0. Closed in Z both ways by design -- that closure is
         // what reacts the joint moment in bearing.
-        translate([MORT_X0, MORT_Y0, MORT_Z0])
-            cube([SPLIT_X + EPS - MORT_X0, MORT_Y1 - MORT_Y0, MORT_Z1 - MORT_Z0]);
+        //
+        // SPLIT BY A CENTRAL RIB (2026-07-31, load review). MEASURED contact
+        // between block and coax is 659.5 mm2, confined to z 7.05..13.40, with
+        // 258 mm2 of it on this floor -- so the tenon's z-faces ARE the load
+        // path and the floor carries ~306 N of the couple. Bearing is a
+        // non-issue at 1.18 MPa. The floor's BENDING is not: as a single
+        // 23.2mm-span panel, 2.0mm thick, a thin-plate strip gives ~119 MPa,
+        // past PA6-CF yield, and the floor cannot be thickened (down is the
+        // femur sweep at 6.35, up is the shoulder at z=17, inboard is the
+        // shoulder at x=40 -- all measured).
+        //
+        // Span is the one free variable, and stress goes as L^2. The rib
+        // halves it: 23.2 -> ~10.1mm per pocket, ~119 -> ~22 MPa, and it ties
+        // the floor to the ceiling so the section behaves as a closed box
+        // rather than an isolated plate. The 2x M3 at y=5 and y=18 sit inside
+        // the two pockets, so the fastening is unchanged.
+        for (yy = [[MORT_Y0, MORT_RIB_Y0], [MORT_RIB_Y1, MORT_Y1]])
+            translate([MORT_X0, yy[0], MORT_Z0])
+                cube([SPLIT_X + EPS - MORT_X0, yy[1] - yy[0], MORT_Z1 - MORT_Z0]);
         // 2x M3 heat-set, bored -X from the mortise's blind end into the grown
         // bridge. Driven from +X (open air past the block) -- the access the
         // inboard cap never had.
