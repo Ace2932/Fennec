@@ -57,12 +57,23 @@ _ELBOW_FWD = (0.0, -0.728009933, 1.200000000)
 # no X-config anywhere. Verified by render_knee_configs.py (knee offset vs the
 # hip->foot chord: elbow_back = -66.0 mm on all four legs).
 #
-# ⚠ CONSEQUENCE: nova_locomotion is now known INCONSISTENT with the robot —
-# leg_ik.KNEE_FORWARD = {FL: True, FR: True, RL: False, RR: False} commands the FRONT
-# knees FORWARD, and its README + docs/knee-config-analysis.md both record an
-# "X-CONFIG decided 2026-07-06" that is not the built configuration. That is a
-# hardware-bring-up hazard, not a sim issue: controller.gait_pose would drive the
-# front legs to a mirrored stance on first stand. Fix belongs in nova_locomotion.
+# ✅ CONSEQUENCE — RAISED AND CLOSED THE SAME DAY. Kept as the record, not as a
+# live warning. When the line above was written, nova_locomotion was inconsistent
+# with the robot: leg_ik.KNEE_FORWARD = {FL: True, FR: True, RL: False, RR: False}
+# commanded the FRONT knees FORWARD, so controller.gait_pose would have driven the
+# front legs to a mirrored stance on first stand.
+#
+# Fixed hours later in 8ec305d (2026-07-25). Verified 2026-08-01, all four layers
+# agree on elbow_back:
+#     real robot                 Aiden, ground truth
+#     sim / trained walker       DEFAULT_POSE = knee_pose("elbow_back")
+#     leg_ik.KNEE_FORWARD        {FL: False, FR: False, RL: False, RR: False}
+#     knee-config-analysis.md    carries a SUPERSEDED banner; X-config never built
+#
+# DO NOT "fix" leg_ik back toward X-config on the strength of this paragraph — it
+# describes a bug that no longer exists. (This block stayed live for a week after
+# the fix while the README and the analysis doc both got their banners; a stale
+# red flag pointing at a closed bug is its own hazard.)
 #
 # The xconfig_* entries are kept as the comparison/evidence trail (round 8), not as
 # live options — do not switch to them without re-tuning the gait, whose parameters
