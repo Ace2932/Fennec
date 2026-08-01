@@ -72,9 +72,11 @@ accordingly.
 
 ## 2. Tooling — the one real gap
 
-Owned (`master-bom.md`): Pinecil V2, flux, wick, sucker. ⚠️ **Solder is NOT confirmed** —
-master-bom still lists it as `⬜ verify`, and its **alloy is recorded nowhere**. See §2a and
-the 🔴 item in §7; it blocks stage 1 and it sets every temperature in §2a.
+Owned (`master-bom.md`): Pinecil V2, flux, wick, sucker, and — **confirmed 2026-08-01** —
+solder: **Sn63Pb37, 1 mm, 1.8 % flux core**. Leaded, as §2a recommends, so **the leaded column
+in §2a is the live one and nothing shifts +30 °C**. The stage-1 blocker is closed. ⚠️ The
+diameter is **1 mm, not the 0.6–0.8 mm** originally specced — see §2a for what that changes
+(technique at stages 1/3, not a re-order).
 
 `pre-power-on-validation.md` §1d records the trap: `VBAT_PROTECTED` (PWR.Cu)
 and `GND` (GND.Cu) are **solid pad-connected planes**, deliberately — the
@@ -119,18 +121,28 @@ Two things govern whether it actually struggles, and only one of them is the tip
         That headroom is exactly what the 14 A plane pads want. ⚠️ **24 V is the Pinecil V2's
         DC ceiling** (barrel 12–24 V, 24 V/5 A) and this is a 30 V supply — dial it down and
         confirm on the display before plugging in; current limit ≥4 A. Details in §2a.
-- [ ] **Preheat — unsolved, and CONDITIONAL. Do the bench test before buying.**
-      No *purpose-built* preheater is owned. May prove unnecessary once TS-C4 runs
-      at 24 V — §2a has the test and its pass/fail.
+- [x] **Preheat — SOLVED. Test run 2026-08-01, PASSED, do not buy.** No
+      purpose-built preheater is owned and none is needed. `U1.4` (10 A) wet in
+      **~2 s with solder through to the far face**; `Q1.3` (**14 A GND inject** —
+      the worst THT pad on the board) went easy and came out **shiny on both
+      faces**, i.e. the barrel wicked. Setup: **TS-C4, Kungber 24.0 V (~88 W),
+      tip 400 °C, Sn63Pb37 1 mm** — heat the pad ~2 s, then feed into the tip/pad
+      junction. Full result in §2a. The conditional buy is **closed, not deferred**.
+      **Consequence:** if the 14 A GND inject goes in seconds, every XT30/XT60 and
+      `SW1.2` is the same problem or easier — the high-current THT is no longer the
+      risk item in this plan.
+      ⚠️ **The one joint the test did NOT model is `L1` (stage 4)**: SMD, plane-tied
+      on *both* sides, so there is no barrel and "solder on the far face" does not
+      apply — it is a fillet against a plane sinking heat from underneath as well as
+      laterally. If it fights, the answer is the **420 °C boost held a few seconds,
+      not a purchase**. The P1S bed (§2a) remains available for stage 4 and is free.
       ⚠️ The Etekcity IR gun **cannot** stand in as the measurement here: 16:1 optics
       (22.6 mm spot at its recommended distance) and a matte-surface emissivity
       assumption make it useless on a 2–3 mm shiny pad. It reads *bulk board*
       temperature only. §2a explains, and uses solder phase-change instead.
-      💡 One owned near-miss: the **Bambu P1S bed reaches 100 °C** and is a large flat
-      contact plate — usable for **stages 1–4 only** (top face still bare), which
-      covers L1. See §2a.
 
-  **If it is needed, it has to be IR, not a contact hotplate.** Both faces of
+  *Kept for the record — the spec that would have applied had it failed.*
+  **It would have had to be IR, not a contact hotplate.** Both faces of
   power_v2 are populated (§1), so a flat plate can only heat a face that is
   still bare:
 
@@ -171,13 +183,13 @@ the iron there. Verified against Pine64's Pinecil docs and the IronOS settings
 reference on 2026-07-31 — but IronOS menu wording shifts between releases, so
 trust the on-device help text over this table if they disagree.
 
-### First: which solder alloy
+### The alloy — CONFIRMED 2026-08-01: Sn63Pb37, 1 mm, 1.8 % flux core
 
-**`master-bom.md` records diameter (0.6–0.8 mm) but not alloy, and §7 still has
-"confirm solder on the shelf" open.** Every number below depends on it, so settle
-this before setting a temperature.
+Leaded, which is what this section recommended. **The leaded column below is the
+live one** — the bracketed lead-free setpoints do not apply and nothing in this
+document shifts +30 °C.
 
-**Use leaded (Sn63Pb37) for both boards** unless you have a reason not to:
+Why it was the right call anyway:
 
 - It melts at **183 °C** vs SAC305's **217–220 °C**, so every joint happens
   ~35 °C cooler — and the whole difficulty here is getting heat *into* a plane.
@@ -186,8 +198,29 @@ this before setting a temperature.
   but there is no reason to take it.
 - The power board is ENIG, which is happy with either.
 
-If you only own SAC305, everything below shifts **+30 °C** and the plane-tied pads
-get materially harder — that alone could decide the preheat question in §7.
+**Eutectic, so the inspection criterion is simple: a correct joint is SHINY.**
+Sn63Pb37 has **no plastic range** — it goes solid at 183 °C with no mushy interval
+to freeze badly in. Dull grey or grainy *after the flux is cleaned off* therefore
+means the joint moved while freezing or was heat-starved. It is a defect signature,
+not a finish preference — and it is the **opposite** of SAC305, where a correct
+joint is legitimately dull. Do not carry that habit over.
+
+⚠️ **The diameter is 1 mm, not the 0.6–0.8 mm `master-bom.md` originally specced**,
+and it cuts both ways along the stage split already in §3. 1 mm carries **~2.8× the
+solder per mm of feed**, which:
+
+- **helps** at stages **4/7/8** — the plane-tied pads, where the entire difficulty
+  is delivering mass and heat before dwell cooks the laminate;
+- **hinders** at stages **1/3** — 0603 pads are ~0.8 mm, so feeding 1 mm wire
+  over-delivers and bridges.
+
+Fix is technique, not a second spool: **tin the tip and place** on the 0603s rather
+than feeding wire, and keep U7/U8 to flux + drag/wick where the wire barely touches.
+
+**1.8 % rosin core is standard, but it flashes off fast at 380–400 °C.** Carry
+separate flux (pen or paste) for stages 4/7/8 and the U7/U8 drag — core flux alone
+is gone before the joint wets at those temperatures, and that reads as "the plane is
+winning" when it is actually flux starvation.
 
 ### Temperature by stage
 
@@ -265,12 +298,31 @@ Navigation, with the tip fitted, from the main screen:
 | Soldering | **Boost temp** | **420 °C** | Your reserve for a 14 A pad that will not wet. Held, not latched — a few seconds, then back off. |
 | Soldering | **Temp change long** | 25 °C (optional) | You will be moving between 320 and 400 °C repeatedly across stages; the default 10 °C step makes that tedious. |
 
-### §7's preheat test — "can the joint even get hot enough with no heater under it?"
+### §7's preheat test — RUN 2026-08-01, **PASSED**. Do not buy a preheater.
 
-That is the whole question, and it is the one thing standing between here and
-stage 4. Run it as: **TS-C4, Kungber at 24.0 V, tip 400 °C, solder placed ON THE
-PAD** (not melted off the tip). Start on `U1.4` (10 A, least severe of the three),
-then `Q1.3` or `SW1.2` (14 A).
+**Result: both pads wet and filled in ~3–4 s, shiny on both faces.**
+
+| pad | rating | result |
+|---|---|---|
+| `U1.4` | 10 A — least severe | ✅ ~2 s to wet, solder through to the far face |
+| `Q1.3` | **14 A GND inject** — tied straight into the ground plane, the worst THT pad on the board | ✅ easy, **shiny both sides** |
+
+**Why "shiny both sides" is the whole verdict in one observation:** shiny = eutectic
+Sn63Pb37 froze undisturbed and not heat-starved; on *both* faces = the solder wicked
+the barrel. A plane-starved pad gives the exact opposite — a blob on the iron side
+and nothing through the hole.
+
+Setup that achieved it: **TS-C4, Kungber 24.0 V (~88 W), tip 400 °C, Sn63Pb37 1 mm.**
+Heat the pad ~2 s, then feed solder into the tip/pad junction.
+
+⚠️ **`L1` (stage 4) is the one joint this did not model** — SMD, plane-tied on *both*
+sides, no barrel, so the far-face criterion does not apply. If it fights, use the
+420 °C boost, not a purchase.
+
+*The rest of this section is the original criterion, kept because the measurement
+reasoning still governs any joint that has to be re-run.* Run as: **TS-C4, Kungber at
+24.0 V, tip 400 °C, solder placed ON THE PAD** (not melted off the tip). Start on
+`U1.4` (10 A, least severe of the three), then `Q1.3` or `SW1.2` (14 A).
 
 > ⚠️ **Correction to the first version of this section.** It said to fail the test
 > if the Etekcity IR gun read the pad below ~185 °C. **Do not point the IR gun at a
@@ -537,27 +589,21 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
 - [x] ~~Tip: 4 mm-class chisel~~ **DONE** — TS-C4 owned (§2).
 - [x] ~~Adequate supply~~ **DONE** — Anker 65 W PD (20 V) and Kungber bench
       (~24 V) both owned. Use the Kungber for stages 4, 7 and 8 (§2).
-- [ ] 🔴 **Test whether the joint can reach temperature with no heater under the
-      pad** — the gating question, and the only thing between here and stage 4.
-      Do not buy for it first. **TS-C4, Kungber at 24.0 V, tip 400 °C, solder on
-      the pad.** Start on `U1.4` (10 A, least severe), then `Q1.3` or `SW1.2` (14 A).
-      **Acceptance is barrel fill on the FAR side, not surface melt** — a
-      plane-starved pad gives you a shiny blob on the iron side and nothing through
-      the hole. Full pass/fail (three outcomes, not two) in **§2a**.
-      Sitting on a pad waiting is what lifts pads and cooks laminate — that is the
-      failure this screens for, so "it eventually flowed at 15 s" counts as a fail.
-      **Only if it fails: the 853A IR preheater (§2)** — not a contact hotplate for
-      stages 7–8, and not hot air. Try the P1S bed (§2a) for stage 4 first; it is free.
+- [x] ✅ **Can the joint reach temperature with no heater under the pad? — TESTED
+      2026-08-01, YES.** `U1.4` wet in ~2 s with solder through to the far face;
+      `Q1.3` (14 A GND inject) was easy and **shiny on both faces**. Setup: TS-C4,
+      Kungber 24.0 V (~88 W), tip 400 °C, Sn63Pb37 1 mm. **No preheater — the buy is
+      closed, not deferred.** Details in §2a. Remaining unknown is `L1` only (stage 4,
+      SMD, plane-tied both sides, no barrel) → 420 °C boost if it fights, and the P1S
+      bed (§2a) is still free cover for that one stage.
 - [ ] Hot-air station (§2) — independent of preheat. Buy when stage 3 (SOIC) or
       harness heatshrink actually calls for it, not as a preheat substitute.
-- [ ] 🔴 **BLOCKING — confirm solder exists, and confirm its ALLOY.**
-      `master-bom.md` still reads `Thin solder 0.6-0.8 mm | ⬜ verify`, so it is not
-      established that there is any solder in the building. Worse, **no doc records
-      the alloy**, and every setpoint in §2a hangs off it: leaded Sn63Pb37 melts at
-      183 °C, SAC305 at 217–220 °C, which is a **+30 °C shift on every stage** and
-      makes the plane-tied pads materially harder — it could decide the preheat
-      question on its own. Recommendation is **leaded**: the logic board is
-      HASL-lead, so its pads are already tin-lead. Check the drawer before stage 1.
+- [x] ✅ **Solder confirmed in hand 2026-08-01 — Sn63Pb37, 1 mm, 1.8 % flux core.**
+      Leaded as recommended, so the leaded column in §2a is live and nothing shifts
+      +30 °C. Stage 1 is unblocked. Diameter is **1 mm, not the 0.6–0.8 mm** the BOM
+      specced — helps stages 4/7/8, hinders 1/3, and the fix is tin-the-tip-and-place
+      rather than a second spool (§2a). Eutectic ⇒ **shiny is the correctness
+      criterion**; dull/grainy after cleaning is a defect signature.
 - [ ] 🔴 **Q1 SOA check — was written as a pre-fab gate, and fab happened without it.**
       `STATUS.md` and `order-list.md` §131-135 both mark the gate-harden design
       *"SOA-gated … BENCH-VALIDATE transient (scope) before fab"*. Soft-start puts
