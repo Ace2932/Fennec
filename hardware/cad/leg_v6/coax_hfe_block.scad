@@ -74,6 +74,7 @@ BOSS_X0     = FEMUR_MID - WHEEL_Z0;      // 51.55
 
 MORT_X0 = 46.4;  MORT_Y0 = 0.0;   MORT_Z0 = 9.5;
 MORT_Y1 = 23.2;  MORT_Z1 = 13.5;
+MORT_RIB_Y0 = 10.1;  MORT_RIB_Y1 = 13.1;
 CLR_TENON = 0.15;
 BOLT_YS = [5.0, 18.0];
 BOLT_Z  = 11.5;
@@ -107,10 +108,14 @@ module coax_hfe_block_R() {
                 wheel_boss_pos();
             // TENON — shrunk on y0/y1/z0/z1 (closed both ways in Z), flush at
             // the mating plane. This is the member that carries the moment.
-            translate([MORT_X0 + CLR_TENON, MORT_Y0 + CLR_TENON, MORT_Z0 + CLR_TENON])
-                cube([SPLIT_X - MORT_X0 - CLR_TENON,
-                      (MORT_Y1 - MORT_Y0) - 2*CLR_TENON,
-                      (MORT_Z1 - MORT_Z0) - 2*CLR_TENON]);
+            // two prongs, matching the coax's rib-split mortise (see that
+            // file: the rib halves the floor's bending span, 119 -> ~22 MPa)
+            for (yy = [[MORT_Y0, MORT_RIB_Y0], [MORT_RIB_Y1, MORT_Y1]])
+                translate([MORT_X0 + CLR_TENON, yy[0] + CLR_TENON,
+                           MORT_Z0 + CLR_TENON])
+                    cube([SPLIT_X - MORT_X0 - CLR_TENON,
+                          (yy[1] - yy[0]) - 2*CLR_TENON,
+                          (MORT_Z1 - MORT_Z0) - 2*CLR_TENON]);
         }
 
         // wheel-screw couple through the boss + arm (unchanged geometry — this
