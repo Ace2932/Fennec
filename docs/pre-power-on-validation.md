@@ -106,7 +106,10 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 - [ ] **U9–U12 INA226 modules** — board connects I2C+power only (`4=SDA, 5=SCL, 6=VCC, 7=GND`).
       Confirm (a) module header order matches your dupont wiring, (b) **a unique I2C address per module via the
       A0/A1 solder bead — see the §1e table** (4 modules on one bus = must differ, or collision).
-      **⚠️ Current-sense path — PCB has NO shunt (R13/R14 removed):** rail current must pass through each
+      **⚠️ Current-sense path — PCB has NO shunt** (the shunt resistors that once sat at R13/R14 were
+      deleted — ⚠️ **those designators have since been REUSED for live safety-chain parts: `R13` = 10k
+      e-stop pull-up `EN_SW`↔`V5_AUX`, `R14` = 470k hardcut hysteresis. Both MUST be populated.**
+      Do not read this line as "leave R13/R14 off"): rail current must pass through each
       module's IN+/IN− screw terminals (onboard 2 mΩ), wired **inline in the harness**: source → IN+ → IN− → load.
       **Hip (J7) / Jetson (J12) / L2 (J13) = single XT30 → clean full-current insertion. Leg (0x40) stars into
       4× XT30 (J3–J6) ON the PCB → NO single total-leg-current point** — insert at U1 buck VOUT (cut VOUT→plane)
@@ -235,7 +238,12 @@ this validates the *timing*, the real half-duplex risk.)
 > | `V7V5_ARM` = `U5.4` only, single-pad net — "arm rail has no exit" | **`J14.2 = V7V5_ARM`.** The rail has an off-board XT30. |
 > | 🔴 `U5.EN` tied to `VBAT_PROTECTED` = always-on, ungated by e-stop/hardcut | **`U5.3 = EN_BUCKS`** — the same net as `U1.3`. Killed by e-stop Q3 **and** hardcut Q2. |
 >
-> So U5/U12 remain DNP **for scope — there is no arm yet — not for safety.**
+> So **U5** remains DNP **for scope — there is no arm yet — not for safety.**
+> ⚠️ **U12 is a different case and DOES get populated** (corrected 2026-07-31): the 4th INA226
+> was reassigned to the **L2 LiDAR rail at 0x45** on 2026-06-30, and `-D NOVA_INA226_L2` is
+> enabled in `platformio.ini` with `/power_rails[9..11]` carrying L2 v/a/w. All four INA slots
+> are electrically identical. Leaving U12 empty makes those three publish nothing.
+> See `hardware/pcb-mods/BUILD_PLAN.md` §4.
 > That is a materially different instruction from the original text, which reads
 > as "populating this creates a pinch/crush hazard".
 >

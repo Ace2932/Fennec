@@ -4,7 +4,54 @@ Single-pane blockers / in-progress / next-actions. Hand-maintained; the detail
 lives in `README.md` (Open Decisions + Build Roadmap), `docs/order-list.md`,
 per-board `ROUTING_HANDOFF.md`, and memory. Update when state changes.
 
-_Last updated: 2026-07-26_
+_Last updated: 2026-07-31_
+
+## 🔧 2026-07-31 — BOARDS IN HAND, SOLDERING STARTED
+
+Both boards fabbed, delivered and being populated. **Canonical build sequence:
+[`hardware/pcb-mods/BUILD_PLAN.md`](hardware/pcb-mods/BUILD_PLAN.md)** (stages 0–10, tip +
+temperature per stage in §2a). Everything below dated 2026-07-26 or earlier is history;
+resolutions are marked inline rather than deleted.
+
+**🔴 Two things block or endanger the current step — neither was on any list:**
+
+1. **Solder is not confirmed to exist.** `master-bom.md` still reads
+   `Thin solder 0.6-0.8 mm | ⬜ verify`, and **no doc anywhere records the ALLOY.** Every
+   temperature in `BUILD_PLAN.md` §2a depends on it (leaded 183 °C vs SAC305 217–220 °C = a
+   30 °C shift, and the plane-tied pads get materially harder on lead-free). Check the shelf
+   before heating the iron. Leaded Sn63Pb37 is the recommendation — the logic board is
+   HASL-lead, so its pads are already tin-lead.
+2. **The Q1 SOA check never happened, and cannot be done with owned gear.** The gate-harden
+   spec below is explicitly *"SOA-gated … BENCH-VALIDATE transient (scope) before fab"* —
+   **fab happened without it.** Soft-start dumps ½CV² ≈ **0.77 J** into Q1 in its linear
+   region; it must sit inside the IRLB3034 10 ms SOA. **No scope is owned** (Rigol DHO804 was
+   deferred to Phase 5), and the documented fallback — a 10/22/47 Ω 2–3 W precharge resistor —
+   **is not in any ✅ ordered list.** See "Next actions".
+
+**Verified clean this pass** (read from the board file, not assumed):
+
+- **Mounting-hole keepouts are real AND effective — proven against the actual fill.** All four
+  H1–H4 have 7 mm-dia keepouts on all four copper layers (`copperpour: not_allowed`). That rule
+  alone proves nothing, since it still permits tracks. Three checks, all clear:
+  **334 track segments + 62 vias** — none within 3.5 mm; **168 component pads** — none within
+  3.5 mm; and, the one that actually matters, **the poured copper itself**: 196 sample points
+  (centre plus r = 1/2/3/3.4 mm × 12 directions, per hole) tested point-in-polygon against all
+  **45 filled polygons** — **zero covered**. Closest pour vertex to any hole centre is
+  **3.483 mm**, i.e. the fill boundary tracing the keepout edge exactly.
+  (H1 is `BATT_NEG` — a standoff bridging it to logic-side GND would be a dead short across Q1.)
+  - ⚠️ **Consequence nobody had written down: do NOT put a flat washer under these standoffs.**
+    The clear copper circle is **6.97 mm** diameter. A DIN125 M3 washer is **7.0 mm OD** — it
+    overhangs the pour edge, and with the 3.2 mm hole / 3 mm screw play it will definitely sit
+    on copper on one side. Solder mask is then the only insulation under a clamped fastener,
+    which is not what mask is rated for. **Brass M3×20 standoff directly on the board is fine**
+    (hex ~5.5 mm A/F, 6.35 mm across corners → ~0.3 mm radial clearance). If you want a washer,
+    use nylon or one with OD ≤ 6.9 mm.
+- **All 9 AMASS XT connectors** still pad1 = − / pad2 = +. The 2026-06-29 fix held.
+- **XT30 mating halves needed = 16** (8 board connectors J3–J7/J12–J14, plus 8 across the four
+  populated buck stations U1–U4 at 2 each); 18 if U5 is ever fitted. This closes the
+  "confirm ~18 mating pairs" item on the Notion board.
+- **U12 (power board) must be POPULATED** as the L2 monitor at 0x45 — it stopped being an arm
+  part on 2026-06-30 and `-D NOVA_INA226_L2` is enabled. See `BUILD_PLAN.md` §4.
 
 ## 🔴 2026-07-26 — CAD review: rear hip placement + the posture safety table
 Full review: [`docs/cad-review-2026-07-26.md`](docs/cad-review-2026-07-26.md); backlog rows CR26-1..8.
@@ -35,7 +82,7 @@ sections + **B1 (U12+J14 place)** below are all **DONE**.
 - ✅ **Mounting-hole keepouts** H1–H4 (brass-safe). ✅ **SW1 drill 1.2→1.5mm** for **TB007-508-02BE** (MKDS OOS → sub ordered ×10); SW1 value → Contura_SPST_18A.
 - ✅ **VBAT_PROTECTED reroute-gap closed** · **VBAT + V12_HIP B.Cu pours** · **via annular 0.5→0.55mm** (39 vias, 2oz).
 - ✅ **Thermal-relief current-throat fix** — SW1.2/U1.4/Q1.3 (14/10/14A) were plane-only 0.5mm spokes (~6A); VBAT_PROTECTED + GND inner planes → **SOLID**, leg spokes 2.0mm.
-- ✅ **Fuse = MRBF-30** (Blue Sea 5191); Class T superseded. **Fab = PCBWay 2oz + stencils (NOT DKRed — 1oz/no-stencil).**
+- ✅ **Fuse = MRBF-30** (Blue Sea 5191); Class T superseded. ~~**Fab = PCBWay 2oz + stencils (NOT DKRed — 1oz/no-stencil).**~~ → **SUPERSEDED 2026-06-29: fab = JLCPCB, and NO stencils.** Switched on cost (PCBWay $277 vs JLC $121 for the power board); PCBWay's 0.125 mm-annular flag was a non-issue at JLC. **Ordered 2026-07-01**, both boards in one parcel, ~$203 all-in. Power = 4L 90×112, 2 oz outer / 0.5 oz inner, ENIG, TG155. Logic = 4L 84×78, 1 oz, HASL-lead, TG135. No stencil — zero fine-pitch, hand-soldered by design.
 - **Open before PCBWay (assembly-time, not board-file):** physical footprint verify (Teensy U6 + bucks U1–U5) · hand-tack 100nF on U8 LM393 Vcc · INA IN± inline harness (leg total-current deferred v7) · **dual-voltage servo harness (FRY-critical)**. Detail: `docs/pre-power-on-validation.md` §1c/§1d.
 
 ## 🔬 System audit 2026-06-18 (cross-domain: FW / PCB / SW / docs)
@@ -115,28 +162,51 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
 ## 🔴 Hard blockers (gate everything downstream)
 | # | Blocker | Owner | Gates | Notes |
 |---|---|---|---|---|
-| B1 | **Place U12 + J14 on power board** (GUI) | you | power routing → DRC → gerbers → fab | board too dense for headless placement; F8 already done. Then I route V7V5_ARM/GND/EN/U12-I2C headless. |
+| ~~B1~~ | ~~**Place U12 + J14 on power board** (GUI)~~ **✅ DONE 2026-06-27** — placed, routed, DRC 0/0, gerbers regenerated, boards ordered 2026-07-01 and delivered. Verified on the ordered board: `J14.2` = `V7V5_ARM`, `U5.3` = `EN_BUCKS`. | — | — | Kept for the record; no longer a blocker. |
 | B2 | **CAD measurement pass** — replace `TODO-CAD` link lengths | you (CAD) | real gait / sim / MoveIt | femur/tibia/hip offsets + joint ranges, in `nova_description` xacro **and** `nova_locomotion` (keep synced). Math/structure already correct + tested. |
 | B3 | **Safety-chain bench validation + MRBF fuse install** | you (bench) | ANY LiPo power-on | LVC 13.0/12.4 V, E-stop, hard-cutoff, INA cal unvalidated; battery lead unfused until MRBF in. Checklist in `order-list.md` "After things arrive". |
 
-## 🚧 In progress / open PRs
+## ✅ PRs — all closed out (verified via `gh` 2026-07-31)
 | PR | What | State |
 |---|---|---|
-| #10 | nova_locomotion (leg IK + trot) + ros-pytest CI | open |
-| #9 | nova_description URDF (sim keystone) | open |
-| #8 | fab_gate.py two-board readiness gate | open |
-| #7 | logic board ERC → 0 | open |
-| #6 | order-list FINAL pre-build order | open |
-| #3 | "LE_NOVA ECC bundle" | open — **predates current work, triage/close?** |
+| #10 | nova_locomotion (leg IK + trot) + ros-pytest CI | **MERGED** |
+| #9 | nova_description URDF (sim keystone) | **MERGED** |
+| #8 | fab_gate.py two-board readiness gate | **MERGED** |
+| #7 | logic board ERC → 0 | **MERGED** |
+| #6 | order-list FINAL pre-build order | **MERGED** |
+| #3 | "LE_NOVA ECC bundle" | **CLOSED** (not merged — triaged away) |
+| #13 · #14 · #17 | power board routed · docs/review hub · firmware boot-settle | **MERGED** |
 
-## ⏭️ Next actions (rough order)
-1. Merge PRs #6–#10 (triage #3).
-2. **B1:** place U12+J14 → save → I route → `fab_gate` GO on both boards.
-3. Fab: both boards ×5 + stencils → PCBWay. Place FINAL order (DigiKey cart + Pololu arm buck + Amazon INA + Feetech cables).
-4. **B2:** CAD pass → refine `TODO-CAD` across URDF + locomotion.
-5. Assemble + **B3** (MRBF + safety bench validation) before any LiPo.
-6. Firmware bench bring-up (real SN74LVC125A + INA226 + STS3215) + servo ID assignment (`docs/setup-servos.md`). Run bus half-duplex timing checks — `pre-power-on-validation.md` §10.
-7. Leg first-article print (PA6-CF).
+Currently open PRs are the leg_v6 HFE-joint set (**#232 / #233 / #234**) — CAD, unrelated to the
+boards.
+
+## ⏭️ Next actions (rewritten 2026-07-31 — items 1–3 above are done)
+
+1. **Check the solder drawer.** Diameter *and* alloy. Blocks every stage. (§ the 🔴 block at top.)
+2. **Solder, per `BUILD_PLAN.md` stages 0–10.** Stage 0 is a bare-board short test — do not skip it.
+3. **Run the preheat bench test at stage 4** (`BUILD_PLAN.md` §2a): TS-C4, Kungber at **24.0 V**
+   (the Pinecil V2's ceiling — it is a 30 V supply, so dial it down and confirm), tip 400 °C, on
+   `U1.4`. Wets in ≤3–4 s → no preheater needed. Only buy the IR station if it fails.
+4. **Decide the Q1 SOA question before the first pack hot-plug** (§ the 🔴 block at top). Three
+   options, no scope required for the first two:
+   - First power-on is already from the **current-limited bench supply at 0.5 A**
+     (`pre-power-on-validation.md` §3), which never creates the inrush the SOA concern is about.
+     That defers the risk rather than clearing it.
+   - **Precharge through an owned resistor.** The Chanzon **1 Ω + 4 Ω** power resistors are on the
+     bench-gear list — a 2-stage connect through the 4 Ω limits peak inrush to ~4.2 A at 16.8 V and
+     puts the 0.77 J in the resistor instead of the FET. ⚠️ **Confirm their wattage rating first** —
+     it is not recorded in `master-bom.md`.
+   - Buy the scope and actually measure it. This is the only option that *clears* the gate.
+5. **B3** — MRBF install + safety-chain bench validation before any LiPo. Includes the two audit
+   items still genuinely open: **E-stop torque-cut path** (does `EN_BUCKS` really limp the robot)
+   and **micro-ROS `RCCHECK`** still hard-bricking on a transient agent hiccup at any init call
+   after `rclc_support_init`.
+6. Firmware bench bring-up (real SN74LVC125A + INA226 + STS3215) + servo ID assignment
+   (`docs/setup-servos.md`). Bus half-duplex timing — `pre-power-on-validation.md` §10.
+7. **B2** — remaining CAD: joint ranges, masses/inertias, the `body_half_x` 0.1412-vs-±129.6 hfe
+   station decision, and `nova_description/README.md` still warns "do NOT train a gait until the
+   TODO-CAD values are…" which is now stale against its own xacro.
+8. Leg first-article print (PA6-CF).
 
 ## 🟡 Not started (deeper backlog)
 - `gait_node` — cmd_vel → trot → IK → `/joint_commands` (Phase-2 glue over the tested core).
@@ -144,7 +214,10 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
 - Phase 2 sim: MJX gait training (now unblocked by URDF, pending B2).
 - Phase 3: Nav2 / autonomy. Phase 4: arm install + MoveIt + VLA.
 
-## Phase snapshot
-- **Phase 0** (pre-build): ~closing — **both boards fab-ready GO** (B1 done); open items are assembly-time only.
-- **Phase 1** (HW bring-up): firmware skeleton green (p99 1 µs, isolation), bench bring-up not started.
-- **Phase 2+** (locomotion/autonomy/arm): groundwork only (URDF + IK/gait scaffolded).
+## Phase snapshot (2026-07-31)
+- **Phase 0** (pre-build): **CLOSED.** Both boards designed, fabbed, delivered.
+- **Phase 1** (HW bring-up): **STARTED — this is where we are.** Soldering in progress
+  (`BUILD_PLAN.md` stages 0–10). Firmware skeleton green (p99 1 µs, isolation); nothing on these
+  boards has been powered or bench-proven yet. B3 is the gate out of this phase.
+- **Phase 2+** (locomotion/autonomy/arm): groundwork only (URDF + IK/gait scaffolded, walks in sim
+  on flat). Gated on the remainder of B2.
