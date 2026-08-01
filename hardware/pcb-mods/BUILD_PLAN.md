@@ -120,8 +120,15 @@ Two things govern whether it actually struggles, and only one of them is the tip
         DC ceiling** (barrel 12–24 V, 24 V/5 A) and this is a 30 V supply — dial it down and
         confirm on the display before plugging in; current limit ≥4 A. Details in §2a.
 - [ ] **Preheat — unsolved, and CONDITIONAL. Do the bench test before buying.**
-      Nothing owned reaches 100–130 °C; the Etekcity IR gun measures it but
-      cannot produce it. May prove unnecessary once TS-C4 runs at 24 V.
+      No *purpose-built* preheater is owned. May prove unnecessary once TS-C4 runs
+      at 24 V — §2a has the test and its pass/fail.
+      ⚠️ The Etekcity IR gun **cannot** stand in as the measurement here: 16:1 optics
+      (22.6 mm spot at its recommended distance) and a matte-surface emissivity
+      assumption make it useless on a 2–3 mm shiny pad. It reads *bulk board*
+      temperature only. §2a explains, and uses solder phase-change instead.
+      💡 One owned near-miss: the **Bambu P1S bed reaches 100 °C** and is a large flat
+      contact plate — usable for **stages 1–4 only** (top face still bare), which
+      covers L1. See §2a.
 
   **If it is needed, it has to be IR, not a contact hotplate.** Both faces of
   power_v2 are populated (§1), so a flat plate can only heat a face that is
@@ -255,20 +262,59 @@ Navigation, with the tip fitted, from the main screen:
 | Soldering | **Boost temp** | **420 °C** | Your reserve for a 14 A pad that will not wet. Held, not latched — a few seconds, then back off. |
 | Soldering | **Temp change long** | 25 °C (optional) | You will be moving between 320 and 400 °C repeatedly across stages; the default 10 °C step makes that tedious. |
 
-### This gives §7's preheat test a pass/fail number
+### §7's preheat test — "can the joint even get hot enough with no heater under it?"
 
-§7 says to test `U1.4` first, then `Q1.3`/`SW1.2`, before buying anything. Run it
-as: **TS-C4, Kungber at 24.0 V, tip 400 °C, leaded solder.**
+That is the whole question, and it is the one thing standing between here and
+stage 4. Run it as: **TS-C4, Kungber at 24.0 V, tip 400 °C, solder placed ON THE
+PAD** (not melted off the tip). Start on `U1.4` (10 A, least severe of the three),
+then `Q1.3` or `SW1.2` (14 A).
 
-- **Pass** — the joint wets and fills in **≤3–4 s**. No preheat needed; skip the
-  853A entirely.
-- **Fail** — still not flowing at **~10 s**, or the Etekcity IR gun shows the pad
-  itself stuck below **~185 °C** (the leaded liquidus; ~220 °C if you are on
-  SAC305). The plane is winning. That is the trigger to buy the IR preheater —
-  and only then.
+> ⚠️ **Correction to the first version of this section.** It said to fail the test
+> if the Etekcity IR gun read the pad below ~185 °C. **Do not point the IR gun at a
+> pad** — that criterion was unsound and would have produced false failures:
+> - **Spot size.** The Lasergrip 800 is **16:1**, and at its own recommended 36 cm
+>   working distance the spot is **22.6 mm across**. A THT pad is 2–3 mm. The
+>   reading averages pad, laminate, iron and background — it cannot resolve the
+>   thing being measured, at any distance.
+> - **Emissivity.** Consumer guns assume a matte surface (~0.95). Shiny solder and
+>   ENIG gold sit nearer 0.05–0.2, so the gun largely sees *reflected ambient* and
+>   reads far low — it will happily report ~150 °C on a pad genuinely at 250 °C.
+>
+> The gun stays useful for **bulk board temperature** (FR4 is matte, close to the
+> assumed emissivity) — that is how you confirm a preheat plate is working. It is
+> not a pad thermometer.
 
-Measure the *pad*, not the tip: the tip will happily read 400 °C while the pad
-sits at 150 °C, and that gap is the entire problem this test is screening for.
+**Use the solder itself as the thermometer.** A phase change at a known temperature
+beats any instrument here: if eutectic leaded solder flows, that joint is above
+183 °C by definition. No calibration, no emissivity, no spot size.
+
+**And for these THT pads the acceptance is barrel fill, not surface melt.** Solder
+has to wick *up through the plated hole* and form a fillet on the **opposite** side
+(IPC-A-610 class 2 wants ~75 % vertical fill). That is the unambiguous "the whole
+joint reached temperature" signal, and it is exactly what a plane-starved pad fails:
+you get a shiny blob on the iron side and nothing on the far side. Surface-melt alone
+will lie to you here.
+
+Three outcomes, not two:
+
+| result | what it means | action |
+|---|---|---|
+| Wets **and fills through** in **≤3–4 s** | the plane is not winning | **No preheat.** Skip the 853A. |
+| Only wets after **~8–15 s** | marginal | **Treat as a fail.** It passes on one joint, but there are ~16 XT30/XT60 plus Q1, SW1 and four buck stations to go — cumulative dwell is precisely how pads lift and laminate cooks. |
+| Never wets; solder balls and sits | conduction into the plane exceeds what the iron delivers at liquidus | **Preheat mandatory.** |
+
+Two things worth trying before spending anything:
+
+- **Flux is a heat-transfer aid**, not just a cleaner — a fluxed joint conducts into
+  the pad noticeably better than a dry one. Be generous on these six pads.
+- **The Bambu P1S bed is an owned 100 °C contact plate.** Per §2 a contact plate only
+  serves a face that is still bare — **stages 1–4**, which is exactly where **L1**
+  lives, the hardest SMD joint on either board. Lay the board top-face-down on the
+  bed with **kapton or foil between it and the PEI** so flux and solder never touch
+  the sheet. 100 °C is the low end of the 100–130 °C target, but it removes ~80 °C
+  of gradient for free. It does **nothing** for stages 7–8 (both faces populated by
+  then), which is where the three 14 A pads are — so it does not replace the IR
+  decision, it may just make stage 4 a non-event.
 
 ---
 
@@ -488,15 +534,17 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
 - [x] ~~Tip: 4 mm-class chisel~~ **DONE** — TS-C4 owned (§2).
 - [x] ~~Adequate supply~~ **DONE** — Anker 65 W PD (20 V) and Kungber bench
       (~24 V) both owned. Use the Kungber for stages 4, 7 and 8 (§2).
-- [ ] **Test whether preheat is needed at all** — do not buy for it first.
-      TS-C4 on the Kungber at ~24 V. Start on `U1.4` (10 A, least severe of the
-      three), then `Q1.3` or `SW1.2` (14 A). Does the joint wet in ~3 s, or does
-      the tip temperature crater while you sit there at 10 s? The Etekcity IR gun
-      reads what the pad actually reaches. Sitting on a pad waiting is what lifts
-      pads and cooks laminate — that is the failure this is screening for.
-      **Only if it fails: the 853A IR preheater (§2), not a contact hotplate and
-      not hot air.** This is the only thing between here and stage 4, and it
-      costs nothing but a few minutes at the bench.
+- [ ] 🔴 **Test whether the joint can reach temperature with no heater under the
+      pad** — the gating question, and the only thing between here and stage 4.
+      Do not buy for it first. **TS-C4, Kungber at 24.0 V, tip 400 °C, solder on
+      the pad.** Start on `U1.4` (10 A, least severe), then `Q1.3` or `SW1.2` (14 A).
+      **Acceptance is barrel fill on the FAR side, not surface melt** — a
+      plane-starved pad gives you a shiny blob on the iron side and nothing through
+      the hole. Full pass/fail (three outcomes, not two) in **§2a**.
+      Sitting on a pad waiting is what lifts pads and cooks laminate — that is the
+      failure this screens for, so "it eventually flowed at 15 s" counts as a fail.
+      **Only if it fails: the 853A IR preheater (§2)** — not a contact hotplate for
+      stages 7–8, and not hot air. Try the P1S bed (§2a) for stage 4 first; it is free.
 - [ ] Hot-air station (§2) — independent of preheat. Buy when stage 3 (SOIC) or
       harness heatshrink actually calls for it, not as a preheat substitute.
 - [ ] 🔴 **BLOCKING — confirm solder exists, and confirm its ALLOY.**
