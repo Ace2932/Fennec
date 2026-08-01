@@ -386,7 +386,7 @@ minimum: bottom SMD, then top SMD, then THT.
 
 | stage | side | what | why here |
 |---|---|---|---|
-| **0** | — | Bare-board: continuity `VBAT`↔`VBAT_PROTECTED` open (SW1 not fitted), no `VBAT`–`GND` short | Cheapest possible fault-find. A plane short after 33 THT parts is a nightmare. |
+| **0** | — | ✅ **DONE 2026-08-01** — bare-board: continuity `VBAT`↔`VBAT_PROTECTED` open (SW1 not fitted), no `VBAT`–`GND` short | Cheapest possible fault-find. A plane short after 33 THT parts is a nightmare. ⚠️ Applies to **the board it was run on** — five of each were ordered, so if the meter went on a spare rather than the build board, this is not carried over. Re-run on the actual build board before stage 1 if in doubt; it costs one minute. |
 | **1** | **B** | Bottom 0603: R2–R9, R11–R16, C7 (+ logic R3–R5) | Smallest, flattest, most numerous, and all on one face — do them in one sitting with the top still bare. |
 | **2** | **B** | Q2–Q4 (SOT-23) | Same face, still small, still cold. |
 | **3** | **B** | U8 (SOIC-8) — and U7 (SOIC-14) on the logic board | Fine-pitch, wants flux + drag or wick. Before anything tall spoils the iron angle. **The stage most likely to want hot air for a bridge.** |
@@ -572,7 +572,9 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
 
 ## 6. Gates between stages
 
-- After **stage 0** — no `VBAT`–`GND` short.
+- After **stage 0** — no `VBAT`–`GND` short. ✅ **PASSED 2026-08-01** (run in a
+  separate session; result reported, not observed here). Per-board, not per-design
+  — see the stage 0 row in §3.
 - After **stage 4** — reflow-quality check on L1 and both SOICs before tall
   parts block the view. Wick any bridge now.
 - After **stage 9**, before **stage 10** — this is the last moment the board is
