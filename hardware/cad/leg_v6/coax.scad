@@ -162,7 +162,7 @@ GROW_Z1     = 16.0;              // ... to here, to host the mortise. CORRECTED
                                  // it measured a different volume than the one
                                  // built. 16.0 measures 0 pts at every swept
                                  // haa angle.
-MORT_X0 = 43.8;  MORT_Y0 = 0.0;   MORT_Z0 = 9.5;
+MORT_X0 = 46.4;  MORT_Y0 = 0.0;   MORT_Z0 = 9.5;
 MORT_Y1 = 23.2;  MORT_Z1 = 13.5;   // 2.1mm wall below, 2.5 above  // mortise; x1 = SPLIT_X (open at the face)
 CLR_TENON  = 0.15;               // same convention as CLR_KEY
 BOLT_YS    = [5.0, 18.0];        // 2x M3 retention, cyclic 133/2 = 66 N each
@@ -403,7 +403,22 @@ module coax_v6() {
             // bridge, now ending at the block's mating plane
             translate([BLK_X - 2, HFE_Y - ARM_HALF_YZ, BRIDGE_Z0])
                 cube([SPLIT_X - BLK_X + 2, 2*ARM_HALF_YZ, 13.4 - BRIDGE_Z0]);
-            // grown bridge section that hosts the mortise (see header)
+            // grown bridge section that hosts the mortise (see header).
+            //
+            // SQUARE STEP, DELIBERATELY, after trying the alternative. A 45deg
+            // ramp here relieves the re-entrant corner at z=13.4 -- but the
+            // ramp eats the roof over the M3 bore, which starts 0.2mm outboard
+            // of GROW_X0: measured roof 0.4mm at x=40.5 and 1.4mm at 41.5,
+            // against the >=1.5mm boss-wall spec. Moving the bore clear of the
+            // ramp costs 2.2mm of tenon, and the tenon length is what sets the
+            // floor bearing load. A true FILLET would need material added
+            // INBOARD of x=40, which the shoulder sweep forbids (measured: the
+            // shoulder crosses the full y width at x 35.4..39.9 at haa -40).
+            //
+            // So the step stays, ACCEPTED and quantified: nominal bridge
+            // bending is ~8 MPa, Kt ~1.5-2 at a square shoulder gives 12-16
+            // MPa against PA6-CF's ~80 MPa -- SF 5-6. It is the least-bad of
+            // three options, not a free choice.
             translate([GROW_X0, HFE_Y - ARM_HALF_YZ, 13.4])
                 cube([SPLIT_X - GROW_X0, 2*ARM_HALF_YZ, GROW_Z1 - 13.4]);
             // The outboard-arm ROOT DOUBLER (backlog #26) and the wheel boss

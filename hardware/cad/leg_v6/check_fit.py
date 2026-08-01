@@ -1020,6 +1020,65 @@ def removable_member_checks(servo, pts0):
     return bad
 
 
+# ---------------------------------------------------------------------------
+# JOINT LOAD-PATH SECTIONS (#226 review, 2026-07-31)
+#
+# The gates check fit, insertability, fastener reachability and printability.
+# None of them check SECTION THICKNESS in a load path -- floor_thickness_check
+# exists but is scoped to heat-set bore floors. So option C's mortise shipped
+# with a 2.0mm floor as the thinnest member in the joint's load path, measured
+# only because the CAD was reviewed by hand afterwards. This closes that: the
+# walls that carry the joint are declared, measured off the built STL, and go
+# red if a later edit thins them.
+#
+# WHY THESE WALLS ARE TIGHT, so nobody "fixes" them by moving geometry that
+# cannot move. Both axes are boxed in, MEASURED:
+#   * DOWN: BRIDGE_Z0=7.4 exists because the femur disc sweep tops at 6.35.
+#   * UP:   at bridge top z=17 the grown section hits the shoulder at haa -40
+#           (44 pts, inside the +-40 limit). 16.0 is the ceiling, not a choice.
+#   * INBOARD: any material above z=13.4 inboard of x=40 hits the shoulder at
+#           haa -40 across the FULL y width (x 35.4..39.9). Local bosses do not
+#           help -- tested.
+# The floor therefore cannot be thickened by growing the bridge in any
+# direction. If it proves inadequate the answer is a different joint topology,
+# not a dimension tweak.
+#
+# HONEST LIMIT: this measures THICKNESS, not stress. The floor's actual margin
+# depends on how the tenon's bearing distributes toward the free edge at the
+# mortise mouth, and hand estimates for it span 15 MPa to yielding. That is an
+# open question for a real load check, and this gate does not answer it -- it
+# only stops the section shrinking without anyone noticing.
+MIN_SECTION_MM = 1.5          # the boss-wall floor docs/fastener-schedule uses
+JOINT_SECTIONS = [
+    ('mortise floor',   (50.0, 11.6,  9.4), (0, 0, -1), 'tenon bears on this'),
+    ('mortise ceiling', (50.0, 11.6, 13.6), (0, 0,  1), 'tenon bears on this'),
+    ('mortise y0 wall', (50.0, -0.2, 11.5), (0, -1, 0), 'mortise side'),
+    ('mortise y1 wall', (50.0, 23.4, 11.5), (0,  1, 0), 'mortise side'),
+    ('M3 bore roof',    (43.0,  5.0, 13.7), (0, 0,  1), 'insert containment'),
+    ('M3 bore floor',   (43.0,  5.0,  9.3), (0, 0, -1), 'insert containment'),
+]
+
+
+def joint_section_checks():
+    print('-- joint load-path sections (#226: thickness, NOT stress) --')
+    bad = False
+    coax = trimesh.load('coax_R.stl')
+    for label, pt, d, why in JOINT_SECTIONS:
+        d = np.asarray(d, float)
+        p0 = np.asarray(pt, float)
+        t = 0.0
+        for k in np.arange(0, 8.0, 0.05):
+            if not contains_chunked(coax, (p0 + d * k)[None, :])[0]:
+                break
+            t = k
+        if t < MIN_SECTION_MM:
+            bad = True
+            print(f'THIN  coax_R.stl {label}: {t:.2f}mm (< {MIN_SECTION_MM}mm) -- {why}')
+        else:
+            print(f'   OK    {label}: {t:.2f}mm  ({why})')
+    return bad
+
+
 # #67 fix (2026-07-12): mount-hardware gate for the coax_hfe cap's fastener.
 # A prior attempt against this same joint (rejected, never merged) added a
 # FASTENER_GROUPS mechanism with genuinely axis-general MERGE/dot checks but
@@ -1067,13 +1126,13 @@ HEATSET_L = 6.2    # bore depth: 5.7 insert + 0.5 seat
 # scad's header).
 # #226 option C (2026-07-31): retargeted from the retired inboard cap to the
 # OUTBOARD block. Two M3 now instead of one, bored -X from the mortise blind
-# end (x=MORT_X0=43.8) into the grown bridge, driven from +X open air -- so
+# end (x=MORT_X0=46.4) into the grown bridge, driven from +X open air -- so
 # `axis` (blind end -> exterior) is +X on the R part and -X on the mirrored L.
 # That access is the whole reason the removable member moved outboard: the cap
 # had 0.8-4.5mm of driver run where 15-20mm was needed.
 FASTENER_GROUPS = [
     dict(cap_part='coax_hfe_block.stl', stub_part='coax_R.stl',
-         holes=[(43.8, 5.0, 11.5), (43.8, 18.0, 11.5)], axis=(1, 0, 0),
+         holes=[(46.4, 5.0, 11.5), (46.4, 18.0, 11.5)], axis=(1, 0, 0),
          bore_d=M3_CLEAR, head_d=6.0, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
          # 3.0, not the cap's old 1.4: that offset was sized to a 1.4mm-wide
          # wall, and it sits INSIDE this d=3 dot's own 1.5mm radius -- the refs
@@ -1083,7 +1142,7 @@ FASTENER_GROUPS = [
          dots=[(62.3, 19.6, 6.0, 1, 0, 0)]),
     dict(cap_part='coax_hfe_block_L.stl', stub_part='coax_L.stl',
          dot_off=(3.0, 3.0),
-         holes=[(-43.8, 5.0, 11.5), (-43.8, 18.0, 11.5)], axis=(-1, 0, 0),
+         holes=[(-46.4, 5.0, 11.5), (-46.4, 18.0, 11.5)], axis=(-1, 0, 0),
          bore_d=M3_CLEAR, head_d=6.0, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
          dots=[(-62.3, 19.6, 6.0, -1, 0, 0), (-62.3, 19.6, 1.0, -1, 0, 0)]),
 ]
@@ -1401,6 +1460,8 @@ def main():
         bad = insertion_checks(servo, pts0) or bad
     if '--removable' in sys.argv or do_sweep:
         bad = removable_member_checks(servo, pts0) or bad
+    if '--sections' in sys.argv or do_sweep:
+        bad = joint_section_checks() or bad
     if '--shoulder' in sys.argv or do_sweep:
         bad = shoulder_checks(servo, pts0) or bad
     if '--through' in sys.argv or do_sweep:

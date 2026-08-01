@@ -72,7 +72,7 @@ ARM_OUT_X1  = ARM_OUT_X0 + ARM_THK;      // 60.2
 SPLIT_X     = ARM_OUT_X0;
 BOSS_X0     = FEMUR_MID - WHEEL_Z0;      // 51.55
 
-MORT_X0 = 43.8;  MORT_Y0 = 0.0;   MORT_Z0 = 9.5;
+MORT_X0 = 46.4;  MORT_Y0 = 0.0;   MORT_Z0 = 9.5;
 MORT_Y1 = 23.2;  MORT_Z1 = 13.5;
 CLR_TENON = 0.15;
 BOLT_YS = [5.0, 18.0];
