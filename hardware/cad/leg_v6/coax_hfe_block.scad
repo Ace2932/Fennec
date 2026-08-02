@@ -40,22 +40,33 @@
 //
 // Geometry proof + negative control: hfe_block_study.py.
 //
-// FASTENERS: 2x M3x16 SHCS. RE-MEASURED 2026-08-02 off the current STLs --
-// head seat (c'bore floor) x=57.0, coax face x=46.35, insert pocket bottom
-// x=40.2 => usable span 16.8mm. M3x16 lands 5.35mm into the 5.7mm insert.
+// FASTENERS: 2x M3x16 SHCS into 2x SLIM M3 HEAT-SETS (4.0mm OD x 6.0 long),
+// NOT the 4.6mm OD insert used everywhere else on this robot.
 //
-// ⚠️ THIS LINE PREVIOUSLY SAID "M3x22 ... insert ends at x=37.6 ... spans
-// 19.5mm; M3x20 is the bare minimum", and said MEASURED. It was measured --
-// at #234, when MORT_X0 was 43.8. #235 moved MORT_X0 to 46.4 and the insert
-// rides on it (coax.scad: translate([MORT_X0 - HEATSET_L, ...])), so the
-// pocket moved 2.6mm outboard and nothing re-measured. Against the geometry
-// that actually exists, M3x22 BOTTOMS OUT 5.2mm early and M3x20 bottoms 3.2mm
-// early -- in a BLIND pocket, so the head never seats: no preload, and
-// torquing either jacks the block off the mortise or strips the insert.
-// Owned lengths are M3x10/14/20, so M3x16 must be ordered; M3x14 (3.35mm
-// engagement, ~1.1xD) is a usable interim and M3x20 is not usable at all.
-// fastener_span_checks() in check_fit.py now derives this from the meshes so
-// it cannot drift silently again. See docs/fastener-schedule.md.
+// WHY A DIFFERENT INSERT HERE (2026-08-02). The insert has to TRAVEL ~10mm down
+// the mortise to reach its bore at the blind end, and that slot was 4.00mm tall
+// (MEASURED, every station, both bolt axes) against a 4.6mm insert. It could
+// not be delivered: a valid seat with no path to it -- the same failure that
+// retired the inboard cap on this joint. Every gate was green, because the
+// heat-set gate casts a RAY to prove the bore is reachable and a ray has no
+// diameter. insert_path_checks() now sweeps the insert's actual DIAMETER.
+// Growing the slot to 5.0 for the 4.6 insert leaves the mortise roof at 1.50mm
+// -- exactly MIN_SECTION_MM, no margin -- and more forces GROW_Z1 up, which
+// coax.scad records as HITTING THE SHOULDER at haa -40. A slimmer, longer
+// insert is the cheaper trade: pull-out goes as pi*D*L, so 4.0x6.0 = 75mm2
+// against 4.6x5.7 = 82mm2 (92%), for a 0.4mm slot growth instead of 1.0, and
+// the roof stays 2.10mm. MORT_Z1 is therefore 13.9 (4.4mm slot), shared from
+// leg_v6_common.scad so this file and coax.scad cannot disagree about it.
+//
+// SCREW LENGTH, re-derived off the meshes: head seat (c'bore floor) x=57.0,
+// coax face x=46.35, bore 3.5 x 6.5 deep so its bottom is x=39.85 => 17.15mm of
+// usable span. M3x16 lands 5.35mm into the 6.0 insert and stops 1.15mm clear of
+// the bottom. (The line here used to say M3x22, and said MEASURED: it was --
+// at #234, when MORT_X0 was 43.8. #235 moved it to 46.4, the insert rides on
+// that constant, and nothing re-measured. M3x22 bottoms out 5.2mm early in a
+// BLIND pocket, so the head never seats: no preload, and torquing it jacks the
+// block off the mortise or strips the insert.) fastener_span_checks() now
+// derives all of this from the meshes. See docs/fastener-schedule.md.
 //
 // Plus 4x M2.5x8 wheel screws (unchanged geometry, wheel_couple_neg) -- those
 // moved here from coax.scad with the boss.
@@ -86,12 +97,10 @@ ARM_OUT_X1  = ARM_OUT_X0 + ARM_THK;      // 60.2
 SPLIT_X     = ARM_OUT_X0;
 BOSS_X0     = FEMUR_MID - WHEEL_Z0;      // 51.55
 
-MORT_X0 = 46.4;  MORT_Y0 = 0.0;   MORT_Z0 = 9.5;
-MORT_Y1 = 23.2;  MORT_Z1 = 13.5;
-MORT_RIB_Y0 = 10.1;  MORT_RIB_Y1 = 13.1;
-CLR_TENON = 0.15;
-BOLT_YS = [5.0, 18.0];
-BOLT_Z  = 11.5;
+// MORT_*/CLR_TENON/BOLT_* come from leg_v6_common.scad (hoisted 2026-08-02).
+// They used to be declared HERE as well as in coax.scad; the tenon below is
+// built from them, so a mortise change in one file and not the other produced
+// a tenon that rattles in its slot with no error anywhere.
 M3_CLEAR_D = 3.4;
 SHCS_HEAD_D = 6.0;
 SHCS_HEAD_H = 3.2;

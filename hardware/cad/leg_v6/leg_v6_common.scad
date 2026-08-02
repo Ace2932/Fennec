@@ -131,6 +131,47 @@ HEATSET_D  = 4.0;    // Ruthex M3 insert BORE — insert OD is 4.6, bore must
                      // femur_?.stl + shoulder.stl on disk had NO insert
                      // bores (chassis-lane catch; STLs rebuilt).
 HEATSET_L  = 6.2;    // bore depth: 5.7 insert + 0.5 seat
+
+// --- #226 HFE mortise/tenon + its retention inserts -------------------------
+// HOISTED HERE 2026-08-02. coax.scad and coax_hfe_block.scad each carried an
+// independent copy of MORT_*/CLR_TENON/BOLT_*, and the block builds its tenon
+// from its copies. Changing the mortise in one file and not the other does not
+// error -- it silently produces a tenon that rattles in its slot, which is the
+// interface that carries the whole joint moment in bearing. One definition.
+MORT_X0     = 46.4;   MORT_Y0 = 0.0;    MORT_Z0 = 9.5;
+MORT_Y1     = 23.2;   MORT_Z1 = 13.9;   // 4.4 mm tall -- see BLOCK_INSERT_OD
+MORT_RIB_Y0 = 10.1;   MORT_RIB_Y1 = 13.1;   // central rib: halves the floor span
+CLR_TENON   = 0.15;
+BOLT_YS     = [5.0, 18.0];
+BOLT_Z      = 11.7;   // CENTRED in the 9.5..13.9 slot (was 11.5, which left the
+                      // insert 2.0mm to the floor = exactly its own radius, i.e.
+                      // ZERO delivery clearance -- insert_path_checks measured
+                      // 4.00mm clear for a 4.0mm insert. Centring gives 0.2/side.
+
+// The block's retention inserts are a DIFFERENT PART from every other heat-set
+// on this robot, and deliberately so.
+//
+// MEASURED 2026-08-02: the mortise slot an insert must travel down to reach its
+// bore was 4.00 mm tall, and the 4.6 mm-OD insert used everywhere else is
+// 4.6 mm. It could not be delivered -- a valid seat with no path to it, the
+// same failure that retired the inboard cap on this very joint. The heat-set
+// gate passed throughout because it casts a RAY to check the bore is reachable;
+// a ray has no diameter.
+//
+// Fixing it by growing the slot to 5.0 for a 4.6 insert leaves the mortise roof
+// at 1.50 mm -- exactly MIN_SECTION_MM, zero margin -- and any more forces
+// GROW_Z1 up, which coax.scad records as HITTING THE SHOULDER at haa -40.
+// A slimmer, LONGER insert buys the clearance back for free: pull-out goes as
+// pi*D*L, so 4.0 x 6.0 = 75 mm^2 against 4.6 x 5.7 = 82 mm^2 -- 92 % of the
+// strength for a 0.4 mm slot growth instead of 1.0, and the roof stays 2.10.
+// Everywhere else on the robot keeps the 4.6 insert: those bores sit in open
+// material with no delivery constraint, and femur_?.stl is ALREADY PRINTED
+// with the 4.0 bore that suits it.
+BLOCK_INSERT_OD = 4.0;   // slim M3 heat-set, 6.0 long (NOT the 4.6 used elsewhere)
+BLOCK_INSERT_L  = 6.0;
+BLOCK_HEATSET_D = 3.5;   // bore for a 4.0 OD insert (0.25 mm/side interference)
+BLOCK_HEATSET_L = 6.5;   // 6.0 insert + 0.5 seat
+BLOCK_SLOT_CLR  = 0.2;   // per side, insert OD -> mortise height
 WALL       = 3.2;
 FLOOR      = 2.5;    // NOMINAL seat-to-exterior (FLOOR_TOP->FLOOR_BOT). #67
                      // (2026-07-12): the connector-bay void cuts 0.375 BELOW

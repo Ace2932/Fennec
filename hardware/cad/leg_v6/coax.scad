@@ -162,12 +162,11 @@ GROW_Z1     = 16.0;              // ... to here, to host the mortise. CORRECTED
                                  // it measured a different volume than the one
                                  // built. 16.0 measures 0 pts at every swept
                                  // haa angle.
-MORT_X0 = 46.4;  MORT_Y0 = 0.0;   MORT_Z0 = 9.5;
-MORT_Y1 = 23.2;  MORT_Z1 = 13.5;   // 2.1mm wall below, 2.5 above
-MORT_RIB_Y0 = 10.1;  MORT_RIB_Y1 = 13.1;   // central rib: halves the floor span  // mortise; x1 = SPLIT_X (open at the face)
-CLR_TENON  = 0.15;               // same convention as CLR_KEY
-BOLT_YS    = [5.0, 18.0];        // 2x M3 retention, cyclic 133/2 = 66 N each
-BOLT_Z     = 11.5;               // vs ~175-245 N wet pull-out -> SF 2.6-3.7
+// MORT_*/CLR_TENON/BOLT_* now live in leg_v6_common.scad (hoisted 2026-08-02)
+// so this file and coax_hfe_block.scad cannot drift apart. MORT_Z1 is 13.9,
+// i.e. a 4.4mm slot: the retention insert has to TRAVEL down it (see that
+// file's BLOCK_INSERT_OD note). Walls: 2.05 below, 2.10 above.
+
 
 // #53 BLOCKER fix (2026-07-11): the coax's femur yoke was a rigid closed U
 // (integral inboard arm + bridge + integral outboard arm) -- no removable
@@ -561,9 +560,12 @@ module coax_v6() {
         // 2x M3 heat-set, bored -X from the mortise's blind end into the grown
         // bridge. Driven from +X (open air past the block) -- the access the
         // inboard cap never had.
+        // BLOCK_HEATSET_* (3.5 x 6.5), NOT the robot-wide HEATSET_* (4.0 x 6.2):
+        // this bore takes the slim 4.0mm-OD insert that can actually travel the
+        // mortise. See leg_v6_common.scad.
         for (by = BOLT_YS)
-            translate([MORT_X0 - HEATSET_L, by, BOLT_Z]) rotate([0, 90, 0])
-                cylinder(d = HEATSET_D, h = HEATSET_L + EPS);
+            translate([MORT_X0 - BLOCK_HEATSET_L, by, BOLT_Z]) rotate([0, 90, 0])
+                cylinder(d = BLOCK_HEATSET_D, h = BLOCK_HEATSET_L + EPS);
 
         // side marker: 1 dot = RIGHT (L wrapper adds a 2nd).
         // LA-2 fix (2026-07-11): the old site (6, BLK_Y0-EPS, 8) targeted
