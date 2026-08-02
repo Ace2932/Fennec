@@ -122,6 +122,24 @@ WHEEL_CTR_D    = 9.5;  // idler-side center relief: clears the wheel's raised
                         // Ø9.5 = 8.8 + 0.7 clearance (room for PA6-CF shrink);
                         // relief r4.75 keeps ~0.8mm wall to the r7 BCD holes.
                         // The idler has NO retention screw — boss clearance only.
+WHEEL_HEAD_CB_DEEP = 2.4;
+                     // Wheel-screw head counterbore, DEEPENED 1.6 -> 2.4 on
+                     // 2026-08-02. This is the only lever on the weakest
+                     // fastener on the leg: engagement_checks() measured the
+                     // M2.5x8 wheel screws with 0.76mm of thread (0.30xD) in a
+                     // ~2.1mm disc. Length cannot fix it -- a longer screw
+                     // bottoms in the disc -- but engagement = length - GRIP,
+                     // and grip is what the counterbore sets. 0.8mm deeper =
+                     // 0.8mm more thread, same screw: 0.76 -> 1.56mm (0.62xD).
+                     // Deliberately +0.8 and not +1.0: the 2.1mm disc figure is
+                     // measured off servo.stl, and the TAPPED depth inside it is
+                     // not known, so this keeps 0.54mm of margin against
+                     // bottoming. FIRST-ARTICLE: check the disc's real thread
+                     // depth; if the holes are through, +1.2 is available.
+                     // ONLY the HFE and KFE wheels use this module -- the HAA
+                     // wheel is cut in shoulder.scad with its own 1.8 c'bore and
+                     // already has 1.40mm, so it must NOT be deepened (2.4mm
+                     // engagement into a 2.1mm disc would bottom).
 WHEEL_CTR_DEEP = 2.5;   // relief depth from the wheel-seat face (boss face);
                         // clears the ~1.0mm-proud hub with margin
 HEATSET_D  = 4.0;    // Ruthex M3 insert BORE — insert OD is 4.6, bore must
@@ -337,7 +355,7 @@ module wheel_couple_neg() {
         for (a = [45 : 90 : 315])
             rotate([0, 0, a]) translate([HORN_BCD/2, 0, 0]) {
                 cylinder(d = M25_CLEAR, h = h_all);
-                cylinder(d = 5.2, h = 1 + 1.6);   // head counterbore
+                cylinder(d = 5.2, h = 1 + WHEEL_HEAD_CB_DEEP);   // head c'bore
             }
         // #51 (2026-07-11): NO center screw hole on the wheel/idler side —
         // the idler has no retention screw (rev 3), so a center M25_CLEAR
