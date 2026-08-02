@@ -181,11 +181,20 @@ revision is this printed part?", which until now was memory.
 2. **Material agreement** — the `.scad` `Print:` header and the registry must
    name the same material. This caught `battery_pocket`: the header said
    PETG-CF while §1/#24 had moved it to PA6-CF in 2026-07-10 (belly crush guard
-   over the LiPo). Header corrected 2026-08-01.
+   over the LiPo). Header corrected 2026-08-01. The gate also **reports what it
+   could not check**: 5 of 28 parts (`floor_plate`, `head`, `jetson_case_mount`,
+   `knee_bumper`, `lead_notch_grommet`) have headers that name no material at
+   all — a real doc gap, now visible instead of passing silently.
 3. **Orientation, measured not trusted** — after the documented face is rotated
    down, the tool measures how much flat area actually lands on the bed, and
    how slender the result is (height / √contact). Under 5 mm² means the part is
    standing on an edge; over slenderness 1.5 it must declare a brim.
+4. **Everything asked for is on ONE plate** — object count matches the request,
+   and the slicer did not split the job. `battery_pocket:9` really does become
+   three plates (4 + 4 + 1); before this gate the tool read plate 1 and
+   reported its 269 g as the total for all nine.
+5. **Settings verification** — the emitted G-code matches the flattened
+   presets, key by key.
 
 **Two real defects it found on its first run**, both invisible in a GUI:
 
@@ -208,6 +217,20 @@ plate, and the tool says so rather than picking one.
 ("rear face down", "crown/pad-down") rather than an axis. The tool refuses them
 and prints every face's measurements so the choice takes a minute. Resolve one
 by adding the axis here **and** to the `.scad` header.
+
+**Parts marked UNRESOLVED** — `oled_mount`, `spacer`, `trunk`, `head_ear(_L)` —
+are printable but cannot be sliced yet, each for a recorded reason: `oled_mount`
+says "PETG/PA6-CF" (two materials); `spacer` names no material anywhere though 8
+are needed; `trunk` is built by `trunk_build.py` so the freshness gate skips it;
+the ears are deliberately non-CF (#32 — the CF detunes the antenna) and no
+non-CF material is modelled yet. `--list` prints this set as a to-do.
+
+⚠️ **These five were in the tool's "not printable" exclusion list on the first
+pass**, which made its coverage line read "covers every STL". That is this
+project's own *green-but-uncovered* pattern, committed by the tool written to
+catch it — worth knowing when reading any coverage claim, including this one.
+Coverage is now stated as numbers: 28 registered (6 refused for prose
+orientation), 5 unresolved, 4 reference-only, 0 unaccounted.
 
 ## 3. DRY yes, ANNEAL no (corrected 2026-07-06 — user catch)
 

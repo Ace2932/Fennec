@@ -37,12 +37,34 @@ against the FLATTENED preset, key by key.
     --self-test runs that regression deliberately (raw preset, expect the check
     to FIRE). A guard that has never been seen to fire is not a guard.
 
+THE GATES, in order. Any one of them refuses the plate:
+
+  1. STL freshness (`check_stl_fresh.py`, #176).
+  2. Material agreement between the .scad header and the registry — and a
+     COUNT of the parts it could not check, because a header that names no
+     material is absence of evidence, not agreement.
+  3. Orientation, measured: how much flat area actually lands on the bed, and
+     how slender the result is. Under 5 mm^2 is an edge, not a face.
+  4. Everything asked for is ON one plate — object count matches the request
+     and the slicer did not silently split the job (see below).
+  5. The emitted G-code matches the flattened presets, key by key.
+
+FOUND BY REVIEWING THIS FILE (2026-08-02) — gate 4 exists because of a real
+failure it did not have. Asked for `battery_pocket:9`, OrcaSlicer split the job
+across plate_1/2/3 (4 + 4 + 1 objects). This tool read plate_1 only: it printed
+"plate total 269.18 g" for what was 4 of 9 parts, wrote a provenance record
+claiming qty 9 at those numbers, and handed back one G-code path. Following it
+gives you four parts and a record that says nine — silent truncation dressed as
+a clean result, which is exactly what the rest of this file exists to prevent.
+
 WHAT THIS DOES NOT DO. It does not send anything to a printer. It does not
 invent an orientation: a part whose documented orientation is prose that names a
 feature rather than an axis ("horn-seat face down", "crown/pad-down") is
 REFUSED, with the prose quoted, rather than sliced in whatever pose the mesh
 happens to sit in. Orientation is the one input where a plausible-looking wrong
-answer costs a whole print.
+answer costs a whole print. Parts that are printable but under-documented sit in
+UNRESOLVED — refused, counted, and listed with what is missing, rather than
+quietly dropped so the coverage line reads well.
 
 Usage:
     python slice_plate.py cable_clip:24
@@ -397,13 +419,53 @@ PARTS = {
     ),
 }
 
-#: STLs that are deliberately NOT printable parts: imported reference geometry
-#: and previews. Listed so `--list` can prove the registry covers everything
-#: else, rather than quietly omitting a part nobody noticed was missing.
+#: STLs that are NOT printable parts: imported reference geometry, used for fit
+#: checks and never sent to a bed.
+#:
+#: CORRECTED 2026-08-02 after review. The first version of this set also held
+#: `oled_mount`, `spacer`, `trunk`, `head_ear` and `head_ear_L` — five parts
+#: that ARE printed (oled_mount.scad: "PRINT: PETG/PA6-CF, foot-down, ~5 g";
+#: spacer.scad: "4 needed + spares (print 8)"). They were in the exclusion list
+#: for one reason: it made `--list`'s coverage line read "covers every STL".
+#: That is the project's own green-but-uncovered pattern, committed by the tool
+#: written to catch it. They now live in UNRESOLVED, which is refused and
+#: counted, so the gap is visible instead of absorbed.
 NOT_PRINTED = {
     "chassis/d456_ref.stl", "chassis/jetson_case_ref.stl", "chassis/l2_ref.stl",
-    "chassis/power_board_model.stl", "chassis/trunk.stl", "chassis/spacer.stl",
-    "chassis/oled_mount.stl", "chassis/head_ear.stl", "chassis/head_ear_L.stl",
+    "chassis/power_board_model.stl",
+}
+
+#: Printable parts that CANNOT be sliced yet because something they need is not
+#: recorded anywhere — not because the tool is missing a feature. Refused, and
+#: reported by `--list`, so the set stays a visible to-do rather than a silent
+#: omission. Each value says exactly what is missing and where it would go.
+UNRESOLVED = {
+    "oled_mount": (
+        "chassis/oled_mount.stl",
+        "material ambiguous — the .scad says 'PRINT: PETG/PA6-CF', which is two "
+        "different materials with different temperatures and process settings. "
+        "Orientation 'foot-down' also names a feature, not an axis. Pick both in "
+        "oled_mount.scad's header."),
+    "spacer": (
+        "chassis/spacer.stl",
+        "no material recorded anywhere — the .scad header specifies M3x14, "
+        "engagement and height but never says what to print it in, and "
+        "print-batch §2 has no row for it. 8 are needed (4 + spares)."),
+    "trunk": (
+        "chassis/trunk.stl",
+        "built by trunk_build.py (trimesh + manifold3d), NOT by OpenSCAD, so "
+        "check_stl_fresh.py SKIPs it and gate 1 cannot cover this plate. "
+        "Material/orientation for a part this size also need a decision that no "
+        "doc records."),
+    "head_ear": (
+        "chassis/head_ear.stl",
+        "material is deliberately OUTSIDE the three modelled here: print-batch "
+        "§1 says plain PETG or ASA, NOT a CF filament, because the ear is a "
+        "2.4/5 GHz antenna mast and carbon fibre detunes it (#32). Add a "
+        "non-CF entry to MATERIALS first. Orientation is also yawed (EAR_YAW +45)."),
+    "head_ear_L": (
+        "chassis/head_ear_L.stl",
+        "as head_ear — non-CF material (#32) and a yawed pose."),
 }
 
 
@@ -523,44 +585,69 @@ def face_report(mesh):
 # gates
 # ---------------------------------------------------------------------------
 
-_SCAD_MATERIAL = re.compile(r"(TPU\s*95A|PA6-CF|PETG-CF|PET-CF|PLA|ABS|ASA)", re.I)
+#: WORD BOUNDARIES ARE LOad-BEARING. Without them `PLA` matches inside "plate"
+#: and `ASA` inside any word containing it — and "plate" appears in plenty of
+#: print headers ("plate on the bed"). The unbounded version returned PLA for
+#: `// PRINT: plate flat on the bed`, which would have this gate reporting a
+#: contradiction that does not exist, or agreeing with one that does.
+_SCAD_MATERIAL = re.compile(r"\b(TPU\s*95A|PA6-CF|PETG-CF|PET-CF|PLA|ABS|ASA)\b", re.I)
+_SCAD_USE = re.compile(r"^\s*use\s*<([^>]+)>")
 
 
-def scad_material(scad_path):
+def scad_material(scad_path, _depth=0):
     """The material named on the .scad's own `Print:` / `PRINT:` header line.
 
-    Returns None when the header does not name one. Only the FIRST material
+    Returns None when nothing in the chain names one. Only the FIRST material
     token is taken: headers like "PA6-CF or PETG-CF" state a preference order,
     and the preference is what the registry should agree with.
+
+    FOLLOWS `use <...>` ONCE. The mirrored parts (`femur_L.scad`,
+    `tibia_L.scad`, `coax_hfe_block_L.scad`, `shoulder_plate_L.scad`) are three
+    lines that mirror the R geometry and never restate the material — so before
+    this, the agreement gate silently skipped every left-hand part on the robot.
+    A gate that quietly covers half of what it names is the failure mode this
+    file is supposed to be about.
     """
     p = REPO / "hardware" / "cad" / scad_path
     if not p.exists():
         return None
-    for line in p.read_text().splitlines()[:120]:
+    text = p.read_text()
+    for line in text.splitlines()[:120]:
         if re.match(r"^//\s*PRINT\b|^//\s*Print:", line):
             m = _SCAD_MATERIAL.search(line)
             if m:
                 t = m.group(1).upper().replace(" ", "")
                 return {"TPU95A": "TPU 95A"}.get(t, t)
+    if _depth == 0:
+        for line in text.splitlines()[:60]:
+            u = _SCAD_USE.match(line)
+            if u:
+                got = scad_material(str(pathlib.Path(scad_path).parent / u.group(1)), 1)
+                if got:
+                    return got
     return None
 
 
 def check_material_agreement(parts):
-    """Fail when a part's .scad header and this registry name different
-    materials.
+    """Compare each part's .scad header against the registry.
 
-    This is not pedantry — `battery_pocket` really does have two answers in two
-    files (#24 moved it to PA6-CF for LiPo puncture resistance; the .scad header
-    was never updated), and the slicer has no opinion about which is right.
+    Returns (mismatches, unchecked). `battery_pocket` is why the first list
+    exists — it really did have two answers in two files (#24 moved it to
+    PA6-CF for LiPo puncture resistance; the .scad header still said PETG-CF).
+
+    The SECOND list is why this function does not just return failures: a part
+    whose header names no material is not agreement, it is absence of evidence,
+    and reporting it as a pass is how a gate ends up covering less than its name
+    claims. The caller prints the count.
     """
-    bad = []
+    bad, unchecked = [], []
     for name, part in parts:
-        if not part.scad:
-            continue
-        declared = scad_material(part.scad)
-        if declared and declared != part.material:
+        declared = scad_material(part.scad) if part.scad else None
+        if declared is None:
+            unchecked.append(name)
+        elif declared != part.material:
             bad.append((name, part.scad, declared, part.material))
-    return bad
+    return bad, unchecked
 
 
 def check_fresh(dirs):
@@ -690,6 +777,17 @@ def _same_value(exp, got):
         return a == b
 
 
+def gcode_object_count(path):
+    """How many distinct objects the slicer actually put on this plate.
+
+    Counts unique `; start printing object, unique label id: N` markers — NOT
+    occurrences, which repeat once per layer (776 lines for 4 objects on the
+    plate that exposed this).
+    """
+    txt = pathlib.Path(path).read_text(errors="ignore")
+    return len(set(re.findall(r"start printing object, unique label id:\s*(\d+)", txt)))
+
+
 def gcode_totals(gc, path):
     txt = path.read_text(errors="ignore")
     grams = re.search(r"total filament used \[g\]\s*=\s*([\d.]+)", txt) or \
@@ -734,18 +832,36 @@ def cmd_list():
         p = PARTS[name]
         o = f"MANUAL — {p.manual}" if p.manual else (p.down or "as modelled")
         print(f"{name:22s} {p.material:9s} {o[:38]:38s} {p.supports}")
-    seen = {p.stl for p in PARTS.values()}
+
+    print("\nUNRESOLVED — printable, refused, and why (this is a to-do list):")
+    for name in sorted(UNRESOLVED):
+        why = UNRESOLVED[name][1]
+        print(f"  {name}:")
+        for chunk in (why[i:i + 74] for i in range(0, len(why), 74)):
+            print(f"      {chunk}")
+
+    seen = {p.stl for p in PARTS.values()} | {v[0] for v in UNRESOLVED.values()}
     everything = {f"{d}/{os.path.basename(f)}"
                   for d in ("leg_v6", "chassis")
                   for f in glob.glob(str(HERE / d / "*.stl"))}
     missing = everything - seen - NOT_PRINTED
     print()
     if missing:
-        print("NOT IN REGISTRY (and not marked non-printable):")
+        print("NOT IN REGISTRY (and not marked reference-only):")
         for m in sorted(missing):
             print("  ", m)
-    else:
-        print("registry covers every STL that is not explicitly non-printable")
+
+    # Coverage is stated as three numbers, not one adjective. "covers
+    # everything" was true only because five printable parts had been moved
+    # into the exclusion list, which is the failure this line now refuses to
+    # hide.
+    _, unchecked = check_material_agreement([(n, p) for n, p in PARTS.items()])
+    manual = [n for n, p in PARTS.items() if p.manual]
+    print(f"{len(PARTS)} registered ({len(manual)} refused for prose orientation), "
+          f"{len(UNRESOLVED)} unresolved, {len(NOT_PRINTED)} reference-only, "
+          f"{len(missing)} unaccounted.")
+    print(f"material gate covers {len(PARTS) - len(unchecked)}/{len(PARTS)}; "
+          f"no material named in the .scad of: {', '.join(sorted(unchecked)) or 'none'}")
     return 0
 
 
@@ -801,6 +917,12 @@ def main():
         ap.error("give at least one part, or --list")
 
     specs = [parse_spec(s) for s in args.parts]
+    blocked = [n for n, _ in specs if n in UNRESOLVED]
+    if blocked:
+        print("REFUSED — printable, but something it needs is not recorded anywhere:")
+        for n in blocked:
+            print(f"  {n}: {UNRESOLVED[n][1]}")
+        return 2
     unknown = [n for n, _ in specs if n not in PARTS]
     if unknown:
         raise SystemExit(f"not in the registry: {unknown} (try --list)")
@@ -847,13 +969,18 @@ def main():
             return 3
 
     # --- gate 2: nobody disagrees about the material -----------------------
-    bad_mat = check_material_agreement([(n, p) for n, p, _ in chosen])
+    bad_mat, unchecked_mat = check_material_agreement([(n, p) for n, p, _ in chosen])
     if bad_mat:
         print("MATERIAL CONTRADICTION — the .scad header and the registry disagree:")
         for n, scad, declared, want in bad_mat:
             print(f"  {n}: {scad} says {declared}, registry says {want}")
         print("Fix the source of truth, do not pick one here.")
         return 4
+    if unchecked_mat:
+        # Not a failure — an honest statement of what gate 2 did NOT cover on
+        # this plate. Silence here would read as "material agreed".
+        print(f"NOTE: material unchecked for {len(unchecked_mat)} part(s) — their .scad "
+              f"header names no material: {', '.join(unchecked_mat)}")
 
     # --- orient, and CHECK the orientation ---------------------------------
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="slice_models_"))
@@ -901,7 +1028,10 @@ def main():
     argv_extra = ["--clone-objects", ",".join(clones)] if any(c != "1" for c in clones) else []
 
     # --- slice -------------------------------------------------------------
-    for f in outdir.glob("*.gcode"):
+    # plate_*.gcode only — this is the tool's own output namespace. The first
+    # version wiped every *.gcode in --outdir, which is somebody else's file if
+    # --outdir is ever pointed somewhere shared.
+    for f in outdir.glob("plate_*.gcode"):
         f.unlink()
     # Brim is a plate-level setting: if any part on the plate declared one, the
     # plate gets one. Erring toward the brim is the cheap direction.
@@ -914,7 +1044,31 @@ def main():
             tail = (r.stdout + r.stderr).strip().splitlines()[-6:]
             raise SystemExit("slicer failed on the cloned plate:\n  " + "\n  ".join(tail))
 
-    # --- gate 3: the G-code is what the presets said -----------------------
+    # --- gate 3: everything asked for is ON THE PLATE ----------------------
+    # FOUND BY REVIEW 2026-08-02, and it is the failure this tool would most
+    # have deserved. Asked for `battery_pocket:9`, the slicer silently split the
+    # job across plate_1/2/3 (4 + 4 + 1 objects) and this code read plate_1
+    # only: it reported "plate total 269.18 g" for what is 4 of 9 parts, wrote a
+    # provenance record claiming qty 9 at those numbers, and printed one G-code
+    # path. Following it gives you four parts and a record that says nine.
+    plates = sorted(outdir.glob("plate_*.gcode"))
+    want_objects = sum(q for _, _, q in chosen)
+    if len(plates) > 1:
+        print(f"DOES NOT FIT ONE PLATE — the slicer produced {len(plates)} plates:")
+        for f in plates:
+            print(f"  {f.name}: {gcode_object_count(f)} objects")
+        print(f"\nAsked for {want_objects} object(s). A 'plate' is the unit this tool "
+              f"records and\nverifies, so it will not hand back the first one as if it "
+              f"were the job.\nSplit the request into plates that fit.")
+        return 7
+    got_objects = gcode_object_count(gcode)
+    if got_objects != want_objects:
+        print(f"OBJECT COUNT MISMATCH — asked for {want_objects}, the G-code contains "
+              f"{got_objects}.")
+        print("  Something was dropped or duplicated between the request and the plate.")
+        return 7
+
+    # --- gate 4: the G-code is what the presets said -----------------------
     gc = gcode_settings(gcode)
     bad = verify_gcode(gc, mat, presets, brim=brim, supports=supports)
     if bad:
