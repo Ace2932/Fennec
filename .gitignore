@@ -158,3 +158,6 @@ sim/nova_mjx/artifacts/policies/*
 # by hardware/cad/leg_v6/hfe_mouth_study.py from the gate-fresh STLs; committing
 # it would need a freshness gate for a throwaway coupon. The script is the record.
 hardware/cad/leg_v6/coax_hfe_mouth_coupon.stl
+
+# sliced G-code — derived, regenerable from slice_plate.py; the RECORD (docs/print-records) is what we keep
+hardware/cad/slices/

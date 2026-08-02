@@ -158,6 +158,57 @@ inner-face gap median 0.277 / p90 0.505 against the 0.4 median limit).
 | chassis PETG-CF | 3 | 0.25 | 20% | riser DECK-FACE-DOWN (zero supports); floor_plate flat (zero supports); jetson_case_mount base-down (uprights rise, no overhangs after the #34 rework); `jetson_clamp_bar` ×2 flat (PA6-CF; #44 — removable case hold-downs, replaced the 4 clamps); `control_pod` COLUMN-FACE-DOWN (riser-facing face on the bed; light supports under the deck + OLED-panel overhangs). **`battery_pocket` prints PA6-CF settings** (§1 row / #24, not PETG), FLOOR-DOWN opening-up, zero supports. (`jetson_cowl` RETIRED #41 — do NOT print) |
 | TPU | 2 | 0.2 | 100% | clips/rails/grommet flat; **knee_bumper U-opening-UP**; shoe per stock orientation |
 
+### 2b. `hardware/cad/slice_plate.py` — slice from the CLI, and prove the settings landed
+
+The table above is prose. `slice_plate.py` is the same table as a registry the
+machine can act on, plus three gates the GUI has no way to run:
+
+```
+proj/.venv/bin/python hardware/cad/slice_plate.py --list                 # registry + coverage
+proj/.venv/bin/python hardware/cad/slice_plate.py grommet_insert case_slot_grommet lead_notch_grommet:2
+proj/.venv/bin/python hardware/cad/slice_plate.py --self-test            # prove the verify step fires
+```
+
+It slices with OrcaSlicer's CLI, writes G-code to `hardware/cad/slices/`
+(gitignored) and a provenance record to `docs/print-records/` — STL + .scad
+sha256, git HEAD, every applied setting. That record is the answer to "which
+revision is this printed part?", which until now was memory.
+
+**Gates, in order.** Any one of them refuses the plate:
+
+1. **STL freshness** (`check_stl_fresh.py`, #176) — you cannot slice geometry
+   that no longer matches its `.scad`.
+2. **Material agreement** — the `.scad` `Print:` header and the registry must
+   name the same material. This caught `battery_pocket`: the header said
+   PETG-CF while §1/#24 had moved it to PA6-CF in 2026-07-10 (belly crush guard
+   over the LiPo). Header corrected 2026-08-01.
+3. **Orientation, measured not trusted** — after the documented face is rotated
+   down, the tool measures how much flat area actually lands on the bed, and
+   how slender the result is (height / √contact). Under 5 mm² means the part is
+   standing on an edge; over slenderness 1.5 it must declare a brim.
+
+**Two real defects it found on its first run**, both invisible in a GUI:
+
+- **`case_slot_grommet` was being printed on its edge.** The `.scad` says
+  "either flat face down" and the mesh's own pose stands it on the 54 × 3.8 mm
+  edge — 11.1 mm tall, **19.2 mm²** of contact. Laying it on **+Y** gives
+  **156.6 mm²** and 3.8 mm of height. All six faces are measured in the file.
+- **`coax_hfe_block_L` had the R part's orientation.** The `_L` is
+  `mirror([1,0,0])`, so its mating face is **−X**, not +X: 54.4 mm² against
+  366.4. Same trap LA-3 records for `femur_L`/`tibia_L` — and the registry
+  reproduced it, then the measurement caught it.
+
+**One divergence it now enforces:** tibia prints at **25 %** (stress audit
+SF 35), not the PA6-CF default 40 %. Measured on `tibia_R`: 66.43 g / 3 h 02 m
+against 73.52 g / 3 h 23 m. Parts wanting different infills cannot share a
+plate, and the tool says so rather than picking one.
+
+**Parts still marked MANUAL** — `shoulder`, `shoulder_plate(_L)`, `head`,
+`control_pod`, `knee_bumper` — have orientations documented as a *feature*
+("rear face down", "crown/pad-down") rather than an axis. The tool refuses them
+and prints every face's measurements so the choice takes a minute. Resolve one
+by adding the axis here **and** to the `.scad` header.
+
 ## 3. DRY yes, ANNEAL no (corrected 2026-07-06 — user catch)
 
 Bambu PA6-CF: annealing is **OPTIONAL** (Bambu guidance) — but the TDS
