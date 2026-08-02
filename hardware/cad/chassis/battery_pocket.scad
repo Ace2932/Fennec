@@ -5,8 +5,14 @@
 // +x FRONT). Lowest-CoM pack, swap WITHOUT tools (design-outline service
 // table: battery = strap only, 0 screws).
 //
-// PRINT: PETG-CF, FLOOR-DOWN (tray bottom on the bed; opening + rim flange
-//   up) — zero supports. 3 walls / 0.25 / 20% (print-batch §2).
+// PRINT: PA6-CF, FLOOR-DOWN (tray bottom on the bed; opening + rim flange
+//   up) — zero supports. PA6-CF settings: 4 walls / 0.2 / 40% (print-batch §2).
+//   MATERIAL CORRECTED 2026-08-01. This header said PETG-CF while print-batch
+//   §1 (#24, 2026-07-10) had already moved the part to PA6-CF: it is the belly
+//   crush guard over the LiPo, where puncture = fire (#15), so impact toughness
+//   beats flatness. Two files, one part, opposite answers — caught by
+//   slice_plate.py's material-agreement gate, which refuses to slice a part
+//   whose .scad and registry disagree rather than silently picking one.
 //
 // Shape: open-TOP tray hanging under the stock shell — the shell floor caps
 // the cavity. Pack slides in from the REAR opening; a velcro strap fences

@@ -64,7 +64,17 @@ can detect a dead Nano.
 
 ## Sketch (TODO)
 
-- Status: not implemented yet. The OLED + LED hardware works
-  standalone; sketch ties them to the USB-serial protocol above.
+- ⚠️ **The OLED is wanted; it currently has nowhere to bolt.** `oled_mount.scad`
+  exists and bolts to the `control_pod` deck, but its 4 board mount holes were
+  removed 2026-07-28 (**#35, open**) — the vendor drawing never gave the hole
+  pitch, and the guessed pitch put 2 of 4 holes inside the display window. Three
+  caliper numbers off the owned module unblock it (both pitches + the active
+  area and its datum offset); see `docs/checklists/caliper-session.md` §6. The
+  electrical side is ready either way: `J10` and the `R2`–`R6` 1k series
+  resistors are on the fabbed logic board.
+- Status: not implemented yet — **this directory contains no source at all**,
+  only this file. "The OLED + LED hardware works standalone" means the modules
+  themselves are known good, NOT that anything drives them: the `oled_status`
+  ROS node is a stub and there is no sketch for it to talk to.
 - Libraries: Adafruit_GFX + Adafruit_SSD1331 + FastLED.
 - Roughly 1-2 evenings of work. Phase 1 polish task.

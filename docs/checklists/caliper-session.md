@@ -44,6 +44,27 @@ measurement needed.
   the head crown via l2_adapter). RJ45 head size only matters for head/neck
   cable routing now — low priority.
 
+## 6. SSD1331 OLED module — ⏳ OPEN, and it is what blocks the bracket (#35)
+
+Added 2026-08-02. The display **is wanted**; it has nowhere to bolt. The 4 board
+mount holes in `oled_mount.scad` were **removed 2026-07-28** because the vendor
+drawing gives the outline (27.3 × 30.7) but **not the hole pitch on either
+axis** — the guessed pitch put 2 of 4 holes inside the display window. The
+bracket is deliberately unprintable until these come off the **owned** module:
+
+- [ ] ⏳ hole pitch along the **27.3 mm** axis (centre-to-centre)
+- [ ] ⏳ hole pitch along the **30.7 mm** axis (centre-to-centre)
+- [ ] ⏳ active display area: **size AND its offset from the board datum** — the
+      20 × 16 window currently in the file is carried over, **not** derived, so
+      it is provisional even once the holes land
+- [ ] → `oled_mount.scad` (holes + window), then `slice_plate.py`'s UNRESOLVED
+      entry can move to the registry with a material and an axis
+
+Everything else in the chain is already built: `control_pod` bolts to the
+`riser_bay` pocket-bosses (4× M3, y±10, z61/66, x−66.5), the bracket bolts to
+the pod deck's 2× M2 heat-sets (x−96/−71, y23), and the logic board carries
+`J10` plus the `R2`–`R6` 1k series resistors. Three numbers, one caliper.
+
 ## Same bench session (not caliper)
 - [ ] ⏳ **Servo SKU audit (#23)** — read all 12 + spare labels: 7.4V vs 12V
       SKU. LABEL hips vs legs physically. (+58% knee-torque question.) **← the
