@@ -1105,6 +1105,87 @@ def zip_capture_checks():
     return bad
 
 
+#: (label, member_stl, parent_stl, axis, bolt centres, declared length mm,
+#:  insert length mm). Axis is the direction a driver approaches from.
+FASTENER_SPANS = [
+    ('HFE block -> coax retention', 'coax_hfe_block.stl', 'coax_R.stl',
+     (1, 0, 0), [(5.0, 11.5), (18.0, 11.5)], 16.0, 5.7),
+]
+#: Minimum thread engagement into the insert. 1xD is the usual floor for steel
+#: into a brass insert; M3 -> 3.0 mm.
+MIN_ENGAGEMENT_MM = 3.0
+
+
+def fastener_span_checks():
+    """Does the DECLARED screw length actually fit between the head seat and
+    the bottom of a blind insert pocket?
+
+    WHY THIS EXISTS (2026-08-02). `coax_hfe_block.scad` and
+    `docs/fastener-schedule.md` both specified **M3x22** for this joint and
+    both said "MEASURED on the built STLs". They were measured -- at #234,
+    when `MORT_X0` was 43.8. #235 moved it to 46.4, and the insert pocket is
+    placed relative to it (`coax.scad`: translate([MORT_X0 - HEATSET_L, ...])),
+    so the pocket travelled 2.6 mm outboard and nothing re-measured. Against
+    the geometry that exists today the span is 16.8 mm, so the specified screw
+    BOTTOMS OUT 5.2 mm early in a blind hole: the head never seats, there is no
+    preload, and torquing it jacks the block off the mortise or strips the
+    insert. Every other gate stayed green throughout -- they check holes, not
+    screws.
+
+    A comment cannot hold a number that another file's constant moves. This
+    derives both ends from the meshes, so the next such move fails here.
+    """
+    print('-- fastener span: declared screw length vs the real seat-to-pocket gap --')
+    bad = False
+    for label, member_f, parent_f, axis, bolts, length, insert in FASTENER_SPANS:
+        member, parent = trimesh.load(member_f), trimesh.load(parent_f)
+        ax = np.asarray(axis, float)
+        lo, hi = member.bounds[0] @ ax, member.bounds[1] @ ax
+        for (b, c) in bolts:
+            def ring(t, r):
+                return np.array([[t, b + r * np.cos(a), c + r * np.sin(a)]
+                                 for a in np.linspace(0, 2 * np.pi, 16, endpoint=False)])
+            # head seat: marching inboard, the first station where the member is
+            # solid OUTSIDE the clearance hole but inside the counterbore radius
+            seat = None
+            for t in np.arange(hi + 1.0, lo, -0.05):
+                if member.contains(ring(t, 2.3)).any():
+                    seat = float(t)
+                    break
+            # insert pocket: first solid in the parent along the same axis, then
+            # the far end of the void behind it
+            face = bottom = None
+            for t in np.arange(seat if seat else hi, lo - 25.0, -0.05):
+                if parent.contains(ring(t, 2.3)).all():
+                    face = float(t)
+                    break
+            if face is not None:
+                for t in np.arange(face - 12.0, face, 0.05):
+                    if not parent.contains(ring(t, 1.6)).all():
+                        bottom = float(t)
+                        break
+            if seat is None or face is None or bottom is None:
+                bad = True
+                print(f'FAIL  {label} @ y={b}: could not locate '
+                      f'seat/face/pocket (got {seat}, {face}, {bottom})')
+                continue
+            span = seat - bottom
+            engage = length - (seat - face)
+            if length > span:
+                bad = True
+                print(f'FAIL  {label} @ y={b}: M3x{length:.0f} BOTTOMS OUT -- span is '
+                      f'{span:.1f}mm (seat {seat:.1f} -> pocket bottom {bottom:.1f}), '
+                      f'screw over-runs by {length - span:.1f}mm')
+            elif engage < MIN_ENGAGEMENT_MM:
+                bad = True
+                print(f'FAIL  {label} @ y={b}: only {engage:.1f}mm of thread engagement '
+                      f'(need >= {MIN_ENGAGEMENT_MM})')
+            else:
+                print(f'   OK    {label} @ y={b}: M3x{length:.0f} in a {span:.1f}mm span, '
+                      f'{engage:.1f}mm engagement of the {insert}mm insert')
+    return bad
+
+
 MIN_SECTION_MM = 1.5          # the boss-wall floor docs/fastener-schedule uses
 JOINT_SECTIONS = [
     ('mortise floor',   (50.0, 11.6,  9.4), (0, 0, -1), 'tenon bears on this'),
@@ -1528,6 +1609,7 @@ def main():
         bad = cable_checks() or bad
     if '--fastener' in sys.argv or do_sweep:
         bad = fastener_checks() or bad
+        bad = fastener_span_checks() or bad
         bad = horn_bolt_checks() or bad
         bad = kfe_bolt_checks() or bad
     sys.exit(1 if bad else 0)

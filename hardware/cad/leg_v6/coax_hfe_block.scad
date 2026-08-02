@@ -40,11 +40,25 @@
 //
 // Geometry proof + negative control: hfe_block_study.py.
 //
-// FASTENERS: 2x M3x22 SHCS. MEASURED on the built STLs -- head seats at
-// x=57.1, tenon grip 13.1mm, the coax-side insert ends at x=37.6, so the bolt
-// spans 19.5mm; M3x20 is the bare minimum and leaves no seat margin. See
-// docs/fastener-schedule.md. Plus 4x M2.5x8 wheel screws (unchanged geometry,
-// wheel_couple_neg) -- those moved here from coax.scad with the boss.
+// FASTENERS: 2x M3x16 SHCS. RE-MEASURED 2026-08-02 off the current STLs --
+// head seat (c'bore floor) x=57.0, coax face x=46.35, insert pocket bottom
+// x=40.2 => usable span 16.8mm. M3x16 lands 5.35mm into the 5.7mm insert.
+//
+// ⚠️ THIS LINE PREVIOUSLY SAID "M3x22 ... insert ends at x=37.6 ... spans
+// 19.5mm; M3x20 is the bare minimum", and said MEASURED. It was measured --
+// at #234, when MORT_X0 was 43.8. #235 moved MORT_X0 to 46.4 and the insert
+// rides on it (coax.scad: translate([MORT_X0 - HEATSET_L, ...])), so the
+// pocket moved 2.6mm outboard and nothing re-measured. Against the geometry
+// that actually exists, M3x22 BOTTOMS OUT 5.2mm early and M3x20 bottoms 3.2mm
+// early -- in a BLIND pocket, so the head never seats: no preload, and
+// torquing either jacks the block off the mortise or strips the insert.
+// Owned lengths are M3x10/14/20, so M3x16 must be ordered; M3x14 (3.35mm
+// engagement, ~1.1xD) is a usable interim and M3x20 is not usable at all.
+// fastener_span_checks() in check_fit.py now derives this from the meshes so
+// it cannot drift silently again. See docs/fastener-schedule.md.
+//
+// Plus 4x M2.5x8 wheel screws (unchanged geometry, wheel_couple_neg) -- those
+// moved here from coax.scad with the boss.
 //
 // OPEN, worth a look before the first structural print: the root doubler that
 // came across with the arm was sized for the arm-to-BRIDGE junction, which no
