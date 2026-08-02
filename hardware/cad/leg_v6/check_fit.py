@@ -1514,6 +1514,163 @@ def fastener_checks():
 HORN_BCD_R = 7.0            # HORN_BCD/2 (leg_v6_common.scad)
 HORN_M25   = 2.9           # M25_CLEAR bolt-shank clearance
 HORN_ANGLES = (45, 135, 225, 315)
+
+
+#: Every fastener joint on the leg, as (label, part, hole list, axis, screw
+#: length, screw diameter, probe radius, depth available beyond the exit face,
+#: what that depth is, accepted-thin value or None).
+#:
+#: `probe_r` sits between the clearance-hole radius and the counterbore radius,
+#: so the solid run it finds IS the grip: it starts at the head seat (or the bare
+#: face where there is no counterbore) and ends at the exit face.
+_M25_PROBE, _M3_PROBE = 1.8, 2.2
+FASTENER_ENGAGEMENT = [
+    ('horn -> HFE  (coax_R inboard arm)', 'coax_R.stl', 'bcd_x', (33.8, 11.6, -9.5),
+     (-1, 0, 0), 5.0, 2.5, _M25_PROBE, 3.05, 'horn disc', 2.15),
+    ('wheel -> HFE (coax_hfe_block)', 'coax_hfe_block.stl', 'bcd_x', (33.8, 11.6, -9.5),
+     (-1, 0, 0), 8.0, 2.5, _M25_PROBE, 2.1, 'wheel disc', 0.70),
+    ('horn -> KFE  (knee_arm)', 'knee_arm.stl', 'bcd_z', (47.9, 0.0, 0.0),
+     (0, 0, -1), 6.0, 2.5, _M25_PROBE, 3.05, 'horn disc', 2.35),
+    ('wheel -> KFE (femur_R bottom boss)', 'femur_R.stl', 'bcd_z_up', (106.9, 0.0, 0.0),
+     (0, 0, 1), 8.0, 2.5, _M25_PROBE, 2.1, 'wheel disc', 0.70),
+    ('horn -> HAA  (shoulder_plate)', 'shoulder_plate.stl', 'bcd_y', (39.05, 0.0, 0.0),
+     (0, -1, 0), 6.0, 2.5, _M25_PROBE, 3.05, 'horn disc', 2.35),
+    ('wheel -> HAA (shoulder rear wall)', 'shoulder.stl', 'bcd_y_up', (39.05, 0.0, 0.0),
+     (0, 1, 0), 14.0, 2.5, _M25_PROBE, 2.1, 'wheel disc', 1.30),
+    # DEFERRED to fastener_span_checks(), which measures this joint end to end
+    # (seat 57.0 -> pocket bottom 39.85 = 17.2mm span, 5.2mm engagement). The
+    # probe window here is only 1.7 < r < 2.0 -- above the M3 clearance, below
+    # the 4.08mm tenon -- and inside it the ring sees the tenon alone, missing
+    # the 0.8mm of arm above the split plane. One joint, one measurement.
+    ('HFE block -> coax (retention)', 'coax_hfe_block.stl', 'list',
+     [(63.0, 5.0, 11.7), (63.0, 18.0, 11.7)], (-1, 0, 0), 16.0, 3.0, 1.9,
+     None, 'see fastener_span_checks', None),
+    ('knee_arm -> femur shelf', 'knee_arm.stl', 'list',
+     [(6.0, -8.0, 8.0), (6.0, 8.0, 8.0), (16.0, -8.0, 8.0), (16.0, 8.0, 8.0)],
+     (0, 0, -1), 8.0, 3.0, _M3_PROBE, HEATSET_L, 'M3 insert bore', None),
+    ('shoulder_plate -> deck', 'shoulder_plate.stl', 'list',
+     [(27.0, 6.2, 48.0), (27.0, 14.0, 48.0), (51.0, 6.2, 48.0), (51.0, 14.0, 48.0)],
+     (0, 0, -1), 6.0, 3.0, _M3_PROBE, HEATSET_L, 'M3 insert bore', None),
+]
+#: Thread engagement floor. 1xD is the usual rule for steel into steel/brass.
+MIN_ENGAGE_D = 1.0
+#: The horn rows are accepted at 0.88-0.97xD deliberately: the target is a STEEL
+#: horn disc, where thread strength passes the screw's own tensile capacity well
+#: below 1xD, and the schedule's lengths were derived as "grip + ~2.5 target,
+#: round DOWN" so the shortfall is the rounding, not an oversight. The wheel rows
+#: are accepted because the ~2.1mm disc CAPS engagement -- a longer screw bottoms
+#: -- so only a deeper counterbore can buy thread there.
+
+
+def _holes_for(kind, spec):
+    """Expand a joint's hole spec into (start point) tuples."""
+    if kind == 'list':
+        return [np.asarray(h, float) for h in spec]
+    cx, cy, cz = spec
+    out = []
+    for a in HORN_ANGLES:
+        s, c = np.sin(np.radians(a)), np.cos(np.radians(a))
+        if kind == 'bcd_x':       # circle in (y,z), screw runs along x
+            out.append(np.array([cx + 30, cy + HORN_BCD_R * s, cz + HORN_BCD_R * c]))
+        elif kind == 'bcd_z':     # circle in (x,y), screw runs -z from above
+            out.append(np.array([cx + HORN_BCD_R * c, cy + HORN_BCD_R * s, cz + 12]))
+        elif kind == 'bcd_z_up':  # ... or +z from below
+            out.append(np.array([cx + HORN_BCD_R * c, cy + HORN_BCD_R * s, cz - 40]))
+        elif kind == 'bcd_y':     # circle in (x,z), screw runs -y
+            out.append(np.array([cx + HORN_BCD_R * c, cy + 30, cz + HORN_BCD_R * s]))
+        elif kind == 'bcd_y_up':  # ... or +y
+            out.append(np.array([cx + HORN_BCD_R * c, cy - 40, cz + HORN_BCD_R * s]))
+    return out
+
+
+def _grip(mesh, start, axis, probe_r, span=60.0, step=0.02):
+    """Length of the FIRST solid run along the axis at `probe_r`.
+
+    That run is the grip: it begins at the head seat (a counterbore floor, or
+    the bare face where there is none, because at probe_r the counterbore reads
+    as void and the material beside the clearance hole reads as solid) and ends
+    where the screw leaves the printed part.
+    """
+    d = np.asarray(axis, float)
+    u = np.array([0, 1.0, 0]) if abs(d[0]) > 0.9 else np.array([1.0, 0, 0])
+    e1 = np.cross(d, u)
+    e1 /= np.linalg.norm(e1)
+    e2 = np.cross(d, e1)
+    ring_a = np.linspace(0, 2 * np.pi, 12, endpoint=False)
+    seat = None
+    for t in np.arange(0, span, step):
+        c = np.asarray(start, float) + d * t
+        ring = np.array([c + e1 * probe_r * np.cos(a) + e2 * probe_r * np.sin(a)
+                         for a in ring_a])
+        solid = mesh.contains(ring).all()
+        if solid and seat is None:
+            seat = t
+        elif not solid and seat is not None:
+            return seat, t - seat
+    return (seat, span - seat) if seat is not None else (None, None)
+
+
+def engagement_checks():
+    """How much THREAD does each screw actually get?
+
+    WHY (2026-08-02). Three fastener defects surfaced in one day -- a screw
+    specified 6mm too long for its blind pocket, an insert that could not be
+    delivered to its bore, and two joints with no screw recorded anywhere -- and
+    every geometry gate stayed green through all of them, because they check
+    holes and these are questions about the fastener. The span and insert-path
+    gates closed the first two. This closes the one they still leave open: a
+    screw can pass every clearance check and still have almost no thread in what
+    it is holding.
+
+    Grip is measured off the mesh, so it tracks a counterbore or a plate
+    thickness changing underneath the declared screw length.
+
+    ACCEPTED-THIN is explicit and carries its value. The wheel joints are known
+    marginal (the disc is ~2.1mm, so length cannot buy engagement -- only a
+    deeper counterbore can), and the point of recording the number is that a
+    REGRESSION goes red while the accepted state stays visible instead of silent.
+    """
+    print('-- fastener engagement: how much thread is actually in the target? --')
+    bad = False
+    cache = {}
+    for (label, part, kind, spec, axis, slen, sdia, probe_r,
+         avail, target, accepted) in FASTENER_ENGAGEMENT:
+        if part not in cache:
+            cache[part] = trimesh.load(part)
+        mesh = cache[part]
+        grips = [] if avail is not None else [0.0]
+        for start in _holes_for(kind, spec):
+            seat, g = _grip(mesh, start, axis, probe_r)
+            if g is not None:
+                grips.append(g)
+        if avail is None:
+            print(f'   DEFER {label}: measured end-to-end by fastener_span_checks()')
+            continue
+        if not grips:
+            bad = True
+            print(f'FAIL  {label}: found no material on any bolt axis -- '
+                  f'coordinates or probe radius are wrong, so this row proves nothing')
+            continue
+        g = float(np.median(grips))
+        eng = slen - g
+        want = MIN_ENGAGE_D * sdia
+        if eng > avail + 0.05:
+            bad = True
+            print(f'FAIL  {label}: M{sdia:g}x{slen:g} BOTTOMS -- grip {g:.2f}mm leaves '
+                  f'{eng:.2f}mm of screw against {avail:.2f}mm of {target}')
+        elif eng >= want:
+            print(f'   OK    {label}: grip {g:.2f} -> {eng:.2f}mm into {avail:.2f}mm '
+                  f'of {target} ({eng / sdia:.2f}xD)')
+        elif accepted is not None and eng >= accepted - 0.05:
+            print(f'   THIN  {label}: grip {g:.2f} -> {eng:.2f}mm ({eng / sdia:.2f}xD) '
+                  f'into {avail:.2f}mm of {target} -- ACCEPTED at {accepted:.2f}mm; '
+                  f'the disc caps it, only a deeper c\'bore buys thread')
+        else:
+            bad = True
+            print(f'FAIL  {label}: only {eng:.2f}mm of thread ({eng / sdia:.2f}xD) into '
+                  f'{avail:.2f}mm of {target}; want >= {want:.2f}mm')
+    return bad
+
 HFE_Y, HFE_Z = 11.6, -9.5  # hfe axis (coax.scad); FEMUR_MID = horn-face x
 FEMUR_MID = 33.8
 ARM_THK = 4.0              # horn couple channel length (leg_v6_common.scad)
@@ -1711,6 +1868,7 @@ def main():
         bad = fastener_checks() or bad
         bad = fastener_span_checks() or bad
         bad = insert_path_checks() or bad
+        bad = engagement_checks() or bad
         bad = horn_bolt_checks() or bad
         bad = kfe_bolt_checks() or bad
     sys.exit(1 if bad else 0)

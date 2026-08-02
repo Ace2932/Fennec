@@ -115,6 +115,8 @@ actually consumes.
 |---|---|---|---|
 | **M3 heat-set, 4.6 mm OD × 5.7** (Ruthex or equivalent) | **100** | femur→knee_arm 16 · shoulder→plate 16 · shoulder→trunk 16 · chassis 12 = ~60 + spares. **`femur_?.stl` is already printed with the Ø4.0 bore this insert wants** | 🛒 order |
 | **M3 heat-set, 4.0 mm OD × 6.0** (slim) | **25** | **HFE block retention only** (8 needed). A 4.6 insert cannot travel the 4.4 mm mortise slot to reach its bore — see `fastener-schedule.md`. ⚠️ 4.0 OD in a **6 mm length** is less common than the 4 mm; if unavailable, 4.0 × 4 works at SF ≈ 1.6–2.3 with an M3×14 | 🛒 order |
+| **M3×8 SHCS** | **25** | knee_arm → femur shelf (16 needed). ⚠️ NOT M3×10 — that bottoms in the 6.2 mm bore | 🛒 order |
+| **M3×6 SHCS** | **25** | shoulder_plate → deck (16 needed). ⚠️ NOT M3×8 — bottoms by 0.42 mm | 🛒 order |
 | **M3×16 SHCS** | **20** | HFE block retention (8 needed). M3×20 **bottoms out** in the blind pocket; M3×14 is the short interim | 🛒 order |
 | M3×3.8 short insert | 10 | neck bracket → shoulder deck (front only) | ⬜ verify |
 | M2×4 insert | 20 | pod, deck-tie, clamp bar, OLED bracket | ⬜ verify |
