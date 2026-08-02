@@ -218,13 +218,25 @@ plate, and the tool says so rather than picking one.
 and prints every face's measurements so the choice takes a minute. Resolve one
 by adding the axis here **and** to the `.scad` header.
 
-**`oled_mount` is DEFERRED, not blocked** (owner, 2026-08-02): the OLED has no
-place on the robot right now, so the bracket is not a print. Deferred ≠
-cancelled — the SSD1331 is owned (BOM, $18, ordered), the **logic board carries
-`J10` (1×07) and the `R2`–`R6` 1k series resistors** for it, and `control_pod`
-keeps its OLED shelf and 2× M2 heat-sets. **`control_pod` still prints as-is**:
-it is the E-stop mount and the shelf costs a few grams. Do not "clean up" those
-features — they are held deliberately.
+**`oled_mount` is WANTED and BLOCKED on three caliper numbers** (2026-08-02).
+The OLED is not deferred — what it lacks is a way to *hold the board*. The
+bracket's 4 board mount holes were **removed 2026-07-28 (#35, still open)**: the
+vendor drawing gives the outline (27.3 × 30.7 mm) but **not the hole pitch on
+either axis**, and the guessed pitch put 2 of 4 holes inside the display window.
+So the bracket is deliberately unprintable until the **owned** module is
+measured:
+
+- [ ] hole pitch along the 27.3 mm axis (centre-to-centre)
+- [ ] hole pitch along the 30.7 mm axis (centre-to-centre)
+- [ ] active display area — size **and** its offset from the board datum (the
+      20 × 16 window in the .scad is carried over, **not** derived)
+
+Everything else in the chain already exists: `control_pod` bolts to the
+`riser_bay` pocket-bosses (4× M3 at y±10, z61/66, x−66.5) and the bracket bolts
+to the pod deck's 2× M2 heat-sets at x−96/−71, y23. It is only the
+board-to-bracket joint that is missing. **`control_pod` prints as-is** — it is
+the E-stop mount, its OLED shelf and heat-sets are held deliberately, and
+nothing about them should be "cleaned up".
 
 **Parts marked UNRESOLVED** — `spacer`, `trunk`, `head_ear(_L)` —
 are printable but cannot be sliced yet, each for a recorded reason: `oled_mount`

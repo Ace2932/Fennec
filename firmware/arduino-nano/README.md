@@ -64,13 +64,14 @@ can detect a dead Nano.
 
 ## Sketch (TODO)
 
-- ⚠️ **The OLED is DEFERRED (owner decision, 2026-08-02): it has no place on the
-  robot right now.** The LED strip is unaffected. Nothing here is cancelled —
-  the SSD1331 is owned, the logic board carries `J10` plus the `R2`–`R6` 1k
-  series resistors for it, and `control_pod` keeps the OLED shelf and its 2× M2
-  heat-sets — but do not treat the display half of this README as pending work.
-  With the OLED out, the Nano's entire remaining job is 4 WS2812B LEDs on one
-  GPIO, which is worth a second look before writing the sketch.
+- ⚠️ **The OLED is wanted; it currently has nowhere to bolt.** `oled_mount.scad`
+  exists and bolts to the `control_pod` deck, but its 4 board mount holes were
+  removed 2026-07-28 (**#35, open**) — the vendor drawing never gave the hole
+  pitch, and the guessed pitch put 2 of 4 holes inside the display window. Three
+  caliper numbers off the owned module unblock it (both pitches + the active
+  area and its datum offset); see `docs/checklists/caliper-session.md` §6. The
+  electrical side is ready either way: `J10` and the `R2`–`R6` 1k series
+  resistors are on the fabbed logic board.
 - Status: not implemented yet — **this directory contains no source at all**,
   only this file. "The OLED + LED hardware works standalone" means the modules
   themselves are known good, NOT that anything drives them: the `oled_status`
