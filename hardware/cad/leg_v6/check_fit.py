@@ -1640,6 +1640,12 @@ def engagement_checks():
         mesh = cache[part]
         grips = [] if avail is not None else [0.0]
         for start in _holes_for(kind, spec):
+            if mesh.contains(np.array([start])).any():
+                bad = True
+                print(f'FAIL  {label}: probe starts INSIDE the part at '
+                      f'{np.round(start, 1).tolist()} -- grip would be measured '
+                      f'from the wrong face, so this row cannot be trusted')
+                continue
             seat, g = _grip(mesh, start, axis, probe_r)
             if g is not None:
                 grips.append(g)
@@ -1651,7 +1657,13 @@ def engagement_checks():
             print(f'FAIL  {label}: found no material on any bolt axis -- '
                   f'coordinates or probe radius are wrong, so this row proves nothing')
             continue
-        g = float(np.median(grips))
+        # MIN, not mean/median: the weakest bolt governs the joint, and an
+        # average is exactly how one bad hole hides behind three good ones.
+        g = float(np.max(grips))          # most grip = least thread = worst case
+        spread = float(np.max(grips) - np.min(grips))
+        if spread > 0.15:
+            print(f'   NOTE  {label}: grip varies {spread:.2f}mm across the 4 bolts '
+                  f'({[round(x, 2) for x in grips]}) -- worst case used')
         eng = slen - g
         want = MIN_ENGAGE_D * sdia
         if eng > avail + 0.05:

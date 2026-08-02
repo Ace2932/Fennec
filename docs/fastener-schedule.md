@@ -101,6 +101,22 @@ an interference one. Use low-head/button M2.5 if sourcing fresh, or accept it.
 2026-07-10 (backlog #41): `jetson_cowl.scad` retired in place, superseded by
 right-angle plug adapters (`BOM.md`). No cowl bolts/inserts to source.
 
+### ⚠️ Open on every screw that threads into a servo disc
+
+`engagement_checks()` compares thread engagement against the **disc thickness**
+(2.1 mm wheel, 3.05 mm horn), both taken from `servo.stl` / calipers. **The
+TAPPED depth inside those discs is not known.** If a disc's thread is shallower
+than the engagement figure, that screw bottoms — and a bottomed screw has no
+preload at all, which is the same failure as the M3×22 found on 2026-08-02.
+
+Current engagements against the assumed depths: wheel HFE/KFE **1.56 / 2.1**,
+wheel HAA **1.40 / 2.1**, horn HFE **2.20 / 3.05**, horn KFE **2.42 / 3.05**,
+horn HAA **2.40 / 3.05**. The horn screws use 72–79 % of the assumed depth.
+
+**FIRST-ARTICLE: measure the real thread depth in one horn disc and one wheel
+disc.** It resolves five joints at once, and it is the only number standing
+between "measured" and "assumed" in this whole table.
+
 ## Purchase summary (chassis/head/electronics)
 - **M3 SHCS**: ×4 **NYLON** M3×12 (head→bracket, breakaway), ×4 M3×12 (riser→flange), ×4 M3×16 (bracket→deck), ×2 M3×8 (adapter→crown), ×4 M3×10 (ears)
 - **M3 CSK**: ×4 M3×10 (L2→adapter), ×4 M3×14 (shoulder flange feet → trunk floor, CR-8 #2), ×6 M3×10 (battery pocket → floor, AUD-11 heat-set fix — was ×6 M3×8 + M3 hex nut under AUD-1)
