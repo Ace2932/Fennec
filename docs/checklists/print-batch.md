@@ -290,8 +290,44 @@ Every insert site depth-probed in the built STLs:
 ## 4. Wave 1 — first article (~450 g, doctrine: before batching)
 
 **PA6-CF progress 2026-08-02 — printed: `strap` ×1, `shoulder_plate` ×2,
-`knee_arm` ×1.** Each carries a first-article check written into its own `.scad`
-header; do these before printing any more of them:
+`knee_arm` ×1, `femur` ×1, `tibia` ×1.** That is enough to dry-assemble the
+**whole knee** (femur + knee_arm + tibia), so the leg_v6 README §Verify list is
+now runnable rather than theoretical — and three of its five items need exactly
+these parts:
+
+- [ ] **Yoke gap — the one that can send the CAD back.** README §5: the tibia
+      end must float in the femur yoke with **0.2–0.6 mm play**. PA6-CF shrinks
+      0.2–0.8 %, so if the gap **clamps** the discs, sand the arm faces or
+      reprint at **+0.3 % Z**. Check before anything else; it decides whether
+      the other legs print as-is.
+- [ ] **Knee-arm plate on the femur shelf** (README §2): seats flat, the
+      diagonal Ø3.1 screws register snugly **before** the clearance pair, horn
+      face flush under the plate ±0.2.
+- [ ] **Servo pocket drop-in** (README §1): the servo drops in under gravity
+      plus a wiggle, **no force** — CLR_POCKET is 0.45/side and location comes
+      from the 4 column screws, not the walls. ⚠️ 0.30/side was the v5
+      press-fit; do **not** "fix" it back. The 0.1 mm anti-rotation ribs are
+      crush ribs — file the tips if a tight print binds.
+- [ ] **M2.5 countersinks flush** (README §3) — heads must not stand proud into
+      the yoke arm plane.
+- [ ] **Heat-set purchase**, Ø4.6 bore at 5.7 deep in PA6-CF (README §4). The
+      LUMINZENLUX kit's threaded insert adapter is the tip for this.
+- [ ] **MEASURE the printed links, do not trust the model.** `femur` hfe→kfe is
+      **106.9 mm** and `tibia` kfe→foot **129.0 mm** in the URDF, both taken
+      from STL bores. At 0.2–0.8 % shrink that is **0.2–0.9 mm** on the femur
+      and **0.3–1.0 mm** on the tibia — straight into IK and gait. Caliper
+      bore-to-bore and feed the real numbers back.
+- [ ] **WEIGH them.** The sim's link inertials are provisional and the recorded
+      plan is to refine them from weighed prints. Slicer predicted **femur_R
+      56.4 g** and **tibia_R 66.4 g** (25 % infill); a large gap also tells you
+      the printer is under- or over-extruding.
+- [ ] **Which side?** If these are the `_L` files, LA-3 applies — they must be
+      rotated **180° about X** from the R pose. A left part at the R orientation
+      lands on 41 mm² (tibia) and would have tipped, so a clean print implies
+      either R or a correctly rotated L.
+
+Each of the earlier three carries a first-article check written into its own
+`.scad` header; do these before printing any more of them:
 
 - [ ] **`knee_arm` + `shoulder_plate` — probe the horn counterbore floor.**
       LA-23: `ARM_THK` 4.0 − `HORN_CTR_DEEP` 2.5 leaves **exactly 1.5 mm**, the
@@ -323,7 +359,7 @@ batching them.
       1× shoulder_plate pair, 1× shoe, 1× skid_rail, ~~2× cable_clip~~,
       1× knee_bumper, 1× strap
       — **still outstanding on this line: `coax_R`, `coax_hfe_block`,
-      `femur_R`, `tibia_R`, `shoulder`.** Sliced 2026-08-02 for real numbers
+      `shoulder`** (`femur` and `tibia` printed 2026-08-02). Sliced for real numbers
       (`slice_plate.py`, PA6-CF, §2 settings): `coax_hfe_block` **5.5 g /
       25 min** · `coax_R` **30.8 g / 1 h 35** (supports + brim) · `femur_R`
       **56.4 g / 2 h 33** · `tibia_R` **66.4 g / 3 h 09** (at its 25 % infill)
