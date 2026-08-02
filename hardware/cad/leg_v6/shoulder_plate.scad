@@ -1,5 +1,40 @@
 // =============================================================================
-// V6 Shoulder horn plate — RIGHT side (mirror for left). Print 2 + 2.
+// V6 Shoulder horn plate — RIGHT side (mirror for left). 4 INSTALLED: 2 per side.
+// =============================================================================
+// HANDEDNESS IS NOMINAL — MEASURED 2026-08-02. This part and shoulder_plate_L
+// are the SAME SHAPE. The body is symmetric about its own midplane (x = 39),
+// so shoulder_plate_L's mirror([1,0,0]) is a pure TRANSLATION: it moves the
+// part from x[23,55] to x[-55,-23] and changes nothing about the geometry.
+// The ONLY asymmetric feature on the whole plate is the LA-2 identity dot.
+//
+// Two independent measurements, both on the built STLs:
+//   volume  R 7676.64 mm^3 vs L 7669.23 -> delta 7.41 mm^3, and one O3 x 1.1
+//           dot is 7.78 mm^3 theoretical. That is the entire difference.
+//   surface mirror R about x=39 and measure deviation from itself: everything
+//           under tolerance except points inside y[20.80,21.75] z[8.5,11.5]
+//           at x~45 and x~33 -- exactly the dot's face and its O3 footprint,
+//           plus its own mirror image. No other feature moves.
+//
+// Two consequences, both easy to get wrong:
+//
+// 1. PRINT ORIENTATION IS THE SAME FOR BOTH. LA-3 warns that femur_L/tibia_L
+//    do NOT share the R orientation, because those are Z-mirrors and the flip
+//    changes which face is flat. That warning does NOT extend here: an
+//    X-mirror of an X-symmetric body rests on the same face. Print
+//    shoulder_plate and shoulder_plate_L both HORN-SEAT-DOWN, same transform,
+//    nest them together.
+//
+// 2. A SWAPPED PLATE IS A NON-EVENT. Fitting an "R" plate on the left side is
+//    mechanically identical -- it is the same part. LA-2 added the dots
+//    because "wrong-leg assembly scrambles the gait with no visual cue", which
+//    is true of femur/tibia/coax and NOT true of this plate. The dots here are
+//    bookkeeping, not hazard prevention. Do not scrap or rework a plate over
+//    its dot count. (Keeping the markers is still right -- they cost nothing
+//    and the convention should be uniform across the family.)
+//
+// If a future edit adds an asymmetric feature to this body, consequence 2
+// silently becomes FALSE and this block becomes a hazard. Re-measure before
+// trusting it after any geometry change here.
 // =============================================================================
 // L-bracket hanging from the shoulder deck: vertical face bolts the haa
 // HORN (rear surface = the horn plane y 17.75); top flange bolts DOWN onto
