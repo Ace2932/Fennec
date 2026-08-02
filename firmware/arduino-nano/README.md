@@ -64,7 +64,16 @@ can detect a dead Nano.
 
 ## Sketch (TODO)
 
-- Status: not implemented yet. The OLED + LED hardware works
-  standalone; sketch ties them to the USB-serial protocol above.
+- ⚠️ **The OLED is DEFERRED (owner decision, 2026-08-02): it has no place on the
+  robot right now.** The LED strip is unaffected. Nothing here is cancelled —
+  the SSD1331 is owned, the logic board carries `J10` plus the `R2`–`R6` 1k
+  series resistors for it, and `control_pod` keeps the OLED shelf and its 2× M2
+  heat-sets — but do not treat the display half of this README as pending work.
+  With the OLED out, the Nano's entire remaining job is 4 WS2812B LEDs on one
+  GPIO, which is worth a second look before writing the sketch.
+- Status: not implemented yet — **this directory contains no source at all**,
+  only this file. "The OLED + LED hardware works standalone" means the modules
+  themselves are known good, NOT that anything drives them: the `oled_status`
+  ROS node is a stub and there is no sketch for it to talk to.
 - Libraries: Adafruit_GFX + Adafruit_SSD1331 + FastLED.
 - Roughly 1-2 evenings of work. Phase 1 polish task.

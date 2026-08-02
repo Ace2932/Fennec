@@ -218,7 +218,15 @@ plate, and the tool says so rather than picking one.
 and prints every face's measurements so the choice takes a minute. Resolve one
 by adding the axis here **and** to the `.scad` header.
 
-**Parts marked UNRESOLVED** — `oled_mount`, `spacer`, `trunk`, `head_ear(_L)` —
+**`oled_mount` is DEFERRED, not blocked** (owner, 2026-08-02): the OLED has no
+place on the robot right now, so the bracket is not a print. Deferred ≠
+cancelled — the SSD1331 is owned (BOM, $18, ordered), the **logic board carries
+`J10` (1×07) and the `R2`–`R6` 1k series resistors** for it, and `control_pod`
+keeps its OLED shelf and 2× M2 heat-sets. **`control_pod` still prints as-is**:
+it is the E-stop mount and the shelf costs a few grams. Do not "clean up" those
+features — they are held deliberately.
+
+**Parts marked UNRESOLVED** — `spacer`, `trunk`, `head_ear(_L)` —
 are printable but cannot be sliced yet, each for a recorded reason: `oled_mount`
 says "PETG/PA6-CF" (two materials); `spacer` names no material anywhere though 8
 are needed; `trunk` is built by `trunk_build.py` so the freshness gate skips it;

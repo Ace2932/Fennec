@@ -442,10 +442,13 @@ NOT_PRINTED = {
 UNRESOLVED = {
     "oled_mount": (
         "chassis/oled_mount.stl",
-        "material ambiguous — the .scad says 'PRINT: PETG/PA6-CF', which is two "
-        "different materials with different temperatures and process settings. "
-        "Orientation 'foot-down' also names a feature, not an axis. Pick both in "
-        "oled_mount.scad's header."),
+        "DEFERRED 2026-08-02 (owner): the OLED has no place on the robot right "
+        "now, so the bracket is not a print. Not cancelled — the SSD1331 is "
+        "owned, the logic board carries J10 + R2-R6 for it, and control_pod "
+        "keeps its shelf and 2x M2 heat-sets. When it comes back, two things "
+        "are still unrecorded: the material (the .scad says 'PETG/PA6-CF', "
+        "which is two different materials) and the orientation ('foot-down' "
+        "names a feature, not an axis)."),
     "spacer": (
         "chassis/spacer.stl",
         "no material recorded anywhere — the .scad header specifies M3x14, "
