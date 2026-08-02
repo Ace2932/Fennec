@@ -1232,7 +1232,8 @@ def insert_path_checks():
         mesh = cache[part]
         ax = np.asarray(axis, float)
         u = np.array([1.0, 0, 0]) if abs(ax[0]) < 0.9 else np.array([0, 1.0, 0])
-        e1 = np.cross(ax, u); e1 /= np.linalg.norm(e1)
+        e1 = np.cross(ax, u)
+        e1 /= np.linalg.norm(e1)
         e2 = np.cross(ax, e1)
         origin = np.asarray(mouth, float)
         tightest, worst_t = float('inf'), None
