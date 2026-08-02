@@ -270,15 +270,33 @@ heat-starved) that the shiny rule exists to catch.
 
 **So the verdict is only available after cleaning. Per stage, before moving on:**
 
-1. Flood the stage's joints with **99 % IPA** — not 70 %; the water in rubbing
-   alcohol dries slowly and leaves its own residue on the high-Z nets.
-2. Brush (acid brush or an old toothbrush).
-3. **Blot with a lint-free wipe.** Do not skip this — IPA *dissolves* rosin, so
-   flooding without wicking it up smears a thin haze over a **wider** area than the
-   original blob. On the divider that is worse than leaving it alone.
-4. Repeat until the wipe comes away clean.
-5. *Now* judge shiny. Rework anything dull or grainy before the next stage — not at
-   the end, when the board no longer sits flat and the pad is behind a tall part.
+Use the **aerosol flux remover** (MG Chemicals 4140, ordered 2026-08-02), not plain IPA.
+The chemistry matters here: our flux is **no-clean**, the residue class IPA handles worst,
+and IPA only *partially* dissolves it — the resin redeposits as a **white haze**. That is
+the mirror of the uncleaned failure above: uncleaned reads glossy → **false PASS**;
+half-dissolved reads hazy → **false FAIL**. Plain IPA, used imperfectly, puts errors on
+both sides of the one criterion this document relies on. 4140 is rated for no-clean and
+states *"safe on plastic components"*, which is what makes it usable at stage 10 alongside
+the Teensy/Nano/INA modules and the OLED window.
+
+1. Board **COOL** — it is a flammable aerosol and you have just been at 320–400 °C.
+2. Stand the board **angled over paper towel** so runoff carries residue OFF the edge.
+   This is the whole mechanical advantage over wiping: it *flushes* rather than
+   redistributes.
+3. Short bursts through the **extension straw**, working top-down.
+4. Brush while wet (acid brush or an old toothbrush).
+5. **Final flush with no brushing** — that pass carries the loosened residue away
+   instead of spreading it. Do not finish on the brush stroke.
+6. Let it flash off and come back to **room temperature** before judging. The propellant
+   chills the board, and in coastal air a chilled board fogs — condensation on a good
+   joint reads as dull.
+7. *Now* judge shiny. Rework anything dull or grainy before the next stage — not at the
+   end, when the board no longer sits flat and the pad is behind a tall part.
+
+99 % IPA is still worth having and is **not** a substitute here — it is for general prep,
+tool wiping and the printer's PEI plate. If you ever have to fall back to it on a board,
+the old rule applies: flood → brush → **blot lint-free** → repeat, because with IPA the
+wicking step is the only thing stopping the smear.
 
 Second-order, and specific to this combination: a lead-free-rated flux run at leaded
 temps leaves **peripheral** residue — squeezed outside the joint, never hotter than
