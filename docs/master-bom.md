@@ -87,6 +87,82 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | **TPU 95A filament** | ✅ **on hand — confirmed 2026-07-31 by having printed with it** (foot shoes ×5, knee_bumper ×5, skid_rail ×2). Was contradicted across three docs: `work-schedule.md` said ✅, `checklists/print-batch.md` §0 had it as an open question, and this table listed only PA6-CF. **~73 g of the ~102 g TPU set is now printed; ~29 g remains** (cable_clip ×24 + grommets) — see `print-batch.md` §1b. External spool only, **AMS will not feed TPU** |
 | PETG-CF filament | ⬜ **unknown** — `print-batch.md` §0 still asks "PETG-CF spool on hand?". Needed for `riser_bay` / `floor_plate` / `head_ear`; the fallback is all-PA6 with warp risk on the 127 mm riser lid |
 
+## Fasteners (added 2026-08-02 — this table did not exist)
+
+**Why it was missing and why that mattered.** This doc calls itself the single source for parts
+status, and until now it carried exactly two fastener rows: M3×20 standoffs and a generic
+"M3 screws/nuts/washers" kit. Everything else lived in `docs/fastener-schedule.md` (the spec
+authority, with measured lengths) and `BOM.md` / `docs/order-list.md` (partial buy lists) — so
+the doc you check before ordering was the one place the fasteners weren't. Quantities below are
+counted from the CAD loops, not copied from a summary.
+
+### 🔴 Heat-set inserts — in NO purchasing document before today
+Ruthex or equivalent. **M3 bore Ø4.0** (insert OD 4.6, len 5.7), short **M3×3.8** where a part is
+thin, **M2 bore Ø3.0** (OD 3.2, len 4.0). Boss wall ≥1.5 mm (M3) / ≥1.0 mm (M2).
+The Pinecil kit's threaded-insert adapter is owned (see the tooling table) — the tool is here,
+the consumable was never ordered.
+
+| Insert | Needed | Where | Status |
+|---|---|---|---|
+| **M3×5.7** | **72** → buy **100** | leg **56** (`shoulder.scad` 16/part ×2 = 32 · `femur.scad` 4/part ×4 = 16 · `coax.scad` option-C mortise 2 ×4 = 8) + chassis/head **16** | ⬜ **ORDER** |
+| **M3×3.8 short** | **16** → buy **25** | shoulder neck-bracket pilots 4/part ×2 = 8 · l2_adapter 2 · battery pocket 6 | ⬜ **ORDER** |
+| **M2×4** | **14** → buy **25** | control_pod 4 · cradle deck-tie 4 · clamp bar 4 · OLED bracket 2 | ⬜ **ORDER** |
+
+⚠️ **The only insert count that existed in the repo was 16 / 8 / 14** — `fastener-schedule.md`'s
+purchase summary, which is scoped *"(chassis/head/electronics)"* and states outright that leg
+fasteners are *"not re-listed here."* The leg's own inserts were never counted anywhere, and the
+leg prints first. Real M3×5.7 demand is **4.5×** the number on the page. Counted from the loops:
+`shoulder.scad` plate bores `sx×PLATE_BX×PLATE_BY` = 8, trunk-flange 4, D456 pads 4;
+`femur.scad` `hx[65,75]×hy[±8]` = 4; `coax.scad` `BOLT_YS` = 2. Buy in 50-packs — a botched
+press wrecks the insert and sometimes the part, so spares are not optional.
+
+### 🔴 M2.5 — leg servo screws, **none owned, none ordered**
+The ✅-ordered M3/M4/M5/M6 stainless kit **starts at M3 — zero overlap.** Lengths MEASURED
+2026-07-11 (`fastener-schedule.md`), each rounded DOWN so it can't bottom the disc.
+
+| Screw | Qty | Joint | Status |
+|---|---|---|---|
+| M2.5×5 | 16 | horn → HFE (thin LA-7 backing) | ⬜ **ORDER** |
+| M2.5×6 | 32 | horn → HAA + KFE (`shoulder_plate` / `knee_arm`) | ⬜ **ORDER** |
+| M2.5×8 | 32 | wheel → HFE + KFE (⚠ only ~0.75 mm disc engagement — tightest joint) | ⬜ **ORDER** |
+| M2.5×14 | 16 | wheel → HAA (shoulder's long boss reach) — uncommon length, likely a separate order | ⬜ **ORDER** |
+
+### M2
+| Screw | Qty | For | Status |
+|---|---|---|---|
+| M2×22 self-tap | 40 | servo case-mount: HAA + KFE + HFE-near pair. ⚠ stock case screws confirmed too short | ⬜ ORDER |
+| M2×25 self-tap | 8 | HFE-far pair only (femur LA-6 ramp, floor +4.4 mm). **Do not exceed 25** — bottoms the ~19.9 mm column | ⬜ ORDER |
+| M2×8 SHCS | 14 | control_pod 4 · deck-tie 4 · clamp bar 4 · OLED foot 2 | ⬜ ORDER |
+| M2×6 SHCS + M2 nut | 4 + 4 | SSD1331 → bracket | ⬜ ORDER |
+
+### M3
+| Screw | Qty | For | Status |
+|---|---|---|---|
+| **M3×8 SHCS** | **38** → buy 50 | **computed 2026-08-02, was unsourced:** `knee_arm`→femur shelf 16 (4/leg: 4.0 arm − 1.8 c'bore = 2.2 grip + 5.7 insert = 7.9) · `shoulder_plate`→deck 16 (4/plate: 3.2 flange − 1.8 c'bore = 1.4 grip + 5.7 = 7.1) · neck_bracket→deck 4 · l2_adapter→crown 2 | ⬜ ORDER (check the Fgruh kit first) |
+| M3×22 SHCS | 8 | coax option-C block retention, 2/leg (#226) | ⬜ ORDER |
+| M3×12 SHCS | 4 | riser → shoulder flange | ⬜ ORDER |
+| **NYLON** M3×12 | 4 | head → neck bracket, #42 breakaway fuse | ⬜ ORDER |
+| **NYLON** M3×10 | 25 pk | breakaway fuses (backlog #2) — L2-mast flange 4 + D456 row 4 | ⬜ ORDER |
+| M3×10 SHCS | 4 | ears → head pad | ⬜ ORDER |
+| M3×10 CSK | 4 | L2 → l2_adapter | ⬜ ORDER |
+| M3×10 CSK | 6 | battery pocket → floor (AUD-11) | ⬜ ORDER |
+| M3×14 CSK | 4 | shoulder flange feet → trunk floor (CR-8 #2) | ⬜ ORDER |
+| M3 nyloc | 4 | shoulder flange feet **only** — see the correction below | ⬜ ORDER |
+| M3 flat washer DIN 125 | 50 pk | under every head bearing on the stock trunk shell | ⬜ ORDER |
+| M3/M4/M5/M6 stainless hex kit | — | general | ✅ ordered (`BOM.md`:174) — **M3 and up only** |
+| M3 screws/nuts/washers | — | board → chassis | ✅ owned (Fgruh 1220pc) |
+
+### ⚠️ Two errors found in `fastener-schedule.md`'s purchase summary (2026-08-02)
+Both would have produced a wrong order, and both contradict that document's own detail table.
+
+1. **"×4 M3×16 (bracket→deck)" is wrong — it is M3×8.** `neck_bracket.scad` says M3×8 in two
+   places (lines 28, 61) with `BASE_T = 4`, and the schedule's own row 23 also says M3×8.
+   4 mm base + 3.8 mm insert = 7.8 mm of usable depth; an M3×16 has nowhere to go and would
+   bottom on the 2.3 mm deck floor or split it.
+2. **"M3 nyloc ×4 (bracket→deck)" is obsolete.** The NO-DRILL fix of 2026-07-10 replaced
+   drill-at-assembly + nyloc with pressed M3×3.8 heat-sets. Only the 4 shoulder-flange-foot
+   nylocs remain.
+
 ## Harness + assembly consumables (mostly Amazon — NOT yet bought)
 The off-board side is 25+ wired connections; this category was unspeced until 2026-06-13.
 | Part | For | Status |
@@ -160,6 +236,18 @@ received (standoffs, wick, rings, MRBF+5191, 12AWG, bench gear), **both PCBs ord
    also confirm 4× 30kg hips in hand (12 active total).
 3. **+1 INA226 20A R002 module** — 0 spares (arm U12 ate the 4th; 4th now = L2). Same GODIYMODULES
    listing, ~$13.
+4. 🆕 **M2.5 leg servo screws — 4 lengths, 96 screws, ~$18.** ⬜ **none owned, none ordered**, and
+   nothing on the shelf substitutes: the ✅-ordered M3–M6 stainless kit starts at M3. ×16 M2.5×5 ·
+   ×32 M2.5×6 · ×32 M2.5×8 · ×16 M2.5×14. **This is the one that blocks the parts already on the
+   plate** — `knee_arm` and `shoulder_plate` both bolt to a servo horn with M2.5×6, and proving
+   that horn seat is the entire reason `knee_arm` is a separate part. M2.5×14 is uncommon and may
+   ship separately, so it sets the lead time. Add the M2 case-mount screws to the same order
+   (×40 M2×22, ×8 M2×25) — same supplier, same 144-screw set.
+5. 🆕 **Heat-set inserts — ~100× M3×5.7, 25× M3×3.8, 25× M2×4.** ⬜ **were in no purchasing document
+   at all** until 2026-08-02. Every leg and chassis joint that isn't a nyloc or a self-tap lands in
+   one. The only count that existed (16/8/14) is scoped to chassis/head/electronics and explicitly
+   excludes the leg, so real M3×5.7 demand is **4.5× that**. Amazon-fast, but it gates *assembly*
+   of everything now being printed — the tool (Pinecil insert adapter) is owned, the inserts are not.
 
 **🟡 Verify on shelf (buy only if missing):**
 - ~~Thin solder 0.6-0.8mm~~ ✅ **closed 2026-08-01 — Sn63Pb37 1 mm 1.8 % flux core in hand** (see
