@@ -87,6 +87,59 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | **TPU 95A filament** | ✅ **on hand — confirmed 2026-07-31 by having printed with it** (foot shoes ×5, knee_bumper ×5, skid_rail ×2, cable_clip ×27). Was contradicted across three docs: `work-schedule.md` said ✅, `checklists/print-batch.md` §0 had it as an open question, and this table listed only PA6-CF. **~101 g of the ~106 g TPU set is now printed; ~5 g remains** — grommets only (`grommet_insert` ×6 on hold for LA-25, `case_slot_grommet` ×1, `lead_notch_grommet` ×2). See `print-batch.md` §1b. ⚠️ Updated 2026-08-01: this row previously read *"~73 g printed, ~29 g remains (cable_clip ×24 + grommets)"* — stale on both counts once the clips were printed, and the ×24 was itself superseded (see below). External spool only, **AMS will not feed TPU** |
 | PETG-CF filament | ⬜ **unknown** — `print-batch.md` §0 still asks "PETG-CF spool on hand?". Needed for `riser_bay` / `floor_plate` / `head_ear`; the fallback is all-PA6 with warp risk on the 127 mm riser lid |
 
+## Fasteners — screws + sourcing notes (added 2026-08-02)
+
+**Inserts and the M3 screw lengths are in §"Heat-set inserts" above** — that section is
+the buy list and is current with #255's two-insert split (OD 4.6×5.7 everywhere, slim
+OD 4.0×6.0 for the HFE block only). This section covers what it does not: the **M2.5 and
+M2** families, the ASINs actually ordered, and the traps that make a wrong purchase look
+right.
+
+None of this existed before today. `master-bom.md` calls itself *"Single source for parts
+status across the whole build"* and carried two fastener rows; everything real lived in
+`fastener-schedule.md` + `BOM.md` + `order-list.md`. **The doc you check before ordering
+was the one place the fasteners weren't.**
+
+### ✅ M2.5 — leg servo screws, ORDERED 2026-08-02
+The ✅-ordered M3/M4/M5/M6 stainless kit **starts at M3 — zero overlap.** Lengths MEASURED
+2026-07-11 (`fastener-schedule.md`), each rounded DOWN so it can't bottom the disc. Nothing
+owned substituted: the ✅-ordered M3/M4/M5/M6 stainless kit **starts at M3 — zero overlap.**
+
+**Ordered, all button head** — the ×8/×14 counterbores are 1.6/1.75 mm against a 2.5 mm SHCS
+head, so 48 heads would otherwise stand ~0.9 mm proud (`fastener-schedule.md` says use
+low-head/button "if sourcing fresh"): iexcell `B0DLKG6JK6` (×5) · Sutemribor `B0DJKVZ4P2`
+(×6) · iexcell `B0DLKC64NP` (×8) · iexcell `B0DLKBDMSB` (×14).
+
+⚠️ **Do not buy an M2.5 assortment kit.** They run 4/6/8/10/12/16/20/25 — **no ×5, no ×14** —
+and neither is substitutable: a ×6 drives 3.2 mm into a 3.05 mm horn disc and bottoms; a ×16
+drives 3.4 mm into a 2.1 mm wheel disc and jacks the boss. Single-length packs only.
+
+| Screw | Qty | Joint | Status |
+|---|---|---|---|
+| M2.5×5 | 16 | horn → HFE (thin LA-7 backing) | 🛒 ordered |
+| M2.5×6 | 32 | horn → HAA + KFE (`shoulder_plate` / `knee_arm`) | 🛒 ordered |
+| M2.5×8 | 32 | wheel → HFE + KFE (⚠ only ~0.75 mm disc engagement — tightest joint) | 🛒 ordered |
+| M2.5×14 | 16 | wheel → HAA (shoulder's long boss reach) — uncommon length, likely a separate order | 🛒 ordered |
+
+### M2
+| Screw | Qty | For | Status |
+|---|---|---|---|
+| M2×22 self-tap | 40 | servo case-mount: HAA + KFE + HFE-near pair. ⚠ stock case screws confirmed too short | ⬜ ORDER |
+| M2×25 self-tap | 8 | HFE-far pair only (femur LA-6 ramp, floor +4.4 mm). **Do not exceed 25** — bottoms the ~19.9 mm column | ⬜ ORDER |
+| M2×8 SHCS | 14 | control_pod 4 · deck-tie 4 · clamp bar 4 · OLED foot 2 | ⬜ ORDER |
+| M2×6 SHCS + M2 nut | 4 + 4 | SSD1331 → bracket | ⬜ ORDER |
+
+### ⚠️ Two errors found in `fastener-schedule.md`'s purchase summary (2026-08-02)
+Both would have produced a wrong order, and both contradict that document's own detail table.
+
+1. **"×4 M3×16 (bracket→deck)" is wrong — it is M3×8.** `neck_bracket.scad` says M3×8 in two
+   places (lines 28, 61) with `BASE_T = 4`, and the schedule's own row 23 also says M3×8.
+   4 mm base + 3.8 mm insert = 7.8 mm of usable depth; an M3×16 has nowhere to go and would
+   bottom on the 2.3 mm deck floor or split it.
+2. **"M3 nyloc ×4 (bracket→deck)" is obsolete.** The NO-DRILL fix of 2026-07-10 replaced
+   drill-at-assembly + nyloc with pressed M3×3.8 heat-sets. Only the 4 shoulder-flange-foot
+   nylocs remain.
+
 ## Harness + assembly consumables (mostly Amazon — NOT yet bought)
 The off-board side is 25+ wired connections; this category was unspeced until 2026-06-13.
 | Part | For | Status |
@@ -160,6 +213,20 @@ received (standoffs, wick, rings, MRBF+5191, 12AWG, bench gear), **both PCBs ord
    also confirm 4× 30kg hips in hand (12 active total).
 3. **+1 INA226 20A R002 module** — 0 spares (arm U12 ate the 4th; 4th now = L2). Same GODIYMODULES
    listing, ~$13.
+4. ✅ **M2.5 leg servo screws — ORDERED 2026-08-02** (~$18, 4 single-length button-head packs;
+   assortment kits carry no ×5 or ×14). ⬜ **The M2 case-mount screws are still open on the same
+   order** — ×40 M2×22 + ×8 M2×25, **countersunk self-tapping**. Not stocked on Amazon: self-tap
+   assortments stop near 16 mm and every 22 mm hit is a GB819 **machine** screw, which cannot grip
+   a coarse formed thread. ⚠️ Measure a stock STS3215 case screw first — M2×22 sits on **0.025 mm**
+   of bottoming margin against a back-solved column depth; the rule is `L_stock + printed floor`.
+5. 🔴 **Heat-set inserts — see §"Heat-set inserts" above for the buy list.** The 2026-08-02 order
+   covered the **OD 4.6 × 5.7** type (ruthex `B08BCRZZS3`), the short (`B09ZHSGHXD`) and the M2
+   (`B088QJG676`) — but **NOT the slim OD 4.0 × 6.0** that #255 introduced for the HFE block
+   retention (8 needed, and `coax_R` + `coax_hfe_block` are the next parts to print). A 4.6 insert
+   cannot travel the 4.4 mm mortise slot to reach its blind-end bore. Fallback: 4.0 × 4 at
+   SF ≈ 1.6–2.3 with an M3×14.
+   ⚠️ **Buy inserts by part code, not brand.** `B0CDH36ZMX` is "ruthex M3 **VORON** RX-M3x5x4" —
+   **OD 5.0**, same price, same brand, same search page, one row from the right part.
 
 **🟡 Verify on shelf (buy only if missing):**
 - ~~Thin solder 0.6-0.8mm~~ ✅ **closed 2026-08-01 — Sn63Pb37 1 mm 1.8 % flux core in hand** (see

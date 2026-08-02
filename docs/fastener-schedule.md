@@ -118,9 +118,9 @@ disc.** It resolves five joints at once, and it is the only number standing
 between "measured" and "assumed" in this whole table.
 
 ## Purchase summary (chassis/head/electronics)
-- **M3 SHCS**: ×4 **NYLON** M3×12 (head→bracket, breakaway), ×4 M3×12 (riser→flange), ×4 M3×16 (bracket→deck), ×2 M3×8 (adapter→crown), ×4 M3×10 (ears)
+- **M3 SHCS**: ×4 **NYLON** M3×12 (head→bracket, breakaway), ×4 M3×12 (riser→flange), ×4 **M3×8** (bracket→deck — ⚠ **CORRECTED 2026-08-02, this said M3×16**, contradicting both the row-23 detail above and `neck_bracket.scad` lines 28/61, which say M3×8 with `BASE_T = 4`. 4 mm base + 3.8 mm insert = 7.8 mm of usable depth; an M3×16 bottoms on the 2.3 mm deck floor or splits it), ×2 M3×8 (adapter→crown), ×4 M3×10 (ears)
 - **M3 CSK**: ×4 M3×10 (L2→adapter), ×4 M3×14 (shoulder flange feet → trunk floor, CR-8 #2), ×6 M3×10 (battery pocket → floor, AUD-11 heat-set fix — was ×6 M3×8 + M3 hex nut under AUD-1)
-- **M3 nyloc**: ×4 (bracket→deck), ×4 (shoulder flange feet, w/ washer)
+- **M3 nyloc**: ×4 (shoulder flange feet, w/ washer). ⚠ **The ×4 for bracket→deck was removed 2026-08-02 — obsolete.** The NO-DRILL fix of 2026-07-10 (row 23) replaced drill-at-assembly + nyloc-below with pressed M3×3.8 heat-sets; this line had not followed.
 - **M2 SHCS**: ×4 M2×8 (pod), ×4 M2×8 (deck-tie), ×4 M2×8 (clamp bar), ×2 M2×8 (OLED bracket foot), ×4 M2×6 (SSD1331)
 - **M2 nut**: ×4 (SSD1331)
 - ⚠️ **INSERT COUNT WAS CHASSIS-ONLY — corrected 2026-08-02.** The line below covered head/ears/riser and omitted every leg and shoulder insert. Counted off the CAD: **coax→block 8** (slim 4.0 OD, see the row above) · **femur→knee_arm 16** · **shoulder deck→plate 16** · **shoulder→trunk 16** · chassis 12 = **~68 M3 total**, against a documented 16.
@@ -128,6 +128,33 @@ between "measured" and "assumed" in this whole table.
 - ✅ **RECEIVED/INBOUND 2026-08-02 (order 111-2168015-0136233, $37.26):** the whole **M2.5 family** — ×100 M2.5×5, ×105 M2.5×6, ×100 M2.5×8, ×100 M2.5×14. Covers all 96 needed with ~4× spares. **Button-head, which is the better head here**: 1.5 mm tall in the wheel c'bore's 1.6 mm real depth sits flush, where a 2.5 mm SHCS head would stand 0.9 mm proud; the horn screws have no c'bore at all, so a lower head is free clearance. ⚠️ Still outstanding from the same BOM line: **M2×22 self-tap ×40 + M2×25 ×8** (servo case-mount) — a third of the 144 leg screws, and what actually holds the servos in.
 - **Ruthex inserts**: M3×5.7 ×16 (head 4, ears 4, riser flange 4, + spares), M3×3.8 ×8 (adapter 2, battery pocket 6 — AUD-11 fix), M2×4 ×14 (pod 4, deck-tie 4, clamp bar 4, OLED-bracket-in-pod-deck 2)
 - **E-stop**: HB2-ES544 (Ø22, owned)
+
+## Purchase summary (leg_v6 STRUCTURAL screws + ALL heat-set inserts) — ADDED 2026-08-02
+
+The two summaries either side of this one leave a hole. The chassis one is scoped
+"(chassis/head/electronics)"; line 38 says leg fasteners are "not re-listed here"; and the leg one
+below covers **servo screws only**. So the leg's own structural M3s and — more seriously — **every
+heat-set insert in the leg** appeared in no buy list anywhere, while the leg is what prints first.
+Counted from the CAD loops, not from a summary.
+
+**Heat-set inserts, whole robot:**
+
+| Insert | Leg | Chassis/head | Total | Buy |
+|---|---|---|---|---|
+| **M3×5.7** | **56** — `shoulder.scad` 16/part ×2 (plate bores `sx×PLATE_BX×PLATE_BY`=8, trunk-flange 4, D456 pads 4) · `femur.scad` 4/part ×4 (`hx[65,75]×hy[±8]`) · `coax.scad` 2/part ×4 (`BOLT_YS`) | 16 | **72** | **100** |
+| **M3×3.8** | 8 — shoulder `NECK_HS_XY` 4/part ×2 | 8 — l2_adapter 2, battery pocket 6 | **16** | **25** |
+| **M2×4** | 0 | 14 | **14** | **25** |
+
+A botched press wrecks the insert and sometimes the part, so buy 50-packs; spares are not optional.
+
+**Leg structural M3 (lengths computed 2026-08-02 — no length existed anywhere before):**
+
+| Screw | Qty | Stack |
+|---|---|---|
+| **M3×8 SHCS** | 32 | `knee_arm`→femur shelf ×16 (4/leg): `ARM_THK` 4.0 − 1.8 c'bore = **2.2 grip** + 5.7 insert = 7.9 → 8. `shoulder_plate`→shoulder deck ×16 (4/plate × 4 plates): flange 3.2 − 1.8 c'bore = **1.4 grip** + 5.7 = 7.1 → 8 |
+| **M3×22 SHCS** | 8 | coax option-C block retention, 2/leg — already in the leg table above (#226) |
+
+Both are first-article-verifiable: seat a screw and check it neither bottoms nor stands proud.
 
 ## Purchase summary (leg_v6 servo screws, MEASURED 2026-07-11 — 12 active servos: 4 HAA + 4 HFE + 4 KFE)
 - **M2 self-tap (case-mount)**: ×40 M2×22 (HAA×16 + KFE×16 + HFE-near×8), ×8 M2×25 (HFE-far pair only, ramped floor — longer to span the +4.4mm ramp; NOT longer than 25 or it bottoms the ~19.9mm column)
