@@ -151,8 +151,8 @@ A botched press wrecks the insert and sometimes the part, so buy 50-packs; spare
 
 | Screw | Qty | Stack |
 |---|---|---|
-| **M3×8 SHCS** | 32 | `knee_arm`→femur shelf ×16 (4/leg): `ARM_THK` 4.0 − 1.8 c'bore = **2.2 grip** + 5.7 insert = 7.9 → 8. `shoulder_plate`→shoulder deck ×16 (4/plate × 4 plates): flange 3.2 − 1.8 c'bore = **1.4 grip** + 5.7 = 7.1 → 8 |
-| **M3×22 SHCS** | 8 | coax option-C block retention, 2/leg — already in the leg table above (#226) |
+| **M3×8 SHCS** | 32 | `knee_arm`→femur shelf ×16 (4/leg): `ARM_THK` 4.0 − 1.8 c'bore = **2.2 grip** + 5.7 insert = 7.9 → 8. `shoulder_plate`→shoulder deck is **M3×6, not M3×8** — measured off the mesh 2026-08-02, an M3×8 **bottoms by 0.42 mm**. My 7.1 → 8 above was arithmetic on constants; the measurement wins |
+| **M3×16 SHCS** | 10 | coax option-C block retention, 2/leg (#226). ⚠️ **This row said M3×22 until 2026-08-02 — that BOTTOMS OUT.** #235 moved `MORT_X0` 43.8 → 46.4 and the insert pocket rides it, so usable span is **16.8 mm, not 19.5**; M3×22 bottoms 5.2 mm early and M3×20 3.2 mm early, in a **blind** pocket. Now gated by `fastener_span_checks()` |
 
 Both are first-article-verifiable: seat a screw and check it neither bottoms nor stands proud.
 
