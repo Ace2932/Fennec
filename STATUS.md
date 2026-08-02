@@ -177,16 +177,33 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
 | #3 | "LE_NOVA ECC bundle" | **CLOSED** (not merged — triaged away) |
 | #13 · #14 · #17 | power board routed · docs/review hub · firmware boot-settle | **MERGED** |
 
-Currently open PRs are the leg_v6 HFE-joint set (**#232 / #233 / #234**) — CAD, unrelated to the
-boards.
+~~Currently open PRs are the leg_v6 HFE-joint set (#232 / #233 / #234)~~ — stale. As of 2026-08-02:
+**#256** (aerosol defluxer) · **#254** (fasteners into the BOM) · **#253** (shoulder_plate handedness
++ print orientation) · **#250** (cable_clip count) — all docs-only; plus **#233** (CAD), **#189**
+(firmware CI), **#123** (sim). #232 and #234 are closed.
 
-## ⏭️ Next actions (rewritten 2026-07-31 — items 1–3 above are done)
+## ⏭️ Next actions (rewritten 2026-08-02 — items 1–3 were stale, all three are done)
 
-1. **Check the solder drawer.** Diameter *and* alloy. Blocks every stage. (§ the 🔴 block at top.)
-2. **Solder, per `BUILD_PLAN.md` stages 0–10.** Stage 0 is a bare-board short test — do not skip it.
-3. **Run the preheat bench test at stage 4** (`BUILD_PLAN.md` §2a): TS-C4, Kungber at **24.0 V**
-   (the Pinecil V2's ceiling — it is a 30 V supply, so dial it down and confirm), tip 400 °C, on
-   `U1.4`. Wets in ≤3–4 s → no preheater needed. Only buy the IR station if it fails.
+1. ~~Check the solder drawer~~ ✅ **DONE 2026-08-01 — Sn63Pb37, 1 mm, 1.8 % flux core.** Leaded, so
+   every *leaded* setpoint in `BUILD_PLAN.md` §2a is the live one and nothing shifts +30 °C.
+   Eutectic ⇒ **shiny is the correctness criterion.**
+2. **Solder, per `BUILD_PLAN.md` stages 0–10.** ✅ **Stage 0 PASSED** (per-board, not per-design)
+   · ✅ **Stage 1 DONE 2026-08-02** (15 power 0603 + 3 logic 1k).
+   🔴 **Next: the before-stage-2 gate — meter the trip network from the EMPTY `U8` land**
+   (`BUILD_PLAN.md` §6). `8→3` must read 11.3k and `8→5` 12.1k, and **`8→3` must be the LOWER of
+   the two**. It is the direct test for an `R4`/`R6` swap, which otherwise hard-cuts the robot at
+   13.0 V *before* the 12.5 V warning and never announces itself. Easy only while `U8`/`Q2`–`Q4`
+   are unpopulated.
+   ⚠️ **Stage 1's own clean → inspect gate has not run** — the flux is no-clean and its residue is
+   glossy, so "shiny" is unreadable until the board is cleaned, and the cleaner (MG Chemicals 4140
+   aerosol defluxer) was only ordered 2026-08-02. Clean and inspect stage 1 when it lands, before
+   stage 2 buries those pads under SOT-23s.
+3. ~~Run the preheat bench test~~ ✅ **RUN 2026-08-01, PASSED — do NOT buy a preheater.** `U1.4` wet
+   in ~2 s with solder through to the far face; `Q1.3` (14 A GND inject, the worst THT pad on the
+   board) easy and **shiny on both faces**. TS-C4, Kungber 24.0 V (~88 W), tip 400 °C. Consequence:
+   every XT30/XT60 and `SW1.2` is the same or easier — stop treating high-current THT as the risk.
+   The one joint it did **not** model is `L1` (SMD, plane-tied both sides, no barrel); if it
+   fights, the answer is the **420 °C boost, not a purchase**.
 4. **Decide the Q1 SOA question before the first pack hot-plug** (§ the 🔴 block at top). Three
    options, no scope required for the first two:
    - First power-on is already from the **current-limited bench supply at 0.5 A**

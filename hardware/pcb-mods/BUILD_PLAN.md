@@ -457,7 +457,7 @@ minimum: bottom SMD, then top SMD, then THT.
 | stage | side | what | why here |
 |---|---|---|---|
 | **0** | — | ✅ **DONE 2026-08-01** — bare-board: continuity `VBAT`↔`VBAT_PROTECTED` open (SW1 not fitted), no `VBAT`–`GND` short | Cheapest possible fault-find. A plane short after 33 THT parts is a nightmare. ⚠️ Applies to **the board it was run on** — five of each were ordered, so if the meter went on a spare rather than the build board, this is not carried over. Re-run on the actual build board before stage 1 if in doubt; it costs one minute. |
-| **1** | **B** | Bottom 0603: R2–R9, R11–R16, C7 (+ logic R3–R5) | Smallest, flattest, most numerous, and all on one face — do them in one sitting with the top still bare. |
+| **1** ✅ **DONE 2026-08-02** (15 power 0603 + 3 logic 1k) | **B** | Bottom 0603: R2–R9, R11–R16, C7 (+ logic R3–R5) | Smallest, flattest, most numerous, and all on one face — do them in one sitting with the top still bare. |
 | **2** | **B** | Q2–Q4 (SOT-23) | Same face, still small, still cold. |
 | **3** | **B** | U8 (SOIC-8) — and U7 (SOIC-14) on the logic board | Fine-pitch, wants flux + drag or wick. Before anything tall spoils the iron angle. **The stage most likely to want hot air for a bridge.** |
 | **4** | **B** | **L1** (12×12 SMD inductor) | Last of the bottom SMD. Plane-tied both sides → fat tip. Last stage where the top face is bare, so the last one a *contact* plate could serve (§2). |
@@ -645,6 +645,31 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
 - After **stage 0** — no `VBAT`–`GND` short. ✅ **PASSED 2026-08-01** (run in a
   separate session; result reported, not observed here). Per-board, not per-design
   — see the stage 0 row in §3.
+- 🔴 **BEFORE stage 2 — meter the trip network from the EMPTY `U8` land.** This is the
+  only moment it is easy: `U8`, `Q2`–`Q4` and the UBEC are all unpopulated, so the
+  divider is isolated and every node is exposed on a bare SOIC-8 footprint. Stage 3
+  covers all eight probe points permanently.
+
+  Pads, read out of `nova_pcb_v6_power_v2.kicad_pcb` (not copied from a note):
+  `1=BATT_LOW 2=VSENSE 3=VREF_G 4=GND 5=VREF_H 6=VSENSE 7=HARDCUT 8=V5_AUX`.
+  `R4` 11.3k sits `V5_AUX`↔`VREF_G`; `R6` 12.1k sits `V5_AUX`↔`VREF_H`. So:
+
+  | probe | expect |
+  |---|---|
+  | `8 → 3` | **11.3k** (`R4`) |
+  | `8 → 5` | **12.1k** (`R6`) |
+
+  **The decisive check is that `8→3` reads LOWER than `8→5`** — do not rely on the
+  absolute values alone. Both nets carry a lower leg to GND (`R5` 10k on `VREF_G`,
+  `R7` 10k on `VREF_H`) plus `R15` 1M / `R14` 470k, so each reading can sit a little
+  under its nominal and *both* will still look plausible if the parts are swapped. The
+  ordering will not. If it is ambiguous, meter `R4` and `R6` across their own pads —
+  that is immune to the topology.
+
+  **Why it matters:** `R4`/`R6` set the two comparator references. Swapped, the board
+  **hard-cuts at 13.0 V *before* the 12.5 V warning ever fires** — it just shuts down
+  early, forever, and never announces why. They are the only 1 % parts in the stage-1
+  reel and they are adjacent values.
 - After **stage 4** — reflow-quality check on L1 and both SOICs before tall
   parts block the view. Wick any bridge now.
 - After **stage 9**, before **stage 10** — this is the last moment the board is
