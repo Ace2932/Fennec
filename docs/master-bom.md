@@ -139,7 +139,7 @@ The ✅-ordered M3/M4/M5/M6 stainless kit **starts at M3 — zero overlap.** Len
 | Screw | Qty | For | Status |
 |---|---|---|---|
 | **M3×8 SHCS** | **38** → buy 50 | **computed 2026-08-02, was unsourced:** `knee_arm`→femur shelf 16 (4/leg: 4.0 arm − 1.8 c'bore = 2.2 grip + 5.7 insert = 7.9) · `shoulder_plate`→deck 16 (4/plate: 3.2 flange − 1.8 c'bore = 1.4 grip + 5.7 = 7.1) · neck_bracket→deck 4 · l2_adapter→crown 2 | ⬜ ORDER (check the Fgruh kit first) |
-| M3×22 SHCS | 8 | coax option-C block retention, 2/leg (#226) | ⬜ ORDER |
+| **M3×16 SHCS** | **10** | coax option-C block retention, 2/leg (#226). ⚠️ **CORRECTED 2026-08-02 — this row said M3×22, which BOTTOMS OUT.** `#235` moved `MORT_X0` 43.8 → 46.4 and the insert pocket rides it, so the pocket travelled 2.6 mm outboard and nothing re-measured. Re-measured: head seat x=57.0, pocket bottom x=40.2 → usable span **16.8 mm**, not 19.5. M3×22 bottoms 5.2 mm early and M3×20 3.2 mm early, in a **blind** pocket — the head never seats, no preload, and torquing jacks the block off the mortise or strips the insert. M3×16 gives 5.35 mm into the 5.7 mm insert. **M3×14 is a usable interim (owned); M3×20 must NEVER go in.** Now gated by `fastener_span_checks()` in `check_fit.py` (#252) | 🔴 **ORDER** |
 | M3×12 SHCS | 4 | riser → shoulder flange | ⬜ ORDER |
 | **NYLON** M3×12 | 4 | head → neck bracket, #42 breakaway fuse | ⬜ ORDER |
 | **NYLON** M3×10 | 25 pk | breakaway fuses (backlog #2) — L2-mast flange 4 + D456 row 4 | ⬜ ORDER |
