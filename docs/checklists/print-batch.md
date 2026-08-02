@@ -289,9 +289,48 @@ Every insert site depth-probed in the built STLs:
 
 ## 4. Wave 1 — first article (~450 g, doctrine: before batching)
 
+**PA6-CF progress 2026-08-02 — printed: `strap` ×1, `shoulder_plate` ×2,
+`knee_arm` ×1.** Each carries a first-article check written into its own `.scad`
+header; do these before printing any more of them:
+
+- [ ] **`knee_arm` + `shoulder_plate` — probe the horn counterbore floor.**
+      LA-23: `ARM_THK` 4.0 − `HORN_CTR_DEEP` 2.5 leaves **exactly 1.5 mm**, the
+      print-margin gate's minimum with zero slack. Measure it, and check for a
+      witness mark or pinhole from a thin top layer. `ARM_THK` is shared across
+      every arm plate on the leg, so this one number validates the pattern.
+- [ ] **`shoulder_plate` — test-fit an M3 through the Ø3.1 dowel pair.** LA-26:
+      FDM commonly undersizes small holes 0.1–0.3 mm. If it is tight, **bump
+      `PLATE_BX`/`PLATE_BY` to 3.2–3.3 in the file** — do not drill the part.
+- [ ] **`strap` — check a zip tie passes the Ø3.2 bores at ±15.60**, and that
+      the 1.44 mm wall to the plate's outer edge did not blow out. Same
+      undersize risk, and this wall is the thin one.
+- [ ] **`shoulder_plate` — which side did you print?** **1 dot = RIGHT,
+      2 dots = LEFT** (LA-2, front face, x±45, dots 20 mm apart in z). The part
+      is `print 2 + 2` — one per leg, 2 R and 2 L — so two R plates covers both
+      right legs but leaves the left legs unserved.
+- [ ] **`shoulder_plate` material was INFERRED, not sourced (#184).** The file
+      says so: nothing in it states a material and PA6-CF was inferred from
+      knee_arm. If it went down in PA6-CF, that inference is now a decision —
+      record it in the header and close #184.
+
+⚠️ **`strap` count is ambiguous and 4 is probably wrong.** Its header says
+"print 4+ per robot", but **two parts carry strap bores**: `tibia.scad:144`
+(`strap_pilot_neg(31, …)`) and `coax.scad:463` (the front zip-tie bores) —
+femur has none. That is **2 per leg = 8 per robot**, not 4. Resolve before
+batching them.
+
 - [ ] 1× RIGHT leg set (coax_R, femur_R, tibia_R, knee_arm), 1× shoulder,
       1× shoulder_plate pair, 1× shoe, 1× skid_rail, ~~2× cable_clip~~,
       1× knee_bumper, 1× strap
+      — **still outstanding on this line: `coax_R`, `coax_hfe_block`,
+      `femur_R`, `tibia_R`, `shoulder`.** Sliced 2026-08-02 for real numbers
+      (`slice_plate.py`, PA6-CF, §2 settings): `coax_hfe_block` **5.5 g /
+      25 min** · `coax_R` **30.8 g / 1 h 35** (supports + brim) · `femur_R`
+      **56.4 g / 2 h 33** · `tibia_R` **66.4 g / 3 h 09** (at its 25 % infill)
+      → **≈159 g and ~7 h 40** for the four. `shoulder` cannot be sliced yet —
+      its orientation is documented as "rear face down" with no axis, and the
+      measured faces disagree with the obvious reading (+Z 7880 mm² vs +Y 772),
+      so that decision comes first.
       — ⚠️ the TPU items here are **already printed in batch** (shoe ×5,
       skid_rail ×2, knee_bumper ×5, **cable_clip ×27**), so for those the
       first-article step is spent. What it would have caught is now a fit check
