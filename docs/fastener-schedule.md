@@ -124,7 +124,18 @@ between "measured" and "assumed" in this whole table.
 - **M2 SHCS**: ×4 M2×8 (pod), ×4 M2×8 (deck-tie), ×4 M2×8 (clamp bar), ×2 M2×8 (OLED bracket foot), ×4 M2×6 (SSD1331)
 - **M2 nut**: ×4 (SSD1331)
 - ⚠️ **INSERT COUNT WAS CHASSIS-ONLY — corrected 2026-08-02.** The line below covered head/ears/riser and omitted every leg and shoulder insert. Counted off the CAD: **coax→block 8** (slim 4.0 OD, see the row above) · **femur→knee_arm 16** · **shoulder deck→plate 16** · **shoulder→trunk 16** · chassis 12 = **~68 M3 total**, against a documented 16.
-- **ON ORDER 2026-08-02:** M3 × 4.6 OD × 5.7 (Ruthex or equiv) **×100** · M3 × **4.0 OD × 6.0** (slim, HFE block only) **×25** · M3×16 SHCS **×20** · **M3×8 ×25** (knee_arm) · **M3×6 ×25** (shoulder_plate). ⚠️ Both corrected 2026-08-02 after `engagement_checks()` measured the head seat instead of the bbox top — the first pass said ×10 and ×8, and both bottom out.
+- ✅ **ORDERED 2026-08-02:** M3 × 4.6 OD × 5.7 (ruthex `B08BCRZZS3`) **×100** · M3 short
+  RX-M3Sx4.0 (`B09ZHSGHXD`) ×100 · M2 × 4 (`B088QJG676`) ×70.
+- 🔴 **NOT ORDERED — this line said "ON ORDER" and that was wrong** (corrected 2026-08-02;
+  `master-bom.md` had it right and the two disagreed, in the direction where you read
+  "ordered" and never place it): M3 × **4.0 OD × 6.0** (slim, HFE block only) **×25** ·
+  **M3×16 SHCS ×20** · **M3×8 ×25** (knee_arm) · **M3×6 ×25** (shoulder_plate).
+  The slim insert **did not exist** until #255 merged, which was the same day the order
+  went out — so it could not have been on it. The three screw lengths were never placed.
+  ⚠️ Two of these gate the next assembly: `coax_R` + `coax_hfe_block` are the next parts
+  to print, and that joint needs the slim insert **and** M3×16. Lengths corrected the same
+  day after `engagement_checks()` measured the head seat instead of the bbox top — the
+  first pass said ×10 and ×8, and both bottom out.
 - ✅ **RECEIVED/INBOUND 2026-08-02 (order 111-2168015-0136233, $37.26):** the whole **M2.5 family** — ×100 M2.5×5, ×105 M2.5×6, ×100 M2.5×8, ×100 M2.5×14. Covers all 96 needed with ~4× spares. **Button-head, which is the better head here**: 1.5 mm tall in the wheel c'bore's 1.6 mm real depth sits flush, where a 2.5 mm SHCS head would stand 0.9 mm proud; the horn screws have no c'bore at all, so a lower head is free clearance. ⚠️ Still outstanding from the same BOM line: **M2×22 self-tap ×40 + M2×25 ×8** (servo case-mount) — a third of the 144 leg screws, and what actually holds the servos in.
 - **Ruthex inserts**: M3×5.7 ×16 (head 4, ears 4, riser flange 4, + spares), M3×3.8 ×8 (adapter 2, battery pocket 6 — AUD-11 fix), M2×4 ×14 (pod 4, deck-tie 4, clamp bar 4, OLED-bracket-in-pod-deck 2)
 - **E-stop**: HB2-ES544 (Ø22, owned)
@@ -151,7 +162,7 @@ A botched press wrecks the insert and sometimes the part, so buy 50-packs; spare
 
 | Screw | Qty | Stack |
 |---|---|---|
-| **M3×8 SHCS** | 32 | `knee_arm`→femur shelf ×16 (4/leg): `ARM_THK` 4.0 − 1.8 c'bore = **2.2 grip** + 5.7 insert = 7.9 → 8. `shoulder_plate`→shoulder deck is **M3×6, not M3×8** — measured off the mesh 2026-08-02, an M3×8 **bottoms by 0.42 mm**. My 7.1 → 8 above was arithmetic on constants; the measurement wins |
+| **M3×8 SHCS** | 16 | `knee_arm`→femur shelf ×16 (4/leg): `ARM_THK` 4.0 − 1.8 c'bore = **2.2 grip** + 5.7 insert = 7.9 → 8. `shoulder_plate`→shoulder deck is **M3×6, not M3×8** — measured off the mesh 2026-08-02, an M3×8 **bottoms by 0.42 mm**. My 7.1 → 8 above was arithmetic on constants; the measurement wins |
 | **M3×16 SHCS** | 10 | coax option-C block retention, 2/leg (#226). ⚠️ **This row said M3×22 until 2026-08-02 — that BOTTOMS OUT.** #235 moved `MORT_X0` 43.8 → 46.4 and the insert pocket rides it, so usable span is **16.8 mm, not 19.5**; M3×22 bottoms 5.2 mm early and M3×20 3.2 mm early, in a **blind** pocket. Now gated by `fastener_span_checks()` |
 
 Both are first-article-verifiable: seat a screw and check it neither bottoms nor stands proud.
