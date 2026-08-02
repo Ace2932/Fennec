@@ -122,6 +122,24 @@ WHEEL_CTR_D    = 9.5;  // idler-side center relief: clears the wheel's raised
                         // Ø9.5 = 8.8 + 0.7 clearance (room for PA6-CF shrink);
                         // relief r4.75 keeps ~0.8mm wall to the r7 BCD holes.
                         // The idler has NO retention screw — boss clearance only.
+WHEEL_HEAD_CB_DEEP = 2.4;
+                     // Wheel-screw head counterbore, DEEPENED 1.6 -> 2.4 on
+                     // 2026-08-02. This is the only lever on the weakest
+                     // fastener on the leg: engagement_checks() measured the
+                     // M2.5x8 wheel screws with 0.76mm of thread (0.30xD) in a
+                     // ~2.1mm disc. Length cannot fix it -- a longer screw
+                     // bottoms in the disc -- but engagement = length - GRIP,
+                     // and grip is what the counterbore sets. 0.8mm deeper =
+                     // 0.8mm more thread, same screw: 0.76 -> 1.56mm (0.62xD).
+                     // Deliberately +0.8 and not +1.0: the 2.1mm disc figure is
+                     // measured off servo.stl, and the TAPPED depth inside it is
+                     // not known, so this keeps 0.54mm of margin against
+                     // bottoming. FIRST-ARTICLE: check the disc's real thread
+                     // depth; if the holes are through, +1.2 is available.
+                     // ONLY the HFE and KFE wheels use this module -- the HAA
+                     // wheel is cut in shoulder.scad with its own 1.8 c'bore and
+                     // already has 1.40mm, so it must NOT be deepened (2.4mm
+                     // engagement into a 2.1mm disc would bottom).
 WHEEL_CTR_DEEP = 2.5;   // relief depth from the wheel-seat face (boss face);
                         // clears the ~1.0mm-proud hub with margin
 HEATSET_D  = 4.0;    // Ruthex M3 insert BORE — insert OD is 4.6, bore must
@@ -131,6 +149,47 @@ HEATSET_D  = 4.0;    // Ruthex M3 insert BORE — insert OD is 4.6, bore must
                      // femur_?.stl + shoulder.stl on disk had NO insert
                      // bores (chassis-lane catch; STLs rebuilt).
 HEATSET_L  = 6.2;    // bore depth: 5.7 insert + 0.5 seat
+
+// --- #226 HFE mortise/tenon + its retention inserts -------------------------
+// HOISTED HERE 2026-08-02. coax.scad and coax_hfe_block.scad each carried an
+// independent copy of MORT_*/CLR_TENON/BOLT_*, and the block builds its tenon
+// from its copies. Changing the mortise in one file and not the other does not
+// error -- it silently produces a tenon that rattles in its slot, which is the
+// interface that carries the whole joint moment in bearing. One definition.
+MORT_X0     = 46.4;   MORT_Y0 = 0.0;    MORT_Z0 = 9.5;
+MORT_Y1     = 23.2;   MORT_Z1 = 13.9;   // 4.4 mm tall -- see BLOCK_INSERT_OD
+MORT_RIB_Y0 = 10.1;   MORT_RIB_Y1 = 13.1;   // central rib: halves the floor span
+CLR_TENON   = 0.15;
+BOLT_YS     = [5.0, 18.0];
+BOLT_Z      = 11.7;   // CENTRED in the 9.5..13.9 slot (was 11.5, which left the
+                      // insert 2.0mm to the floor = exactly its own radius, i.e.
+                      // ZERO delivery clearance -- insert_path_checks measured
+                      // 4.00mm clear for a 4.0mm insert. Centring gives 0.2/side.
+
+// The block's retention inserts are a DIFFERENT PART from every other heat-set
+// on this robot, and deliberately so.
+//
+// MEASURED 2026-08-02: the mortise slot an insert must travel down to reach its
+// bore was 4.00 mm tall, and the 4.6 mm-OD insert used everywhere else is
+// 4.6 mm. It could not be delivered -- a valid seat with no path to it, the
+// same failure that retired the inboard cap on this very joint. The heat-set
+// gate passed throughout because it casts a RAY to check the bore is reachable;
+// a ray has no diameter.
+//
+// Fixing it by growing the slot to 5.0 for a 4.6 insert leaves the mortise roof
+// at 1.50 mm -- exactly MIN_SECTION_MM, zero margin -- and any more forces
+// GROW_Z1 up, which coax.scad records as HITTING THE SHOULDER at haa -40.
+// A slimmer, LONGER insert buys the clearance back for free: pull-out goes as
+// pi*D*L, so 4.0 x 6.0 = 75 mm^2 against 4.6 x 5.7 = 82 mm^2 -- 92 % of the
+// strength for a 0.4 mm slot growth instead of 1.0, and the roof stays 2.10.
+// Everywhere else on the robot keeps the 4.6 insert: those bores sit in open
+// material with no delivery constraint, and femur_?.stl is ALREADY PRINTED
+// with the 4.0 bore that suits it.
+BLOCK_INSERT_OD = 4.0;   // slim M3 heat-set, 6.0 long (NOT the 4.6 used elsewhere)
+BLOCK_INSERT_L  = 6.0;
+BLOCK_HEATSET_D = 3.5;   // bore for a 4.0 OD insert (0.25 mm/side interference)
+BLOCK_HEATSET_L = 6.5;   // 6.0 insert + 0.5 seat
+BLOCK_SLOT_CLR  = 0.2;   // per side, insert OD -> mortise height
 WALL       = 3.2;
 FLOOR      = 2.5;    // NOMINAL seat-to-exterior (FLOOR_TOP->FLOOR_BOT). #67
                      // (2026-07-12): the connector-bay void cuts 0.375 BELOW
@@ -296,7 +355,7 @@ module wheel_couple_neg() {
         for (a = [45 : 90 : 315])
             rotate([0, 0, a]) translate([HORN_BCD/2, 0, 0]) {
                 cylinder(d = M25_CLEAR, h = h_all);
-                cylinder(d = 5.2, h = 1 + 1.6);   // head counterbore
+                cylinder(d = 5.2, h = 1 + WHEEL_HEAD_CB_DEEP);   // head c'bore
             }
         // #51 (2026-07-11): NO center screw hole on the wheel/idler side —
         // the idler has no retention screw (rev 3), so a center M25_CLEAR
