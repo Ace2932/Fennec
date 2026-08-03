@@ -117,7 +117,8 @@ seat is a cone.
 | M3×14 CSK ×100 | `B0CQ4YH87R` | shoulder flange feet → trunk floor (4) |
 | Nylon M3 kit 330 pc | `B0DKND2824` | breakaway fuses — ×12 (10) and ×10 (10) |
 | M2 CSK self-tap kit ×2 | `B09DB5SMCZ` | 60× M2×8 + 60× M2×12 body-mount |
-| uxcell M3 OD 4.0 × L 4.0 ×50 | `B07LBQS9W3` | slim insert, HFE block (8) |
+| uxcell M3 OD 4.0 × **L 6.0** ×50 | **`B07R9SP532`** | slim insert, HFE block (8) — ✅ the RIGHT part, full 75.4 mm² |
+| ~~uxcell M3 OD 4.0 × L 4.0 ×50~~ | `B07LBQS9W3` | ⚠️ 2 mm short → 50.3 mm², SF 1.6–2.3. Fallback only |
 
 ⚠️ **Two gates before any of it enters a servo.**
 
@@ -248,10 +249,10 @@ actually consumes.
 | Part | Qty | For | Status |
 |---|---|---|---|
 | **M3 heat-set, 4.6 mm OD × 5.7** (Ruthex or equivalent) | **100** | femur→knee_arm 16 · shoulder→plate 16 · shoulder→trunk 16 · chassis 12 = ~60 + spares. **`femur_?.stl` is already printed with the Ø4.0 bore this insert wants** | ✅ **ORDERED 2026-08-02** — ruthex `B08BCRZZS3`, 100 pc |
-| **M3 heat-set, 4.0 mm OD × 6.0** (slim) | **25** | **HFE block retention only** (8 needed). A 4.6 insert cannot travel the 4.4 mm mortise slot to reach its bore — see `fastener-schedule.md`. ⚠️ 4.0 OD in a **6 mm length** is less common than the 4 mm; if unavailable, 4.0 × 4 works at SF ≈ 1.6–2.3 with an M3×14 | ✅ **ORDERED 2026-08-03** — uxcell `B07LBQS9W3`, OD 4.0 × **L 4.0** ×50 (the sanctioned fallback; no L6.0 exists to buy) |
+| **M3 heat-set, 4.0 mm OD × 6.0** (slim) | **25** | **HFE block retention only** (8 needed). A 4.6 insert cannot travel the 4.4 mm mortise slot to reach its bore — see `fastener-schedule.md`. ✅ **THE L6.0 PART EXISTS — found 2026-08-03: uxcell `B07R9SP532`, "M3 x 6mm(L) x 4mm(OD)", M3×0.5, 50 pcs.** The earlier "no L6.0 exists to buy" was a search failure, not a fact. Full 6.0 gives **75.4 mm², SF 2.4–3.4** — the number the design always assumed. | ⬜ **ORDER `B07R9SP532`.** The already-ordered `B07LBQS9W3` is the same OD but only **L 4.0** → 50.3 mm², SF 1.6–2.3: a usable fallback, not the right part. ⚠️ 4.0 OD is NON-STANDARD for M3 and IS the standard M2.5 OD — **check the thread on arrival.** |
 | **M3×8 SHCS** | **25** | knee_arm → femur shelf (16 needed). ⚠️ NOT M3×10 — that bottoms in the 6.2 mm bore | ✅ **COVERED** — owned kit has 35× M3×8 socket head; the 32 *wheel* screws come from the ordered M3×8 **button** pack `B08H2HTTRT` |
 | **M3×6 SHCS** | **25** | shoulder_plate → deck (16 needed). ⚠️ NOT M3×8 — bottoms by 0.42 mm | ✅ **COVERED** — owned kit has 35× M3×6 socket head (deck job needs 16); horn positions have no counterbore so socket head serves |
-| **M3×16 SHCS** | **20** | HFE block retention (8 needed). M3×20 **bottoms out** in the blind pocket; M3×14 is the short interim | ✅ **ORDERED 2026-08-03** — iexcell `B089MDDJMZ` ×100, socket cap. ⚠️ NOT the flat-head M3×16 (`B0CR6FZBYB`) — the block's seat is a cylindrical Ø6.0 c'bore and needs a flat-bottomed head |
+| **M3×16 SHCS** | **20** | HFE block retention (8 needed). Engages **5.2 mm of the 6.0 insert = 1.73×D**; M3×20 **bottoms out** in the blind pocket | ✅ **ORDERED 2026-08-03** — iexcell `B089MDDJMZ` ×100, socket cap. ⚠️ NOT the flat-head M3×16 (`B0CR6FZBYB`) — the block's seat is a cylindrical Ø6.0 c'bore and needs a flat-bottomed head |
 | M3×3.8 short insert | 10 | neck bracket → shoulder deck (front only) | ✅ **ORDERED 2026-08-02** — ruthex `B09ZHSGHXD` (RX-M3Sx4.0; ruthex's short is **4.0**, docs say 3.8, pockets are 4.2 deep so it fits) |
 | M2×4 insert | 20 | pod, deck-tie, clamp bar, OLED bracket | ✅ **ORDERED 2026-08-02** — ruthex `B088QJG676`, 70 pc |
 

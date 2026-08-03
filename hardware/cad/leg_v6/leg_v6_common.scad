@@ -197,6 +197,11 @@ BLOCK_INSERT_OD = 4.0;   // slim M3 heat-set, 6.0 long (NOT the 4.6 used elsewhe
 BLOCK_INSERT_L  = 6.0;
 BLOCK_HEATSET_D = 3.5;   // bore for a 4.0 OD insert (0.25 mm/side interference)
 BLOCK_HEATSET_L = 6.5;   // 6.0 insert + 0.5 seat
+// The OD-4.0 x 6.0 M3 insert is SOURCED: uxcell B07R9SP532 (M3x0.5). Note 4.0 is
+// NON-STANDARD for M3 -- the industry table is hole 4.0 / OD 4.6 / wall 0.95, and
+// OD 4.0 is the M2.5 row -- so CHECK THE THREAD on arrival, not just the OD.
+// NB that table's recommended hole for a 4.0 OD is 3.7; 3.5 here is deliberately
+// tighter (0.25 vs 0.15 mm/side) and is what the printed parts already carry.
 BLOCK_SLOT_CLR  = 0.2;   // per side, insert OD -> mortise height
 WALL       = 3.2;
 FLOOR      = 2.5;    // NOMINAL seat-to-exterior (FLOOR_TOP->FLOOR_BOT). #67

@@ -1113,10 +1113,20 @@ BLOCK_HEATSET_D = 3.5
 BLOCK_HEATSET_L = 6.5
 BLOCK_INSERT_OD = 4.0
 
-#: Insert LENGTH actually ordered. 🔴 Was 6.0 -- the length the joint was designed
-#: around -- but no such part exists (see INSERT_STD_OD below), and the part on the
-#: shelf is 4.0 long. Two thirds of the designed pull-out area.
-BLOCK_INSERT_L  = 4.0
+#: SOURCED 2026-08-03: uxcell B07R9SP532, "M3 x 6mm(L) x 4mm(OD)", M3x0.5, 50pcs.
+#: This is EXACTLY the dimension the joint was designed for, and finding it
+#: retired a switch to M2.5 that was already half-implemented on the strength of
+#: "4.0-OD M3 does not exist". It does; it is simply NON-STANDARD (the industry
+#: table puts M3 at OD 4.6), which is a reason to name the part, not to assume it
+#: is unavailable. See insert_sourcing_checks.
+BLOCK_INSERT_L  = 6.0
+BLOCK_THREAD    = 'M3'
+#: Nominal major diameter of BLOCK_THREAD, for the 1xD engagement floor.
+BLOCK_THREAD_D  = 3.0
+#: A specific, orderable part for the NON-STANDARD OD above. The gate requires
+#: this to be non-empty precisely because the OD is off-standard: an unusual
+#: dimension is allowed, an unusual dimension nobody has sourced is not.
+BLOCK_INSERT_SOURCE = 'uxcell B07R9SP532 (M3 x 6mm L x 4mm OD, M3x0.5, 50pcs)'
 
 #: Standard heat-set insert OD by thread size, from the industry dimension table
 #: (Albany County Fasteners, and it agrees with ruthex / Adafruit / McMaster):
@@ -1127,19 +1137,21 @@ BLOCK_INSERT_L  = 4.0
 #:      M3       4.0     4.6    4-6 mm         0.95
 #:      M4       5.3     6.0    5-8 mm         1.25
 #:
-#: WHY THIS TABLE IS IN A GATE (2026-08-03). `docs/fastener-schedule.md` specified
-#: a "SLIM M3 heat-set: 4.0 mm OD x 6.0 long" for this joint, chosen because 4.0 is
-#: what fits down the 4.4 mm mortise slot. **No such part exists.** OD 4.0 is the
-#: M2.5 row exactly; the M3 row is 4.6, an M3 thread inside a 4.0 OD leaves 0.5 mm
-#: of brass against a 0.95 mm spec, and the specialty thin-wall M3 (Tappex
-#: Microbarb) goes the other way at OD 6.1. So the geometry was solved for a
-#: dimension nobody sells, and the part bought at that OD is an M2.5 insert -- an
-#: M3x16 will not thread into it.
+#: WHY THIS TABLE IS IN A GATE (2026-08-03). This joint specifies a "SLIM M3
+#: heat-set: 4.0 mm OD x 6.0 long", chosen because 4.0 is what fits down the 4.4 mm
+#: mortise slot. That OD is **non-standard for M3** -- the table puts M3 at OD 4.6
+#: with a 0.95 mm wall, and OD 4.0 is the **M2.5** row exactly.
 #:
-#: The fix is not a bigger bore. **Use M2.5 hardware for this joint**: OD 4.0 x 6.0
-#: IS a standard M2.5 insert, so it fits the existing slot AND restores the full
-#: designed pull-out area (pi*D*L depends on the OD and length, not the thread), and
-#: 66 N/bolt is ~3% of an M2.5 screw's proof load.
+#: Reading that, I concluded the part did not exist and started converting the joint
+#: to M2.5. **It does exist**: uxcell B07R9SP532 is a thin-wall M3 at OD 4.0 x 6.0,
+#: 0.5 mm of brass. The table describes what is STANDARD, not what is manufactured,
+#: and I treated the two as the same thing -- the same error class as reading a
+#: modelled hole diameter off a STEP and calling it a thread spec.
+#:
+#: So the rule below is deliberately NOT "OD must equal the standard". It is: an
+#: off-standard OD is allowed **only while a specific orderable part is named**.
+#: That flags the real risk (nobody has checked you can buy it) without asserting a
+#: falsehood, and it goes red the moment the source line goes blank.
 INSERT_STD_OD = {"M2": 3.5, "M2.5": 4.0, "M3": 4.6, "M4": 6.0}
 
 #: (label, member_stl, parent_stl, axis, bolt centres, declared length mm,
@@ -1149,8 +1161,9 @@ FASTENER_SPANS = [
      (1, 0, 0), [(5.0, 11.7), (18.0, 11.7)], 16.0, BLOCK_INSERT_L),
 ]
 #: Minimum thread engagement into the insert. 1xD is the usual floor for steel
-#: into a brass insert; M3 -> 3.0 mm.
-MIN_ENGAGEMENT_MM = 3.0
+#: into a brass insert. Keyed to BLOCK_THREAD so it moves with the joint instead
+#: of silently staying at M3's 3.0 after a thread change.
+MIN_ENGAGEMENT_MM = BLOCK_THREAD_D
 
 #: Cyclic tensile load per retention bolt at this joint (fastener-schedule: the
 #: tenon carries the moment in BEARING, these two bolts are retention only).
@@ -1166,36 +1179,43 @@ def insert_sourcing_checks():
     """Is the specified insert a PART THAT EXISTS, not just a dimension that fits?
 
     WHY THIS EXISTS (2026-08-03). The joint was solved for a "SLIM M3 heat-set:
-    4.0 mm OD x 6.0 long" because 4.0 is what fits down the 4.4 mm mortise slot.
-    Nobody checked that such a part is sold. It is not: OD 4.0 is the **M2.5**
-    standard row, the M3 row is 4.6, and the specialty thin-wall M3 goes UP to
-    6.1, not down. So the geometry gate was green on a bore sized for a fastener
-    that does not exist -- and the part bought at that OD is an M2.5 insert, which
-    an M3x16 cannot thread into.
+    4.0 mm OD x 6.0 long" because 4.0 is what fits down the 4.4 mm mortise slot,
+    and for weeks nobody checked whether that dimension is a part you can order.
+    It is (uxcell B07R9SP532) -- but only just: 4.0 is NON-STANDARD for M3, it is
+    the standard M2.5 OD, and the first part actually bought at that OD was 2 mm
+    short of the pocket.
 
     Every other gate here asks "does the hole fit the fastener". This one asks the
-    question none of them could: "can you buy the fastener at all".
+    question none of them could: "can you buy the fastener at all". It passes an
+    off-standard dimension only while a specific part is NAMED, and warns to check
+    the thread on arrival whenever that OD collides with another thread's standard
+    -- because a substitution at the same OD is the silent failure here.
     """
     bad = False
-    thread = 'M3'                      # what FASTENER_SPANS drives into this insert
+    thread = BLOCK_THREAD              # what FASTENER_SPANS drives into this insert
     std = INSERT_STD_OD[thread]
     print(f'-- insert sourcing ({thread} thread, OD {BLOCK_INSERT_OD}, '
           f'L {BLOCK_INSERT_L})')
-    if BLOCK_INSERT_OD < std - 0.05:
-        smaller = [t for t, od in INSERT_STD_OD.items()
-                   if abs(od - BLOCK_INSERT_OD) < 0.05]
+    if abs(BLOCK_INSERT_OD - std) < 0.05:
+        print(f'   OK    {thread} at OD {BLOCK_INSERT_OD} is the standard size')
+    elif not BLOCK_INSERT_SOURCE:
+        clash = [k for k, od in INSERT_STD_OD.items() if abs(od - BLOCK_INSERT_OD) < 0.05]
         bad = True
-        print(f'FAIL  no such part: a {thread} heat-set insert is OD {std} as standard, '
-              f'but this joint specifies OD {BLOCK_INSERT_OD}.'
-              + (f' OD {BLOCK_INSERT_OD} is the {smaller[0]} row -- so the part you can '
-                 f'actually buy at this OD gives a {smaller[0]} thread, not {thread}.'
-                 if smaller else ''))
-        print(f'      FIX: use {smaller[0]} hardware here if the slot cannot grow. '
-              f'Pull-out is pi*OD*L, so it is unchanged by the thread size, and '
-              f'{RETENTION_LOAD_N:.0f}N/bolt is a few percent of an {smaller[0]} proof load.'
-              if smaller else '      FIX: grow the slot, or change the joint.')
+        print(f'FAIL  OD {BLOCK_INSERT_OD} is NOT standard for {thread} (standard is {std}) '
+              f'and no orderable part is named. A dimension that merely fits the geometry '
+              f'is not a fastener.')
+        if clash:
+            print(f'      NB OD {BLOCK_INSERT_OD} IS the standard {clash[0]} OD, so anything '
+                  f'you find at this OD may well be {clash[0]}-threaded -- check the thread, '
+                  f'not just the OD.')
     else:
-        print(f'   OK    {thread} at OD {BLOCK_INSERT_OD} matches the standard {std}')
+        clash = [k for k, od in INSERT_STD_OD.items() if abs(od - BLOCK_INSERT_OD) < 0.05]
+        print(f'   OK    OD {BLOCK_INSERT_OD} is non-standard for {thread} (standard {std}), '
+              f'but a specific part is named: {BLOCK_INSERT_SOURCE}')
+        if clash:
+            print(f'         ^ CHECK THE THREAD ON ARRIVAL: OD {BLOCK_INSERT_OD} is also the '
+                  f'standard {clash[0]} OD, so a mislabelled or substituted part at this OD '
+                  f'is most likely {clash[0]}, which a {thread} screw will not enter.')
     return bad
 
 
@@ -1266,7 +1286,7 @@ def fastener_span_checks():
                            PULLOUT_N_PER_MM2_DRY * area / RETENTION_LOAD_N
             if length > span:
                 bad = True
-                print(f'FAIL  {label} @ y={b}: M3x{length:.0f} BOTTOMS OUT -- span is '
+                print(f'FAIL  {label} @ y={b}: {BLOCK_THREAD}x{length:.0f} BOTTOMS OUT -- span is '
                       f'{span:.1f}mm (seat {seat:.1f} -> pocket bottom {bottom:.1f}), '
                       f'screw over-runs by {length - span:.1f}mm')
             elif engage < MIN_ENGAGEMENT_MM:
@@ -1281,7 +1301,7 @@ def fastener_span_checks():
                     extra = (f' [capped by the insert: the bore offers {engage_bore:.1f}mm, '
                              f'so {engage_bore - insert:.1f}mm of the screw turns in EMPTY '
                              f'bore past the insert end]')
-                print(f'   OK    {label} @ y={b}: M3x{length:.0f} in a {span:.1f}mm span, '
+                print(f'   OK    {label} @ y={b}: {BLOCK_THREAD}x{length:.0f} in a {span:.1f}mm span, '
                       f'{engage:.1f}mm engagement of the {insert}mm insert{extra}')
                 print(f'         pull-out area pi*{BLOCK_INSERT_OD}*{insert} = {area:.1f}mm^2 '
                       f'-> SF {sf_lo:.1f}-{sf_hi:.1f} against {RETENTION_LOAD_N:.0f}N/bolt cyclic'

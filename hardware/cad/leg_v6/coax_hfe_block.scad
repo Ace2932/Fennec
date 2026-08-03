@@ -43,6 +43,23 @@
 // FASTENERS: 2x M3x16 SHCS into 2x SLIM M3 HEAT-SETS (4.0mm OD x 6.0 long),
 // NOT the 4.6mm OD insert used everywhere else on this robot.
 //
+// SOURCED 2026-08-03 -- uxcell B07R9SP532, "M3 x 6mm(L) x 4mm(OD)", M3x0.5.
+// Worth recording HOW this nearly went wrong. The 4.0 OD is NON-STANDARD for M3
+// (the industry table puts M3 at hole 4.0 / OD 4.6 / wall 0.95, and OD 4.0 is the
+// M2.5 row), and reading that table I concluded the specified part did not exist
+// and began switching this joint to M2.5. It does exist -- uxcell simply makes a
+// thin-wall M3 at 0.5mm of brass. **A dimension being off-standard is a reason to
+// NAME the part, not to assume it is unavailable.** check_fit's
+// insert_sourcing_checks() now encodes exactly that: a non-standard OD is allowed
+// only while a specific orderable part is recorded, and it FAILS if that goes
+// blank (negative-controlled both ways).
+//
+// ⚠️ ON ARRIVAL, CHECK THE THREAD, not just the OD. OD 4.0 is also the standard
+// M2.5 OD, so any mislabelled or substituted part at this OD is most likely
+// M2.5 -- which an M3x16 will not enter. The earlier order (B07LBQS9W3) is the
+// same OD but only 4.0 LONG: usable at SF 1.6-2.3, but 2mm short of the 6.0 this
+// pocket is cut for, which is 50.3mm2 of pull-out instead of 75.4.
+//
 // WHY A DIFFERENT INSERT HERE (2026-08-02). The insert has to TRAVEL ~10mm down
 // the mortise to reach its bore at the blind end, and that slot was 4.00mm tall
 // (MEASURED, every station, both bolt axes) against a 4.6mm insert. It could
@@ -60,7 +77,7 @@
 //
 // SCREW LENGTH, re-derived off the meshes: head seat (c'bore floor) x=57.0,
 // coax face x=46.35, bore 3.5 x 6.5 deep so its bottom is x=39.85 => 17.15mm of
-// usable span. M3x16 lands 5.35mm into the 6.0 insert and stops 1.15mm clear of
+// usable span. M3x16 lands 5.2mm into the 6.0 insert and stops 0.8mm clear of
 // the bottom. (The line here used to say M3x22, and said MEASURED: it was --
 // at #234, when MORT_X0 was 43.8. #235 moved it to 46.4, the insert rides on
 // that constant, and nothing re-measured. M3x22 bottoms out 5.2mm early in a
