@@ -20,7 +20,37 @@
 //     webs x ±51..55 tie flange to wall; 2x Ø12 cable grommets at (±32,-26).
 // MATERIAL BASIS (#184): PA6-CF. SOURCED in this file — the cable-notch note
 // below calls this part's own material "abrasive PA6-CF".
-// Print: PA6-CF, rear face down; tree supports under the flange span.
+// Print: PA6-CF, **+Z FACE DOWN** (deck top on the bed); tree supports under the
+// flange span.
+//
+// AXIS RESOLVED 2026-08-02 — this line said only "rear face down", which names a
+// face and no axis, and `slice_plate.py` refused to slice the part because of it.
+// Measured off shoulder.stl, bed-contact area for each candidate down-face:
+//
+//     +Z   7880 mm^2   80 mm tall   slenderness 0.90   <-- 9.2x the runner-up
+//     +X    856          119                  4.06
+//     -X    856          119                  4.06
+//     +Y    772          104                  3.73
+//     -Z    358           80                  4.20
+//     -Y     64          104                 12.96   (knife edge, unprintable)
+//
+// Not a close call. This is a 138 cm^3 / ~165 g PA6-CF part and PA6-CF warps;
+// every alternative is a tall part on a footprint under 900 mm^2.
+//
+// It is also the right face FUNCTIONALLY, which is the part worth stating: the
+// +Z extreme is the DECK TOP (DECK_Z1) -- the face `shoulder_plate` bolts flat
+// against, and the face all 8 plate heat-set bores plus the 4 `neck_heatset`
+// pilots press into. Printing it against the bed is the flattest that surface can
+// be. And "tree supports under the flange span" only parses if the flange is
+// ELEVATED, which rules out the flange's own face as "rear".
+//
+// One thing to watch, not a reason to change: those 8 Ø4.0 insert bores now open
+// at the bed face, so elephant-foot can pinch their mouths. Enable elephant-foot
+// compensation. Minor either way -- a heat-set is an interference fit by design
+// and melts its own way in.
+//
+// NB "rear" was never pinned to an axis anywhere; this resolves the PRINT
+// question, not the author's original intent.
 
 include <leg_v6_common.scad>
 
