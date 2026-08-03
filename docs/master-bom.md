@@ -320,7 +320,8 @@ received (standoffs, wick, rings, MRBF+5191, 12AWG, bench gear), **both PCBs ord
 3. **+1 INA226 20A R002 module** — 0 spares (arm U12 ate the 4th; 4th now = L2). Same GODIYMODULES
    listing, ~$13.
 4. 🔴 **Leg servo disc screws — the M2.5 order (2026-08-02, ~$18) is SUPERSEDED; the thread is M3**
-   (#263, FEETECH spec). Lengths 5/6/8/14 unchanged; ×6 and ×8 are covered by the owned M3 kit,
+   (#263; Ø3.0 nominal — ⚠️ tapped-M3 vs PA3.0 self-tap pilot open, see #262 before buying more).
+   Lengths 5/6/8/14 unchanged; ×6 and ×8 are covered by the owned M3 kit,
    **×5 and ×14 still need ordering**. See the disc-screw section above. ⬜ **The M2 case-mount
    screws are still open** — now ×40 **M2×9** + ×8 **M2×13**, **countersunk self-tapping** (was
    ×40 M2×22 + ×8 M2×25 — the column is **7 mm blind, measured**, so a ×22 drives ~13 mm into the

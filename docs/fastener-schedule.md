@@ -144,7 +144,11 @@ between "measured" and "assumed" in this whole table.
   first pass said ×10 and ×8, and both bottom out.
 - 🔴 **SUPERSEDED — the M2.5 family does not fit and must not be used.** Received 2026-08-02
   (order 111-2168015-0136233, $37.26): ×100 M2.5×5, ×105 M2.5×6, ×100 M2.5×8, ×100 M2.5×14.
-  **The FEETECH STS3215 spec gives the disc threads as M3** (#263, 2026-08-02) — M2.5 was this
+  **The disc fastener is Ø3.0 nominal, not M2.5** (#263, 2026-08-02) — ⚠️ but see #262 and
+  `dimensions.md`: the vendor lists *"Machine screws: M3 x 6"* **and** *"Self-tapping screws:
+  PA30X5"* without saying which hole either goes in, so **machine-screw-into-tapped-hole vs
+  thread-forming-screw-into-plain-pilot is UNRESOLVED.** Both are Ø3.0, so the printed ∅3.4
+  clearance is right either way; the *purchase* is not settled. M2.5 was this
   project's own unsourced inference. A 2.5 mm screw in an M3 thread does not engage at all. The
   lengths (5/6/8/14) were right and carry straight over to M3; only the thread was wrong. Keep the
   M2.5 stock for unrelated M2.5 work, don't scrap-hunt it into this build. **Button head is still

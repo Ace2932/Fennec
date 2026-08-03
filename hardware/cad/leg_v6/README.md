@@ -23,7 +23,8 @@ correct: those were blocks, not leg designs).
 - **Driven joint = yoke:** top arm bolts to the Ø20 output horn (4× **M3** on
   Ø14 BCD ±45° + M3 center); bottom arm pivots on an **M3 shoulder screw into a
   heat-set boss (M3 × D4.6) in the pocket floor**, coaxial with the spline.
-  🔴 *Disc thread was "M2.5" until 2026-08-02 (#263) — FEETECH spec says M3. The
+  🔴 *Disc fastener was "M2.5" until 2026-08-02 (#263) — it is Ø3.0 nominal, though
+  tapped-M3 vs PA3.0 self-tap pilot is UNRESOLVED (#262). The
   ∅2.5 holes in the STEP are the M3 tap drill, not M2.5 clearance (2.9).*
   The Ø20 bolt-on bottom wheel is NOT used — it and the case-screw square both
   occupy r<10 of the bottom face (mutually exclusive with floor mounting), and
