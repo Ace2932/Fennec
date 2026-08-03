@@ -292,9 +292,28 @@ PARTS = {
         scad=_leg("coax_hfe_block_L.scad"),
         doc="Print: PA6-CF, MATING FACE (x=SPLIT_X) DOWN — mirrored to -X on this part",
     ),
+    # supports="normal" ADDED 2026-08-03. This entry had no supports= argument at
+    # all, so it silently defaulted to "none" -- and femur has 555 mm^2 of FLAT
+    # downward-facing area sitting 4.40 mm above the bed (x -15.9..14.8,
+    # y -16.0..15.9), cantilevered off the SUB_X0/SUB_X1 ramp with nothing
+    # anchoring its far end. It would have drooped.
+    #
+    # The requirement was never absent, only unwritten: #49 is literally
+    # "femur: underside ramp-fill to cut support area -39% (#24/LA-6, partial)",
+    # and femur.scad says the ramp "closes MOST of the old float, but NOT all of
+    # it". Every OTHER leg part states its support need in its .scad header
+    # (tibia "support pillars under the blade slab", coax "supports under the
+    # yoke bridge span", shoulder "tree supports under the flange span") and got
+    # the right value here. femur's header is silent, so the default won.
+    #
+    # "none" being a legal value is why no gate caught it: an omission and a
+    # decision are indistinguishable in this field. If that recurs, make
+    # supports= REQUIRED rather than defaulted.
     "femur_R": Part(
-        _leg("femur_R.stl"), "PA6-CF", down=None, scad=_leg("femur.scad"),
-        doc="Print: PA6-CF, flat on the -Z face.",
+        _leg("femur_R.stl"), "PA6-CF", down=None, supports="normal",
+        scad=_leg("femur.scad"),
+        doc="Print: PA6-CF, flat on the -Z face; supports under the servo-pocket "
+            "end, which floats 4.4 mm (SUB_X0=17 ramp).",
     ),
     # +Z, and the measurement says so rather than the prose: femur_R's documented
     # -Z face is 2772.5 mm^2, and on femur_L the SAME area appears at +Z
@@ -302,7 +321,8 @@ PARTS = {
     # LA-3's "180 deg about X" means, so this is the R pose mirrored, confirmed
     # numerically instead of assumed.
     "femur_L": Part(
-        _leg("femur_L.stl"), "PA6-CF", down="+Z", scad=_leg("femur_L.scad"),
+        _leg("femur_L.stl"), "PA6-CF", down="+Z", supports="normal",
+        scad=_leg("femur_L.scad"),
         doc="PRINT (LA-3): the Z-mirror flips which face is flat. Do NOT reuse the R orientation. "
             "+Z measured 2772 mm^2 = femur_R's -Z face.",
     ),
