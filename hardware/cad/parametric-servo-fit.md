@@ -30,8 +30,8 @@ Variable Studio `leg-vars` (element id `0dc53880d81b63d47a7402ff` in doc `dc7221
 | `sts_spline_x` | 12.50 mm | spline X offset from body center (CRITICAL) |
 | `horn_disc_od` | 20.0 mm | top horn disc OD |
 | `horn_bcd` | 14.0 mm | horn screw bolt-circle dia |
-| `horn_screw_d` | 2.5 mm | M2.5 horn screw |
-| `horn_screw_clr` | 2.9 mm | M2.5 wider clearance |
+| `horn_screw_d` | **3.0 mm** | **M3** horn screw — 🔴 *was 2.5/M2.5, corrected 2026-08-02 (#263)* |
+| `horn_screw_clr` | **3.4 mm** | M3 clearance — 🔴 *was 2.9* |
 | `back_shaft_d` | 6.0 mm | bottom reaction shaft OD |
 | `bearing_od` | 16.05 mm | 688ZZ + press-fit clearance |
 | `bearing_h` | 5 mm | 688ZZ width |

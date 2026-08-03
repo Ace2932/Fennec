@@ -91,9 +91,10 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 
 **Inserts and the M3 screw lengths are in §"Heat-set inserts" above** — that section is
 the buy list and is current with #255's two-insert split (OD 4.6×5.7 everywhere, slim
-OD 4.0×6.0 for the HFE block only). This section covers what it does not: the **M2.5 and
-M2** families, the ASINs actually ordered, and the traps that make a wrong purchase look
-right.
+OD 4.0×6.0 for the HFE block only). This section covers what it does not: the **disc-screw
+and M2 case-screw** families, the ASINs actually ordered, and the traps that make a wrong
+purchase look right — including the two that already caught this build (M2.5-for-M3 discs,
+and M2×22 case screws into a 7 mm blind column).
 
 None of this existed before today. `master-bom.md` calls itself *"Single source for parts
 status across the whole build"* and carried two fastener rows; everything real lived in
@@ -160,26 +161,40 @@ anyway, since #263's Ø6.0 counterbores leave a socket head standing 1.4 mm prou
 **Fgruh 1220 pc M3 kit** — also owned, contents NOT recorded. Worth listing the same way
 before the next order.
 
-### ✅ M2.5 — leg servo screws, ORDERED 2026-08-02
-The ✅-ordered M3/M4/M5/M6 stainless kit **starts at M3 — zero overlap.** Lengths MEASURED
-2026-07-11 (`fastener-schedule.md`), each rounded DOWN so it can't bottom the disc. Nothing
-owned substituted: the ✅-ordered M3/M4/M5/M6 stainless kit **starts at M3 — zero overlap.**
+### 🔴 leg servo disc screws — the thread is **M3**, not M2.5 (corrected 2026-08-02, #263)
+**The M2.5 set below was ordered AND received, and it does not fit.** The FEETECH STS3215 spec
+sheet gives the disc threads as **M3**; M2.5 was this project's own inference, and the note that
+"proved" it (`dimensions.md` note 4) misread a ∅2.5 modeled hole as "M2.5 clearance" — but M2.5
+clearance is ∅2.9, and ∅2.5 is exactly the M3 tap drill. See that note for the full retraction.
 
-**Ordered, all button head** — the ×8/×14 counterbores are 1.6/1.75 mm against a 2.5 mm SHCS
-head, so 48 heads would otherwise stand ~0.9 mm proud (`fastener-schedule.md` says use
-low-head/button "if sourcing fresh"): iexcell `B0DLKG6JK6` (×5) · Sutemribor `B0DJKVZ4P2`
-(×6) · iexcell `B0DLKC64NP` (×8) · iexcell `B0DLKBDMSB` (×14).
+**The lengths were right and carry straight over** — grip is set by printed geometry, not thread
+diameter — so the buy is the same 5/6/8/14 in M3. Holes went 2.9 → **3.4** and the disc-facing
+head c'bores 5.2 → **6.0** in `leg_v6_common.scad`; `M25_CLEAR` was deleted.
 
-⚠️ **Do not buy an M2.5 assortment kit.** They run 4/6/8/10/12/16/20/25 — **no ×5, no ×14** —
-and neither is substitutable: a ×6 drives 3.2 mm into a 3.05 mm horn disc and bottoms; a ×16
-drives 3.4 mm into a 2.1 mm wheel disc and jacks the boss. Single-length packs only.
+⚠️ **FIRST-ARTICLE, 10 seconds, do it before ordering more:** hand-thread an M3 screw into a
+spare disc. The spec sheet and the STEP are both inference; the servo in your hand is not.
+
+**Still all BUTTON head**, and now for a stronger reason: an M3 SHCS head is ∅5.5 × 3.0 tall and
+would stand ~1.4 mm proud of the 1.6 mm c'bore, worse than M2.5's 0.9. An M3 button is
+∅5.7 × 1.65 → **~0.05 mm, effectively flush**, and ∅5.7 still clears the new 6.0 c'bore. That is
+why 6.0 was chosen over the 5.5 an SHCS alone would need.
+
+⚠️ **Do not buy an M3 assortment kit for this.** Same trap as M2.5: kits run 4/6/8/10/12/16/20
+— **no ×5, no ×14**, and neither is substitutable (a ×6 drives 3.2 mm into a 3.05 mm horn disc
+and bottoms; a ×16 drives 3.4 mm into a 2.1 mm wheel disc and jacks the boss). The owned
+M3/M4/M5/M6 stainless kit is 6/8/10/12 only — it covers ×6 and ×8, **not ×5 or ×14.**
+Single-length packs for those two.
 
 | Screw | Qty | Joint | Status |
 |---|---|---|---|
-| M2.5×5 | 16 | horn → HFE (thin LA-7 backing) | 🛒 ordered |
-| M2.5×6 | 32 | horn → HAA + KFE (`shoulder_plate` / `knee_arm`) | 🛒 ordered |
-| M2.5×8 | 32 | wheel → HFE + KFE (⚠ only ~0.75 mm disc engagement — tightest joint) | 🛒 ordered |
-| M2.5×14 | 16 | wheel → HAA (shoulder's long boss reach) — uncommon length, likely a separate order | 🛒 ordered |
+| **M3×5** button | 16 | horn → HFE (thin LA-7 backing) | ⬜ **ORDER** — no ×5 in the owned kit |
+| **M3×6** button | 32 | horn → HAA + KFE (`shoulder_plate` / `knee_arm`) | ✅ owned (kit has ×6) — verify button vs SHCS head height |
+| **M3×8** button | 32 | wheel → HFE + KFE (⚠ only ~0.75 mm disc engagement — tightest joint) | ✅ owned (kit has ×8) — ⚠️ **must be button**, an SHCS head stands 1.4 mm proud |
+| **M3×14** button | 16 | wheel → HAA (shoulder's long boss reach) | ⬜ **ORDER** — `B08H2HQ3VZ`, no ×14 in the owned kit |
+
+**Superseded M2.5 order** (111-2168015-0136233, $37.26, received 2026-08-02): ×100 M2.5×5,
+×105 M2.5×6, ×100 M2.5×8, ×100 M2.5×14 — iexcell `B0DLKG6JK6` · Sutemribor `B0DJKVZ4P2` ·
+iexcell `B0DLKC64NP` · iexcell `B0DLKBDMSB`. Keep for unrelated M2.5 work; do not build from it.
 
 ### M2
 | Screw | Qty | For | Status |
@@ -304,12 +319,16 @@ received (standoffs, wick, rings, MRBF+5191, 12AWG, bench gear), **both PCBs ord
    also confirm 4× 30kg hips in hand (12 active total).
 3. **+1 INA226 20A R002 module** — 0 spares (arm U12 ate the 4th; 4th now = L2). Same GODIYMODULES
    listing, ~$13.
-4. ✅ **M2.5 leg servo screws — ORDERED 2026-08-02** (~$18, 4 single-length button-head packs;
-   assortment kits carry no ×5 or ×14). ⬜ **The M2 case-mount screws are still open on the same
-   order** — ×40 M2×22 + ×8 M2×25, **countersunk self-tapping**. Not stocked on Amazon: self-tap
-   assortments stop near 16 mm and every 22 mm hit is a GB819 **machine** screw, which cannot grip
-   a coarse formed thread. ⚠️ Measure a stock STS3215 case screw first — M2×22 sits on **0.025 mm**
-   of bottoming margin against a back-solved column depth; the rule is `L_stock + printed floor`.
+4. 🔴 **Leg servo disc screws — the M2.5 order (2026-08-02, ~$18) is SUPERSEDED; the thread is M3**
+   (#263, FEETECH spec). Lengths 5/6/8/14 unchanged; ×6 and ×8 are covered by the owned M3 kit,
+   **×5 and ×14 still need ordering**. See the disc-screw section above. ⬜ **The M2 case-mount
+   screws are still open** — now ×40 **M2×9** + ×8 **M2×13**, **countersunk self-tapping** (was
+   ×40 M2×22 + ×8 M2×25 — the column is **7 mm blind, measured**, so a ×22 drives ~13 mm into the
+   servo). At these lengths the sourcing problem inverts and gets EASIER: self-tap assortments
+   stop near 16 mm, which now covers both. ⚠️ Pitch-check against a factory screw (6 crests over
+   7 mm) before any goes in — a GB819 **machine** screw cannot grip a coarse formed thread.
+   The rule is `L_max = printed floor + measured column`, and the column must be MEASURED —
+   back-solving it from an existing screw length makes the length confirm itself.
 5. 🔴 **Heat-set inserts — see §"Heat-set inserts" above for the buy list.** The 2026-08-02 order
    covered the **OD 4.6 × 5.7** type (ruthex `B08BCRZZS3`), the short (`B09ZHSGHXD`) and the M2
    (`B088QJG676`) — but **NOT the slim OD 4.0 × 6.0** that #255 introduced for the HFE block

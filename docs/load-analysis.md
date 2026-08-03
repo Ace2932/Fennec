@@ -74,7 +74,7 @@ horn-plate (+17.75) / wheel-boss (−17.75) planes, 35.5 apart (reconciled
 |---|---|---|
 | horn plate 4× M3 deck inserts | 28 N/screw tension | pullout ~400 N (6.5 deck) → SF 14 |
 | Ø19 wheel boss shear | 0.4 MPa | SF ≫ 100 |
-| 4× M2.5 wheel screws | 28 N shear each | SF > 50 |
+| 4× **M3** wheel screws (*was M2.5, #263*) | 28 N shear each | SF > 50 (a larger shank only raises it) |
 
 ## 4. Tibia toe_v2 / shoe
 
@@ -175,13 +175,13 @@ findings at once:
    the whole peel" assumption no longer holds structurally.
 
 **Method:** couple force at the horn face, same as Section 3:
-F_face = M_HFE / S = 14.2 / 0.0355 = **400 N**; 4× M2.5 BCD bolts share it
+F_face = M_HFE / S = 14.2 / 0.0355 = **400 N**; 4× **M3** BCD bolts share it (*was M2.5, #263*)
 → **100 N/bolt**. (Unchanged by the #7-fix — same load case, reworked
 load path.)
 
 | # | Element | Load | Stress | SF dry (old→new) | SF wet (old→new) | Verdict |
 |---|---|---|---|---|---|---|
-| 7a | Horn BCD bearing, 4× M2.5 through the cap front-band (`M25_CLEAR=2.9` dia hole × t) — **t: 1.15mm → 2.75mm** (front-band 1.15 + new band 1.6) | 100 N/bolt | 100/(2.9×1.15)=30.0 MPa → 100/(2.9×2.75)=**12.5 MPa** | 5.0 → **12.0** | 2.5 → **6.0** | **FIXED — was marginal (exactly on the floor), now 2.4× the 2.5 floor** |
+| 7a | Horn BCD bearing, 4× **M3** through the cap front-band (`M3_CLEAR=3.4` dia hole × t) — **t: 1.15mm → 2.75mm** (front-band 1.15 + new band 1.6) | 100 N/bolt | 100/(3.4×1.15)=25.6 MPa → 100/(3.4×2.75)=**10.7 MPa** | 5.0 → **12.0** | 2.9 → **7.0** | **FIXED — and the M3 retarget (#263) IMPROVED this: the wider ∅3.4 hole spreads the same load over more bearing area, so stress fell 12.5 → 10.7 MPa and SF 6.0 → 7.0. Recomputed 2026-08-02; was `M25_CLEAR=2.9`** |
 | 7b | M3 clamp, nominal path (shape-key faces react the moment in compression; bolt = retention/anti-spin only) | preload only | — | high | high | OK, unchanged — bolt keeps its originally-intended role |
 | 7c | M3 clamp / band engagement, worst-case bound — **was**: slip-fit shape-key assumed compression-only (can't react peel) → single M3 bolt alone reacts 400N. **now**: the new bands' Z0/Z1 walls give a genuine closed (both-direction) compression path AT the bolt circle; worst-case single-wall bearing area ≈ 1.6mm(X) × 17mm(Y) = 27.2mm² | F = 400 N | pullout(old) 356N/400N=0.89 dry, 0.44 wet → bearing(new) 400/27.2=**14.7 MPa** | 0.89 → **10.3** | 0.44 → **5.1** | **FIXED — was FAILS outright, now clears the floor with 2× spare; M3 bolt no longer the sole path** |
 | 7d | Stub/cap split-line, compression-side shape-key bearing (mid-band walls + front-band r=15.8 cylindrical wall, both `CLR`/`CLR_KEY` shrunk contacts) | 400 N over a ~28.8mm² representative contact patch | ≈13.9 MPa | 10.9 | 5.4 | OK, unchanged — still not the limiting path; now further redundant with the new bands' own compression walls |

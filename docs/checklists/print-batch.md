@@ -329,8 +329,10 @@ these parts:
       from the 4 column screws, not the walls. ⚠️ 0.30/side was the v5
       press-fit; do **not** "fix" it back. The 0.1 mm anti-rotation ribs are
       crush ribs — file the tips if a tight print binds.
-- [ ] **M2.5 countersinks flush** (README §3) — heads must not stand proud into
-      the yoke arm plane.
+- [ ] **M3 countersinks flush** (README §3) — heads must not stand proud into
+      the yoke arm plane. 🔴 *Read "M2.5" until 2026-08-02; disc thread is M3
+      (#263).* ⚠️ **Use BUTTON heads on the ×8/×14 wheel screws** — an M3 SHCS
+      head stands ~1.4 mm proud of the 1.6 mm counterbore; a button is ~flush.
 - [ ] **Heat-set purchase**, Ø4.6 bore at 5.7 deep in PA6-CF (README §4). The
       LUMINZENLUX kit's threaded insert adapter is the tip for this.
 - [ ] **MEASURE the printed links, do not trust the model.** `femur` hfe→kfe is
