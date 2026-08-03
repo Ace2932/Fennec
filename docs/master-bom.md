@@ -180,10 +180,34 @@ actually consumes.
 | M3×3.8 short insert | 10 | neck bracket → shoulder deck (front only) | ✅ **ORDERED 2026-08-02** — ruthex `B09ZHSGHXD` (RX-M3Sx4.0; ruthex's short is **4.0**, docs say 3.8, pockets are 4.2 deep so it fits) |
 | M2×4 insert | 20 | pod, deck-tie, clamp bar, OLED bracket | ✅ **ORDERED 2026-08-02** — ruthex `B088QJG676`, 70 pc |
 
-⚠️ The owned HANGLIFE 345-pc assortment carries M3 in **D4×L3, D4×L4, D5×L5** —
-**no 4.6 OD**, which is what every printed Ø4.0 bore on this robot is sized for.
-Its D5×L5 will seat in a Ø4.0 bore (0.5 mm/side, ~1.7× the usual interference);
-its D4 will spin freely. Enough to build the first leg, not the robot.
+⚠️ **The owned HANGLIFE 345-pc assortment is M3 in D5 ONLY** — confirmed off the box
+2026-08-02. This paragraph previously said it carried **D4×L3 and D4×L4**; it does not,
+and that mattered because the slim-insert fallback below was written assuming a D4 was
+already on the shelf. Its D5 will seat in a Ø4.0 bore (0.5 mm/side, ~1.7× the intended
+interference) — enough to build the first leg, not the robot — and it is **useless for the
+HFE block**, whose bore is Ø3.5: a D5 there is 1.5 mm diametral against a **1.95 mm mortise
+roof** and will split it. Do not try.
+
+⚠️ **The ruthex M3 Short already on order is NOT the slim insert either.** `RX-M3Sx4.0` is
+short in *length*; ruthex's own comparison table gives the recommended hole for **every M3
+in their range as 4.0 mm**, i.e. OD 4.6. Same OD as the standard, so it has the identical
+delivery problem — a 4.6 cannot travel the 4.4 mm mortise slot.
+
+✅ **SLIM INSERT SOURCED 2026-08-02 — uxcell `B07LBQS9W3`, $6.69/50.** Its spec line is
+unambiguous, which matters here: *"Thread Size: M3; Pitch: 0.5mm; **Length: 4mm**; **Outer
+Diameter: 4mm**"*. That is the **4.0 × 4** fallback this table already documents at
+SF ≈ 1.6–2.3 — 8 needed, 50 in the pack.
+
+⚠️ **Buy this one by its spelled-out spec, not by an `M3xAxB` code.** The convention is not
+stable across vendors: ruthex's `RX-M3x5x4` is **OD 5.0 × L 4.0**, while other listings use
+`M3 × length × OD` for the same string. Two of the three candidates found were ambiguous;
+only the uxcell listing states which number is which.
+
+**Pair it with M3×14, which is already owned — not M3×16.** M3×16 is sized for the 6.0 mm
+insert of the design case. Against a 4.0 mm insert the engagement is capped by the insert,
+so the longer screw buys nothing and just runs into the 2.5 mm of empty bore below it. The
+full-strength **4.0 OD × 6.0** is still worth ordering if it can be found (π·D·L = 75 mm²
+vs 50), but the L4 route needs **no other purchase**.
 
 ## Soldering / tools — verify on shelf
 | Item | Status |
