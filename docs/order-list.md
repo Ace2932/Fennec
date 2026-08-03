@@ -342,34 +342,54 @@ only sink is the bulk caps (1 J into 5000 µF from 7.5 V ≈ 21 V rail — over 
 - Using Bambu's liquid glue on textured PEI for PA6-CF adhesion
 - ⚠️ Bambu's stock liquid glue is generic-purpose, not nylon-specific. **Print-test before committing to batch:** if PA6-CF first layer doesn't bond well, fallback to Magigoo PA (~$15) or similar PA-specific adhesion product.
 
-### Leg servo screws — M2/M2.5, 6 lengths — ~$18 🆕 ORDER (none owned)
+### Leg servo screws — M2 case + **M3** disc, 6 lengths 🔴 TWICE CORRECTED 2026-08-02
 Spec + verification: `docs/fastener-schedule.md` §"leg_v6 STS3215 servo screws"
 (MEASURED 2026-07-11). Also BOM.md:161. **12 active servos (4 HAA + 4 HFE +
 4 KFE), 3 fastener families each = 144 screws** (self-consistent at 12/servo).
 
-**Cross-ref — nothing owned covers these:** the ✅-ordered **M3/M4/M5/M6
-stainless hex kit** starts at M3; every leg servo screw is **M2 or M2.5** →
-zero overlap. Owned brass M3×20 ×50 + M3 kit are all M3+ chassis hardware.
-So **order the whole set.**
+🔴 **Two independent errors were found in this table on 2026-08-02. Both had the
+same shape — a number that confirmed itself instead of being measured:**
+1. **The disc thread is M3, not M2.5** (#263). The FEETECH STS3215 spec sheet
+   states it. The note that "disproved" M3 read a ∅2.5 modeled hole as "M2.5
+   clearance", but M2.5 clearance is ∅2.9 and ∅2.5 is the **M3 tap drill**.
+   Lengths (5/6/8/14) are unaffected — grip is printed geometry, not thread.
+2. **The case column is 7 mm blind, not ~19.9 mm.** The 19.9 was *back-solved
+   from the 22 mm screw*, so "M2×22 fits a 19.9 mm column" was circular. Real
+   max = printed floor + 7.0 → **M2×9** / **M2×13**.
+
+**Cross-ref:** the owned **M3/M4/M5/M6 stainless hex kit** is M3 in **6/8/10/12
+only** — it now *does* cover the disc ×6 and ×8, but has **no ×5 and no ×14.**
 
 | Screw | Qty | Joint | Head / note | Own? |
 |---|---|---|---|---|
-| **M2×22 self-tap** | 40 | case-mount: HAA + KFE + HFE-near pair (*seats the servo in the pocket*) | CSK; ⚠ **stock case screws confirmed too short** | ❌ |
-| **M2×25 self-tap** | 8 | case-mount: HFE-far pair only (femur LA-6 ramp, floor +4.4mm) | CSK; capped at 25 (else bottoms the ~19.9mm column) | ❌ |
-| **M2.5×5** | 16 | horn (HFE, thinner LA-7 backing) | SHCS/button, no c'bore | ❌ |
-| **M2.5×6** | 32 | horn (HAA + KFE) | SHCS/button, no c'bore | ❌ |
-| **M2.5×8** | 32 | wheel (HFE + KFE) | SHCS, Ø5.2 c'bore; ⚠ only ~0.75mm disc engagement (tightest joint) | ❌ |
-| **M2.5×14** | 16 | wheel (HAA, long shoulder boss reach) | SHCS, Ø5.2 c'bore; uncommon length | ❌ |
+| **M2×9 self-tap** 🔴 *was ×22* | 40 | case-mount: HAA + KFE + HFE-near pair (*seats the servo in the pocket*) | CSK; floor 2.125 + 7.0 column = 9.1 max | ❌ |
+| **M2×13 self-tap** 🔴 *was ×25* | 8 | case-mount: HFE-far pair only (femur LA-6 ramp, floor +4.4mm) | CSK; floor 6.525 + 7.0 = 13.5 max (×14 bottoms by 0.5) | ❌ |
+| **M3×5** 🔴 *was M2.5×5* | 16 | horn (HFE, thinner LA-7 backing) | button, no c'bore | ❌ **order** |
+| **M3×6** 🔴 *was M2.5×6* | 32 | horn (HAA + KFE) | button, no c'bore | ✅ kit has ×6 |
+| **M3×8** 🔴 *was M2.5×8* | 32 | wheel (HFE + KFE) | **button**, Ø6.0 c'bore; ⚠ only ~0.75mm disc engagement (tightest joint) | ✅ kit has ×8 |
+| **M3×14** 🔴 *was M2.5×14* | 16 | wheel (HAA, long shoulder boss reach) | **button**, Ø6.0 c'bore; uncommon length | ❌ **order** |
 | stock retention (center) | 12 | horn center | factory-installed with the servo | ✅ don't source |
 
 **+~10% spares per length** (self-tap plastic-thread wear + thin wheel-disc grip).
 
-**3 buys:**
-1. **M2 self-tap** covering **22 + 25mm** (plastic/sheet-metal self-tap — bites the servo's plastic case columns). *Near-term blocker: the M2×22 is what seats the servo in the coax for the current fit test.*
-2. **M2.5 SHCS assortment** — covers **5 / 6 / 8mm** in one kit.
-3. **M2.5×14** separately (rarely in assortments).
+**Buys now:**
+1. **M2 self-tap covering 9 + 13 mm**, countersunk. This got *easier* with the
+   correction — self-tap assortments stop near 16 mm, which now covers both,
+   where the old ×22/×25 were only available as GB819 **machine** screws that
+   cannot grip a coarse formed thread.
+2. **M3×5** and **M3×14** single-length packs (`B08H2HQ3VZ` for the ×14). Not in
+   assortments and not in the owned kit.
 
-⚠ **Before ordering:** glance in the Waveshare/Feetech servo hardware bag — no verified stock length was found for the M2.5 horn/wheel screws; the factory *center* screw is the only reliable one. ⚠ Lengths are measured off the **current** STLs; re-check grip on a current-design print before final torque (esp. the M2.5×8 wheel).
+⚠ **Head style is not optional on the ×8 and ×14:** an M3 SHCS head (∅5.5 × 3.0)
+stands ~1.4 mm proud of the 1.6 mm counterbore. Use **button** (∅5.7 × 1.65) →
+~0.05 mm, effectively flush. ∅5.7 still clears the 6.0 c'bore; that is why the
+c'bore is 6.0 and not the 5.5 an SHCS alone would need.
+
+⚠ **Before ordering — the 10-second test that settles #1 outright:** hand-thread
+an M3 screw into a spare disc. Spec sheets and STEP files are inference; the servo
+in your hand is not. ⚠ Also pitch-check a factory case screw (6 crests over 7 mm)
+before buying self-tappers. ⚠ Lengths are measured off the **current** STLs;
+re-check grip on a current-design print before final torque (esp. the ×8 wheel).
 
 ---
 

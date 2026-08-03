@@ -41,8 +41,8 @@ bores, all standard; not re-listed here.
 
 Every servo (HAA in `coax`, HFE in `femur`, KFE in `tibia`) takes 3 fastener
 families: 4× **M2 case-mount** (replaces the stock self-tap columns — see
-`leg_v6_common.scad:24` — **too short stock**, already known), 4× **M2.5
-horn** (driven-side yoke arm → the servo's OUTPUT horn), 4× **M2.5 wheel**
+`leg_v6_common.scad:24` — **too short stock**, already known), 4× **M3
+horn** (driven-side yoke arm → the servo's OUTPUT horn), 4× **M3 wheel**
 (idler-side yoke arm/boss → the BOTTOM WHEEL, **no center screw** — the wheel
 disc carries only a plastic idler boss there, `WHEEL_CTR_D` relief, not a
 thread). All 3 joints take the SAME 12 screws/servo, but **lengths differ by
@@ -55,15 +55,15 @@ concern.
 
 | Connection | Screw (std) | Hole / stack | Engage | Grip | Status |
 |---|---|---|---|---|---|
-| **case → HAA (coax)** ×4, **case → KFE (tibia)** ×4, **case → HFE (femur) NEAR pair** ×2 (`COL_PTS` x=−8.3) | **M2×22 self-tap** | `M2_CLEAR` 2.3 clear + Ø4.6→2.3 countersink through the printed floor | into servo case column | **floor 2.125mm MEASURED** (ray-cast, all 3 parts agree exactly; ~0.4mm under the nominal `FLOOR`=2.5 comment — real bay-cavity-cut boundary sits at z=−20.075, not the `FLOOR_TOP` reference) | ✅ confirms the existing "≥22" baseline |
-| **case → HFE (femur) FAR pair** ×2 (`COL_PTS` x=−32.8, under the LA-6/`SUB_FLOOR` underside ramp) | **M2×25 self-tap** | same, but floor is ramped **4.4mm deeper** here (femur-local x=32.8) | into servo case column | **floor 6.525mm MEASURED** (+4.4mm vs the near pair — exact match to the ramp's own "rise 4.4" design note) | ✅ floor 6.525 + the ~19.9mm case-column depth = **26.4mm MAX** before bottoming → **M2×25** (18.5mm engagement, ≈ the near pair's 19.9). NOT M2×28 — that needs 21.5mm engagement, over-runs the ~19.9mm column and bottoms out; 28/26 aren't standard M2 sizes anyway. Column depth ASSUMED ~19.9mm (back-solved from the 22mm baseline at 2.125mm floor — internal to the servo, not measurable in our meshes) |
-| **horn → HAA** ×4 (`shoulder_plate.scad`), **horn → KFE** ×4 (`knee_arm.scad`) | **M2.5×6** | `M25_CLEAR` 2.9 clear through `ARM_THK`=4.0, no head c'bore | into horn disc (~3.05mm, project's calipered figure — see note) | **grip 3.6mm MEASURED** (4.0 − 0.4mm `HORN_OD` locating-recess that spans the whole horn footprint) | ✅ 3.6+~2.5 target=6.15 → **round DOWN** to 6 (don't bottom out the 3.05mm disc) |
+| **case → HAA (coax)** ×4, **case → KFE (tibia)** ×4, **case → HFE (femur) NEAR pair** ×2 (`COL_PTS` x=−8.3) | **M2×9 self-tap, CSK** 🔴 *was M2×22* | `M2_CLEAR` 2.3 clear + Ø4.6→2.3 countersink through the printed floor | into servo case column, **7.0 mm blind (MEASURED)** | **floor 2.125mm MEASURED** (ray-cast, all 3 parts agree exactly; ~0.4mm under the nominal `FLOOR`=2.5 comment — real bay-cavity-cut boundary sits at z=−20.075, not the `FLOOR_TOP` reference) | 🔴 **CORRECTED 2026-08-02 — the "≥22 baseline" this row used to confirm was itself back-solved from an ASSUMED 19.9 mm column.** Real column is **7.0 mm blind, measured**: floor 2.125 + 7.0 = **9.1 mm max**, so M2×9. An M2×22 drives ~13 mm past the bottom of a blind hole. See the CASE SCREWS block below |
+| **case → HFE (femur) FAR pair** ×2 (`COL_PTS` x=−32.8, under the LA-6/`SUB_FLOOR` underside ramp) | **M2×13 self-tap, CSK** 🔴 *was M2×25* | same, but floor is ramped **4.4mm deeper** here (femur-local x=32.8) | into servo case column, **7.0 mm blind (MEASURED)** | **floor 6.525mm MEASURED** (+4.4mm vs the near pair — exact match to the ramp's own "rise 4.4" design note) | 🔴 **CORRECTED 2026-08-02.** floor 6.525 + **7.0 measured** column = **13.5mm MAX** before bottoming → **M2×13** (M2×14 bottoms by 0.5). The old row's whole chain was built on a column depth *back-solved from the 22mm baseline* — the 22 was never independently measured, so it confirmed itself. That is the circular-self-confirmation trap |
+| **horn → HAA** ×4 (`shoulder_plate.scad`), **horn → KFE** ×4 (`knee_arm.scad`) | **M3×6** 🔴 *was M2.5×6* | `M3_CLEAR` **3.4** clear through `ARM_THK`=4.0, no head c'bore | into horn disc (~3.05mm, project's calipered figure — see note) | **grip 3.6mm MEASURED** (4.0 − 0.4mm `HORN_OD` locating-recess that spans the whole horn footprint) | ✅ 3.6+~2.5 target=6.15 → **round DOWN** to 6 (don't bottom out the 3.05mm disc). 🔴 **THREAD CORRECTED TO M3 2026-08-02 (#263)** — the FEETECH STS3215 spec gives the disc threads as M3. Length math is unchanged (grip is geometry, not thread), but `M25_CLEAR` is **deleted** from `leg_v6_common.scad` |
 | **HFE block → coax (retention)** ×2 (`coax_hfe_block.scad`, #226 option C) | **M3×16 SHCS** | `M3_CLEAR` 3.4 through the tenon + Ø6.0 head c'bore on the block's outboard face | **SLIM M3 heat-set: 4.0 mm OD × 6.0 long**, in a **Ø3.5 × 6.5** bore at the mortise blind end (x 46.35 → 39.85). ⚠️ **NOT the 4.6 mm OD insert used everywhere else** | **RE-MEASURED 2026-08-02: head seat x=57.0, pocket bottom x=39.85 → 17.2 mm span; M3×16 engages 5.2 mm of the 6.0 insert and stops 1.15 mm clear of the bottom.** Bolt axis moved z 11.5 → **11.7** to sit centred in the slot | ✅ **Why a different insert:** the insert must TRAVEL ~10 mm down the mortise to reach its bore, and that slot was **4.00 mm** against a 4.6 mm insert — undeliverable at any print accuracy, a valid seat with no path, the same failure that retired this joint's cap. Growing the slot to 5.0 for a 4.6 insert puts the roof at exactly 1.50 mm (`MIN_SECTION_MM`, no margin) and more forces `GROW_Z1` up, which **hits the shoulder at haa −40**. Pull-out goes as π·D·L, so 4.0×6.0 = **75 mm²** vs 4.6×5.7 = 82 mm² — **92 % of the strength for a 0.4 mm slot growth instead of 1.0**. `MORT_Z1` 13.5 → 13.9; roof 1.95 mm, floor 1.95 mm, both gated. Retention only — the tenon carries the moment in bearing (66 N/bolt cyclic vs ~160–225 N wet pull-out at this area, SF ≈ 2.4–3.4). `insert_path_checks()` now sweeps the insert's DIAMETER down its delivery path |
 | **knee_arm → femur shelf** ×4/leg = 16 (`knee_arm.scad`) | **M3×8 SHCS** ⚠️ *corrected from M3×10 the same day* | 2× Ø3.1 dowel-fit + 2× Ø3.4 clear through the 4.0 plate, head on top (no c'bore) | **M3×5.7 insert** in the femur shelf | **MEASURED by `engagement_checks()`: grip 2.18 mm** — the plate is 4.0 thick but carries a **Ø6.4 × 1.8 head counterbore**, so the seat is 1.8 below the top face. M3×8 → **5.82 mm into the 6.2 bore (1.94×D)**. ⚠️ **My first derivation said M3×10 and was wrong**: it took the head seat from the part's bbox top and missed the counterbore. M3×10 leaves 7.82 mm against a 6.2 bore — **it bottoms** | ⚠️ **THIS ROW DID NOT EXIST until 2026-08-02.** The joint is in `leg_v6/README.md` and in the CAD, but no length was recorded anywhere — the same gap that let the HFE block ship an M3×22 that bottoms out |
 | **shoulder_plate → shoulder deck** ×4/plate = 16 (`shoulder_plate.scad`) | **M3×6 SHCS** ⚠️ *corrected from M3×8 the same day* | flange clear Ø3.4, head on top | **M3×5.7 insert** in the deck (`PLATE_BX`×`PLATE_BY`, bored from `DECK_Z1`=41.5) | **MEASURED by `engagement_checks()`: grip 1.38 mm** — same **Ø6.4 × 1.8 counterbore** as knee_arm. M3×6 → **4.62 mm into the 6.2 bore (1.54×D)**. ⚠️ **My first derivation said M3×8 and was wrong** for the same reason (bbox top ≠ head seat); M3×8 leaves 6.62 mm against 6.2 — **it bottoms by 0.42 mm** | ⚠️ Row did not exist until 2026-08-02 |
-| **horn → HFE** ×4 (`coax.scad` inboard arm) | **M2.5×5** | same, but arm backs onto the HAA pocket cavity (LA-7: 3.2mm local budget, not the full 4.0mm `ARM_THK`) | into horn disc | **grip 2.8mm MEASURED** (3.2 local budget − 0.4mm recess; `ctr_deep=1.65` override on the center relief only) | ✅ 2.8+~2.5 target=5.35 → round DOWN to 5 |
-| **wheel → HFE** ×4 (`coax_hfe_block.scad` arm+boss — moved off `coax.scad` in #226 option C), **wheel → KFE** ×4 (`femur.scad` own bottom arm+boss) | **M2.5×8** | `M25_CLEAR` 2.9 clear + Ø5.2 head c'bore (**1.6mm real depth**, measured — the shared `wheel_couple_neg()` cylinder is nominally 2.6 but 1.0mm of that is overcut margin below the true exterior) | into wheel disc (~2.1mm MEASURED directly off `servo.stl`, matches the ~2.15 doc figure) | **grip 6.44mm MEASURED after the 2026-08-02 counterbore fix** (was 7.25). `WHEEL_HEAD_CB_DEEP` 1.6 → **2.4** in the shared `wheel_couple_neg()`, which only HFE and KFE use — **engagement 0.76 → 1.56mm (0.30 → 0.62×D), same M2.5×8 screw**. Length could never fix this: a longer screw bottoms in the ~2.1mm disc. Engagement = length − GRIP, and the counterbore is what sets grip. ⚠️ Deliberately +0.8 not +1.0: the 2.1mm disc is measured off `servo.stl` and its TAPPED depth is unknown, so 0.54mm of anti-bottoming margin is kept. **FIRST-ARTICLE: measure the disc's real thread depth** — if the holes are through, +1.2 is available. ⚠️ The HAA wheel is cut separately in `shoulder.scad` (its own 1.8 c'bore, 1.40mm engagement) and must NOT be deepened: 2.4mm into a 2.1mm disc bottoms | ✅ 7.25+~1.7 target=8.95 → round DOWN to 8 (**thin: only ~0.75mm real engagement into the 2.1mm disc — tightest joint in this table**) |
-| **wheel → HAA** ×4 (`shoulder.scad` wheel boss, long rear-wall→wheel-face reach) | **M2.5×14** | Ø5.2 head c'bore (**1.75mm measured**, code says 1.8) at the rear-wall exterior | into wheel disc | **grip 12.6mm MEASURED** (boss reaches 14.35mm total, far longer than the leg's own 4.85mm boss) | ✅ 12.6+~1.7 target=14.3 → round DOWN to 14 |
+| **horn → HFE** ×4 (`coax.scad` inboard arm) | **M3×5** 🔴 *was M2.5×5* | same (`M3_CLEAR` **3.4**), but arm backs onto the HAA pocket cavity (LA-7: 3.2mm local budget, not the full 4.0mm `ARM_THK`) | into horn disc | **grip 2.8mm MEASURED** (3.2 local budget − 0.4mm recess; `ctr_deep=1.65` override on the center relief only) | ✅ 2.8+~2.5 target=5.35 → round DOWN to 5 |
+| **wheel → HFE** ×4 (`coax_hfe_block.scad` arm+boss — moved off `coax.scad` in #226 option C), **wheel → KFE** ×4 (`femur.scad` own bottom arm+boss) | **M3×8** 🔴 *was M2.5×8* | `M3_CLEAR` **3.4** clear + **Ø6.0** head c'bore (**1.6mm real depth**, measured — the shared `wheel_couple_neg()` cylinder is nominally 2.6 but 1.0mm of that is overcut margin below the true exterior) | into wheel disc (~2.1mm MEASURED directly off `servo.stl`, matches the ~2.15 doc figure) | **grip 6.44mm MEASURED after the 2026-08-02 counterbore fix** (was 7.25). `WHEEL_HEAD_CB_DEEP` 1.6 → **2.4** in the shared `wheel_couple_neg()`, which only HFE and KFE use — **engagement 0.76 → 1.56mm, same ×8 screw**. ⚠️ **×D ratios RESTATED for M3 (#263):** 1.56/3.0 = **0.52×D** (was quoted 0.62×D against the wrong D of 2.5); the pre-fix 0.76mm is **0.25×D**, not 0.30. The absolute millimetres are measured and unchanged — only the ratio's denominator was wrong. Length could never fix this: a longer screw bottoms in the ~2.1mm disc. Engagement = length − GRIP, and the counterbore is what sets grip. ⚠️ Deliberately +0.8 not +1.0: the 2.1mm disc is measured off `servo.stl` and its TAPPED depth is unknown, so 0.54mm of anti-bottoming margin is kept. **FIRST-ARTICLE: measure the disc's real thread depth** — if the holes are through, +1.2 is available. ⚠️ The HAA wheel is cut separately in `shoulder.scad` (its own 1.8 c'bore, 1.40mm engagement) and must NOT be deepened: 2.4mm into a 2.1mm disc bottoms | ✅ 7.25+~1.7 target=8.95 → round DOWN to 8 (**thin: only ~0.75mm real engagement into the 2.1mm disc — tightest joint in this table**) |
+| **wheel → HAA** ×4 (`shoulder.scad` wheel boss, long rear-wall→wheel-face reach) | **M3×14** 🔴 *was M2.5×14* | **Ø6.0** head c'bore (**1.75mm measured**, code says 1.8) at the rear-wall exterior | into wheel disc | **grip 12.6mm MEASURED** (boss reaches 14.35mm total, far longer than the leg's own 4.85mm boss) | ✅ 12.6+~1.7 target=14.3 → round DOWN to 14 |
 | **stock retention screw** (driven side only — HAA/HFE/KFE horns, NOT wheels) ×1/servo | **STOCK** (Ø5.4 head × ~1.5mm proud, factory-installed with the horn) | printed clearance only: `HORN_CTR_D` Ø6.5 blind c'bore, `HORN_CTR_DEEP` 2.5mm generic / **1.65mm at coax's inboard arm** (LA-7: floor 1.55mm, head margin 0.15mm — first-article check) | n/a | n/a | ✅ NOT sourced — comes with the servo/horn kit |
 
 **Horn disc thickness note:** the wheel disc (~2.1mm) was confirmed by direct
@@ -75,27 +75,33 @@ so the horn engagement bound above uses the project's own CALIPERED figure
 rev-3) rather than a shakier mesh read of that specific feature.
 
 **Stock vs source:** case screws are confirmed too short stock (already
-documented). No verified stock M2.5 horn/wheel screw length was found in this
+documented). No verified stock M3 horn/wheel screw length was found in this
 repo to compare against — every position above adds a 3.6–12.6mm printed
 yoke arm/boss between the screw head and the disc that a stock (thin-arm,
-direct-mount) screw isn't sized for; **source all 6 M2.5 lengths (5/6/8/14mm)
-explicitly**, don't assume the servo kit's screws cover any of them.
+direct-mount) screw isn't sized for; **source all 4 M3 lengths (5/6/8/14mm)
+explicitly**, don't assume the servo kit's screws cover any of them. The servos
+*do* ship disc screws, but they are sized for direct thin-arm mounting and are
+too short for every position in the table above.
 
 **~~Open finding~~ CLOSED (re-checked 2026-07-26):** the phantom 5th "center
 (wheel is M2.5)" clearance hole in the shared `wheel_couple_neg()` was already
 removed under **#51 (2026-07-11)** — the module now cuts only the 4 BCD screws
 plus the blind `WHEEL_CTR_D` idler-boss relief, so nothing is latent in
 `coax.scad`'s HFE or `femur.scad`'s KFE wheel coupling. This paragraph was
-stale, not the code. Still open elsewhere: `design-outline.md:95` ("4× M2.5 +
-ctr") repeats the retired assumption.
+stale, not the code. ✅ `design-outline.md:95` ("4× M2.5 + ctr") **also fixed
+2026-08-02** — it repeated both retired assumptions (the phantom centre screw
+*and* the M2.5 thread).
 
 **Head protrusion at the wheel BCD (noted 2026-07-26, first-article check):**
-the Ø5.2 counterbore is **1.6 mm deep** (above) while an M2.5 SHCS head is
-~2.5 mm tall, so each of those 8 heads per leg stands **~0.9 mm proud** of the
-yoke bottom-arm / coax outboard-arm exterior. Both faces look into free air
-(femur underside at the knee, coax outboard flank) and the sweep gates are run
-against the STLs, which do not model heads — so this is a snag/scuff item, not
-an interference one. Use low-head/button M2.5 if sourcing fresh, or accept it.
+the counterbore (**now Ø6.0**, #263) is **1.6 mm deep** (above) while an M3 SHCS
+head is Ø5.5 × ~3.0 mm tall, so each of those 8 heads per leg stands **~1.4 mm
+proud** of the yoke bottom-arm / coax outboard-arm exterior — worse than the
+~0.9 mm this paragraph recorded for M2.5. Both faces look into free air (femur
+underside at the knee, coax outboard flank) and the sweep gates are run against
+the STLs, which do not model heads — so this is a snag/scuff item, not an
+interference one. **Use M3 BUTTON head** (ISO 7380, Ø5.7 × 1.65 tall): it drops
+the protrusion to ~0.05 mm, effectively flush, and Ø5.7 still clears the 6.0
+c'bore. That is why the 6.0 figure was chosen over the 5.5 an SHCS alone needs.
 
 **cowl → upright ×2 (M2×10 SHCS + M2×4 insert, Ø5.5 c'bore)** — REMOVED
 2026-07-10 (backlog #41): `jetson_cowl.scad` retired in place, superseded by
@@ -136,7 +142,15 @@ between "measured" and "assumed" in this whole table.
   to print, and that joint needs the slim insert **and** M3×16. Lengths corrected the same
   day after `engagement_checks()` measured the head seat instead of the bbox top — the
   first pass said ×10 and ×8, and both bottom out.
-- ✅ **RECEIVED/INBOUND 2026-08-02 (order 111-2168015-0136233, $37.26):** the whole **M2.5 family** — ×100 M2.5×5, ×105 M2.5×6, ×100 M2.5×8, ×100 M2.5×14. Covers all 96 needed with ~4× spares. **Button-head, which is the better head here**: 1.5 mm tall in the wheel c'bore's 1.6 mm real depth sits flush, where a 2.5 mm SHCS head would stand 0.9 mm proud; the horn screws have no c'bore at all, so a lower head is free clearance. ⚠️ Still outstanding from the same BOM line: **M2×22 self-tap ×40 + M2×25 ×8** (servo case-mount) — a third of the 144 leg screws, and what actually holds the servos in.
+- 🔴 **SUPERSEDED — the M2.5 family does not fit and must not be used.** Received 2026-08-02
+  (order 111-2168015-0136233, $37.26): ×100 M2.5×5, ×105 M2.5×6, ×100 M2.5×8, ×100 M2.5×14.
+  **The FEETECH STS3215 spec gives the disc threads as M3** (#263, 2026-08-02) — M2.5 was this
+  project's own unsourced inference. A 2.5 mm screw in an M3 thread does not engage at all. The
+  lengths (5/6/8/14) were right and carry straight over to M3; only the thread was wrong. Keep the
+  M2.5 stock for unrelated M2.5 work, don't scrap-hunt it into this build. **Button head is still
+  the right head** for the same reason it was before: 1.5 mm tall clears the wheel c'bore's 1.6 mm
+  real depth flush, where an SHCS head stands proud. ⚠️ Also outstanding from the same BOM line:
+  the servo case-mount self-tappers, now **M2×9 ×40 + M2×13 ×8** (not ×22/×25 — see below).
 - **Ruthex inserts**: M3×5.7 ×16 (head 4, ears 4, riser flange 4, + spares), M3×3.8 ×8 (adapter 2, battery pocket 6 — AUD-11 fix), M2×4 ×14 (pod 4, deck-tie 4, clamp bar 4, OLED-bracket-in-pod-deck 2)
 - **E-stop**: HB2-ES544 (Ø22, owned)
 
@@ -234,7 +248,14 @@ Both are first-article-verifiable: seat a screw and check it neither bottoms nor
 
 ## Purchase summary (leg_v6 servo screws, MEASURED 2026-07-11 — 12 active servos: 4 HAA + 4 HFE + 4 KFE)
 - **M2 self-tap (case-mount), COUNTERSUNK**: ×40 **M2×9** (HAA×16 + KFE×16 + HFE-near×8), ×8 **M2×13** (HFE-far pair only, ramped floor). ⚠️ **This line read M2×22 / M2×25 until 2026-08-02** — the column is **7 mm blind, measured**, not the 19.9 mm assumed, so a ×22 goes 13 mm into the servo. See the CASE SCREWS block above.
-- **M2.5 (horn, driven side)**: ×32 M2.5×6 (HAA×16 + KFE×16), ×16 M2.5×5 (HFE, thinner LA-7 backing)
-- **M2.5 (wheel, idler side, NO center screw)**: ×32 M2.5×8 (HFE×16 + KFE×16), ×16 M2.5×14 (HAA, long boss reach)
+- **M3 (horn, driven side)**: ×32 **M3×6** (HAA×16 + KFE×16), ×16 **M3×5** (HFE, thinner LA-7 backing)
+- **M3 (wheel, idler side, NO center screw)**: ×32 **M3×8** (HFE×16 + KFE×16), ×16 **M3×14** (HAA, long boss reach)
+- 🔴 **These two lines read M2.5 until 2026-08-02 (#263).** The FEETECH STS3215 spec gives the
+  disc threads as **M3**; the M2.5 figure was this project's own inference, never sourced. Holes
+  went 2.9 → **3.4** and the disc-facing head c'bores 5.2 → **6.0** in `leg_v6_common.scad`, and
+  `M25_CLEAR` was **deleted** rather than redefined. **Lengths did not change** — grip is set by
+  printed geometry, not by thread diameter. ⚠️ **The M2.5 family was already bought and received**
+  (order 111-2168015-0136233, $37.26) and is now **scrap for this purpose** — do not re-derive the
+  build from it. M3 replacements ordered 2026-08-03.
 - Total 144 screws = 12/servo × 12 servos, self-consistent. Stock retention screw (×12, one per horn) is NOT sourced — factory-installed.
 - Add ~10% spares per length given self-tap/plastic-thread wear risk (case) and the thin HFE/KFE wheel engagement margin.
