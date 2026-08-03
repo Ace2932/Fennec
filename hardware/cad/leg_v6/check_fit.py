@@ -15,6 +15,7 @@ coax_hfe cap mount-hardware gate alone).
 
 Exit 0 = clean, 1 = interference (clusters printed).
 """
+import math
 import pathlib
 import sys
 
@@ -1107,11 +1108,39 @@ def zip_capture_checks():
 
 # The HFE block's two retention bores are DELIBERATELY different: a 4.6mm insert
 # cannot travel the mortise to reach them (see insert_path_checks). 4.0mm-OD
-# insert, 6.0 long -> 3.5 bore, 6.5 deep.
+# insert -> 3.5 bore, 6.5 deep.
 BLOCK_HEATSET_D = 3.5
 BLOCK_HEATSET_L = 6.5
 BLOCK_INSERT_OD = 4.0
-BLOCK_INSERT_L  = 6.0
+
+#: Insert LENGTH actually ordered. 🔴 Was 6.0 -- the length the joint was designed
+#: around -- but no such part exists (see INSERT_STD_OD below), and the part on the
+#: shelf is 4.0 long. Two thirds of the designed pull-out area.
+BLOCK_INSERT_L  = 4.0
+
+#: Standard heat-set insert OD by thread size, from the industry dimension table
+#: (Albany County Fasteners, and it agrees with ruthex / Adafruit / McMaster):
+#:
+#:      thread   hole    OD     length range   min wall
+#:      M2       3.2     3.5    3-5 mm         0.75
+#:      M2.5     3.7     4.0    3.5-6 mm       0.75
+#:      M3       4.0     4.6    4-6 mm         0.95
+#:      M4       5.3     6.0    5-8 mm         1.25
+#:
+#: WHY THIS TABLE IS IN A GATE (2026-08-03). `docs/fastener-schedule.md` specified
+#: a "SLIM M3 heat-set: 4.0 mm OD x 6.0 long" for this joint, chosen because 4.0 is
+#: what fits down the 4.4 mm mortise slot. **No such part exists.** OD 4.0 is the
+#: M2.5 row exactly; the M3 row is 4.6, an M3 thread inside a 4.0 OD leaves 0.5 mm
+#: of brass against a 0.95 mm spec, and the specialty thin-wall M3 (Tappex
+#: Microbarb) goes the other way at OD 6.1. So the geometry was solved for a
+#: dimension nobody sells, and the part bought at that OD is an M2.5 insert -- an
+#: M3x16 will not thread into it.
+#:
+#: The fix is not a bigger bore. **Use M2.5 hardware for this joint**: OD 4.0 x 6.0
+#: IS a standard M2.5 insert, so it fits the existing slot AND restores the full
+#: designed pull-out area (pi*D*L depends on the OD and length, not the thread), and
+#: 66 N/bolt is ~3% of an M2.5 screw's proof load.
+INSERT_STD_OD = {"M2": 3.5, "M2.5": 4.0, "M3": 4.6, "M4": 6.0}
 
 #: (label, member_stl, parent_stl, axis, bolt centres, declared length mm,
 #:  insert length mm). Axis is the direction a driver approaches from.
@@ -1122,6 +1151,52 @@ FASTENER_SPANS = [
 #: Minimum thread engagement into the insert. 1xD is the usual floor for steel
 #: into a brass insert; M3 -> 3.0 mm.
 MIN_ENGAGEMENT_MM = 3.0
+
+#: Cyclic tensile load per retention bolt at this joint (fastener-schedule: the
+#: tenon carries the moment in BEARING, these two bolts are retention only).
+RETENTION_LOAD_N = 66.0
+#: Heat-set pull-out shear on the plastic side, N/mm^2 of pi*OD*L interface.
+#: Bracketed wet/dry because PA6-CF's own strength is 75/151 MPa wet/dry; the
+#: ~160-225 N figure the schedule quotes for a 75 mm^2 interface implies ~2.1-3.0.
+PULLOUT_N_PER_MM2_WET = 2.1
+PULLOUT_N_PER_MM2_DRY = 3.0
+
+
+def insert_sourcing_checks():
+    """Is the specified insert a PART THAT EXISTS, not just a dimension that fits?
+
+    WHY THIS EXISTS (2026-08-03). The joint was solved for a "SLIM M3 heat-set:
+    4.0 mm OD x 6.0 long" because 4.0 is what fits down the 4.4 mm mortise slot.
+    Nobody checked that such a part is sold. It is not: OD 4.0 is the **M2.5**
+    standard row, the M3 row is 4.6, and the specialty thin-wall M3 goes UP to
+    6.1, not down. So the geometry gate was green on a bore sized for a fastener
+    that does not exist -- and the part bought at that OD is an M2.5 insert, which
+    an M3x16 cannot thread into.
+
+    Every other gate here asks "does the hole fit the fastener". This one asks the
+    question none of them could: "can you buy the fastener at all".
+    """
+    bad = False
+    thread = 'M3'                      # what FASTENER_SPANS drives into this insert
+    std = INSERT_STD_OD[thread]
+    print(f'-- insert sourcing ({thread} thread, OD {BLOCK_INSERT_OD}, '
+          f'L {BLOCK_INSERT_L})')
+    if BLOCK_INSERT_OD < std - 0.05:
+        smaller = [t for t, od in INSERT_STD_OD.items()
+                   if abs(od - BLOCK_INSERT_OD) < 0.05]
+        bad = True
+        print(f'FAIL  no such part: a {thread} heat-set insert is OD {std} as standard, '
+              f'but this joint specifies OD {BLOCK_INSERT_OD}.'
+              + (f' OD {BLOCK_INSERT_OD} is the {smaller[0]} row -- so the part you can '
+                 f'actually buy at this OD gives a {smaller[0]} thread, not {thread}.'
+                 if smaller else ''))
+        print(f'      FIX: use {smaller[0]} hardware here if the slot cannot grow. '
+              f'Pull-out is pi*OD*L, so it is unchanged by the thread size, and '
+              f'{RETENTION_LOAD_N:.0f}N/bolt is a few percent of an {smaller[0]} proof load.'
+              if smaller else '      FIX: grow the slot, or change the joint.')
+    else:
+        print(f'   OK    {thread} at OD {BLOCK_INSERT_OD} matches the standard {std}')
+    return bad
 
 
 def fastener_span_checks():
@@ -1178,7 +1253,17 @@ def fastener_span_checks():
                       f'seat/face/pocket (got {seat}, {face}, {bottom})')
                 continue
             span = seat - bottom
-            engage = length - (seat - face)
+            # Engagement into the BORE. This is what the check used to test, and it
+            # is not the same thing as engagement into the INSERT: threaded length
+            # cannot exceed the insert, no matter how deep the bore is.
+            engage_bore = length - (seat - face)
+            engage = min(engage_bore, insert)
+            # Pull-out is a shear area on the plastic side: pi * OD * L. The thread
+            # size does not enter it, which is exactly why an M2.5 insert at the same
+            # OD and length is just as strong in the plastic.
+            area = math.pi * BLOCK_INSERT_OD * insert
+            sf_lo, sf_hi = PULLOUT_N_PER_MM2_WET * area / RETENTION_LOAD_N, \
+                           PULLOUT_N_PER_MM2_DRY * area / RETENTION_LOAD_N
             if length > span:
                 bad = True
                 print(f'FAIL  {label} @ y={b}: M3x{length:.0f} BOTTOMS OUT -- span is '
@@ -1187,10 +1272,20 @@ def fastener_span_checks():
             elif engage < MIN_ENGAGEMENT_MM:
                 bad = True
                 print(f'FAIL  {label} @ y={b}: only {engage:.1f}mm of thread engagement '
-                      f'(need >= {MIN_ENGAGEMENT_MM})')
+                      f'(need >= {MIN_ENGAGEMENT_MM}) -- bore offers {engage_bore:.1f}mm '
+                      f'but the insert is only {insert:.1f}mm long, and thread cannot '
+                      f'exist past the end of the insert')
             else:
+                extra = ''
+                if engage_bore > insert + 0.05:
+                    extra = (f' [capped by the insert: the bore offers {engage_bore:.1f}mm, '
+                             f'so {engage_bore - insert:.1f}mm of the screw turns in EMPTY '
+                             f'bore past the insert end]')
                 print(f'   OK    {label} @ y={b}: M3x{length:.0f} in a {span:.1f}mm span, '
-                      f'{engage:.1f}mm engagement of the {insert}mm insert')
+                      f'{engage:.1f}mm engagement of the {insert}mm insert{extra}')
+                print(f'         pull-out area pi*{BLOCK_INSERT_OD}*{insert} = {area:.1f}mm^2 '
+                      f'-> SF {sf_lo:.1f}-{sf_hi:.1f} against {RETENTION_LOAD_N:.0f}N/bolt cyclic'
+                      + ('  <== THIN' if sf_lo < 2.0 else ''))
     return bad
 
 
@@ -1902,6 +1997,7 @@ def main():
     if '--fastener' in sys.argv or do_sweep:
         bad = fastener_checks() or bad
         bad = fastener_span_checks() or bad
+        bad = insert_sourcing_checks() or bad
         bad = insert_path_checks() or bad
         bad = engagement_checks() or bad
         bad = horn_bolt_checks() or bad
