@@ -104,8 +104,25 @@ right-angle plug adapters (`BOM.md`). No cowl bolts/inserts to source.
 ### ⚠️ Open on every screw that threads into a servo disc
 
 `engagement_checks()` compares thread engagement against the **disc thickness**
-(2.1 mm wheel, 3.05 mm horn), both taken from `servo.stl` / calipers. **The
-TAPPED depth inside those discs is not known.** If a disc's thread is shallower
+(2.1 mm wheel, 3.05 mm horn), both taken from `servo.stl` / calipers. Two things
+about those holes are still unestablished, and the second is the bigger one:
+
+**(a) The tapped depth is not known.**
+
+**(b) It is not established that they are TAPPED AT ALL.** `dimensions.md` note 4
+records the holes as *"r = 1.25 mm (∅2.5 = M2.5 clearance)"*, extracted from the
+STEP — that is authority for the **diameter and the Ø14 BCD**, and it correctly
+killed the older "M3" claim. But **Ø2.5 is not M2.5 clearance** (that is
+2.7–2.9). Ø2.5 is what you see for a *thread-forming* screw or a plain hole. If
+those holes are plain, an **M2.5 machine screw has nothing to thread into** —
+and every engagement figure in this table measures penetration into material
+that may not be threaded. The 405 M2.5 machine screws on order assume it is.
+
+**Cross-check that does NOT settle it:** LeRobot's SO-101 — same STS3215 —
+specifies *"secure the top horn with a M3×6mm screw"* (that is the horn-to-spline
+**centre** screw, and matches this file's "horn ctr M3") and *"4× M3×6"* for its
+printed parts. Its printed parts bolt to the servo's supplied horn kit, not to
+the Ø20 disc's Ø14 BCD, so it neither confirms nor refutes M2.5 here. If a disc's thread is shallower
 than the engagement figure, that screw bottoms — and a bottomed screw has no
 preload at all, which is the same failure as the M3×22 found on 2026-08-02.
 
@@ -113,8 +130,11 @@ Current engagements against the assumed depths: wheel HFE/KFE **1.56 / 2.1**,
 wheel HAA **1.40 / 2.1**, horn HFE **2.20 / 3.05**, horn KFE **2.42 / 3.05**,
 horn HAA **2.40 / 3.05**. The horn screws use 72–79 % of the assumed depth.
 
-**FIRST-ARTICLE: measure the real thread depth in one horn disc and one wheel
-disc.** It resolves five joints at once, and it is the only number standing
+**FIRST-ARTICLE, 30 seconds:** take one horn disc and one wheel disc. Try an
+M2.5 screw. **Does it thread, or spin straight through?** If it threads, wind it
+to the stop, mark it at the face, back it out and caliper mark-to-tip. If it
+spins through, the joints need self-tapping screws or nuts and this table
+changes for 12 servos. It resolves five joints at once, and it is the only number standing
 between "measured" and "assumed" in this whole table.
 
 ## Purchase summary (chassis/head/electronics)
