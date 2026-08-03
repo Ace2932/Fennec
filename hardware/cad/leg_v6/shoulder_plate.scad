@@ -100,7 +100,7 @@ module shoulder_plate_R() {
             cylinder(d = HORN_OD + 2*CLR_HORN, h = 0.4 + EPS);  // locating recess
             for (a = [45 : 90 : 315])
                 rotate([0, 0, a]) translate([HORN_BCD/2, 0, 0])
-                    cylinder(d = M25_CLEAR, h = FACE_Y1 - FACE_Y0 + 2*EPS);
+                    cylinder(d = M3_CLEAR, h = FACE_Y1 - FACE_Y0 + 2*EPS);
             cylinder(d = HORN_CTR_D, h = HORN_CTR_DEEP + EPS);
         }
         // 4x M3 down through the flange (diagonal pair close-fit = dowels)

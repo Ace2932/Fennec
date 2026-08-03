@@ -1500,7 +1500,7 @@ def fastener_checks():
     return bad
 
 
-# BUGFIX gate 2026-07-12 (full-leg assembly audit): the 4x M2.5 HFE horn bolts
+# BUGFIX gate 2026-07-12 (full-leg assembly audit): the 4x HFE horn bolts (M3)
 # (BCD r7 about the hfe X-axis at y=HFE_Y, z=HFE_Z) are driven -X through the
 # empty HAA pocket into the femur's servo horn to capture the coax<->femur
 # joint. The #53 "nothing left to cut here" note was written when the whole
@@ -1512,7 +1512,13 @@ def fastener_checks():
 # This gate closes that hole: it scans all 4 BCD channels through the coax stub
 # (coax_R/coax_L) and asserts each is clear across the ARM_THK bolt span.
 HORN_BCD_R = 7.0            # HORN_BCD/2 (leg_v6_common.scad)
-HORN_M25   = 2.9           # M25_CLEAR bolt-shank clearance
+HORN_BOLT_CLEAR = 3.4      # M3_CLEAR bolt-shank clearance. 2026-08-02: was
+                           # HORN_M25 = 2.9, because the disc screws were
+                           # believed M2.5. FEETECH's own spec draws both discs
+                           # "4-M3" and an M3 threaded into an outer BCD hole on
+                           # the bench. Probing a 2.9 channel through a 3.4 hole
+                           # under-tests it by 0.5mm and could miss an
+                           # obstruction a real M3 would hit.
 HORN_ANGLES = (45, 135, 225, 315)
 
 
@@ -1526,17 +1532,17 @@ HORN_ANGLES = (45, 135, 225, 315)
 _M25_PROBE, _M3_PROBE = 1.8, 2.2
 FASTENER_ENGAGEMENT = [
     ('horn -> HFE  (coax_R inboard arm)', 'coax_R.stl', 'bcd_x', (33.8, 11.6, -9.5),
-     (-1, 0, 0), 5.0, 2.5, _M25_PROBE, 3.05, 'horn disc', 2.15),
+     (-1, 0, 0), 5.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.15),
     ('wheel -> HFE (coax_hfe_block)', 'coax_hfe_block.stl', 'bcd_x', (33.8, 11.6, -9.5),
-     (-1, 0, 0), 8.0, 2.5, _M25_PROBE, 2.1, 'wheel disc', 1.50),
+     (-1, 0, 0), 8.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.50),
     ('horn -> KFE  (knee_arm)', 'knee_arm.stl', 'bcd_z', (47.9, 0.0, 0.0),
-     (0, 0, -1), 6.0, 2.5, _M25_PROBE, 3.05, 'horn disc', 2.35),
+     (0, 0, -1), 6.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.35),
     ('wheel -> KFE (femur_R bottom boss)', 'femur_R.stl', 'bcd_z_up', (106.9, 0.0, 0.0),
-     (0, 0, 1), 8.0, 2.5, _M25_PROBE, 2.1, 'wheel disc', 1.50),
+     (0, 0, 1), 8.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.50),
     ('horn -> HAA  (shoulder_plate)', 'shoulder_plate.stl', 'bcd_y', (39.05, 0.0, 0.0),
-     (0, -1, 0), 6.0, 2.5, _M25_PROBE, 3.05, 'horn disc', 2.35),
+     (0, -1, 0), 6.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.35),
     ('wheel -> HAA (shoulder rear wall)', 'shoulder.stl', 'bcd_y_up', (39.05, 0.0, 0.0),
-     (0, 1, 0), 14.0, 2.5, _M25_PROBE, 2.1, 'wheel disc', 1.30),
+     (0, 1, 0), 14.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.30),
     # DEFERRED to fastener_span_checks(), which measures this joint end to end
     # (seat 57.0 -> pocket bottom 39.85 = 17.2mm span, 5.2mm engagement). The
     # probe window here is only 1.7 < r < 2.0 -- above the M3 clearance, below
@@ -1554,12 +1560,29 @@ FASTENER_ENGAGEMENT = [
 ]
 #: Thread engagement floor. 1xD is the usual rule for steel into steel/brass.
 MIN_ENGAGE_D = 1.0
-#: The horn rows are accepted at 0.88-0.97xD deliberately: the target is a STEEL
-#: horn disc, where thread strength passes the screw's own tensile capacity well
-#: below 1xD, and the schedule's lengths were derived as "grip + ~2.5 target,
-#: round DOWN" so the shortfall is the rounding, not an oversight. The wheel rows
-#: are accepted because the ~2.1mm disc CAPS engagement -- a longer screw bottoms
-#: -- so only a deeper counterbore can buy thread there.
+#: ACCEPTANCE RATIONALE REWRITTEN 2026-08-02 -- the old one was wrong twice.
+#: It read "accepted at 0.88-0.97xD ... the target is a STEEL horn disc". Both
+#: halves failed:
+#:   * the ratios were computed against a 2.5 screw. The discs are M3 (FEETECH
+#:     PRODUCT SPECIFICATION STS3215 A/0 section 10, "4-M3", confirmed on the
+#:     bench). The real figures are 0.73-0.81xD on the horn rows and
+#:     0.47-0.52xD on the wheel rows.
+#:   * the discs are NOT steel. The same spec calls them 6061 anodised
+#:     aluminium. That matters: the "passes the screw's tensile capacity well
+#:     below 1xD" argument is a steel-into-steel argument. Aluminium generally
+#:     wants ~1.5-2xD to develop the same capacity.
+#: The ENGAGEMENT IN MM DID NOT MOVE (2.20 / 1.56 / 2.42 / 1.56 / 2.40 / 1.40).
+#: The geometry is unchanged; only the denominator and the material were wrong.
+#: These rows stay ACCEPTED on a different and honest basis: this is the
+#: MANUFACTURER'S OWN JOINT. FEETECH ships a 2.1mm aluminium disc tapped M3 and
+#: expects it to be bolted -- the disc thickness is a hard cap no screw length
+#: can beat (a longer one bottoms). We are not choosing a thin joint; we are
+#: using the one the servo provides.
+#: OPEN LEVER, not taken here: a deeper head counterbore DOES buy thread on the
+#: wheel rows. They sit at 1.56mm of a possible 2.10mm because the head seats
+#: 0.54mm too high; ~0.54mm more counterbore would take the tightest joint on
+#: the robot from 0.52xD to 0.70xD. Cost is wall behind the c'bore (real depth
+#: is already 1.6 of ARM_THK 4.0). That is a design call for #255's author.
 
 
 def _holes_for(kind, spec):
@@ -1689,7 +1712,7 @@ ARM_THK = 4.0              # horn couple channel length (leg_v6_common.scad)
 
 
 def horn_bolt_checks():
-    print('-- HFE horn-bolt gate (4x M2.5 BCD channels must clear through the coax stub) --')
+    print('-- HFE horn-bolt gate (4x M3 BCD channels must clear through the coax stub) --')
     bad = False
     for part in ('coax_R.stl', 'coax_L.stl'):
         m = trimesh.load(part)
@@ -1706,7 +1729,7 @@ def horn_bolt_checks():
             # re-thickening (the #67 regression) can't hide just outside it.
             base = np.array([sx * (FEMUR_MID + 0.5), y, z])
             blocked = _axis_scan(m, base, [-sx, 0, 0],
-                                 -0.5, ARM_THK + MARGIN_MM, r=HORN_M25 / 2 - 0.1)
+                                 -0.5, ARM_THK + MARGIN_MM, r=HORN_BOLT_CLEAR / 2 - 0.1)
             if blocked:
                 bad = True
                 print(f'BLOCK {part}: horn bolt a={a:3d} (y={y:+.1f},z={z:+.1f}) '
@@ -1723,8 +1746,8 @@ def horn_bolt_checks():
 # yoke and the tibia hosts the KFE servo (verified: "KFE servo in tibia
 # pocket"). Three bolt circles capture the joint, all about the kfe Z-axis at
 # femur-frame x=FEMUR_LEN:
-#   * TOP    knee_arm.stl 4x M2.5 horn BCD -> the tibia servo horn
-#   * BOTTOM femur_R/L wheel BCD 4x M2.5   -> the tibia idler wheel
+#   * TOP    knee_arm.stl 4x M3 horn BCD -> the tibia servo horn
+#   * BOTTOM femur_R/L wheel BCD 4x M3     -> the tibia idler wheel
 #   * MOUNT  knee_arm 4x M3 -> femur shelf heat-sets (holds the top plate on)
 # Every scan carries a solid-material guard (a ring at r+1.2 must read solid):
 # a bare centerline-void test reads a FALSE clear in empty space -- exactly the
@@ -1768,7 +1791,7 @@ def _blind_pocket(mesh, cx, cy, z_top, dirn, depth):
 def kfe_bolt_checks():
     print('-- KFE joint gate (knee-arm horn BCD + femur wheel BCD + knee-arm mount) --')
     bad = False
-    r25 = HORN_M25 / 2
+    r25 = HORN_BOLT_CLEAR / 2
     # 1. knee_arm horn BCD (single part, no mirror) -> tibia servo horn
     ka = trimesh.load('knee_arm.stl')
     for a in HORN_ANGLES:

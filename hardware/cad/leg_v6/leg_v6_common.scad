@@ -55,7 +55,7 @@ HORN_Z0   = 14.7;   HORN_Z1 = 17.75;     // output horn disc faces. HORN_Z1 =
                                           // about the shaft (Z=0) -> ±17.75.
                                           // HORN_Z0 (case-side face) unmoved.
 HORN_OD   = 20.0;
-HORN_BCD  = 14.0;                        // 4x M2.5 at ±45° + center (both discs)
+HORN_BCD  = 14.0;                        // 4x M3 at ±45° + center (both discs)
 WHEEL_Z0  = -17.75; WHEEL_Z1 = -15.6;    // bottom wheel faces. WHEEL_Z0 = yoke
                                           // SEAT plane, same rev-3 caliper fix.
 WHEEL_OD  = 20.0;
@@ -103,7 +103,15 @@ CLR_POCKET = 0.45;   // DROP-IN slip fit. NOT the 0.30 press calibration
                      // would not drop in.
 CLR_HORN   = 0.15;
 M2_CLEAR   = 2.3;    // case-column replacement screws (M2 self-tap)
-M25_CLEAR  = 2.9;    // horn / wheel disc screws
+// M25_CLEAR (2.9) REMOVED 2026-08-02 — the disc screws are M3, not M2.5.
+// FEETECH PRODUCT SPECIFICATION STS3215 A/0 section 10 draws BOTH discs as
+// O19.95 OD / O14 BCD / "4-M3", and an M3 was threaded into an outer BCD hole
+// on the bench to confirm. M2.5 was never verified — fastener-schedule.md said
+// outright "no verified stock M2.5 horn/wheel screw length was found in this
+// repo". A 2.9 clearance will not pass an M3 shank (3.0), so every disc-facing
+// hole now uses M3_CLEAR. The constant is DELETED rather than redefined: a
+// symbol called M25_CLEAR holding 3.4 is the same name-lies trap this project
+// keeps paying for.
 M3_CLEAR   = 3.4;    // general M3 clearance (knee_arm/shoulder_plate mounting
                      // screws). NOT the horn/wheel center relief any more —
                      // see HORN_CTR_D / WHEEL_CTR_D below (rev 3).
@@ -332,7 +340,7 @@ module horn_couple_neg(ctr_deep = HORN_CTR_DEEP) {
         cylinder(d = HORN_OD + 2*CLR_HORN, h = 0.4 + EPS);   // locating recess
         for (a = [45 : 90 : 315])
             rotate([0, 0, a]) translate([HORN_BCD/2, 0, 0])
-                cylinder(d = M25_CLEAR, h = ARM_THK + 2*EPS);
+                cylinder(d = M3_CLEAR, h = ARM_THK + 2*EPS);
         cylinder(d = HORN_CTR_D, h = ctr_deep + EPS);   // blind counterbore
     }
 }
@@ -354,11 +362,19 @@ module wheel_couple_neg() {
     translate([0, 0, YOKE_BOT_IN - ARM_THK - 1]) {
         for (a = [45 : 90 : 315])
             rotate([0, 0, a]) translate([HORN_BCD/2, 0, 0]) {
-                cylinder(d = M25_CLEAR, h = h_all);
-                cylinder(d = 5.2, h = 1 + WHEEL_HEAD_CB_DEEP);   // head c'bore
+                cylinder(d = M3_CLEAR, h = h_all);
+                // head c'bore 5.2 -> 6.0 (2026-08-02, M3): an M3 SHCS head is
+                // O5.5 and does NOT fit 5.2. 6.0 matches coax_hfe_block's
+                // existing M3 head c'bore, and it also clears an M3 BUTTON head
+                // (O5.7) -- which is the head to use here: button is 1.65 tall
+                // against this c'bore's ~1.6mm real depth, so it sits flush,
+                // where an M3 SHCS at 3.0 tall would stand 1.4mm proud. The
+                // c'bore cannot simply be deepened: real depth 1.6 already
+                // leaves only 2.4 of the 4.0 ARM_THK behind it.
+                cylinder(d = 6.0, h = 1 + WHEEL_HEAD_CB_DEEP);
             }
         // #51 (2026-07-11): NO center screw hole on the wheel/idler side —
-        // the idler has no retention screw (rev 3), so a center M25_CLEAR
+        // the idler has no retention screw (rev 3), so a center clearance
         // through-cut here was PHANTOM: an open daylight hole through the
         // flat-on-flat wheel clamp face + a debris path into the C-box (the
         // same defect LA-5 removed from shoulder.scad's standalone cut, but it
