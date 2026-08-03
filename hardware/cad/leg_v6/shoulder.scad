@@ -255,11 +255,11 @@ module shoulder_v6() {
                 translate([sx*HIP_X + HORN_BCD/2*cos(a), REAR_W0 - 1,
                            HORN_BCD/2*sin(a)])
                     rotate([-90, 0, 0])
-                        cylinder(d = M25_CLEAR,
+                        cylinder(d = M3_CLEAR,
                                  h = (WHEEL_FACE_Y - REAR_W0) + 2);
                 translate([sx*HIP_X + HORN_BCD/2*cos(a), REAR_W0 - EPS,
                            HORN_BCD/2*sin(a)])
-                    rotate([-90, 0, 0]) cylinder(d = 5.2, h = 1.8);
+                    rotate([-90, 0, 0]) cylinder(d = 6.0, h = 1.8);   // M3 head (was 5.2 for M2.5)
             }
             // idler-boss relief (rev 3): the haa wheel has NO retention
             // screw — a black plastic boss (Ø6, ~1-2mm proud, MEASURED)
