@@ -140,6 +140,48 @@ between "measured" and "assumed" in this whole table.
 - **Ruthex inserts**: M3×5.7 ×16 (head 4, ears 4, riser flange 4, + spares), M3×3.8 ×8 (adapter 2, battery pocket 6 — AUD-11 fix), M2×4 ×14 (pod 4, deck-tie 4, clamp bar 4, OLED-bracket-in-pod-deck 2)
 - **E-stop**: HB2-ES544 (Ø22, owned)
 
+## 🔴 CASE SCREWS — M2×22/M2×25 WAS WRONG AND WOULD WRECK SERVOS (measured 2026-08-02)
+
+The stock screw and its column were finally measured. Every number below is off a
+real STS3215, not back-solved:
+
+| | measured |
+|---|---|
+| stock screw | **PA ~2.0 self-tapping**, **PAN head Ø3.2**, **7 mm** under-head |
+| pitch | **~1.2 mm** (6 crests over 7 mm) — coarse, plastic-forming |
+| **case column depth** | **7.0 mm — BLIND** |
+
+**The column is 7 mm, not the 19.9 mm this document assumed.** That 19.9 was
+back-solved from the 22 mm baseline, and the 22 was never derived from anything —
+`leg_v6/README.md` has always said *"measure stock length at first article, spec ≈
+stock + 3 mm"*, which gives **10 mm**. Circular, and nobody measured until now.
+
+🔴 **An M2×22 drives ~13 mm past the bottom of a blind hole in plastic**, with the
+gear train and encoder above it. 4 per servo × 12 servos. Do not fit one.
+
+### Correct lengths — `floor + column`, and they must not bottom
+
+| pair | printed floor | max under-head | use | engagement |
+|---|---|---|---|---|
+| near — HAA `coax`, KFE `tibia`, HFE-near `femur` | 2.125 | **9.125** | **M2×9** (M2×8 safe fallback) | 6.9 mm (8 → 5.9) |
+| far — HFE-far `femur` (LA-6 ramp) | 6.525 | **13.525** | **M2×13** (M2×12 safe fallback) | 6.5 mm (12 → 5.5) |
+
+M2×10 bottoms the near pair by 0.9 mm; M2×14 bottoms the far pair by 0.5 mm.
+Bottoming in a blind plastic column means no preload, then a stripped or split boss.
+
+### ⚠️ Buy COUNTERSUNK, not pan like the stock screw
+
+The printed floor has a **cone, Ø4.6 → Ø2.3 over 1.4 mm**, and `README.md` specs these
+"countersunk" — the intent was always CSK. A **pan head cannot seat in a cone**: it makes
+line contact where the cone equals the head Ø (0.85 mm down for Ø3.2), sits ~0.5 mm
+proud, and wedges the ~1.15 mm wall around the hole. **The factory screws cannot be
+reused in the printed part.** A 90° CSK head (~Ø3.8) contacts near the cone mouth and
+seats slightly recessed — the good case, and no CAD change needed.
+
+Engagement lands at 5.5–6.9 mm against the factory's 7 mm, so the case clamp is a little
+weaker than stock. The printed tail strap is the documented backup.
+
+
 ## Purchase summary (leg_v6 STRUCTURAL screws + ALL heat-set inserts) — ADDED 2026-08-02
 
 The two summaries either side of this one leave a hole. The chassis one is scoped
@@ -168,7 +210,7 @@ A botched press wrecks the insert and sometimes the part, so buy 50-packs; spare
 Both are first-article-verifiable: seat a screw and check it neither bottoms nor stands proud.
 
 ## Purchase summary (leg_v6 servo screws, MEASURED 2026-07-11 — 12 active servos: 4 HAA + 4 HFE + 4 KFE)
-- **M2 self-tap (case-mount)**: ×40 M2×22 (HAA×16 + KFE×16 + HFE-near×8), ×8 M2×25 (HFE-far pair only, ramped floor — longer to span the +4.4mm ramp; NOT longer than 25 or it bottoms the ~19.9mm column)
+- **M2 self-tap (case-mount), COUNTERSUNK**: ×40 **M2×9** (HAA×16 + KFE×16 + HFE-near×8), ×8 **M2×13** (HFE-far pair only, ramped floor). ⚠️ **This line read M2×22 / M2×25 until 2026-08-02** — the column is **7 mm blind, measured**, not the 19.9 mm assumed, so a ×22 goes 13 mm into the servo. See the CASE SCREWS block above.
 - **M2.5 (horn, driven side)**: ×32 M2.5×6 (HAA×16 + KFE×16), ×16 M2.5×5 (HFE, thinner LA-7 backing)
 - **M2.5 (wheel, idler side, NO center screw)**: ×32 M2.5×8 (HFE×16 + KFE×16), ×16 M2.5×14 (HAA, long boss reach)
 - Total 144 screws = 12/servo × 12 servos, self-consistent. Stock retention screw (×12, one per horn) is NOT sourced — factory-installed.
