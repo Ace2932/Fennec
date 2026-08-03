@@ -178,8 +178,31 @@ proud, and wedges the ~1.15 mm wall around the hole. **The factory screws cannot
 reused in the printed part.** A 90° CSK head (~Ø3.8) contacts near the cone mouth and
 seats slightly recessed — the good case, and no CAD change needed.
 
-Engagement lands at 5.5–6.9 mm against the factory's 7 mm, so the case clamp is a little
-weaker than stock. The printed tail strap is the documented backup.
+### They MOUNT THE BODY — they do not hold the servo case shut
+
+Corrected 2026-08-03 (user, at the bench). The version of this block merged in #264 said the
+screw "clamps the case shut AND bolts the servo to the leg". **It does not.** These four are
+blind mounting columns in the servo's bottom face; the case is held together by its own
+hardware. Two consequences, both in the reassuring direction:
+
+- **There is no "case unclamped" window during assembly.** Pulling all four does not open
+  the servo. #264's warning to keep it bottom-face-down and not invert it was wrong —
+  disregard it. Nothing about the gear train or encoder is exposed.
+- **The load is SHEAR, not tension.** The servo reacts its own output torque against these
+  four. `COL_PTS` = (−8.3, ±10.2) and (−32.8, ±10.25), so the centroid radius is
+  `√(12.25² + 10.2²) ≈ 15.9 mm`; stall is 19.5 kg·cm = 1.91 N·m, giving
+  **F ≈ 1.91 / (4 × 0.0159) ≈ 30 N per screw in shear.** Shear capacity is nearly
+  independent of engagement depth past the first few threads.
+
+So 5.5–6.9 mm of engagement against the factory's 7 mm is **not a meaningful reduction for
+this joint**, and the kit lengths (M2×8 / M2×12, ≈4.0–4.4 mm of thread) are comfortably
+adequate rather than a compromise. These screws are also one of four retention features —
+pocket walls at 0.45/side, the platform seat, the bay seat, and the printed tail strap — and
+per the connection map their real duty is **positional**: "the 4 screws, ±0.15 → THE servo
+locator".
+
+⚠️ `leg_v6_common.scad:23` calls these "CASE-SCREW COLUMNS", which is what invited the wrong
+reading. The same comment correctly adds "the REAL mounting". Read it as body-mount.
 
 
 ## Purchase summary (leg_v6 STRUCTURAL screws + ALL heat-set inserts) — ADDED 2026-08-02
