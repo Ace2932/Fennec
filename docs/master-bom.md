@@ -194,7 +194,7 @@ Single-length packs for those two.
 
 **Superseded M2.5 order** (111-2168015-0136233, $37.26, received 2026-08-02): ×100 M2.5×5,
 ×105 M2.5×6, ×100 M2.5×8, ×100 M2.5×14 — iexcell `B0DLKG6JK6` · Sutemribor `B0DJKVZ4P2` ·
-iexcell `B0DLKC64NP` · iexcell `B0DLKBDMSB`. Keep for unrelated M2.5 work; do not build from it.
+iexcell `B0DLKC64NP` · iexcell `B0DLKBDMSB`. ✅ **RETURNED 2026-08-03 — the $37 is recovered.** Nothing to keep, nothing to scrap-hunt back into the build.
 
 ### M2
 | Screw | Qty | For | Status |

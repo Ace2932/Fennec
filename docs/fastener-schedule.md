@@ -150,8 +150,9 @@ between "measured" and "assumed" in this whole table.
   thread-forming-screw-into-plain-pilot is UNRESOLVED.** Both are Ø3.0, so the printed ∅3.4
   clearance is right either way; the *purchase* is not settled. M2.5 was this
   project's own unsourced inference. A 2.5 mm screw in an M3 thread does not engage at all. The
-  lengths (5/6/8/14) were right and carry straight over to M3; only the thread was wrong. Keep the
-  M2.5 stock for unrelated M2.5 work, don't scrap-hunt it into this build. **Button head is still
+  lengths (5/6/8/14) were right and carry straight over to M3; only the thread was wrong.
+  ✅ **RETURNED 2026-08-03** — the whole M2.5 family went back and the $37 is recovered, so there
+  is no leftover stock to mistake for build hardware. **Button head is still
   the right head** for the same reason it was before: 1.5 mm tall clears the wheel c'bore's 1.6 mm
   real depth flush, where an SHCS head stands proud. ⚠️ Also outstanding from the same BOM line:
   the servo case-mount self-tappers, now **M2×9 ×40 + M2×13 ×8** (not ×22/×25 — see below).

@@ -337,26 +337,34 @@ PARTS = {
         doc="PRINT: PA6-CF (in the leg batch) or PETG-CF, FLAT (2.5 plate on the bed)",
     ),
     "shoulder": Part(
-        _leg("shoulder.stl"), "PA6-CF",
-        manual="rear face down — which axis is 'rear' is not stated. Measured: +Z dominates "
-               "at 7880 mm^2 (s0.90); the +Y and +X candidates are 772 and 856. If 'rear' "
-               "means +Y as it does on coax.scad, that is a 10x worse footprint — resolve it "
-               "on the plate, not here",
+        _leg("shoulder.stl"), "PA6-CF", down="+Z",
+        # RESOLVED #259 (2026-07-31): the .scad header now reads "**+Z FACE DOWN** (deck top
+        # on the bed)", so the prose this entry was refusing on no longer exists. Re-measured
+        # 2026-08-03: +Z 7880 mm^2 / s0.90 against +X 856, +Y 772, -Z 358, -Y 64 (a knife
+        # edge) -- 9.2x the runner-up, and the functionally right face too: +Z is DECK_Z1,
+        # the surface shoulder_plate bolts flat against and all 8 plate heat-sets press into.
+        # This entry stayed MANUAL for three days after the .scad was fixed, which is the
+        # give-away shape: the resolution landed in one of the two files that had to agree.
         supports="tree", scad=_leg("shoulder.scad"),
         doc="Print: PA6-CF, rear face down; tree supports under the flange span.",
     ),
     "shoulder_plate": Part(
-        _leg("shoulder_plate.stl"), "PA6-CF",
-        manual="back face DOWN — axis not stated. Measured: +Y dominates at 1627 mm^2 "
-               "(s0.49); next is +Z 504, then -Y 102",
+        _leg("shoulder_plate.stl"), "PA6-CF", down="+Y",
+        # RESOLVED #253/#258: "back face" IS +Y -- the .scad's own FACE_Y1 = 21.75 is the bed
+        # face. Re-measured 2026-08-03: +Y 1617 mm^2 / s0.49, next +Z 504, then +X/-X 74.
+        # NB "back face down" was itself a correction of "horn-seat-down" (knee_arm's
+        # doctrine copied onto a part whose flange sits 15.75 mm below that plane, so it
+        # physically cannot rest there).
         scad=_leg("shoulder_plate.scad"),
         doc="Print: PA6-CF, back face DOWN (perfect seat on the horn face, knee_arm doctrine)",
     ),
     "shoulder_plate_L": Part(
-        _leg("shoulder_plate_L.stl"), "PA6-CF",
-        manual="back face DOWN — axis not stated. Measured: +Y 1620 mm^2 (s0.49), i.e. the "
-               "SAME face as the R part — this pair does not swap sides the way "
-               "coax_hfe_block does, which is worth knowing before assuming it",
+        _leg("shoulder_plate_L.stl"), "PA6-CF", down="+Y",
+        # RESOLVED #253/#258, and this pair does NOT swap: +Y 1610 mm^2 vs the R's 1617 --
+        # the SAME face, because shoulder_plate_L is an X-mirror of a body that never crosses
+        # x=0, making it a pure translation. Only coax_hfe_block and the Z-mirrored
+        # femur_L/tibia_L actually flip. Never carry an orientation across a mirror on
+        # assumption; measure the part in front of you.
         scad=_leg("shoulder_plate_L.scad"),
         doc="Print: PA6-CF, back face DOWN",
     ),
