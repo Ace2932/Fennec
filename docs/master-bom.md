@@ -124,8 +124,8 @@ drives 3.4 mm into a 2.1 mm wheel disc and jacks the boss. Single-length packs o
 ### M2
 | Screw | Qty | For | Status |
 |---|---|---|---|
-| M2×22 self-tap | 40 | servo case-mount: HAA + KFE + HFE-near pair. ⚠ stock case screws confirmed too short | ⬜ ORDER |
-| M2×25 self-tap | 8 | HFE-far pair only (femur LA-6 ramp, floor +4.4 mm). **Do not exceed 25** — bottoms the ~19.9 mm column | ⬜ ORDER |
+| **M2×9 self-tap, COUNTERSUNK** | 40 | servo case-mount: HAA + KFE + HFE-near pair. 🔴 **WAS M2×22 — that drives 13 mm into the servo.** Column measured **7.0 mm blind** 2026-08-02 (19.9 was back-solved). Stock is a 7 mm PAN-head PA2.0 self-tapper; buy CSK, the printed floor has a Ø4.6→2.3 cone | ⬜ ORDER |
+| **M2×13 self-tap, COUNTERSUNK** | 8 | HFE-far pair only (femur LA-6 ramp, floor 6.525). 🔴 **WAS M2×25.** Max is floor + 7.0 column = **13.5 mm**; M2×14 bottoms by 0.5 | ⬜ ORDER |
 | M2×8 SHCS | 14 | control_pod 4 · deck-tie 4 · clamp bar 4 · OLED foot 2 | ⬜ ORDER |
 | M2×6 SHCS + M2 nut | 4 + 4 | SSD1331 → bracket | ⬜ ORDER |
 
