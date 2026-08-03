@@ -83,8 +83,19 @@ legs, so
     LEFT  leg (at +y): shaft = -y => +tick is POSITIVE about +y => urdf_sign +1
     RIGHT leg (at -y): shaft = +y => +tick is NEGATIVE about +y => urdf_sign -1
 
-Front and rear share a sign, as for the hips -- corroborated by the MJCF, where
-hfe/kfe ranges are identical across all four legs.
+Front and rear share a pitch sign -- and this is the one place the 180 deg yaw
+does NOT propagate, so it is worth saying why rather than asserting it:
+
+    "inboard" is a SIDE-relative notion, and the yaw maps inboard -> inboard.
+    The yaw flips x AND y, so it carries a leg to the opposite side; a shaft
+    that pointed -y (inboard at the +y corner) now points +y, which is inboard
+    at the -y corner it landed on. The shaft-vs-inboard relation is invariant,
+    the URDF axis is +y everywhere, so the sign turns only on which side the
+    leg sits. FL and RR are the SAME PART and get OPPOSITE urdf_sign, because
+    the yaw reverses that part's shaft in the trunk frame.
+
+So the yaw's fore-aft effect on hfe lands in the LIMITS, not the sign -- see
+below, and #144.
 
 The "horn faces INBOARD" premise is no longer just a reading of somebody's
 constant. `hardware/cad/leg_v6/servo_orientation_gate.py` seats the real servo
@@ -102,11 +113,28 @@ impossibility proof rather than on documentation -- arguably firmer than haa's,
 which rests on reading a placement transform.
 
 What stays unconfirmed is the half hfe/kfe SHARE with haa: "+tick = CLOCKWISE
-from horn side". No mesh can check a servo's internal convention. There is also
-no independent kinematic cross-check for the pitch joints the way haa has the
-mirrored ranges -- the URDF axis is +y on all four with identical ranges, so the
-model holds no left/right asymmetry to exploit. Homing confirmation is still
-required for every joint.
+from horn side". No mesh can check a servo's internal convention. Homing
+confirmation is still required for every joint.
+
+CORRECTED 2026-08-03. This paragraph used to end: "There is also no independent
+kinematic cross-check for the pitch joints the way haa has the mirrored ranges
+-- the URDF axis is +y on all four with identical ranges, so the model holds no
+left/right asymmetry to exploit." Both halves are now false:
+
+  * The MJCF hfe ranges are NOT identical. They are exact front/rear NEGATIONS
+    -- FL/FR [-1.5010, +0.8730] vs RL/RR [-0.8730, +1.5010] -- because
+    toward-the-trunk is +hfe at the front and -hfe at the rear, so the
+    conservative chassis cap sits on opposite signs (#144). kfe IS still
+    range-identical, but only because +-1.9 is symmetric and therefore
+    negation-invariant: it cannot distinguish the two hypotheses at all.
+  * So the model DOES hold an asymmetry to exploit -- a FRONT/REAR one, which
+    is precisely the yaw's fingerprint -- and
+    `test_pitch_AXES_identical_across_all_four_legs` already exploits it,
+    asserting `rng(FL,hfe) == -reversed(rng(RL,hfe))`. The cross-check this
+    paragraph declared nonexistent runs on every CI.
+
+A symmetric range is not evidence of symmetry. It is the absence of evidence
+either way, and it was read as confirmation.
 
 ASSEMBLY NOTE worth carrying to the bench: the femur/tibia POCKET does not
 discriminate. A backwards servo drops in perfectly happily and only refuses
@@ -124,8 +152,22 @@ not merely argued — see `test_derived_signs.py`:
     inboard right.
   * Forward kinematics measured: +haa moves the foot toward +y on ALL FOUR legs
     (dy = +0.070, +0.075, +0.070, +0.075 m at 0.30 rad).
-  * hfe/kfe ranges are IDENTICAL across all four legs — no fore-aft mirroring,
-    corroborating "4 identical translated legs" from the CAD side.
+  * hfe ranges are exact front/rear NEGATIONS, [-1.5010, +0.8730] at the front
+    vs [-0.8730, +1.5010] at the rear (#144) — an INDEPENDENT kinematic
+    corroboration of the 180 deg yaw, from the model rather than the CAD. kfe is
+    range-identical, but +-1.9 is symmetric so it distinguishes nothing.
+  * the pitch shaft points INBOARD on all four legs, asserted against the real
+    placement (`coax_to_trunk_bases()`), with det +1 at FR/RL and -1 at FL/RR —
+    handedness DIAGONAL. This is what actually pins the pitch table.
+
+CORRECTED 2026-08-03. The first bullet used to read "hfe/kfe ranges are
+IDENTICAL across all four legs — no fore-aft mirroring, corroborating '4
+identical translated legs' from the CAD side." That was false on the ranges, and
+it cited as support the very premise this file's own WHY section demolishes:
+lines above establish the rear hip is a YAW and that "front/rear shoulder = ONE
+part translated" is WRONG. The file was arguing against itself, in the section
+titled HOW MUCH OF THIS IS CHECKED. The sign TABLE was right throughout and the
+tests were updated at #144; only this prose lagged.
 
 Steps 1-3 (the SERVO half — the CW convention and the horn facing) are DERIVED
 ONLY. No model can check them; they are facts about a physical part in a
