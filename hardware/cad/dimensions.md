@@ -599,7 +599,10 @@ mounts. Dims kept here only for future re-introduction reference.
 | Dim | Value | Status |
 |---|---|---|
 | Build volume X × Y × Z | 256 × 256 × 256 | ✅ |
-| Nozzle (project hardened steel) | 0.4 mm | ✅ |
+| Nozzle | **0.4 mm Bambu "Obsidian", HIGH FLOW variant** — hardened, rated for abrasives. CONFIRMED INSTALLED in the P1S 2026-08-03 (user). Supersedes the unnamed "project hardened steel" this row used to read; the checklist item in `docs/checklists/week-2.md` is now satisfiable by name rather than by adjective | ✅ user-confirmed 2026-08-03 |
+| PA6-CF max volumetric speed | **8–10 mm³/s** (`Bambu PA6-CF @BBL X1C`, Bambu Studio preset) | ✅ vendor preset |
+| ⤦ what that implies | At 0.20 × 0.42 mm line, 8 mm³/s = **95.2 mm/s** — so the filament's own volumetric cap already enforces `patterns.md`'s "≤ 100 mm/s" CF rule. **Do not hand-set a speed cap**; it is redundant and will drift from the preset. It also means the HIGH-FLOW nozzle's extra headroom is **unused** for PA6-CF: the filament, not the nozzle, is the bottleneck | ✅ derived from the two rows above |
+| PA6-CF nozzle temp | **275 °C** (vendor preset, both extruder entries) — ⚠️ `hardware/cad/README.md:45` says "280 °C"; the vendor preset is the authority and 275 is what actually gets used unless someone overrides it | ⚠️ README disagrees |
 | Chamber | enclosed | ✅ |
 | AMS HF | bypassed for PA6-CF (see BOM §8) | ✅ |
 
