@@ -245,7 +245,9 @@ STS3215 = {
     "horn_disc_od":  20.0,    # both top + bottom horn disc OD
     "horn_disc_t":   8.80,    # top horn disc thickness (dimensions.md §1)
     "horn_offset":   12.50,   # CRITICAL — spline X offset from body center
-    "horn_screw_d":  3.0,     # M3 per the FEETECH spec sheet. 🔴 This line read 2.5
+    "horn_screw_d":  3.0,     # O3.0 nominal. 🔴 This line read 2.5
+                              # ⚠️ M3-tapped vs PA3.0 self-tap pilot UNRESOLVED (#262) --
+                              # both are O3.0, so clearance is unaffected; the BUY is not.
                               # with "(NOT M3 as old notes claimed)" until 2026-08-02
                               # (#263) — the old M3 notes were RIGHT. The ∅2.5 in the
                               # STEP is the M3 tap drill (3.0-0.5), not M2.5 clearance
@@ -258,7 +260,7 @@ STS3215 = {
     # {7.55, 17.45} × {±4.95} sit at radius sqrt(4.95^2 + 4.95^2) = 7.000 from
     # the spline, i.e. they ARE the Ø14 BCD at ±45 deg, and they are IN THE DISCS.
     # A hole in the rotating disc can never mount the body -- the disc covers it.
-    # Thread is M3 (FEETECH spec), not M2.5.
+    # Fastener is O3.0 nominal, not M2.5. Tapped-M3 vs PA3.0 pilot open (#262).
     #
     # The REAL body mount pattern is a different family: 8x Ø1.5 pilots (with
     # Ø4.2 head recesses) at y = ±10.25 on the two shaft-normal faces, x = +4.20

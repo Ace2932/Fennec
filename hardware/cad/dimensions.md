@@ -46,7 +46,7 @@ was 0.6 mm too narrow.**
 | Rear top cap ridge | to z 17.4 (x −34.8..−28.5, y ±7) | ✅ mesh |
 | Output HORN disc | Ø20 × ~3.05, z 14.7..**17.75** (+boss to 20.2) | ✅ mesh + CALIPER 2026-07-10 |
 | Bottom WHEEL disc | Ø20 × ~2.15, z **−17.75**..−15.6 — **standard-fitted** | ✅ mesh + CALIPER 2026-07-10 |
-| Disc screw pattern (BOTH discs) | 4× **M3** on Ø14 BCD ±45° + center — 🔴 *was "M2.5", corrected 2026-08-02 per the FEETECH spec; see note 4, whose ∅2.5="M2.5 clearance" reasoning is retracted* | ✅ mesh (pattern), spec sheet (thread) |
+| Disc screw pattern (BOTH discs) | 4× **M3** on Ø14 BCD ±45° + center — 🔴 *was "M2.5"; O3.0 nominal confirmed 2026-08-02, though tapped-M3 vs PA3.0 self-tap pilot is open (#262) — see note 4, whose ∅2.5="M2.5 clearance" reasoning is retracted* | ✅ mesh (pattern), spec sheet (thread) |
 | Connector bay | rear-bottom to z −19.4 over x<−5.3, **FULL width ±12.35**; 2× 3-pin sockets mid-body facing rear | ✅ mesh (fit-gate catch) |
 | **REAL case mounting** | the 4 case-screw columns (Ø2 self-tap, heads at the bay): (−8.3, ±10.2) & (−32.8, ±10.25) — use longer M2 through the printed floor | ✅ mesh |
 | Spline offset from body center | +12.50 along the long axis | ✅ |
@@ -682,13 +682,30 @@ These differ from values currently in `patterns.md` or `nova_sm3_patterns.md`:
 
 ---
 
-## STS3215 STEP — full hole census (re-parsed 2026-08-02, settles notes 4/6/9)
+## STS3215 STEP — full hole census (re-parsed 2026-08-02)
+
+> ⚠️ **Read §1 lines 47–58 FIRST — most of this was already there.** The
+> 2026-07-02 correction block already recorded that the "9.9 × 9.9 square" is the
+> disc BCD and not a body mount ("*Screws driven there thread into nothing. Cost
+> one full pocket redesign*"), and the **REAL case mounting** row already lists
+> (−8.3, ±10.2) & (−32.8, ±10.25). This census **re-derived both from scratch
+> without noticing** — which is its own lesson: the file contained the correction
+> *and* the uncorrected note 6 at the same time, so a reader could land on either.
+> **The genuinely new content here is only:** the three-way ∅2.5 ambiguity, the
+> ∅3.4-on-axis argument, the 1.5 mm modeled pilot depth vs 7.0 measured, and
+> striking note 6. Everything else is confirmation of work already done.
 
 Source: `feetech_servo_models/.../STS3215_03a v1.step`. Every CIRCLE entity was
 resolved through `AXIS2_PLACEMENT_3D` → `CARTESIAN_POINT` to get real centres, not
 just radii. **115 circles total.** Spline axis at **x = 12.5, y = 0**; shaft axis
 is **Z**; the two discs are the plates at z ≈ +16.2…+18.7 (2.5 thick) and
 z ≈ −15.6…−17.7 (**2.1 thick — matches the project's calipered wheel figure**).
+
+⚠️ **The horn figure disagrees with the caliper, and the CALIPER WINS.** §1 line 47 has the
+horn disc at **~3.05** (reconciled to the calipered 35.5 mm disc-to-disc, commit 52d387f);
+these STEP circles imply 2.5. The wheel agrees (2.1 vs calipered ~2.15). **Do not use 2.5 as
+a horn-disc thickness** — the ×6 length derivation depends on 3.05, and these circles bound
+the *hole*, which need not run the full plate thickness.
 
 | family | Ø | n | where | what it is |
 |---|---|---|---|---|
@@ -697,31 +714,60 @@ z ≈ −15.6…−17.7 (**2.1 thick — matches the project's calipered wheel f
 | r=2.1 | **4.2** | 8 | same centres as the Ø1.5 | head recesses for the case screws |
 | r=1.7 | 3.4 | 10 | on-axis, z = +20.2 | horn centre / output bore |
 
-**Three things this settles:**
+**Three things this confirmed — the first two were ALREADY KNOWN (see banner):**
 
 1. **The "9.9 × 9.9 mm square" and the "Ø14 BCD at ±45°" are ONE pattern, not two.**
-   Corners at (±4.95, ±4.95) → radius 4.95·√2 = **7.000** = 14/2. Notes 6 and 9
-   described the disc bolt circle in Cartesian terms and it was then mistaken for a
-   separate body-mount pattern. It is **in the discs**, so it can never be a body
-   mount — the disc covers it. `leg_v5`'s `sts3215_mount_holes()` aimed at it.
+   ⚠️ **Already corrected 2026-07-02 at §1 line 55** — this census re-derived it from
+   scratch without noticing, because **note 6 further down still asserted the old
+   version.** Corners at (±4.95, ±4.95) → radius 4.95·√2 = **7.000** = 14/2. It is
+   **in the discs**, so it can never be a body mount — the disc covers it. `leg_v5`'s
+   `sts3215_mount_holes()` aimed at it. *The new part is only that note 6 is now
+   struck, so the file no longer says both things at once.*
 
-2. **The real case-mount pattern is the Ø1.5 family, and `leg_v6` already has it
-   exactly right.** Subtract the 12.5 spline offset from the bottom-face centres
-   (x = +4.20, −20.30 at y = ±10.25) → **(−8.3, ±10.2) and (−32.8, ±10.25)**, which
-   is `COL_PTS` in `leg_v6_common.scad` term for term. Independent confirmation.
-   ⚠️ The two faces are **asymmetric** (top face is x = +4.20 / **−16.50**) — mount
-   through the **bottom** face, which is what leg_v6 does.
+2. **The real case-mount pattern is the Ø1.5 family, and `leg_v6` has it right.**
+   ⚠️ **Already in §1 as the "REAL case mounting" row**, with these exact coordinates.
+   Re-derived: subtract the 12.5 spline offset from the bottom-face centres
+   (x = +4.20, −20.30 at y = ±10.25) → **(−8.3, ±10.2) and (−32.8, ±10.25)** =
+   `COL_PTS` term for term. *Genuinely new:* the two faces are **asymmetric** (top
+   face is x = +4.20 / **−16.50**), so "present on both faces" was never quite true —
+   mount through the **bottom**, which is what leg_v6 does.
 
 3. **Nothing in this file supports a ~19.9 mm case column.** The pilots are modeled
    1.5 mm deep and the user's caliper says **7.0 mm**. The 19.9 was back-solved from
    an assumed-correct M2×22, which is why "M2×22 fits" kept confirming itself. See
    the M2×9 / M2×13 correction in `docs/fastener-schedule.md`.
 
-⚠️ **What the STEP CANNOT tell us: the disc thread.** ∅2.5 is simultaneously the
-M3×0.5 tap drill (3.0 − 0.5) and the M2.5 nominal major diameter, and vendor CAD
-uses both conventions. It is **not** M2.5 clearance (2.9), which is the one thing
-note 4 asserted. The tiebreak is the FEETECH spec sheet → **M3**, and the physical
-tiebreak is to hand-thread an M3 into a spare disc. Do that at first article.
+⚠️ **What the STEP CANNOT tell us: the disc thread.** ∅2.5 has **three** readings:
+- the **M3×0.5 tap drill** (3.0 − 0.5 = 2.5) → M3 machine screw into a tapped hole
+- the **M2.5 nominal major**, drawn as a plain cylinder at callout size
+- a **plain pilot for a Ø3.0 thread-forming screw** — and the vendor ships exactly
+  that: the STS3215 hardware list is *"Machine screws: M3 x 6"* **and**
+  *"Self-tapping screws: PA30X5"*. A ∅2.5 pilot is textbook for a PA3.0.
+
+It is **not** M2.5 clearance (2.9), which is the one thing note 4 asserted.
+
+**A CAD-internal argument narrows it to two.** This same file models the on-axis
+feature at **∅3.4** — textbook M3 *clearance*. So when this CAD means a clearance
+hole, it draws the true clearance diameter. That makes ∅2.5 not-a-clearance-hole,
+which kills reading 2's rationale and leaves **tapped-M3** or **PA3.0 pilot**.
+
+**Both of those put the fastener at Ø3.0 nominal**, which is why #263's ∅3.4
+printed clearance is right either way. What is NOT settled is *machine screw into
+a tapped hole* vs *thread-forming screw into a plain pilot* — that changes what to
+**buy**, not the printed geometry.
+
+🔴 **Do not cite "the FEETECH spec sheet says M3" as settling the BCD holes** —
+that overstates it, and #267 did exactly that before this correction. Two vendor
+spec pages were checked (druav, rcdrone): both list the M3×6 and the PA30X5 and
+**neither assigns either screw to a specific hole.** Credit to **#262** for
+naming this gap first, from the LeRobot/SO-101 side: SO-101's M3×6 is the horn
+**centre** screw, which says nothing about the Ø14 BCD.
+
+⚠️ **The bench test is now two questions, not one, and it is still ~30 seconds:**
+does an M3 machine screw **thread** into a BCD hole, or spin/force through? If it
+threads — wind to the stop, mark at the face, caliper mark-to-tip for real depth.
+If it does not, these joints want the supplied PA3.0 self-tappers (or nuts) and
+the engagement column of the fastener table changes for 12 servos.
 
 ---
 
