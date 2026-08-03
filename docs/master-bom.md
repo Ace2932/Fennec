@@ -100,6 +100,37 @@ status across the whole build"* and carried two fastener rows; everything real l
 `fastener-schedule.md` + `BOM.md` + `order-list.md`. **The doc you check before ordering
 was the one place the fasteners weren't.**
 
+### ✅ Owned M3 inventory — CONTENTS RECORDED 2026-08-03
+
+Recorded because the un-recorded version of this is what produced the false *"M3×14 is
+already owned"* claim below, and nearly left the HFE block with no screw.
+
+**M3/M4/M5/M6 stainless hex kit** (`BOM.md`:174, ✅ owned) — all **socket head**:
+
+| | lengths | qty each |
+|---|---|---|
+| **M3** | **6 · 8 · 10 · 12 mm** | **35** |
+| M4 | 8 · 10 · 16 · 20 | 25 |
+| M5 | 10 · 16 · 20 · 30 | 6–15 |
+| M6 | 16 · 25 · 35 | 6–8 |
+
+Plus 140 M3 nuts, 140 flat washers, 140 spring washers.
+
+**What it closes:** `shoulder_plate`→deck ×16 (M3×6) · `knee_arm`→femur shelf ×16 (M3×8,
+and socket head is what that counterbore expects) · riser→shoulder flange ×4 (M3×12) ·
+ears→head pad ×4 (M3×10).
+
+⚠️ **The four real gaps: no M3×5, no M3×14, no M3×16, and no countersunk at all.** Those map
+exactly onto horn→HFE (needs 5), wheel→HAA (needs 14), HFE-block retention (needs 16, and
+M3×20 bottoms), and the chassis CSK positions.
+
+⚠️ Quantity: 35 each of ×6 and ×8 against a total demand of 48 each. Fine if the 32 horn and
+32 wheel screws come from bought button-head packs — button is wanted at the wheel positions
+anyway, since #263's Ø6.0 counterbores leave a socket head standing 1.4 mm proud.
+
+**Fgruh 1220 pc M3 kit** — also owned, contents NOT recorded. Worth listing the same way
+before the next order.
+
 ### ✅ M2.5 — leg servo screws, ORDERED 2026-08-02
 The ✅-ordered M3/M4/M5/M6 stainless kit **starts at M3 — zero overlap.** Lengths MEASURED
 2026-07-11 (`fastener-schedule.md`), each rounded DOWN so it can't bottom the disc. Nothing
@@ -124,8 +155,8 @@ drives 3.4 mm into a 2.1 mm wheel disc and jacks the boss. Single-length packs o
 ### M2
 | Screw | Qty | For | Status |
 |---|---|---|---|
-| **M2×9 self-tap, COUNTERSUNK** | 40 | servo case-mount: HAA + KFE + HFE-near pair. 🔴 **WAS M2×22 — that drives 13 mm into the servo.** Column measured **7.0 mm blind** 2026-08-02 (19.9 was back-solved). Stock is a 7 mm PAN-head PA2.0 self-tapper; buy CSK, the printed floor has a Ø4.6→2.3 cone | ⬜ ORDER |
-| **M2×13 self-tap, COUNTERSUNK** | 8 | HFE-far pair only (femur LA-6 ramp, floor 6.525). 🔴 **WAS M2×25.** Max is floor + 7.0 column = **13.5 mm**; M2×14 bottoms by 0.5 | ⬜ ORDER |
+| **M2×9 self-tap, COUNTERSUNK** | 40 | servo BODY-mount — these do NOT hold the case shut; loaded in SHEAR (~30 N/screw at stall), so engagement depth is not critical. HAA + KFE + HFE-near pair. 🔴 **WAS M2×22 — that drives 13 mm into the servo.** Column measured **7.0 mm blind** 2026-08-02 (19.9 was back-solved). Stock is a 7 mm PAN-head PA2.0 self-tapper; buy CSK, the printed floor has a Ø4.6→2.3 cone | ⬜ ORDER |
+| **M2×13 self-tap, COUNTERSUNK** | 8 | HFE-far pair only (femur LA-6 ramp, floor 6.525). Body-mount, shear-loaded. 🔴 **WAS M2×25.** Max is floor + 7.0 column = **13.5 mm**; M2×14 bottoms by 0.5 | ⬜ ORDER |
 | M2×8 SHCS | 14 | control_pod 4 · deck-tie 4 · clamp bar 4 · OLED foot 2 | ⬜ ORDER |
 | M2×6 SHCS + M2 nut | 4 + 4 | SSD1331 → bracket | ⬜ ORDER |
 
@@ -203,7 +234,7 @@ stable across vendors: ruthex's `RX-M3x5x4` is **OD 5.0 × L 4.0**, while other 
 `M3 × length × OD` for the same string. Two of the three candidates found were ambiguous;
 only the uxcell listing states which number is which.
 
-**Pair it with M3×14, which is already owned — not M3×16.** M3×16 is sized for the 6.0 mm
+**Pair it with M3×14 — or M3×16, which you are buying anyway.** ⚠️ **CORRECTED 2026-08-03: M3×14 is NOT owned.** See §"Owned M3 inventory" — the stainless kit is M3 in 6/8/10/12 only. Either length works here because engagement is capped by the 4.0 mm insert, so M3×16 is the simpler answer; it just runs 1.7 mm into the empty bore below. M3×16 is sized for the 6.0 mm
 insert of the design case. Against a 4.0 mm insert the engagement is capped by the insert,
 so the longer screw buys nothing and just runs into the 2.5 mm of empty bore below it. The
 full-strength **4.0 OD × 6.0** is still worth ordering if it can be found (π·D·L = 75 mm²
