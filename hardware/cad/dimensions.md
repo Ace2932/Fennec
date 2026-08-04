@@ -740,7 +740,18 @@ the *hole*, which need not run the full plate thickness.
    an assumed-correct M2×22, which is why "M2×22 fits" kept confirming itself. See
    the M2×9 / M2×13 correction in `docs/fastener-schedule.md`.
 
-⚠️ **What the STEP CANNOT tell us: the disc thread.** ∅2.5 has **three** readings:
+✅ **RESOLVED ON THE BENCH 2026-08-03 — the discs are TAPPED M3.** Aiden threaded an
+M3 into a disc; the screws the servo *ships with* are M3, and a **machine screw only
+works in a tapped hole**, so this is settled on the part rather than inferred. That
+retires the whole ambiguity below and, with it, the plain-pilot reading. Keep the
+analysis for the method, not the conclusion — and note it took a 10-second physical
+act to close what three documents could not.
+
+⚠️ *Still unmeasured:* the disc's real **thread DEPTH**. Every engagement figure in
+`fastener-schedule.md` assumes one. Wind a screw to the stop, mark it at the disc
+face, caliper mark-to-tip.
+
+~~⚠️ **What the STEP CANNOT tell us: the disc thread.**~~ (historical) ∅2.5 had **three** readings:
 - the **M3×0.5 tap drill** (3.0 − 0.5 = 2.5) → M3 machine screw into a tapped hole
 - the **M2.5 nominal major**, drawn as a plain cylinder at callout size
 - a **plain pilot for a Ø3.0 thread-forming screw** — and the vendor ships exactly
