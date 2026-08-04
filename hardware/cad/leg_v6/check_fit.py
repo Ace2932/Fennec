@@ -1647,15 +1647,24 @@ HORN_ANGLES = (45, 135, 225, 315)
 _M25_PROBE, _M3_PROBE = 1.8, 2.2
 FASTENER_ENGAGEMENT = [
     ('horn -> HFE  (coax_R inboard arm)', 'coax_R.stl', 'bcd_x', (33.8, 11.6, -9.5),
-     (-1, 0, 0), 5.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.15),
+#: 🔴 HORN DISC IS 2.40, NOT 3.05 (corrected 2026-08-03). These rows carried 3.05
+#: for months and it is the raised HUB (R 3-4, z 14.75..18.65), not the PLATE at
+#: R=7 where the BCD screws actually pass -- which Aiden calipered at 2.40,
+#: matching servo.stl and the STEP. A correct measurement of the wrong feature,
+#: used as the engagement limit. The accept thresholds moved with it (2.15->2.10,
+#: 2.35->2.20). The wheel rows' 2.10 was right all along.
+#: NB the BCD holes are THROUGH, with 1.90mm of air behind the horn and 1.25 behind
+#: the wheel, so "engagement > disc thickness" is NOT a bottoming failure here --
+#: the screw exits into that gap. It is capped by the disc only for PULL-OUT.
+     (-1, 0, 0), 5.0, 3.0, _M3_PROBE, 2.40, 'horn disc', 2.10),
     ('wheel -> HFE (coax_hfe_block)', 'coax_hfe_block.stl', 'bcd_x', (33.8, 11.6, -9.5),
      (-1, 0, 0), 8.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.50),
     ('horn -> KFE  (knee_arm)', 'knee_arm.stl', 'bcd_z', (47.9, 0.0, 0.0),
-     (0, 0, -1), 6.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.35),
+     (0, 0, -1), 6.0, 3.0, _M3_PROBE, 2.40, 'horn disc', 2.20),
     ('wheel -> KFE (femur_R bottom boss)', 'femur_R.stl', 'bcd_z_up', (106.9, 0.0, 0.0),
      (0, 0, 1), 8.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.50),
     ('horn -> HAA  (shoulder_plate)', 'shoulder_plate.stl', 'bcd_y', (39.05, 0.0, 0.0),
-     (0, -1, 0), 6.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.35),
+     (0, -1, 0), 6.0, 3.0, _M3_PROBE, 2.40, 'horn disc', 2.20),
     ('wheel -> HAA (shoulder rear wall)', 'shoulder.stl', 'bcd_y_up', (39.05, 0.0, 0.0),
      (0, 1, 0), 14.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.30),
     # DEFERRED to fastener_span_checks(), which measures this joint end to end
