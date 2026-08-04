@@ -386,10 +386,33 @@ batching them.
       (`slice_plate.py`, PA6-CF, §2 settings): `coax_hfe_block` **5.5 g /
       25 min** · `coax_R` **30.8 g / 1 h 35** (supports + brim) · `femur_R`
       **56.4 g / 2 h 33** · `tibia_R` **66.4 g / 3 h 09** (at its 25 % infill)
-      → **≈159 g and ~7 h 40** for the four. `shoulder` cannot be sliced yet —
-      its orientation is documented as "rear face down" with no axis, and the
-      measured faces disagree with the obvious reading (+Z 7880 mm² vs +Y 772),
-      so that decision comes first.
+      → **≈159 g and ~7 h 40** for the four.
+
+      ✅ **`shoulder` SLICED 2026-08-03** — the "cannot be sliced yet" blocker is
+      closed. #259 resolved the orientation to **+Z FACE DOWN** (deck top on the
+      bed) and `slice_plate.py`'s registry was corrected to match on 2026-08-03;
+      it had kept refusing the part for three days after the `.scad` was fixed.
+
+      **`shoulder` 124.32 g total (117.64 model + 6.68 support) / 5 h 09 m**
+      · +Z down · **tree** supports · 4 walls / 0.20 / 40 % · elephant-foot
+      compensation 0.15 (the 8 Ø4.0 deck heat-set bores open at the bed face in
+      this pose).
+
+      ⚠️ **This is a SLICER ESTIMATE, not a weighed part** — same status as the
+      four figures above it. To be replaced with a scale reading. Recording the
+      distinction because the whole point of these receipts is to catch settings
+      that did not apply, and an estimate cannot catch an extrusion-calibration
+      error the way a weighed mass can.
+
+      Sanity-checked rather than taken on trust: 117.64 g is **72 % of solid**
+      (138.0 cm³ × 1.19), against the femur's 59 %. That is expected, not
+      suspicious — the shoulder is a thin-walled shell where 4 walls of solid
+      perimeter dominate its volume, while the femur is chunky and infill
+      dominates. Three independent confirmations that the settings landed:
+      **397 layers × 0.20 = 79.40 mm** vs the part's 79.5 (layer height applied);
+      **support only 5 % of total** (at −Z down, on 358 mm² of contact instead of
+      7880, it would be a large fraction — so this also proves the orientation);
+      tree supports carrying 461 mm² of overhang dropping 71.5 mm for 6.68 g.
       — ⚠️ the TPU items here are **already printed in batch** (shoe ×5,
       skid_rail ×2, knee_bumper ×5, **cable_clip ×27**), so for those the
       first-article step is spent. What it would have caught is now a fit check
