@@ -44,8 +44,12 @@ was 0.6 mm too narrow.**
 |---|---|---|
 | Case box | x −35.2..+10.2 · y ±12.4 · z −15.5..+14.7 | ✅ mesh 2026-07-02 |
 | Rear top cap ridge | to z 17.4 (x −34.8..−28.5, y ±7) | ✅ mesh |
-| Output HORN disc | Ø20 × ~3.05, z 14.7..**17.75** (+boss to 20.2) | ✅ mesh + CALIPER 2026-07-10 |
-| Bottom WHEEL disc | Ø20 × ~2.15, z **−17.75**..−15.6 — **standard-fitted** | ✅ mesh + CALIPER 2026-07-10 |
+| Output HORN disc — **PLATE at the BCD** | Ø20 × **2.40** (z 16.25..18.65) | ✅ **CALIPERED 2026-08-03** (Aiden); matches `servo.stl` 2.40 and the STEP 2.5 |
+| ⤦ central HUB (R≈3–4) | **3.90** thick, z 14.75..18.65. The old **~3.05** = 17.75 − 14.7, i.e. hub underside → reconciled seat plane | ✅ mesh profile 2026-08-03 |
+| ⤦ centre pip (R≤2) | to z 20.15 | ✅ mesh |
+| 🔴 *what changed 2026-08-03* | This row read **Ø20 × ~3.05** and `fastener-schedule.md` used 3.05 as the **screw-engagement limit** — the **wrong feature**. 3.05 is the raised HUB; the BCD sits at **R=7**, where the plate is **2.40**. A correct measurement of the wrong thing, propagated into a derived calculation. Aiden diagnosed it: *"the 3.05 could be the upraised one since the center comes out more than the rest of the body."* | — |
+| ⚠️ BCD holes are **THROUGH** | no disc material at any of the four hole angles (45/135/225/315°). Air behind: **1.90 mm** (horn) / **1.25 mm** (wheel) before the servo case → **4.30 / 3.35 mm** total usable depth | ✅ mesh probe 2026-08-03 |
+| Bottom WHEEL disc | Ø20 × **2.1** (z −17.70..−15.65) — **standard-fitted** | ✅ **CALIPERED 2026-08-03** (Aiden); matches `servo.stl` 2.05 |
 | Disc screw pattern (BOTH discs) | 4× **M3** on Ø14 BCD ±45° + center — 🔴 *was "M2.5"; O3.0 nominal confirmed 2026-08-02, though tapped-M3 vs PA3.0 self-tap pilot is open (#262) — see note 4, whose ∅2.5="M2.5 clearance" reasoning is retracted* | ✅ mesh (pattern), spec sheet (thread) |
 | Connector bay | rear-bottom to z −19.4 over x<−5.3, **FULL width ±12.35**; 2× 3-pin sockets mid-body facing rear | ✅ mesh (fit-gate catch) |
 | **REAL case mounting** | the 4 case-screw columns (Ø2 self-tap, heads at the bay): (−8.3, ±10.2) & (−32.8, ±10.25) — use longer M2 through the printed floor | ✅ mesh |
