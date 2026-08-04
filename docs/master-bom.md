@@ -117,8 +117,8 @@ seat is a cone.
 | M3×14 CSK ×100 | `B0CQ4YH87R` | shoulder flange feet → trunk floor (4) |
 | Nylon M3 kit 330 pc | `B0DKND2824` | breakaway fuses — ×12 (10) and ×10 (10) |
 | M2 CSK self-tap kit ×2 | `B09DB5SMCZ` | 60× M2×8 + 60× M2×12 body-mount |
-| uxcell M3 OD 4.0 × **L 6.0** ×50 | **`B07R9SP532`** | slim insert, HFE block (8) — ✅ the RIGHT part, full 75.4 mm² |
-| ~~uxcell M3 OD 4.0 × L 4.0 ×50~~ | `B07LBQS9W3` | ⚠️ 2 mm short → 50.3 mm², SF 1.6–2.3. Fallback only |
+| uxcell M3 OD 4.0 × **L 6.0** ×50 | **`B07R9SP532`** | slim insert, HFE block (8) — ✅ **ORDERED 2026-08-03, ARRIVES FRI 2026-08-07.** The right part, full 75.4 mm² / SF 2.4–3.4. ⚠️ **Check the thread on arrival** — OD 4.0 is the standard *M2.5* OD, so a substitution at this OD will not take an M3×16 |
+| ~~uxcell M3 OD 4.0 × L 4.0 ×50~~ | `B07LBQS9W3` | ⚠️ 2 mm short → 50.3 mm², SF 1.6–2.3. Fallback only — but **the right one to burn on the pull test**: it is in hand now, and if the SHORT insert holds 13.5 kg the 6.0 (1.5× the area) is comfortable |
 
 ⚠️ **Two gates before any of it enters a servo.**
 
