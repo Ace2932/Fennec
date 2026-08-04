@@ -276,10 +276,23 @@ PARTS = {
         scad=_leg("coax.scad"),
         doc="Print: PA6-CF, rear face (+Y) down; supports under the yoke bridge span.",
     ),
+    # supports="normal" ADDED 2026-08-03, third instance of the same defaulted-field
+    # bug (femur_R and femur_L were the first two). MEASURED in the +X-down pose:
+    # 374.3 mm^2 of bed contact against 732.4 mm^2 of downward-facing area above the
+    # bed, of which 664.5 mm^2 is under 45deg and genuinely needs support -- a shelf
+    # of 619.5 mm^2 sitting only 0.5-2.0 mm up, plus 112.8 mm^2 at z 4.35-5.95.
+    # Nearly twice as much overhang as bed contact.
+    #
+    # Cause, same as femur: coax_hfe_block.scad's header names the orientation
+    # ("MATING FACE (x=SPLIT_X) DOWN") and says nothing about supports, so this
+    # entry omitted supports= and took the default. Caught by Aiden looking at the
+    # plate preview, not by any gate -- "none" is a legal value, so an omission and
+    # a decision remain indistinguishable in this field.
     "coax_hfe_block": Part(
-        _leg("coax_hfe_block.stl"), "PA6-CF", down="+X",
+        _leg("coax_hfe_block.stl"), "PA6-CF", down="+X", supports="normal",
         scad=_leg("coax_hfe_block.scad"),
-        doc="Print: PA6-CF, MATING FACE (x=SPLIT_X) DOWN",
+        doc="Print: PA6-CF, MATING FACE (x=SPLIT_X) DOWN; supports under the "
+            "0.5-2.0mm shelf (665 mm^2 of sub-45deg overhang).",
     ),
     # -X, NOT +X. coax_hfe_block_L.scad is `mirror([1,0,0]) coax_hfe_block_R()`,
     # so the mating face lands on the opposite side — the same trap LA-3 records
@@ -288,7 +301,7 @@ PARTS = {
     # caught it: +X gives 54.4 mm^2 (s=2.14), -X gives 366.4 mm^2 (s=0.83) on the
     # same mesh. Copying an orientation across a mirror is the bug, every time.
     "coax_hfe_block_L": Part(
-        _leg("coax_hfe_block_L.stl"), "PA6-CF", down="-X",
+        _leg("coax_hfe_block_L.stl"), "PA6-CF", down="-X", supports="normal",
         scad=_leg("coax_hfe_block_L.scad"),
         doc="Print: PA6-CF, MATING FACE (x=SPLIT_X) DOWN — mirrored to -X on this part",
     ),
@@ -414,8 +427,17 @@ PARTS = {
         supports="tree", scad=_chassis("head.scad"),
         doc="print-batch §2: head CROWN/PAD-DOWN, tree supports under the tilted-face + cheek overhangs",
     ),
+    # supports="normal" 2026-08-03, found by the new overhang_checks(). MEASURED in
+    # the declared FLOOR-DOWN pose: 639 mm^2 prints over air, ALL of it in the
+    # z 25..40 band of a 38.8mm-tall part, spanning x -43..45 / y +-29.6 -- i.e. the
+    # TOP FLANGE added by the battery-mount redesign.
+    # ⚠️ This CONTRADICTS print-batch.md §2, which says battery_pocket prints
+    # "FLOOR-DOWN opening-up, zero supports". That line predates the top-flange
+    # redesign; the flange is what overhangs. Flagged for review rather than
+    # silently trusted -- but 639 mm^2 floating 34.8mm will not print unsupported,
+    # so the measurement wins over the stale prose.
     "battery_pocket": Part(
-        _chassis("battery_pocket.stl"), "PA6-CF", down=None,
+        _chassis("battery_pocket.stl"), "PA6-CF", supports="normal", down=None,
         scad=_chassis("battery_pocket.scad"),
         doc="print-batch §1 (#24): stays PA6-CF (belly crush guard over the LiPo). "
             "FLOOR-DOWN, opening-up, zero supports. NOTE: the .scad header still says PETG-CF.",
@@ -928,6 +950,75 @@ def cmd_self_test(outdir):
     return 0
 
 
+#: Unsupported-overhang gate (2026-08-03). WHY: `supports` defaults to "none",
+#: so an OMISSION and a DECISION are indistinguishable in that field, and no gate
+#: could tell them apart. That defaulted three times in one day -- femur_R,
+#: femur_L, coax_hfe_block -- each caught only by a human looking at the plate
+#: preview. Making the field REQUIRED was the obvious fix and the wrong one: 16 of
+#: 20 entries relied on the default, so it would have forced 16 guesses.
+#:
+#: Measure it instead. For each part, in its DECLARED orientation, find the
+#: downward-facing facets under 45 deg whose ray straight down reaches the bed
+#: without hitting part material -- i.e. facets that genuinely print over air.
+#:
+#: THE FIRST VERSION OF THIS WAS WRONG and is worth recording. It counted every
+#: downward facet above the bed, with no ray cast, and flagged four extra parts:
+#: knee_arm 287, riser_bay 505, neck_bracket 160, skid_rail 119 mm^2. Ray-casting
+#: drops those to 33 / 88 / 9 / 60 -- over-reported by up to 17x, because a
+#: downward facet sitting on top of solid material (a bolt-hole ceiling, a 0.5mm
+#: step) is not an overhang. knee_arm printed fine with no supports the day
+#: before, which is the corroboration. Proximity is not containment; measure the
+#: predicate you actually mean.
+MIN_DROP_MM = 1.0        #: below this it is first-layer noise, not an overhang
+MAX_UNSUPPORTED_MM2 = 150.0
+#: 150 sits in a MEASURED gap: the largest correctly-"none" part is riser_bay at
+#: 88 mm^2, the smallest part that legitimately declares supports is shoulder at
+#: 461. Room on both sides. (battery_pocket lands at 639 while declaring "none" --
+#: that is the defect this gate exists to catch, not a reason to move the line.)
+
+
+def unsupported_area(mesh):
+    """(area_mm2, max_drop_mm) of facets that print over air down to the bed."""
+    n = mesh.face_normals
+    c = mesh.triangles_center
+    a = mesh.area_faces
+    ang = np.degrees(np.arccos(np.clip(-n[:, 2], -1, 1)))
+    cand = np.where((n[:, 2] < 0) & (ang < 45) & (c[:, 2] > MIN_DROP_MM))[0]
+    if len(cand) == 0:
+        return 0.0, 0.0
+    org = c[cand] + np.array([0, 0, -1e-3])
+    dirs = np.tile([0, 0, -1.0], (len(cand), 1))
+    hit = mesh.ray.intersects_any(ray_origins=org, ray_directions=dirs)
+    free = cand[~hit]
+    if len(free) == 0:
+        return 0.0, 0.0
+    return float(a[free].sum()), float(c[free][:, 2].max())
+
+
+def overhang_checks():
+    """Does every part that prints over air actually declare supports?"""
+    print('-- unsupported overhang vs declared supports --')
+    bad = False
+    for name in sorted(PARTS):
+        part = PARTS[name]
+        if part.manual:
+            continue
+        mesh = trimesh.load(part.stl, force='mesh', process=False)
+        mesh = orient(mesh, part.down) if part.down else mesh.copy()
+        if not part.down:
+            mesh.apply_translation([0, 0, -mesh.bounds[0][2]])
+        area, drop = unsupported_area(mesh)
+        if part.supports == "none" and area > MAX_UNSUPPORTED_MM2:
+            bad = True
+            print(f'FAIL  {name}: {area:.0f} mm^2 prints over air (max drop '
+                  f'{drop:.1f} mm) but supports="none". Either declare supports '
+                  f'or explain why this face is acceptable.')
+        elif area > MAX_UNSUPPORTED_MM2:
+            print(f'   OK    {name}: {area:.0f} mm^2 over air (drop {drop:.1f} mm), '
+                  f'supports="{part.supports}"')
+    return bad
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("parts", nargs="*", help="part[:qty] ... (see --list)")
@@ -940,7 +1031,8 @@ def main():
     args = ap.parse_args()
 
     if args.list:
-        return cmd_list()
+        rc = cmd_list()
+        return 1 if overhang_checks() else (rc or 0)
     if not ORCA.exists():
         raise SystemExit(f"OrcaSlicer not found at {ORCA} (set ORCA=/path/to/binary)")
 
