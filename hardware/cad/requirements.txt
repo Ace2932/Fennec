@@ -54,7 +54,9 @@ mujoco
 # the tolerances rather than loosening them.
 # ---------------------------------------------------------------------------
 
-# shapely: NOT a CI-gate dep — used only by leg_v6/hfe_mouth_study.py (#221)
+# shapely: NO REMAINING CONSUMER. It was used only by leg_v6/hfe_mouth_study.py
+# (#221), retired with the mouth idea in #226. Kept installed rather than
+# dropped mid-refactor; remove once nothing has needed it for a release.
 # to build the mouth wedge polygon. Recorded because a committed script with
 # an unrecorded dependency is #200's exact gap.
 shapely

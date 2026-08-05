@@ -245,16 +245,30 @@ STS3215 = {
     "horn_disc_od":  20.0,    # both top + bottom horn disc OD
     "horn_disc_t":   8.80,    # top horn disc thickness (dimensions.md §1)
     "horn_offset":   12.50,   # CRITICAL — spline X offset from body center
-    "horn_screw_d":  2.5,     # M2.5 (NOT M3 as old notes claimed)
+    "horn_screw_d":  3.0,     # O3.0 nominal. 🔴 This line read 2.5
+                              # ⚠️ M3-tapped vs PA3.0 self-tap pilot UNRESOLVED (#262) --
+                              # both are O3.0, so clearance is unaffected; the BUY is not.
+                              # with "(NOT M3 as old notes claimed)" until 2026-08-02
+                              # (#263) — the old M3 notes were RIGHT. The ∅2.5 in the
+                              # STEP is the M3 tap drill (3.0-0.5), not M2.5 clearance
+                              # (which is 2.9). See dimensions.md note 4, retracted.
     "horn_screw_bcd": 13.86,  # 4× holes at ±45° from cardinal, ~14 mm BCD
     "back_shaft_d":  6.0,     # bottom shaft OD
     "back_shaft_face_z": -15.60,  # bottom horn disc Z position
-    # Body mount screws — STEP-extracted 2026-06-07 (18× r=1.25 = ∅2.5 circles).
-    # 4× M2.5 on a 9.9 × 9.9 mm SQUARE, centered on the SPLINE axis (x=12.5),
-    # NOT body center: holes at (x,y) = {7.55, 17.45} × {±4.95}. Present on BOTH
-    # shaft-normal faces; mount through the BOTTOM (back-shaft) face — the top
-    # holes sit under the ∅20 horn disc. Closes dimensions.md §1 notes 6 + 9.
-    "mount_screw_d":  2.9,    # M2.5 clearance
+    # 🔴 MISLABELLED — these are the DISC screws, NOT body mount screws.
+    # Re-parsed 2026-08-02: the 18× r=1.25 (∅2.5) circles at (x,y) =
+    # {7.55, 17.45} × {±4.95} sit at radius sqrt(4.95^2 + 4.95^2) = 7.000 from
+    # the spline, i.e. they ARE the Ø14 BCD at ±45 deg, and they are IN THE DISCS.
+    # A hole in the rotating disc can never mount the body -- the disc covers it.
+    # Fastener is O3.0 nominal, not M2.5. Tapped-M3 vs PA3.0 pilot open (#262).
+    #
+    # The REAL body mount pattern is a different family: 8x Ø1.5 pilots (with
+    # Ø4.2 head recesses) at y = ±10.25 on the two shaft-normal faces, x = +4.20
+    # and -20.30 on the BOTTOM face. Minus the 12.5 spline offset that is
+    # (-8.3, ±10.2) and (-32.8, ±10.25) = leg_v6's COL_PTS exactly. M2 self-tap.
+    # The faces are ASYMMETRIC (top is +4.20 / -16.50) -- use the bottom.
+    # Supersedes dimensions.md §1 notes 6 + 9; see the STEP hole census there.
+    "mount_screw_d":  3.4,    # M3 clearance (🔴 was 2.9/M2.5 — see horn_screw_d)
     "mount_pitch":    9.90,   # square pattern, both axes
     "mount_center_x": 12.50,  # = horn_offset (spline axis), NOT body center
 }
@@ -270,8 +284,8 @@ def nova_sts3215_dual_mount(workplane, clearance_mat="PA6-CF"):
                 STS3215["body_w"] + clr["locational"])
           .cutBlind(-(STS3215["body_h"] + clr["slip"])))
 
-    # Body mount screw pattern — 4× M2.5 clearance on the 9.9 mm square,
-    # centered on the spline axis (mount_center_x), NOT the body center.
+    # 🔴 This cuts the DISC bolt circle (Ø14 BCD ±45°, M3 clearance), not a body
+    # mount pattern — see the note above. Real body mount = 8× Ø1.5 at y=±10.25.
     cx = STS3215["mount_center_x"]
     p  = STS3215["mount_pitch"] / 2
     wp = (wp.faces(">Z").workplane()

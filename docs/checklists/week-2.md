@@ -115,7 +115,15 @@
 - [ ] Download + install Bambu Studio (latest)
 - [ ] **AMS HF bypassed for PA6-CF.** Configure Bambu Studio for **external single-spool feed**: SpacePi X4 → 4 mm PTFE Bowden tube → P1S top-side input. PA stays in heated dryer chamber the entire print; AMS holds nothing.
 - [ ] Run PA6-CF in Creality SpacePi X4 dryer **24 h @ 70 °C** before first print. Keep dryer running at 60-70 °C during print (chamber stays sealed).
-- [ ] Confirm hardened steel hotend installed in P1S (PA6-CF mandatory — brass dies in <1 spool)
+- [x] Confirm hardened steel hotend installed in P1S (PA6-CF mandatory — brass dies in <1 spool)
+      — ✅ **2026-08-03: 0.4 mm Bambu "Obsidian", HIGH FLOW variant** (user-confirmed).
+      Hardened, rated for abrasives. Recorded by NAME in `hardware/cad/dimensions.md` §
+      "Printer" so this can never again be satisfied by the adjective "hardened" with no part
+      behind it. ⚠️ Note the stock `Bambu Lab P1S 0.4 nozzle` machine profile declares
+      `nozzle_type = ['stainless_steel','stainless_steel']` — that is the STOCK nozzle, not
+      this one, so the profile understates what is fitted. Selecting **High Flow** in Bambu
+      Studio is correct for this nozzle; it just buys nothing on PA6-CF, which caps at
+      8–10 mm³/s regardless.
 - [ ] Add **Magigoo PA** to next order (Bambu liquid glue not rated for PA per Bambu wiki — PA6-CF first-layer detachment likely with stock glue)
 - [ ] First-article print test: small fit-test coupon in PA6-CF (NOT a benchy — too generic). Print a hip-pocket fragment with bearing seat + servo cutout to validate Bowden feed tension, bed adhesion, and dimensional accuracy in one print.
 

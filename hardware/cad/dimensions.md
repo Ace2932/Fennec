@@ -46,7 +46,7 @@ was 0.6 mm too narrow.**
 | Rear top cap ridge | to z 17.4 (x −34.8..−28.5, y ±7) | ✅ mesh |
 | Output HORN disc | Ø20 × ~3.05, z 14.7..**17.75** (+boss to 20.2) | ✅ mesh + CALIPER 2026-07-10 |
 | Bottom WHEEL disc | Ø20 × ~2.15, z **−17.75**..−15.6 — **standard-fitted** | ✅ mesh + CALIPER 2026-07-10 |
-| Disc screw pattern (BOTH discs) | 4× M2.5 on Ø14 BCD ±45° + center (horn ctr M3, wheel ctr M2.5) | ✅ mesh |
+| Disc screw pattern (BOTH discs) | 4× **M3** on Ø14 BCD ±45° + center — 🔴 *was "M2.5"; O3.0 nominal confirmed 2026-08-02, though tapped-M3 vs PA3.0 self-tap pilot is open (#262) — see note 4, whose ∅2.5="M2.5 clearance" reasoning is retracted* | ✅ mesh (pattern), spec sheet (thread) |
 | Connector bay | rear-bottom to z −19.4 over x<−5.3, **FULL width ±12.35**; 2× 3-pin sockets mid-body facing rear | ✅ mesh (fit-gate catch) |
 | **REAL case mounting** | the 4 case-screw columns (Ø2 self-tap, heads at the bay): (−8.3, ±10.2) & (−32.8, ±10.25) — use longer M2 through the printed floor | ✅ mesh |
 | Spline offset from body center | +12.50 along the long axis | ✅ |
@@ -599,7 +599,10 @@ mounts. Dims kept here only for future re-introduction reference.
 | Dim | Value | Status |
 |---|---|---|
 | Build volume X × Y × Z | 256 × 256 × 256 | ✅ |
-| Nozzle (project hardened steel) | 0.4 mm | ✅ |
+| Nozzle | **0.4 mm Bambu "Obsidian", HIGH FLOW variant** — hardened, rated for abrasives. CONFIRMED INSTALLED in the P1S 2026-08-03 (user). Supersedes the unnamed "project hardened steel" this row used to read; the checklist item in `docs/checklists/week-2.md` is now satisfiable by name rather than by adjective | ✅ user-confirmed 2026-08-03 |
+| PA6-CF max volumetric speed | **8–10 mm³/s** (`Bambu PA6-CF @BBL X1C`, Bambu Studio preset) | ✅ vendor preset |
+| ⤦ what that implies | At 0.20 × 0.42 mm line, 8 mm³/s = **95.2 mm/s** — so the filament's own volumetric cap already enforces `patterns.md`'s "≤ 100 mm/s" CF rule. **Do not hand-set a speed cap**; it is redundant and will drift from the preset. It also means the HIGH-FLOW nozzle's extra headroom is **unused** for PA6-CF: the filament, not the nozzle, is the bottleneck | ✅ derived from the two rows above |
+| PA6-CF nozzle temp | **275 °C** (vendor preset, both extruder entries) — ⚠️ `hardware/cad/README.md:45` says "280 °C"; the vendor preset is the authority and 275 is what actually gets used unless someone overrides it | ⚠️ README disagrees |
 | Chamber | enclosed | ✅ |
 | AMS HF | bypassed for PA6-CF (see BOM §8) | ✅ |
 
@@ -663,12 +666,111 @@ These differ from values currently in `patterns.md` or `nova_sm3_patterns.md`:
 1. **L2 LiDAR mount = 36 mm square** (±18; ≡ Ø51 bolt-circle at 45°), per the L2 3D model / `l2_adapter.scad`. NOT 22.5 mm, NOT the older 50 mm placeholder. ⚠ physical-measure pending (user to confirm). Update `L2_LIDAR['bolt_circle_d']` to the Ø51-at-45° form.
 2. **STS3215 horn-disc OD = 20 mm**, NOT 25 mm as written in some older notes. STEP file is authoritative.
 3. **STS3215 spline X offset = +12.5 mm** from body center. CRITICAL: every cavity in leg V3.1 reflects this. Old OpenSCAD `coxa.scad` had it at 0 (bug).
-4. **STS3215 horn screws are M2.5, NOT M3.** STEP shows holes at r=1.25 mm (∅2.5 = M2.5 clearance). Older notes / `patterns.md` calling them M3 are wrong. BCD measured at 13.86 mm (call it 14 mm).
+4. 🔴 **RETRACTED 2026-08-02 — this note's REASONING was wrong, and it wrongly overruled the older M3 notes.** It read ~~"STEP shows holes at r=1.25 mm (∅2.5 = **M2.5 clearance**)"~~. **∅2.5 is not M2.5 clearance.** M2.5 clearance is ∅2.7 (close) / **2.9** (normal) / 3.1 (loose) — a 2.5 mm screw cannot pass a 2.5 mm hole at all. So the measurement never supported the conclusion drawn from it, and "older notes calling them M3 are wrong" was itself the error.
+
+   **What ∅2.5 actually is: ambiguous, and it does not adjudicate the thread.** Two readings both land exactly on 2.5 —
+   - **M3 tapped, modeled at the tap/minor diameter:** M3×0.5 tap drill = 3.0 − 0.5 = **2.5** ✓
+   - **M2.5 threaded, modeled at the nominal major diameter** (the common vendor simplification of drawing a threaded hole as a plain cylinder at its callout size) = **2.5** ✓
+
+   **Resolution: M3, on the FEETECH STS3215 spec sheet**, which states the disc threads directly. The STEP is consistent with it and cannot contradict it. Geometry retargeted 2.9 → **3.4** clear and 5.2 → **6.0** head c'bore in #263; `M25_CLEAR` deleted.
+
+   ⚠️ **FIRST-ARTICLE, and it is a 10-second test: thread an M3 screw into a spare disc by hand.** That is the direct artifact and it settles this outright — everything above is inference from a CAD file and a datasheet. **The printed geometry is deliberately tolerant either way:** ∅3.4 passes an M3 and still passes an M2.5 (with 0.9 mm slop instead of 0.4), and a ∅6.0 c'bore seats an M3 button (∅5.7) or an M2.5 button (∅4.7, thinner bearing ring). So the merged change is safe under both readings and *required* under the M3 one.
+
+   BCD measured at 13.86 mm (call it 14 mm) — unaffected, and note that the "9.9 × 9.9 mm square" of note 6/9 IS this same Ø14 BCD at ±45°: √(4.95² + 4.95²) = **7.000** = 14/2. One pattern, two descriptions.
 5. **SUPERSEDED 2026-07-10 — see caliper reconciliation below.** ~~STS3215 body Z (between horn faces) = 34.3 mm~~, not 36.8. Older 36.8 figure conflated body height with bbox-including-horn-discs. ~~Bbox total Z = 39.6~~ (39.6 - 34.3 = 5.3 mm of horn-disc stack on top + bottom). ~~Use 34.3 for bracket pocket depth.~~ **The 34.3 / 34.9 / 36.8 figures are all superseded — the CALIPERED disc-to-disc (the yoke seating faces) = 35.5 mm** (real bbox total Z = 39.1 mm; fixed in commit 52d387f). Use **35.5** going forward.
-6. **patterns.md §3 mount_x_pitch=49 / mount_y_pitch=10 IS WRONG** — body is only 45.4 mm long, so 49 mm pitch is impossible. ✅ **RESOLVED (2026-06-07, see note 9):** STEP inspected — real pattern is a **9.9 × 9.9 mm square** of 4× M2.5, centered on the spline axis. Update `patterns.md` mount macro to this; do NOT use the old 49×10 numbers.
+6. **patterns.md §3 mount_x_pitch=49 / mount_y_pitch=10 IS WRONG** — body is only 45.4 mm long, so 49 mm pitch is impossible. ~~✅ RESOLVED (2026-06-07, see note 9): real pattern is a **9.9 × 9.9 mm square** of 4× M2.5, centered on the spline axis.~~ 🔴 **The replacement was ALSO wrong (2026-08-02): the 9.9 × 9.9 square is the DISC bolt circle** — its corners are at radius 4.95·√2 = **7.000** = the Ø14 BCD — **not** a body-mount pattern, and it lives in the discs where a body screw could never reach it. The real body mount is **8× Ø1.5 at y = ±10.25**; see the STEP hole census at the end of this file. So 49×10 was wrong *and* 9.9×9.9 was wrong.
 7. **Pololu buck board sizes in §4 were pre-drawing estimates — all three corrected** from the Pololu dimension drawings (reg19a / reg34a / reg34c): D42V110 = **31.8 × 43.2** (was 25.4×25.4, badly wrong), D24V22 = **17.8 × 17.8** (was 20.3×17.8; also has 2× ⌀2.18 mounts, not "none"), D42V55 = **25.4 × 25.4** (was 22.9×17.8). Chassis buck-carrier pockets must use the corrected sizes. Connector L→R pin orders now recorded per buck — **verify against the physical module before PCB fab** (a wrong order is a coordinate swap in `nova_v6.pretty`).
 8. **Class-T fuse is OFF-board + all 3 INA226 are modules (2026-06-04).** F1 fuse block dropped from the PCB (now an inline block in the battery lead); leg/hip INA226 (U9/U10) changed from bare VSSOP-10 + external 2 mΩ 2512 shunt to the same `INA226_Module_Breakout` U11 uses, and shunts R13/R14 were deleted. Board now carries **zero fine-pitch (VSSOP-10) parts**. Schematic done + ERC-clean; `.kicad_pcb` needs **Update PCB from Schematic (F8)** to realize it.
 9. **STS3215 body mount-screw pattern extracted from STEP (2026-06-07).** Parsed the 18× r=1.25 mm (∅2.5 = M2.5) circles in `STS3215_03a v1.step` → a **9.9 × 9.9 mm square** of 4 holes, centered on the spline axis (x=12.5, y=0): (x,y) = {7.55, 17.45}×{±4.95}, present on **both** shaft-normal faces. Top face holes sit at R≈7 — **inside the ∅20 horn disc, so unusable**; mount through the **bottom (back-shaft) face**. Implemented as `sts3215_mount_holes()` in `leg_v5_screwlock/sts3215_mount.scad`. Closes note 6.
+
+---
+
+## STS3215 STEP — full hole census (re-parsed 2026-08-02)
+
+> ⚠️ **Read §1 lines 47–58 FIRST — most of this was already there.** The
+> 2026-07-02 correction block already recorded that the "9.9 × 9.9 square" is the
+> disc BCD and not a body mount ("*Screws driven there thread into nothing. Cost
+> one full pocket redesign*"), and the **REAL case mounting** row already lists
+> (−8.3, ±10.2) & (−32.8, ±10.25). This census **re-derived both from scratch
+> without noticing** — which is its own lesson: the file contained the correction
+> *and* the uncorrected note 6 at the same time, so a reader could land on either.
+> **The genuinely new content here is only:** the three-way ∅2.5 ambiguity, the
+> ∅3.4-on-axis argument, the 1.5 mm modeled pilot depth vs 7.0 measured, and
+> striking note 6. Everything else is confirmation of work already done.
+
+Source: `feetech_servo_models/.../STS3215_03a v1.step`. Every CIRCLE entity was
+resolved through `AXIS2_PLACEMENT_3D` → `CARTESIAN_POINT` to get real centres, not
+just radii. **115 circles total.** Spline axis at **x = 12.5, y = 0**; shaft axis
+is **Z**; the two discs are the plates at z ≈ +16.2…+18.7 (2.5 thick) and
+z ≈ −15.6…−17.7 (**2.1 thick — matches the project's calipered wheel figure**).
+
+⚠️ **The horn figure disagrees with the caliper, and the CALIPER WINS.** §1 line 47 has the
+horn disc at **~3.05** (reconciled to the calipered 35.5 mm disc-to-disc, commit 52d387f);
+these STEP circles imply 2.5. The wheel agrees (2.1 vs calipered ~2.15). **Do not use 2.5 as
+a horn-disc thickness** — the ×6 length derivation depends on 3.05, and these circles bound
+the *hole*, which need not run the full plate thickness.
+
+| family | Ø | n | where | what it is |
+|---|---|---|---|---|
+| r=1.25 | **2.5** | 18 | **R = 7.000** from the spline, in BOTH discs, ±45° | **disc screw holes** |
+| r=0.75 | **1.5** | 16 | y = **±10.25**, both ±Z faces, **1.5 deep** as modeled | **case-mount pilots** |
+| r=2.1 | **4.2** | 8 | same centres as the Ø1.5 | head recesses for the case screws |
+| r=1.7 | 3.4 | 10 | on-axis, z = +20.2 | horn centre / output bore |
+
+**Three things this confirmed — the first two were ALREADY KNOWN (see banner):**
+
+1. **The "9.9 × 9.9 mm square" and the "Ø14 BCD at ±45°" are ONE pattern, not two.**
+   ⚠️ **Already corrected 2026-07-02 at §1 line 55** — this census re-derived it from
+   scratch without noticing, because **note 6 further down still asserted the old
+   version.** Corners at (±4.95, ±4.95) → radius 4.95·√2 = **7.000** = 14/2. It is
+   **in the discs**, so it can never be a body mount — the disc covers it. `leg_v5`'s
+   `sts3215_mount_holes()` aimed at it. *The new part is only that note 6 is now
+   struck, so the file no longer says both things at once.*
+
+2. **The real case-mount pattern is the Ø1.5 family, and `leg_v6` has it right.**
+   ⚠️ **Already in §1 as the "REAL case mounting" row**, with these exact coordinates.
+   Re-derived: subtract the 12.5 spline offset from the bottom-face centres
+   (x = +4.20, −20.30 at y = ±10.25) → **(−8.3, ±10.2) and (−32.8, ±10.25)** =
+   `COL_PTS` term for term. *Genuinely new:* the two faces are **asymmetric** (top
+   face is x = +4.20 / **−16.50**), so "present on both faces" was never quite true —
+   mount through the **bottom**, which is what leg_v6 does.
+
+3. **Nothing in this file supports a ~19.9 mm case column.** The pilots are modeled
+   1.5 mm deep and the user's caliper says **7.0 mm**. The 19.9 was back-solved from
+   an assumed-correct M2×22, which is why "M2×22 fits" kept confirming itself. See
+   the M2×9 / M2×13 correction in `docs/fastener-schedule.md`.
+
+⚠️ **What the STEP CANNOT tell us: the disc thread.** ∅2.5 has **three** readings:
+- the **M3×0.5 tap drill** (3.0 − 0.5 = 2.5) → M3 machine screw into a tapped hole
+- the **M2.5 nominal major**, drawn as a plain cylinder at callout size
+- a **plain pilot for a Ø3.0 thread-forming screw** — and the vendor ships exactly
+  that: the STS3215 hardware list is *"Machine screws: M3 x 6"* **and**
+  *"Self-tapping screws: PA30X5"*. A ∅2.5 pilot is textbook for a PA3.0.
+
+It is **not** M2.5 clearance (2.9), which is the one thing note 4 asserted.
+
+**A CAD-internal argument narrows it to two.** This same file models the on-axis
+feature at **∅3.4** — textbook M3 *clearance*. So when this CAD means a clearance
+hole, it draws the true clearance diameter. That makes ∅2.5 not-a-clearance-hole,
+which kills reading 2's rationale and leaves **tapped-M3** or **PA3.0 pilot**.
+
+**Both of those put the fastener at Ø3.0 nominal**, which is why #263's ∅3.4
+printed clearance is right either way. What is NOT settled is *machine screw into
+a tapped hole* vs *thread-forming screw into a plain pilot* — that changes what to
+**buy**, not the printed geometry.
+
+🔴 **Do not cite "the FEETECH spec sheet says M3" as settling the BCD holes** —
+that overstates it, and #267 did exactly that before this correction. Two vendor
+spec pages were checked (druav, rcdrone): both list the M3×6 and the PA30X5 and
+**neither assigns either screw to a specific hole.** Credit to **#262** for
+naming this gap first, from the LeRobot/SO-101 side: SO-101's M3×6 is the horn
+**centre** screw, which says nothing about the Ø14 BCD.
+
+⚠️ **The bench test is now two questions, not one, and it is still ~30 seconds:**
+does an M3 machine screw **thread** into a BCD hole, or spin/force through? If it
+threads — wind to the stop, mark at the face, caliper mark-to-tip for real depth.
+If it does not, these joints want the supplied PA3.0 self-tappers (or nuts) and
+the engagement column of the fastener table changes for 12 servos.
 
 ---
 

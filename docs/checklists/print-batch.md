@@ -63,7 +63,10 @@ the (now-chamfered) battery-lead notch, same family as `case_slot_grommet`.
 
 - [ ] PETG-CF spool on hand? (buy if not — or all-PA6 and accept warp
       risk on the 127 mm riser lid)
-- [ ] TPU 95A on hand? (~100 g needed, external spool — AMS won't feed)
+- [x] **TPU 95A on hand — SETTLED 2026-07-31 by having printed with it.** (~100 g
+      budgeted, external spool — AMS won't feed.) This had been contradicted across
+      three docs: `work-schedule.md` said ✅ on hand, this line said unknown, and
+      `master-bom.md` listed only PA6-CF. Resolved in favour of ✅ — see §1b.
 - [ ] ~1.5 kg PA6-CF + ~0.6 kg PETG-CF total — enough stock?
 - [ ] Shoulder lightening windows (backlog #27): rec DEFER one rev —
       shoulder just took feet + bosses + gussets, prove it first
@@ -76,16 +79,199 @@ the (now-chamfered) battery-lead notch, same family as `case_slot_grommet`.
 |---|---|
 | PA6-CF (DRY 80 °C/10 h; no anneal — §3) | coax, femur, tibia, knee_arm, shoulder, shoulder_plate (+L variants), strap ×4, **`head`**, **`neck_bracket`**, **`battery_pocket`** (#24 2026-07-10: stays PA6-CF — belly crush guard over the LiPo, puncture=fire #15; impact toughness > flatness) — 4 walls / 40 % / gyroid (**AUDITED** `neck_bracket_analysis.py`: faceplant SF ~12; ⚠ the L2-scan **vibration/resonance** is a stiffness concern, unverified — modal check on the first print) |
 | PETG-CF | riser_bay, floor_plate, **`head_ear` ×2** (split off the head 2026-07-07 — prints FLAT, low-warp. Bolts to the head ear-pad; OPTIONAL per the WiFi-antenna decision #32. **MATERIAL 2026-07-13: plain PETG or ASA — NOT a CF filament.** The ear is an antenna mast; carbon fiber is conductive at 2.4/5 GHz and detunes/absorbs the whip (several dB). Rigid low-loss dielectric holds the mast stiff with no RF penalty. If the ears end up pure styling, any filament is fine. **YAWED +45° edge-on to the L2** (`head_ear.scad EAR_YAW`, occlusion_ear.py): blocked LiDAR arc 28.5°→13.8°/ear, ~29° total FoV recovered; ears lean back. First-article: check base stiffness on the longer cantilever), **`l2_adapter`** (FLAT bottom-down, ~6 g; PA6-CF also fine — it carries the L2 mass so PA6-CF preferred if in stock), **`control_pod`** (COLUMN-FACE-DOWN, ~24 g; rear-top E-stop + OLED mount) |
-| TPU 95A | SM3_Foot shoe ×4+1 (STOCK geometry — crush-zone v2 waits for first-article, #20), skid_rail ×2, cable_clip ×20, ~~tibia_pad~~ → **knee_bumper ×4+1** (backlog #15 B, replaces the retired tibia_pad — wraps the tibia knee-block, ~8 g TPU, U opening up), **grommet_insert ×6**, **case_slot_grommet** (#41 follow-up, -Y CASE_SLOT edge liner), **lead_notch_grommet ×2** (AUD-12b, 2026-07-10 — battery-lead notch edge liner, one per shoulder/trunk end) |
+| TPU 95A | ✅ **SM3_Foot shoe ×4+1 PRINTED** (STOCK geometry — crush-zone v2 still waits for first-article fit, #20) · ✅ **skid_rail ×2 PRINTED** · ✅ **knee_bumper ×4+1 PRINTED** (backlog #15 B, replaced the retired ~~tibia_pad~~ — wraps the tibia knee-block, U opening up) · ✅ **cable_clip ×27 PRINTED 2026-08-01** (20 install + 7 spares; batch printed ahead of the §4 first-article step — see the anchor-topology note in §1b) · ⬜ **grommet_insert ×6** · ⬜ **case_slot_grommet** (#41 follow-up, -Y CASE_SLOT edge liner) · ⬜ **lead_notch_grommet ×2** (AUD-12b, 2026-07-10 — battery-lead notch edge liner, one per shoulder/trunk end) |
+
+### 1b. TPU print status — measured, 2026-07-31
+
+Volumes measured from the STLs (trimesh), mass at TPU 95A ρ ≈ 1.21 g/cm³, solid.
+The `~100 g` budget in §0 checks out: the full set is **~102 g**.
+
+| part | qty | ea cm³ | set g | status |
+|---|---|---|---|---|
+| SM3_Foot shoe (`original_body_files/SM3_Foot.stl`) | 5 | 3.6 | ~22 | ✅ printed |
+| knee_bumper | 5 | 6.5 | ~40 | ✅ printed |
+| skid_rail | 2 | 4.7 | ~11 | ✅ printed |
+| cable_clip | 27 | 0.85 | ~28 | ✅ printed 2026-08-01 — 20 install (5/leg) + 7 spares |
+| grommet_insert | 11 (LA-25 ladder) | 0.40 / 0.43 / 0.46 | ~5.9 | ⬜ 1× OD 12.2 (negative control) + 5× **12.7** (tracked default) + 5× 13.2 — see the ladder note below |
+| case_slot_grommet | 1 | 0.55 | ~1 | ⬜ |
+| lead_notch_grommet | 2 | 0.24 | ~1 | ⬜ |
+
+**~101 g printed, ~7 g remaining** (updated 2026-08-01). There is no large TPU job
+left on this project — the biggest single TPU part is a 6.5 cm³ knee_bumper, and
+every one of those is printed. Remaining: **1× `case_slot_grommet`, 2×
+`lead_notch_grommet`, 11× `grommet_insert` (the LA-25 OD ladder)** ≈ 7 g total.
+Was "~5 g / 6× grommet_insert" — the ladder replaced the flat 6-off, see below.
+
+**`grommet_insert` — print the LA-25 OD LADDER, not 6 identical.** The old advice
+here ("print one at 12.2, grow `BARREL_OD` if it spins free") pointed at the wrong
+fix, because 12.2 is not a tolerance miss — **it cannot grip at any print accuracy.**
+The slit is 2.0 mm of arc, so closing it shrinks the barrel diameter by
+`SLIT/π = 0.637 mm`, while the design interference into a nominal Ø12 hole is only
+**0.200 mm**. The ring swallows the whole interference by closing a fraction of its
+gap and never reaches hoop compression; the only restoring force is the C-section's
+bending stiffness in Shore-95A TPU. **Hoop engagement begins at
+`12.0 + SLIT/π = 12.637`** — so creeping to 12.3 or 12.4 stays inside the dead band.
+
+Default moved **12.2 → 12.7** in `grommet_insert.scad` on that analysis (smallest
+value in the engaged regime; still a hypothesis, not a press-test result). Print
+**1× 12.2 + 5× 12.7 + 5× 13.2** ≈ 5.9 g:
+
+- **12.2 is the negative control** — it should spin free. If it grips, the analysis
+  is wrong and the other two rungs are oversized.
+- 5 of each candidate because 4 install + 1 spare, and **the TPU spool changeover
+  is the expensive step, not the filament** — whichever rung wins, no second job.
+- `openscad -D BARREL_OD=<od> -o <out>.stl grommet_insert.scad` regenerates any rung.
+- `BORE` stays 9.0 on all three, so bundle clearance is unaffected; only the wall
+  thickens (1.60 / 1.85 / 2.10 mm). `FLG_OD` untouched → flange-face clearances hold.
+
+Never re-drill the flange. ⚠️ The press test needs a printed PA6-CF Ø12 hole and
+there are **no first-article prints yet** (`STATUS.md`) — cheapest unblock is a
+scrap coupon with a few Ø12 holes in the wave-1 PA6-CF job, so LA-25 clears without
+test-fitting into a real shoulder. ⚠️ `lead_notch_grommet` is 0.24 g; preview the
+plate before sending, because slicers drop islands that small.
+
+#### ⚠️ Anchor-topology check the clip batch skipped
+
+The 27 clips were printed ahead of §4's 2-off first article, so this is now a
+**fit check on parts in hand** rather than a print decision. It is worth doing
+before the harness goes on, because it changes install, not the print.
+
+The clip's own zip holes are **Ø3.4 on a Z axis at y = ±5** (`cable_clip.scad:91`),
+i.e. straight down through the flat base at **10 mm spacing** — which is exactly
+`zip_pair_neg`'s default (`leg_v6_common.scad:343`, `spacing = 10`, axis Z). Three
+of the five per-leg stations are that: **femur x44, femur x84, tibia x58.** Those
+match by construction.
+
+The other two stations are **not the same kind of anchor**:
+
+| station | source | geometry |
+|---|---|---|
+| coax tunnel-exit | `coax.scad:600` | `translate([sx*7, 17, -36]) rotate([0, sx*90, 0])` — **axis X**, one hole per ∓X side wall, **14 mm apart** |
+| coax HAA connector-bay | `coax.scad:636` | `translate([sx*7, 19, -27]) rotate([0, sx*90, 0])` — same pattern at a different (y,z) |
+
+Both punch **sideways through opposite walls** starting inside an already-open
+void — deliberately, so a tie can be looped (a blind pocket cannot). But a tie
+threaded through those cannot also thread the clip's vertical base holes: the axes
+are perpendicular and the spacings differ (14 vs 10). **That is 2 of 5 stations per
+leg = 8 of the 20 installed clips.**
+
+What is *not* established: whether the clip still works there as a tie-clamped
+saddle (a tie crossing the void could press bundle-into-clip without threading the
+clip at all), and whether an 18 × 16 mm clip physically fits the tunnel void
+(grid-probed clean gap at that z-band is x[−9, 9] = 18 mm wide). Both are bench
+questions against a printed coax — and the coax was redesigned since
+(#234/#235/#240), so they belong to the **#226 first article**, not to a re-print.
+Fallback if it does not fit: those two stations revert to what they were designed
+as before the clip existed — a plain tie wrapping the bundle against the wall pair,
+losing the bell-mouth bend control at the hip crossing only.
+
+The `SM3_Foot` shoe is **not modelled in this repo** — it is stock upstream geometry
+at `original_body_files/SM3_Foot.stl`. `leg_v6/check_shoe.py` gates its fit against
+the tibia toe; last run 2026-07-31 clean on both sides (0/21000 interference points,
+inner-face gap median 0.277 / p90 0.505 against the 0.4 median limit).
 
 ## 2. Slicer spec
 
 | Class | Walls | Layer | Infill | Notes |
 |---|---|---|---|---|
-| legs PA6-CF | 4 | 0.2 | 40% (**tibia 25%** — stress audit SF 35) | orientations per part headers: femur/tibia flat −Z, coax rear-face-down + supports under the yoke bridge, shoulder rear-face-down + tree supports, tibia tab-down + pillars, shoulder_plate horn-seat-down, knee_arm underside-down, strap flat. **⚠ LA-3 (2026-07-11): femur_L / tibia_L do NOT share the R orientation** — the Z-mirror flips which face is flat, so "flat/tab face −Z down" applied to an L part prints it upside-down (tibia_L lands on two ~25.4mm² islands = tip-over risk). Rotate femur_L/tibia_L **180° about X from the R orientation** so they rest on the same flat face R does. |
+| legs PA6-CF | 4 | 0.2 | 40% (**tibia 25%** — stress audit SF 35) | orientations per part headers: femur/tibia flat −Z, coax rear-face-down + supports under the yoke bridge, shoulder rear-face-down + tree supports, tibia tab-down + pillars, **shoulder_plate BACK-FACE-DOWN** (corrected 2026-08-02 — this said "horn-seat-down", which is `knee_arm`'s doctrine copied onto a part whose own header calls it *geometrically impossible*: the flange runs to y=2.00, 15.75 mm below the horn-seat plane at y=17.75, so it cannot rest there. Bed face is y=FACE_Y1=21.75), knee_arm underside-down, strap flat. **⚠ LA-3 (2026-07-11): femur_L / tibia_L do NOT share the R orientation** — the Z-mirror flips which face is flat, so "flat/tab face −Z down" applied to an L part prints it upside-down (tibia_L lands on two ~25.4mm² islands = tip-over risk). Rotate femur_L/tibia_L **180° about X from the R orientation** so they rest on the same flat face R does. ✅ **LA-3 does NOT extend to `shoulder_plate_L`, `coax_L` or `coax_hfe_block_L`** — those are X-mirrors, and only the Z-mirror changes which face is flat. `shoulder_plate_L` in particular is the **same shape** as the R (measured 2026-08-02: symmetric about its own midplane, the sole difference is the LA-2 dot, 7.41 mm³) — print both **back-face-down, same transform**, and nest them. |
 | head/bracket PA6-CF | 4–5 | 0.2 | 40–60% | `head` CROWN/PAD-DOWN (the flat crown top on the bed = best L2-seat + ear-pad surface; the boss + tilted face + cheeks rise → tree supports under the tilted-face + cheek overhangs); `neck_bracket` BASE-DOWN (deck face on the bed, wall+gussets rise); `l2_adapter` FLAT bottom-down (zero supports) |
 | chassis PETG-CF | 3 | 0.25 | 20% | riser DECK-FACE-DOWN (zero supports); floor_plate flat (zero supports); jetson_case_mount base-down (uprights rise, no overhangs after the #34 rework); `jetson_clamp_bar` ×2 flat (PA6-CF; #44 — removable case hold-downs, replaced the 4 clamps); `control_pod` COLUMN-FACE-DOWN (riser-facing face on the bed; light supports under the deck + OLED-panel overhangs). **`battery_pocket` prints PA6-CF settings** (§1 row / #24, not PETG), FLOOR-DOWN opening-up, zero supports. (`jetson_cowl` RETIRED #41 — do NOT print) |
 | TPU | 2 | 0.2 | 100% | clips/rails/grommet flat; **knee_bumper U-opening-UP**; shoe per stock orientation |
+
+### 2b. `hardware/cad/slice_plate.py` — slice from the CLI, and prove the settings landed
+
+The table above is prose. `slice_plate.py` is the same table as a registry the
+machine can act on, plus three gates the GUI has no way to run:
+
+```
+proj/.venv/bin/python hardware/cad/slice_plate.py --list                 # registry + coverage
+proj/.venv/bin/python hardware/cad/slice_plate.py grommet_insert case_slot_grommet lead_notch_grommet:2
+proj/.venv/bin/python hardware/cad/slice_plate.py --self-test            # prove the verify step fires
+```
+
+It slices with OrcaSlicer's CLI, writes G-code to `hardware/cad/slices/`
+(gitignored) and a provenance record to `docs/print-records/` — STL + .scad
+sha256, git HEAD, every applied setting. That record is the answer to "which
+revision is this printed part?", which until now was memory.
+
+**Gates, in order.** Any one of them refuses the plate:
+
+1. **STL freshness** (`check_stl_fresh.py`, #176) — you cannot slice geometry
+   that no longer matches its `.scad`.
+2. **Material agreement** — the `.scad` `Print:` header and the registry must
+   name the same material. This caught `battery_pocket`: the header said
+   PETG-CF while §1/#24 had moved it to PA6-CF in 2026-07-10 (belly crush guard
+   over the LiPo). Header corrected 2026-08-01. The gate also **reports what it
+   could not check**: 5 of 28 parts (`floor_plate`, `head`, `jetson_case_mount`,
+   `knee_bumper`, `lead_notch_grommet`) have headers that name no material at
+   all — a real doc gap, now visible instead of passing silently.
+3. **Orientation, measured not trusted** — after the documented face is rotated
+   down, the tool measures how much flat area actually lands on the bed, and
+   how slender the result is (height / √contact). Under 5 mm² means the part is
+   standing on an edge; over slenderness 1.5 it must declare a brim.
+4. **Everything asked for is on ONE plate** — object count matches the request,
+   and the slicer did not split the job. `battery_pocket:9` really does become
+   three plates (4 + 4 + 1); before this gate the tool read plate 1 and
+   reported its 269 g as the total for all nine.
+5. **Settings verification** — the emitted G-code matches the flattened
+   presets, key by key.
+
+**Two real defects it found on its first run**, both invisible in a GUI:
+
+- **`case_slot_grommet` was being printed on its edge.** The `.scad` says
+  "either flat face down" and the mesh's own pose stands it on the 54 × 3.8 mm
+  edge — 11.1 mm tall, **19.2 mm²** of contact. Laying it on **+Y** gives
+  **156.6 mm²** and 3.8 mm of height. All six faces are measured in the file.
+- **`coax_hfe_block_L` had the R part's orientation.** The `_L` is
+  `mirror([1,0,0])`, so its mating face is **−X**, not +X: 54.4 mm² against
+  366.4. Same trap LA-3 records for `femur_L`/`tibia_L` — and the registry
+  reproduced it, then the measurement caught it.
+
+**One divergence it now enforces:** tibia prints at **25 %** (stress audit
+SF 35), not the PA6-CF default 40 %. Measured on `tibia_R`: 66.43 g / 3 h 02 m
+against 73.52 g / 3 h 23 m. Parts wanting different infills cannot share a
+plate, and the tool says so rather than picking one.
+
+**Parts still marked MANUAL** — `shoulder`, `shoulder_plate(_L)`, `head`,
+`control_pod`, `knee_bumper` — have orientations documented as a *feature*
+("rear face down", "crown/pad-down") rather than an axis. The tool refuses them
+and prints every face's measurements so the choice takes a minute. Resolve one
+by adding the axis here **and** to the `.scad` header.
+
+**`oled_mount` is WANTED and BLOCKED on three caliper numbers** (2026-08-02).
+The OLED is not deferred — what it lacks is a way to *hold the board*. The
+bracket's 4 board mount holes were **removed 2026-07-28 (#35, still open)**: the
+vendor drawing gives the outline (27.3 × 30.7 mm) but **not the hole pitch on
+either axis**, and the guessed pitch put 2 of 4 holes inside the display window.
+So the bracket is deliberately unprintable until the **owned** module is
+measured:
+
+- [ ] hole pitch along the 27.3 mm axis (centre-to-centre)
+- [ ] hole pitch along the 30.7 mm axis (centre-to-centre)
+- [ ] active display area — size **and** its offset from the board datum (the
+      20 × 16 window in the .scad is carried over, **not** derived)
+
+Everything else in the chain already exists: `control_pod` bolts to the
+`riser_bay` pocket-bosses (4× M3 at y±10, z61/66, x−66.5) and the bracket bolts
+to the pod deck's 2× M2 heat-sets at x−96/−71, y23. It is only the
+board-to-bracket joint that is missing. **`control_pod` prints as-is** — it is
+the E-stop mount, its OLED shelf and heat-sets are held deliberately, and
+nothing about them should be "cleaned up".
+
+**Parts marked UNRESOLVED** — `spacer`, `trunk`, `head_ear(_L)` —
+are printable but cannot be sliced yet, each for a recorded reason: `oled_mount`
+says "PETG/PA6-CF" (two materials); `spacer` names no material anywhere though 8
+are needed; `trunk` is built by `trunk_build.py` so the freshness gate skips it;
+the ears are deliberately non-CF (#32 — the CF detunes the antenna) and no
+non-CF material is modelled yet. `--list` prints this set as a to-do.
+
+⚠️ **These five were in the tool's "not printable" exclusion list on the first
+pass**, which made its coverage line read "covers every STL". That is this
+project's own *green-but-uncovered* pattern, committed by the tool written to
+catch it — worth knowing when reading any coverage claim, including this one.
+Coverage is now stated as numbers: 28 registered (6 refused for prose
+orientation), 5 unresolved, 4 reference-only, 0 unaccounted.
 
 ## 3. DRY yes, ANNEAL no (corrected 2026-07-06 — user catch)
 
@@ -124,9 +310,92 @@ Every insert site depth-probed in the built STLs:
 
 ## 4. Wave 1 — first article (~450 g, doctrine: before batching)
 
+**PA6-CF progress 2026-08-02 — printed: `strap` ×1, `shoulder_plate` ×2,
+`knee_arm` ×1, `femur` ×1, `tibia` ×1.** That is enough to dry-assemble the
+**whole knee** (femur + knee_arm + tibia), so the leg_v6 README §Verify list is
+now runnable rather than theoretical — and three of its five items need exactly
+these parts:
+
+- [ ] **Yoke gap — the one that can send the CAD back.** README §5: the tibia
+      end must float in the femur yoke with **0.2–0.6 mm play**. PA6-CF shrinks
+      0.2–0.8 %, so if the gap **clamps** the discs, sand the arm faces or
+      reprint at **+0.3 % Z**. Check before anything else; it decides whether
+      the other legs print as-is.
+- [ ] **Knee-arm plate on the femur shelf** (README §2): seats flat, the
+      diagonal Ø3.1 screws register snugly **before** the clearance pair, horn
+      face flush under the plate ±0.2.
+- [ ] **Servo pocket drop-in** (README §1): the servo drops in under gravity
+      plus a wiggle, **no force** — CLR_POCKET is 0.45/side and location comes
+      from the 4 column screws, not the walls. ⚠️ 0.30/side was the v5
+      press-fit; do **not** "fix" it back. The 0.1 mm anti-rotation ribs are
+      crush ribs — file the tips if a tight print binds.
+- [ ] **M3 countersinks flush** (README §3) — heads must not stand proud into
+      the yoke arm plane. 🔴 *Read "M2.5" until 2026-08-02; disc thread is M3
+      (#263).* ⚠️ **Use BUTTON heads on the ×8/×14 wheel screws** — an M3 SHCS
+      head stands ~1.4 mm proud of the 1.6 mm counterbore; a button is ~flush.
+- [ ] **Heat-set purchase**, Ø4.6 bore at 5.7 deep in PA6-CF (README §4). The
+      LUMINZENLUX kit's threaded insert adapter is the tip for this.
+- [ ] **MEASURE the printed links, do not trust the model.** `femur` hfe→kfe is
+      **106.9 mm** and `tibia` kfe→foot **129.0 mm** in the URDF, both taken
+      from STL bores. At 0.2–0.8 % shrink that is **0.2–0.9 mm** on the femur
+      and **0.3–1.0 mm** on the tibia — straight into IK and gait. Caliper
+      bore-to-bore and feed the real numbers back.
+- [ ] **WEIGH them.** The sim's link inertials are provisional and the recorded
+      plan is to refine them from weighed prints. Slicer predicted **femur_R
+      56.4 g** and **tibia_R 66.4 g** (25 % infill); a large gap also tells you
+      the printer is under- or over-extruding.
+- [ ] **Which side?** If these are the `_L` files, LA-3 applies — they must be
+      rotated **180° about X** from the R pose. A left part at the R orientation
+      lands on 41 mm² (tibia) and would have tipped, so a clean print implies
+      either R or a correctly rotated L.
+
+Each of the earlier three carries a first-article check written into its own
+`.scad` header; do these before printing any more of them:
+
+- [ ] **`knee_arm` + `shoulder_plate` — probe the horn counterbore floor.**
+      LA-23: `ARM_THK` 4.0 − `HORN_CTR_DEEP` 2.5 leaves **exactly 1.5 mm**, the
+      print-margin gate's minimum with zero slack. Measure it, and check for a
+      witness mark or pinhole from a thin top layer. `ARM_THK` is shared across
+      every arm plate on the leg, so this one number validates the pattern.
+- [ ] **`shoulder_plate` — test-fit an M3 through the Ø3.1 dowel pair.** LA-26:
+      FDM commonly undersizes small holes 0.1–0.3 mm. If it is tight, **bump
+      `PLATE_BX`/`PLATE_BY` to 3.2–3.3 in the file** — do not drill the part.
+- [ ] **`strap` — check a zip tie passes the Ø3.2 bores at ±15.60**, and that
+      the 1.44 mm wall to the plate's outer edge did not blow out. Same
+      undersize risk, and this wall is the thin one.
+- [ ] **`shoulder_plate` — which side did you print?** **1 dot = RIGHT,
+      2 dots = LEFT** (LA-2, front face, x±45, dots 20 mm apart in z). The part
+      is `print 2 + 2` — one per leg, 2 R and 2 L — so two R plates covers both
+      right legs but leaves the left legs unserved.
+- [ ] **`shoulder_plate` material was INFERRED, not sourced (#184).** The file
+      says so: nothing in it states a material and PA6-CF was inferred from
+      knee_arm. If it went down in PA6-CF, that inference is now a decision —
+      record it in the header and close #184.
+
+⚠️ **`strap` count is ambiguous and 4 is probably wrong.** Its header says
+"print 4+ per robot", but **two parts carry strap bores**: `tibia.scad:144`
+(`strap_pilot_neg(31, …)`) and `coax.scad:463` (the front zip-tie bores) —
+femur has none. That is **2 per leg = 8 per robot**, not 4. Resolve before
+batching them.
+
 - [ ] 1× RIGHT leg set (coax_R, femur_R, tibia_R, knee_arm), 1× shoulder,
-      1× shoulder_plate pair, 1× shoe, 1× skid_rail, 2× cable_clip,
+      1× shoulder_plate pair, 1× shoe, 1× skid_rail, ~~2× cable_clip~~,
       1× knee_bumper, 1× strap
+      — **still outstanding on this line: `coax_R`, `coax_hfe_block`,
+      `shoulder`** (`femur` and `tibia` printed 2026-08-02). Sliced for real numbers
+      (`slice_plate.py`, PA6-CF, §2 settings): `coax_hfe_block` **5.5 g /
+      25 min** · `coax_R` **30.8 g / 1 h 35** (supports + brim) · `femur_R`
+      **56.4 g / 2 h 33** · `tibia_R` **66.4 g / 3 h 09** (at its 25 % infill)
+      → **≈159 g and ~7 h 40** for the four. `shoulder` cannot be sliced yet —
+      its orientation is documented as "rear face down" with no axis, and the
+      measured faces disagree with the obvious reading (+Z 7880 mm² vs +Y 772),
+      so that decision comes first.
+      — ⚠️ the TPU items here are **already printed in batch** (shoe ×5,
+      skid_rail ×2, knee_bumper ×5, **cable_clip ×27**), so for those the
+      first-article step is spent. What it would have caught is now a fit check
+      against the printed rigid parts instead — see the anchor-topology note in
+      §1b for the one that matters (2 of 5 clip stations per leg use a
+      perpendicular anchor).
 - [ ] 1× head + 1× neck_bracket + 1× l2_adapter + 2× head_ear (FIT-CHECK — prove
       the L2 Ø51 + D456 ±47.5 patterns vs the real parts; the ear feet bolt to
       the pad; the L2 adapter tongue slides under the crown lip)
@@ -165,11 +434,17 @@ Every insert site depth-probed in the built STLs:
       boss edge, so a screwdriver body swinging next to the seated 19mm boss is
       tight. First-article: confirm the driver actually reaches the near case
       screws with the parent boss in place (else strictly follow servos-first).
-- [ ] **LA-25 first-article: grommet_insert press-test.** BARREL_OD 12.2 into
-      the nominal Ø12 flange hole is only 0.2mm interference (likely inside
-      FDM/TPU noise) and the axial slit makes it a split ring — press one
-      in, tug-test retention; grow `BARREL_OD` in `grommet_insert.scad` if
-      loose.
+- [ ] **LA-25 first-article: grommet_insert OD ladder press-test.** Not a
+      tolerance check — the split ring means the original 12.2 cannot grip at
+      any print accuracy: closing the 2.0mm slit shrinks the diameter by
+      `SLIT/π = 0.637mm` against only 0.200mm of design interference, so it
+      never reaches hoop compression. **Engagement starts at 12.637.** Press
+      all three rungs into the printed Ø12 hole in one sitting and tug-test:
+      **12.2 must spin free** (negative control — if it grips, the analysis is
+      wrong), then take the lowest of 12.7 / 13.2 that holds. Set the winner as
+      `BARREL_OD` in `grommet_insert.scad` and regenerate the STL. Never
+      re-drill the flange. Needs a printed PA6-CF Ø12 hole — add a scrap coupon
+      to the wave-1 job rather than test-fitting into a real shoulder.
 - [ ] **LA-26 first-article: shoulder_plate 3.1mm dowel holes.** Test-fit an
       M3 in the 2 diagonal "dowel" flange holes before committing — FDM
       often prints small holes 0.1–0.3mm undersize; bump to 3.2–3.3 in

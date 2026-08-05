@@ -8,12 +8,24 @@ correct: those were blocks, not leg designs).
 
 ## Design pattern (every joint, every part)
 
-- **Servo mounting:** drops into an **open-top pocket**, 4× **countersunk M2.5**
-  through the pocket floor into the case's threaded bottom holes
-  (9.9×9.9 square, STEP-verified). Lifts straight out for service.
-- **Driven joint = yoke:** top arm bolts to the Ø20 output horn (4× M2.5 on
+- **Servo mounting:** drops into an **open-top pocket**, 4× **countersunk M2
+  self-tap** through the pocket floor into the case's bottom pilot holes. Lifts
+  straight out for service. 🔴 *Read "M2.5" and cited the "9.9×9.9 square" until
+  2026-08-02 — both wrong: the case screws are **M2**, and the 9.9×9.9 square is
+  the DISC bolt pattern, not the case pattern.* **STEP-verified 2026-08-02:** the
+  case pilots are **8× Ø1.5** (with Ø4.2 head recesses) at **y=±10.25** on the two
+  shaft-normal faces, x = +4.20 / −20.30 on the bottom face. Subtract the 12.5 mm
+  spline offset → **(−8.3, ±10.2) and (−32.8, ±10.25) = `COL_PTS` exactly.** The
+  pocket geometry is right. ⚠️ The STEP models these pilots only **1.5 mm deep**;
+  the real column is **7.0 mm measured** — and never the 19.9 mm that older docs
+  back-solved from a 22 mm screw. Note the faces are **asymmetric** (top face is
+  x = +4.20 / −16.50); leg_v6 mounts through the **bottom** face.
+- **Driven joint = yoke:** top arm bolts to the Ø20 output horn (4× **M3** on
   Ø14 BCD ±45° + M3 center); bottom arm pivots on an **M3 shoulder screw into a
   heat-set boss (M3 × D4.6) in the pocket floor**, coaxial with the spline.
+  🔴 *Disc fastener was "M2.5" until 2026-08-02 (#263) — it is Ø3.0 nominal, though
+  tapped-M3 vs PA3.0 self-tap pilot is UNRESOLVED (#262). The
+  ∅2.5 holes in the STEP are the M3 tap drill, not M2.5 clearance (2.9).*
   The Ø20 bolt-on bottom wheel is NOT used — it and the case-screw square both
   occupy r<10 of the bottom face (mutually exclusive with floor mounting), and
   the boss routes joint side-load into the printed bracket, not the servo case.
@@ -31,6 +43,7 @@ correct: those were blocks, not leg designs).
 | `tibia.scad` (+`_L`) | ✅ gated | KFE pocket + blade + **toe_v2 designed seat** (disc/boss/key-pockets, mates the SM3_Foot crescent — `check_shoe.py` gated) @129.0, jog −30.5 outboard (stock stance); vents, anchors, dots |
 | `coax.scad` (+`_L`) | ✅ gated | HAA pocket (horn −Y, front insert), femur yoke (horn arm 16.6 / wheel boss →51.5, bridge 7.4), front strap pads, vent, bottom cable tunnel |
 | `strap.scad` (print 4+) | ✅ | servo tail retention, 2× Ø3.2 zip-tie bores into rim-pad zip cuts (2026-07-16: was M2.5 self-tap — see row 15) |
+| `shoulder_plate.scad` (+`_L`, 4 installed = 2 per side) | ✅ gated | L-bracket hanging off the shoulder deck — vertical face bolts the haa HORN, top flange bolts down into the deck heat-sets; drop 4 screws + 1 plug and the whole leg comes off. **⚠ HANDEDNESS IS NOMINAL (measured 2026-08-02): `_L` is the SAME SHAPE.** The body is symmetric about its own midplane (x=39), so `mirror([1,0,0])` is a pure translation; the only asymmetric feature is the LA-2 dot (volume delta 7.41 mm³ = one Ø3×1.1 dot). Consequences: **both print horn-seat-down in the same orientation** (LA-3's L-orientation warning is for the Z-mirrored femur/tibia, not this), and **a plate on the wrong side is a non-event** — dots here are bookkeeping, not hazard prevention. ⬜ material still INFERRED not sourced (#184) |
 | shoulder | ✅ gated (rev 2026-07-06) | v6 crossmember per trunk end; **riser interface rev**: flange center notch (x ±26 above z 19.5) + 2× Ø3.4 riser hold-down holes (x ±40, z 26.95) — see `../chassis/README.md` |
 
 **ROM (sweep-gate verified, LEG-LOCAL):** kfe ±109° sw / ~118° mech ·
@@ -53,10 +66,12 @@ the horn/wheel discs). rev 2, from `feetech_servo_models/converted_stl/servo.stl
 - **Mounting:** the servo's own 4 case-screw columns — replace the stock
   self-tappers with **longer M2 screws through the pocket floor** (countersunk;
   measure stock length at first article, spec ≈ stock + 3mm). SO-ARM style.
-- **Joints bolted BOTH sides:** yoke top arm on the Ø20 horn (4× M2.5 BCD14 +
+- **Joints bolted BOTH sides:** yoke top arm on the Ø20 horn (4× **M3** BCD14 +
   M3 center); yoke bottom arm's **Ø19 boss reaches through the Ø21.5 floor
-  window and bolts the Ø20 BOTTOM WHEEL** (standard-fitted; 4× M2.5 + M2.5
-  center, head counterbores modeled). No heat-set/idler-boss hack.
+  window and bolts the Ø20 BOTTOM WHEEL** (standard-fitted; 4× **M3**, **NO
+  center screw** — idler side, #51/LA-5; head counterbores modeled at Ø6.0).
+  No heat-set/idler-boss hack. 🔴 *"M2.5 + M2.5 center" until 2026-08-02: the
+  thread is M3 (#263) and the wheel center screw was retired in #51.*
 - **Cables:** the case's rear-bottom connector bay (3.9 deep) is seated by the
   floor; sockets face rearward mid-body — **plug before drop-in**, wires lie in
   the bay and exit the end-wall tunnel (femur/tibia: toward the joint below;
@@ -65,8 +80,10 @@ the horn/wheel discs). rev 2, from `feetech_servo_models/converted_stl/servo.stl
   case's rear top cap ridge stands 2.7 proud of the rim plane).
 
 ## Hardware per joint
-4× M2 ≈stock+3mm (case columns, countersunk) · 4+1× M2.5×6 (horn + M3 center)
-· 4+1× M2.5×8 (wheel, through boss, counterbored) · strap retention: **tibia**
+4× **M2×9** CSK (case columns — **not** "stock+3mm"; floor 2.125 + 7.0 measured
+column = 9.1 max, and the HFE-far pair takes ×13 on its ramped floor) · 4+1×
+**M3×6** (horn + M3 center) · 4× **M3×8** (wheel, through boss, counterbored,
+**no center screw**) · strap retention: **tibia**
 zip tie (2026-07-16, Ø3.2 through-bore — see row 15); **coax** also zip tie
 (2026-07-16, coordinator follow-up — Ø3.2 through-bore at x=±15.60 in its own
 separate strap-pilot cut, coax.scad — hand-converted, not a
@@ -83,7 +100,7 @@ Every mate, its fit, and who provides location:
 | 2 | case columns ↔ floor holes | M2 in Ø2.3 (+csk Ø4.6 cone) | the 4 screws, ±0.15 → THE servo locator |
 | 3 | case front-bottom ↔ platform | 0.1 axial seat gap | — |
 | 4 | bay ↔ bay seat | 0.3 axial | — |
-| 5 | horn Ø20 ↔ arm recess | Ø+0.3 (CLR_HORN 0.15), 0.4 deep | recess + 4×M2.5 BCD |
+| 5 | horn Ø20 ↔ arm recess | Ø+0.3 (CLR_HORN 0.15), 0.4 deep | recess + 4×**M3** BCD |
 | 6 | horn face ↔ arm underside | bolted contact | — |
 | 7 | wheel Ø20 ↔ boss face | flat clamp, NO radial feature (impossible: boss 19 < wheel 20) | the 5 screws, ±0.2 |
 | 8 | boss Ø19 ↔ floor window Ø21.5 | 1.25/side swing | — |
@@ -138,7 +155,7 @@ model missed (real bay = full case width).
    3. tibia↔femur anytime; 4. shoulder last. Servicing hfe = pull haa servo.
 Keep 2-3 spare horn discs (hard falls can strip a spline).
 
-### Cable dressing (backlog #18 — `cable_clip.scad`, TPU 95A, print 20)
+### Cable dressing (backlog #18 — `cable_clip.scad`, TPU 95A, 20 installed = 5 per leg × 4)
 Each flex zone gets a **clip at BOTH loop ends** (the existing zip tie
 threads the leg's Ø3.2 pair AND the clip's matching holes — no leg mods):
 - HIP loop (haa+hfe flex): coax tunnel-exit pair + femur x44 pair
@@ -173,7 +190,9 @@ rating with splayed push-up).
    walls. (0.30/side = the v5 press-fit calibration — do NOT "fix" it back.)
 2. Knee-arm plate: seats flat on the shelf, diagonal Ø3.1 screws register
    snugly BEFORE the clearance pair; horn face flush under the plate ±0.2.
-3. M2.5 countersink flush (heads must NOT proud into the yoke arm plane).
+3. **M3** countersink flush (heads must NOT proud into the yoke arm plane).
+   Use **button** heads on the wheel ×8/×14: an M3 SHCS head stands ~1.4 mm
+   proud of the 1.6 mm counterbore, a button ~0.05 mm.
 4. Heat-set bore Ø4.6 — check insert purchase in PA6-CF at 5.7 deep.
 5. Yoke gap: tibia end floats with 0.2-0.6 play. PA6-CF shrinks 0.2-0.8% —
    if the gap CLAMPS the discs, sand the arm faces or reprint at +0.3% Z.

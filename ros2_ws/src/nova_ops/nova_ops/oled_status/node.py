@@ -1,5 +1,13 @@
 """OLED status node — STUB.
 
+⚠️ Note what this is talking to. `setup.py` registers it as
+`ros2 run nova_ops oled_status`, so it LOOKS runnable; the Arduino Nano
+sketch it writes to does not exist (firmware/arduino-nano/ contains a
+README and no source). Running it writes bytes at /dev/ttyUSB0 that
+nothing reads. The display itself is wanted but has no bracket yet —
+oled_mount's board mount holes are absent pending three caliper numbers
+(#35, open).
+
 Bridges Jetson ROS 2 topics to the Arduino Nano (USB-serial) which
 drives the SSD1331 96×64 OLED + WS2812B LEDs.
 

@@ -106,7 +106,10 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 - [ ] **U9–U12 INA226 modules** — board connects I2C+power only (`4=SDA, 5=SCL, 6=VCC, 7=GND`).
       Confirm (a) module header order matches your dupont wiring, (b) **a unique I2C address per module via the
       A0/A1 solder bead — see the §1e table** (4 modules on one bus = must differ, or collision).
-      **⚠️ Current-sense path — PCB has NO shunt (R13/R14 removed):** rail current must pass through each
+      **⚠️ Current-sense path — PCB has NO shunt** (the shunt resistors that once sat at R13/R14 were
+      deleted — ⚠️ **those designators have since been REUSED for live safety-chain parts: `R13` = 10k
+      e-stop pull-up `EN_SW`↔`V5_AUX`, `R14` = 470k hardcut hysteresis. Both MUST be populated.**
+      Do not read this line as "leave R13/R14 off"): rail current must pass through each
       module's IN+/IN− screw terminals (onboard 2 mΩ), wired **inline in the harness**: source → IN+ → IN− → load.
       **Hip (J7) / Jetson (J12) / L2 (J13) = single XT30 → clean full-current insertion. Leg (0x40) stars into
       4× XT30 (J3–J6) ON the PCB → NO single total-leg-current point** — insert at U1 buck VOUT (cut VOUT→plane)
@@ -139,7 +142,7 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 
 ## 🟠 1d. Power-board fixes from adversarial review (2026-06-26)
 - [ ] **U8 LM393 — NO Vcc bypass cap on the board.** Hand-tack **100nF V5_AUX↔GND across U8 pins 8↔4** (0603 or axial) at assembly. V5_AUX also sets the trip VREFs (R4/R6) → an unbypassed comparator supply risks noisy/chattering 13.0/12.4 V trips. Not on the PCB; add by hand.
-- [ ] **Solid-plane soldering tradeoff:** VBAT_PROTECTED (PWR.Cu) + GND (GND.Cu) are now **SOLID** pad-connected, and power-zone spokes widened (2.0 mm leg / 1.5 mm VBAT+HIP) — needed because the high-current pads (**SW1.2 14 A inject, U1.4 10 A leg VOUT, Q1.3 14 A GND inject**) were **thermal-relief 0.5 mm ≈ 6 A throats** (plane-only, no trace) that would overheat. Cost: those THT power pads (SW1, Q1, buck VIN/VOUT, GND THT) now **wick heat into the planes** → use a **fat tip + preheat**; a bare 60–88 W Pinecil will struggle on the big ones.
+- [ ] **Solid-plane soldering tradeoff:** VBAT_PROTECTED (PWR.Cu) + GND (GND.Cu) are now **SOLID** pad-connected, and power-zone spokes widened (2.0 mm leg / 1.5 mm VBAT+HIP) — needed because the high-current pads (**SW1.2 14 A inject, U1.4 10 A leg VOUT, Q1.3 14 A GND inject**) were **thermal-relief 0.5 mm ≈ 6 A throats** (plane-only, no trace) that would overheat. Cost: those THT power pads (SW1, Q1, buck VIN/VOUT, GND THT) now **wick heat into the planes** → use a **fat tip (TS-C4) at 24 V / ~88 W, tip 400 °C**. ✅ **The "a bare 60–88 W Pinecil will struggle" prediction was TESTED 2026-08-01 and is WRONG for the THT pads:** `U1.4` wet in ~2 s with fill through to the far face and `Q1.3` (the 14 A GND inject) was easy and shiny on both faces, **with no preheat at all**. Preheat is not needed and is not being bought — see `hardware/pcb-mods/BUILD_PLAN.md` §2a. The prediction is still *untested* for **`L1`**, which is SMD and plane-tied on both sides (no barrel to wick).
 
 ## 🟠 1e. Assembly config — connector polarity, buck variants, INA addressing (2026-06-29)
 
@@ -235,7 +238,12 @@ this validates the *timing*, the real half-duplex risk.)
 > | `V7V5_ARM` = `U5.4` only, single-pad net — "arm rail has no exit" | **`J14.2 = V7V5_ARM`.** The rail has an off-board XT30. |
 > | 🔴 `U5.EN` tied to `VBAT_PROTECTED` = always-on, ungated by e-stop/hardcut | **`U5.3 = EN_BUCKS`** — the same net as `U1.3`. Killed by e-stop Q3 **and** hardcut Q2. |
 >
-> So U5/U12 remain DNP **for scope — there is no arm yet — not for safety.**
+> So **U5** remains DNP **for scope — there is no arm yet — not for safety.**
+> ⚠️ **U12 is a different case and DOES get populated** (corrected 2026-07-31): the 4th INA226
+> was reassigned to the **L2 LiDAR rail at 0x45** on 2026-06-30, and `-D NOVA_INA226_L2` is
+> enabled in `platformio.ini` with `/power_rails[9..11]` carrying L2 v/a/w. All four INA slots
+> are electrically identical. Leaving U12 empty makes those three publish nothing.
+> See `hardware/pcb-mods/BUILD_PLAN.md` §4.
 > That is a materially different instruction from the original text, which reads
 > as "populating this creates a pinch/crush hazard".
 >

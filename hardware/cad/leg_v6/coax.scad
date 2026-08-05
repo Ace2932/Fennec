@@ -103,6 +103,71 @@ ARM_OUT_X1 = ARM_OUT_X0 + ARM_THK;           // 60.2
 ARM_HALF_YZ = 16;
 BRIDGE_Z0  = 7.4;                            // femur disc sweep tops at 6.35; raised 0.5 after a corner graze at the sweep gate
 
+// ---------------------------------------------------------------------------
+// #226 OPTION C (2026-07-31): the removable member moves OUTBOARD.
+//
+// The inboard cap (coax_hfe_plate) is retired. It could never be installed:
+// blocked in all six axes against the seated femur AND against a bare coax, in
+// the #67 revision AND the pre-#7-fix one, while its seated pose was itself
+// legitimate (boolean intersection with this part = 0.0 mm3). A valid final
+// position with no path to it. Aiden's printed coax refused it on the bench;
+// check_fit.removable_member_checks() now gates the class.
+//
+// So: the INBOARD arm becomes integral (arm_plate(PLATE_X0, ARM_IN_X1) below,
+// replacing the bored wedge + cap), and the OUTBOARD arm + gusset + wheel boss
+// become a separate bolt-on part, coax_hfe_block.scad. The femur then enters
+// AXIALLY (+X, with the block off) instead of laterally -- this file's own #53
+// header noted "+X blocked by the integral outboard arm", and making that arm
+// removable is exactly what opens it. MEASURED clear, 0 pts over t=2..50mm.
+//
+// JOINT = MORTISE AND TENON, not bolts in tension. Any bridge-level interface
+// sits ~22mm above the boss, so the 133 N cyclic axial load (20 N lateral foot
+// -> 4.72 N.m / 35.5mm disc spacing) becomes ~2.95 N.m at the joint = ~490 N
+// per bolt on a 10mm face, past M3 heat-set pull-out in wet PA6-CF. A
+// concentric spigot would shorten the lever but there is no room: MEASURED,
+// the femur occupies r 10..16 at the boss station. The tenon reacts the moment
+// in BEARING over its own length (245 N on ~92 mm2 = 2.7 MPa) and the bolts
+// drop to retention -- the same move #7-fix made for the cap, including its
+// corollary that the key must be CLOSED both ways (a compression-only key
+// cannot react peel), hence the shrink on y0/y1/z0/z1 and flush only at x1.
+//
+// MOUTH RULED OUT (#221 candidate F, retired with hfe_mouth_study.py). Before
+// C, the idea was to keep the cap architecture and cut a rear MOUTH so the
+// horn could slide out sideways. Measured with the mask removed: 4,477 hits,
+// of which 2,339 are on the O19 INTEGRAL OUTBOARD boss -- not on the cap at
+// all, so no mouth cut anywhere in the cap could ever reach them. The mouth
+// cannot work, and not by a margin a better mouth closes. Recorded here
+// because the study that proved it is retired.
+//
+// The geometry proof for THIS joint (and its negative control: at equal boss/
+// bore radii the two graze at r 9.47..9.49 and both the femur and the block
+// read trapped) lived in hfe_block_study.py, also retired -- check_fit's
+// insertion_checks + removable_member_checks now gate the same properties
+// against the shipped STLs, which is strictly better than a study that
+// rebuilds them.
+SPLIT_X     = ARM_OUT_X0;        // 56.2 -- block mating plane
+BOSS_X0     = FEMUR_MID - WHEEL_Z0;   // 51.55 = the femur wheel contact face
+BOSS_X0_CLR = BOSS_X0 - 2;            // bore starts a little inboard of it
+BOSS_BORE_R = 10.0;              // boss r9.5 + 0.5. At EQUAL radii the boss and
+                                 // bore graze at r 9.47..9.49 and both the femur
+                                 // and the block read trapped (measured -- it is
+                                 // hfe_block_study's negative control).
+GROW_X0     = 40.0;              // bridge grows over x GROW_X0..SPLIT_X ...
+GROW_Z1     = 16.0;              // ... to here, to host the mortise. CORRECTED
+                                 // from 18.0: at 18 the grown bridge HITS the
+                                 // shoulder at haa -40 (66 pts, inside the +-40
+                                 // limit). An earlier headroom probe said 7.76mm
+                                 // clear, but it sampled x 50..62 while the
+                                 // growth is actually built over x 40..56.2 --
+                                 // it measured a different volume than the one
+                                 // built. 16.0 measures 0 pts at every swept
+                                 // haa angle.
+// MORT_*/CLR_TENON/BOLT_* now live in leg_v6_common.scad (hoisted 2026-08-02)
+// so this file and coax_hfe_block.scad cannot drift apart. MORT_Z1 is 13.9,
+// i.e. a 4.4mm slot: the retention insert has to TRAVEL down it (see that
+// file's BLOCK_INSERT_OD note). Walls: 2.05 below, 2.10 above.
+
+
 // #53 BLOCKER fix (2026-07-11): the coax's femur yoke was a rigid closed U
 // (integral inboard arm + bridge + integral outboard arm) -- no removable
 // side, so the femur's horn+wheel disc pack had NO insertion path. Mirrors
@@ -329,29 +394,43 @@ module coax_v6() {
                 cube([2*BLK_X, BLK_YF - BLK_Y0, 38.4 + 13.4]);
             // pocket platform, transformed with the pocket
             rotate([0, -90, 0]) rotate([90, 0, 0]) pocket_platform_pos();
-            // femur yoke: bridge, outboard arm + wheel boss. #53 fix: the
-            // INBOARD (horn) arm is no longer integral -- see coax_hfe_plate.scad
-            arm_plate(ARM_OUT_X0, ARM_OUT_X1);
+            // femur yoke. #226 option C: the INBOARD (horn) arm is INTEGRAL
+            // again -- it is the load-carrying, never-removed side now -- and
+            // the OUTBOARD arm + gusset + wheel boss have left for
+            // coax_hfe_block.scad. #53's inboard cap is retired; see the
+            // option-C header above for why it could never be installed.
+            arm_plate(PLATE_X0, ARM_IN_X1);
+            // bridge, now ending at the block's mating plane
             translate([BLK_X - 2, HFE_Y - ARM_HALF_YZ, BRIDGE_Z0])
-                cube([ARM_OUT_X1 - BLK_X + 2, 2*ARM_HALF_YZ, 13.4 - BRIDGE_Z0]);
-            // outboard-arm ROOT DOUBLER (backlog #26, stress audit
-            // 2026-07-06): the arm-to-bridge junction was the only member
-            // on the robot under SF 15 — ~14 MPa at the 4-thick root under
-            // a 20 N lateral/turning foot load = fatigue SF ~1.9 per
-            // stride. 2-thick outboard gusset over the junction (z 0..13.4,
-            // tapering out by z -1.5) doubles the root modulus -> ~6 MPa.
-            // Taper stops ABOVE the wheel-screw head zone (top BCD heads
-            // reach z -1.95; ARM_THK itself is shared by every couple cut
-            // and cannot change). L mirror: symmetric in y, mirrors clean.
-            hull() {
-                translate([ARM_OUT_X1 - EPS, HFE_Y - ARM_HALF_YZ, 0])
-                    cube([2, 2*ARM_HALF_YZ, 13.4]);
-                translate([ARM_OUT_X1 - EPS, HFE_Y - ARM_HALF_YZ, -1.5])
-                    cube([0.5, 2*ARM_HALF_YZ, 14.9]);
-            }
-            // outboard-arm boss reaching the femur wheel (56.2 -> 51.5)
-            translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0])
-                wheel_boss_pos();
+                cube([SPLIT_X - BLK_X + 2, 2*ARM_HALF_YZ, 13.4 - BRIDGE_Z0]);
+            // grown bridge section that hosts the mortise (see header).
+            //
+            // SQUARE STEP, DELIBERATELY, after trying the alternative. A 45deg
+            // ramp here relieves the re-entrant corner at z=13.4 -- but the
+            // ramp eats the roof over the M3 bore, which starts 0.2mm outboard
+            // of GROW_X0: measured roof 0.4mm at x=40.5 and 1.4mm at 41.5,
+            // against the >=1.5mm boss-wall spec. Moving the bore clear of the
+            // ramp costs 2.2mm of tenon, and the tenon length is what sets the
+            // floor bearing load. A true FILLET would need material added
+            // INBOARD of x=40, which the shoulder sweep forbids (measured: the
+            // shoulder crosses the full y width at x 35.4..39.9 at haa -40).
+            //
+            // So the step stays, ACCEPTED and quantified: nominal bridge
+            // bending is ~8 MPa, Kt ~1.5-2 at a square shoulder gives 12-16
+            // MPa against PA6-CF's ~80 MPa -- SF 5-6. It is the least-bad of
+            // three options, not a free choice.
+            translate([GROW_X0, HFE_Y - ARM_HALF_YZ, 13.4])
+                cube([SPLIT_X - GROW_X0, 2*ARM_HALF_YZ, GROW_Z1 - 13.4]);
+            // The outboard-arm ROOT DOUBLER (backlog #26) and the wheel boss
+            // now live on coax_hfe_block.scad -- they are part of the removable
+            // member. Keeping the doubler's rationale here because it is what
+            // makes this joint hard and it must not be lost with the geometry:
+            // the arm-to-bridge junction was the only member on the robot under
+            // SF 15 (~14 MPa at the 4-thick root under a 20 N lateral/turning
+            // foot load, fatigue SF ~1.9 per stride); the 2-thick gusset halves
+            // it to ~6 MPa. That is precisely why option C's joint carries its
+            // moment through a mortise/tenon in BEARING rather than through
+            // bolt tension across a printed split line.
             // front strap pads (0.8 proud of BLK_Y0). NB since rev 3 moved the
             // horn seat 17.2->17.75 the case's top cap ridge (CAP_TOP 17.4)
             // sits 0.35 BEHIND that plane, so the strap lands 1.15 clear of
@@ -396,6 +475,17 @@ module coax_v6() {
         // pads" above) -- so the outboard side is left open (a thin slot on
         // the exterior face over the bore's length, not a fully round hole
         // there) rather than reinforced into that collision. This mirrors
+        // LOAD DIRECTION RESOLVED (2026-07-31, measured): the opening faces
+        // exactly OUTBOARD ([+1,0,0] on the +x bore, [-1,0,0] on the -x,
+        // 158deg arc; the tibia's two are the same, [0,+-1,0]). The strap lies
+        // flat on the pocket rim and its hole is coaxial with this bore, so the
+        // CLAMP force acts ALONG the bore axis -- there is no radial component
+        // pushing the tie outboard. The only radial load is the tie's own turn
+        // as the loop closes, which pulls it INBOARD toward the loop centre,
+        // against the intact 205deg of wall. So the open side does not see the
+        // retention load, and this trade is sound for the reason it needed to
+        // be. The residual cost is ASSEMBLY, not service: an UNCINCHED tie can
+        // fall sideways out of the slot while being threaded.
         // strap_pilot_neg()'s own precedent -- its outboard/non-cavity side
         // is thin too ("not the safety-critical direction") -- just more so
         // here, because this wall started thinner. Genuine through-bore
@@ -434,19 +524,48 @@ module coax_v6() {
         translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0])
             horn_couple_neg();
         //
-        // #67 fix: cap clearance = just the measured femur-swept wedge (was
-        // the FULL r=ARM_HALF_YZ disc under #53) -- see coax_hfe_bore()'s
-        // own comment above for the measurement. Everything else in the old
-        // disc footprint stays INTEGRAL stub material.
-        coax_hfe_bore();
-        // #67 fastener: ear channel (riser + head, cap-side clearance) and
-        // the heat-set bore itself -- see both modules' own comments above.
-        coax_hfe_ear_channel();
-        coax_hfe_fastener_neg();
-        translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0]) {
-            // outboard arm + boss = "bottom arm" (+z -> -x inboard)
-            wheel_couple_neg();
-        }
+        // #226 option C: coax_hfe_bore() / coax_hfe_ear_channel() /
+        // coax_hfe_fastener_neg() are GONE -- they existed only to make room
+        // for the inboard cap and its M3, and the cap is retired. The inboard
+        // arm is solid now, so all four horn-bolt channels are cut by the
+        // horn_couple_neg() above (which is why that call stays).
+        //
+        // Clearance bore for the block's wheel boss. NOT a bearing: the boss
+        // is located by the tenon and cantilevered off the block's arm plate;
+        // this is assembly clearance only, hence BOSS_BORE_R = boss + 0.5.
+        translate([BOSS_X0_CLR, HFE_Y, HFE_Z]) rotate([0, 90, 0])
+            cylinder(r = BOSS_BORE_R, h = (SPLIT_X + 2) - BOSS_X0_CLR);
+        // MORTISE for the block's tenon: open at the mating face (x = SPLIT_X),
+        // blind at MORT_X0. Closed in Z both ways by design -- that closure is
+        // what reacts the joint moment in bearing.
+        //
+        // SPLIT BY A CENTRAL RIB (2026-07-31, load review). MEASURED contact
+        // between block and coax is 659.5 mm2, confined to z 7.05..13.40, with
+        // 258 mm2 of it on this floor -- so the tenon's z-faces ARE the load
+        // path and the floor carries ~306 N of the couple. Bearing is a
+        // non-issue at 1.18 MPa. The floor's BENDING is not: as a single
+        // 23.2mm-span panel, 2.0mm thick, a thin-plate strip gives ~119 MPa,
+        // past PA6-CF yield, and the floor cannot be thickened (down is the
+        // femur sweep at 6.35, up is the shoulder at z=17, inboard is the
+        // shoulder at x=40 -- all measured).
+        //
+        // Span is the one free variable, and stress goes as L^2. The rib
+        // halves it: 23.2 -> ~10.1mm per pocket, ~119 -> ~22 MPa, and it ties
+        // the floor to the ceiling so the section behaves as a closed box
+        // rather than an isolated plate. The 2x M3 at y=5 and y=18 sit inside
+        // the two pockets, so the fastening is unchanged.
+        for (yy = [[MORT_Y0, MORT_RIB_Y0], [MORT_RIB_Y1, MORT_Y1]])
+            translate([MORT_X0, yy[0], MORT_Z0])
+                cube([SPLIT_X + EPS - MORT_X0, yy[1] - yy[0], MORT_Z1 - MORT_Z0]);
+        // 2x M3 heat-set, bored -X from the mortise's blind end into the grown
+        // bridge. Driven from +X (open air past the block) -- the access the
+        // inboard cap never had.
+        // BLOCK_HEATSET_* (3.5 x 6.5), NOT the robot-wide HEATSET_* (4.0 x 6.2):
+        // this bore takes the slim 4.0mm-OD insert that can actually travel the
+        // mortise. See leg_v6_common.scad.
+        for (by = BOLT_YS)
+            translate([MORT_X0 - BLOCK_HEATSET_L, by, BOLT_Z]) rotate([0, 90, 0])
+                cylinder(d = BLOCK_HEATSET_D, h = BLOCK_HEATSET_L + EPS);
 
         // side marker: 1 dot = RIGHT (L wrapper adds a 2nd).
         // LA-2 fix (2026-07-11): the old site (6, BLK_Y0-EPS, 8) targeted

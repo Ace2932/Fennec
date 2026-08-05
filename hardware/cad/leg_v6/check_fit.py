@@ -278,9 +278,14 @@ def _clearance_warn(target, p, label, floor_mm=1.0):
 DESIGNED_CONTACT_R = 10.3
 MASK_DRIFT_MM = 1.0
 #: Points allowed to overlap at the SEATED pose (t=0) of the insertion sweep.
-#: Measured 0 on the current geometry. Raising this is a deliberate act that
-#: needs a reason in the commit, not a knob to turn when the gate goes red.
-SEATED_OVERLAP_EXPECTED = 0
+#: RAISED 0 -> 600 for #226 option C, deliberately and with the reason:
+#: the inboard arm is INTEGRAL now, so the horn is genuinely captured at the
+#: seat -- a real disc interface that the retired cap architecture did not
+#: have (with the cap off, the old geometry overlapped by exactly 0). Measured
+#: 483 pts on the option-C build; 600 leaves headroom for surface-sampling
+#: noise while still catching a materially different seat.
+#: This is the knob that assertion exists to make someone turn ON PURPOSE.
+SEATED_OVERLAP_EXPECTED = 600
 
 
 def mask_invariance_check(envelopes, label):
@@ -393,19 +398,19 @@ def sweep_checks(servo, pts0):
         if n == 0 and abs(ang) <= 109:
             _clearance_warn(femur, p, f'kfe {ang:+4d}deg vs femur')
             _clearance_warn(arm, p, f'kfe {ang:+4d}deg vs knee_arm')
-    # #53 fix (2026-07-11): coax's inboard HFE arm is now a separate bolt-on
-    # (coax_hfe_plate.scad) -- union it into the "coax" solid used for the
-    # SEATED hip-pitch sweep (both parts are defined in the same coax world
-    # frame at identity, no transform needed to combine them).
+    # #226 option C: the inboard arm is INTEGRAL now, and the removable member
+    # is the OUTBOARD block -- union THAT into the "coax" solid for the SEATED
+    # hip-pitch sweep, since the assembled leg carries it (both parts are
+    # defined in the same coax world frame at identity, no transform needed).
     coax = trimesh.util.concatenate([trimesh.load('coax_R.stl'),
-                                      trimesh.load('coax_hfe_plate.stl')])
+                                      trimesh.load('coax_hfe_block.stl')])
     fem_asm = np.vstack([trimesh.sample.sample_surface(femur, 5000, seed=0)[0],
                          trimesh.sample.sample_surface(arm, 1500, seed=0)[0],
                          trimesh.transform_points(pts0, rot_z180())])
     M = (trimesh.transformations.translation_matrix([33.8, 11.6, -9.5])
          @ rot_z180()
          @ trimesh.transformations.rotation_matrix(np.pi/2, [0, 1, 0]))
-    print('-- hip pitch sweep (femur assembly vs coax+coax_hfe_plate)')
+    print('-- hip pitch sweep (femur assembly vs coax+coax_hfe_block)')
     hfe_masked = []
     # LA-19a: extended past the sw limit (86) to ±90/95/100 to pin the mech
     # stop, same pattern as the kfe sweep's 109/118. Measured (2026-07-11,
@@ -445,9 +450,9 @@ def shoulder_checks(servo, pts0):
     bad = False
     sh = trimesh.load('shoulder.stl')
     pl = trimesh.load('shoulder_plate.stl')
-    # #53 fix (2026-07-11): coax's inboard HFE arm is now coax_hfe_plate.scad
+    # #226 option C: removable member is the outboard block (see sweep_checks)
     coax = trimesh.util.concatenate([trimesh.load('coax_R.stl'),
-                                      trimesh.load('coax_hfe_plate.stl')])
+                                      trimesh.load('coax_hfe_block.stl')])
     femur = trimesh.load('femur_R.stl')
     tibia = trimesh.load('tibia_R.stl')
     arm = trimesh.load('knee_arm.stl')
@@ -809,18 +814,19 @@ def insertion_checks(servo, pts0):
     U (integral inboard arm + bridge + integral outboard arm) -- the femur+
     HFE-servo assembly had NO insertion path (this exact sweep, run against
     the pre-fix geometry, was blocked essentially across the whole travel).
-    With the inboard arm now a separate bolt-on (coax_hfe_plate.scad),
-    verify the assembly can be removed/inserted with the plate OFF: place
-    it at its seated pose, sweep it AWAY along the real insertion axis, and
-    assert clean (no mid-travel block) all the way out.
+    #226 option C (2026-07-31): the removable member is the OUTBOARD block
+    now, so "with the removable part off" means coax_R.stl itself -- the
+    outboard arm has left for coax_hfe_block.scad. Verify the assembly can be
+    removed/inserted in that state: place it at its seated pose, sweep it AWAY
+    along the real insertion axis, and assert clean all the way out.
 
-    Insertion axis (found by testing all 6 +-X/Y/Z directions on the fixed
-    geometry, see coax.scad's own header): +Y (rearward), NOT axial +-X --
-    both X directions stay solid-blocked even with the arm gone (the HAA
-    housing's own pocket wall blocks -X; the integral outboard arm blocks
-    +X). Real assembly: femur approaches from behind the coax (+Y), slides
-    forward (-Y) to seat, wheel bolts to the integral outboard boss, THEN
-    coax_hfe_plate bolts on to capture the horn.
+    INSERTION AXIS IS NOW +X (2026-07-31). It used to be +Y, and this
+    docstring used to record "+X blocked by the integral outboard arm" as the
+    reason. Option C makes that arm removable, which is exactly what opens +X:
+    measured 0 points over t=2..50mm. Real assembly: femur enters axially from
+    outboard (-X to seat), THEN the block slides on (-X) and its 2x M3
+    retention bolts are driven from +X open air -- the driver access the
+    inboard cap never had.
 
     #226 (2026-07-31) -- THIS SWEEP MASKS NOTHING, AND MUST NOT.
     It used to drop every point within r13 of the hfe axis, inheriting the
@@ -857,13 +863,13 @@ def insertion_checks(servo, pts0):
          @ rot_z180()
          @ trimesh.transformations.rotation_matrix(np.pi / 2, [0, 1, 0]))
     seated = trimesh.transform_points(fem_asm, M)
-    print('-- #53 insertion sweep (femur+HFE-servo assembly vs coax, plate OFF, +Y) --')
+    print('-- #226 insertion sweep (femur+HFE-servo vs coax, BLOCK OFF, +X) --')
     print('   (NO radial mask -- see #226 in the docstring; a translation sweep '
           'cannot mask its own axis)')
     blocked_t = []
     for t in range(0, 72, 2):
         p = seated.copy()
-        p[:, 1] += t
+        p[:, 0] += t          # +X: axial, see the docstring
         inside = contains_chunked(coax, p)
         n = int(inside.sum())
         status = 'OK ' if n == 0 else 'HIT'
@@ -901,6 +907,416 @@ def insertion_checks(servo, pts0):
     return bad
 
 
+# ---------------------------------------------------------------------------
+# REMOVABLE-MEMBER INSTALLABILITY (#226 follow-up, 2026-07-31)
+#
+# THE STEP NOTHING MODELLED. Four gates covered this joint -- the insertion
+# sweep, the horn-bolt channels, the #67 fastener gate, the orientation gate --
+# and all four were green on a part that cannot be built. The reason is that
+# every one of them checked something OTHER than the step that actually fails:
+#
+#   insertion_checks   sweeps the FEMUR, with the cap OFF
+#   horn_bolt_checks   scans bolt CHANNELS through the stub
+#   #67 fastener gate  checks the cap's heat-set is reachable and backed
+#   orientation gate   proves the servo seats one way round
+#
+# Nobody ever swept the CAP. Measured 2026-07-31, coax_hfe_plate is blocked in
+# all six axes -- against the seated femur AND against a bare coax, in the
+# current revision AND in the pre-#7-fix one. Its seated pose is legitimate
+# (boolean intersection with the coax is 0.0 mm3), so it is a valid final
+# position with no way to reach it: a ship in a bottle. That is exactly what
+# Aiden reported from the bench ("doesn't really slide in") -- not a tolerance
+# problem, no path at all.
+#
+# CRITERION. A keyed member is SUPPOSED to be constrained in most directions;
+# that is what a key does. The failure is having NO free direction. So this
+# passes if AT LEAST ONE axis is clear across the whole travel, and fails only
+# when the member is enclosed on every one. Along its true install axis a
+# slip-fit part slides out cleanly from t=0, so "clear" means zero blocked
+# steps, not "few".
+#
+# LIMIT, stated because it bounds the verdict: rigid-body TRANSLATION along six
+# axes. It does not model rotation, compound paths, or elastic snap-fit. A part
+# this gate passes is installable; a part it fails might still go in with a
+# twist -- but nothing in this joint is designed to, and the printed part did
+# not.
+REMOVABLE_MEMBERS = [
+    # (member, side, obstacles that are already in place when it is installed)
+    ('coax_hfe_block.stl', 'R', 'coax_R.stl'),
+    ('coax_hfe_block_L.stl', 'L', 'coax_L.stl'),
+]
+INSTALL_DIRS = [('+X', (1, 0, 0)), ('-X', (-1, 0, 0)),
+                ('+Y', (0, 1, 0)), ('-Y', (0, -1, 0)),
+                ('+Z', (0, 0, 1)), ('-Z', (0, 0, -1))]
+
+
+def _seated_obstacles(side, servo, pts0):
+    """Everything already in place when the removable member goes on.
+
+    The femur+HFE-servo is seated first (coax.scad's own documented order), so
+    the member has to reach its seat past a loaded joint, not an empty one.
+    """
+    sx = 1.0 if side == 'R' else -1.0
+    mirror = np.eye(4)
+    mirror[0, 0] = sx
+    M = (mirror
+         @ trimesh.transformations.translation_matrix([33.8, 11.6, -9.5])
+         @ rot_z180()
+         @ trimesh.transformations.rotation_matrix(np.pi / 2, [0, 1, 0]))
+    femur = trimesh.load(f'femur_{side}.stl')
+    femur.apply_transform(M if side == 'R' else M @ mirror)
+    srv = servo.copy()
+    srv.apply_transform(M @ rot_z180())
+    return [('femur', femur), ('servo', srv)], sx
+
+
+def removable_member_checks(servo, pts0):
+    print('-- removable-member installability (#226: the step no gate modelled) --')
+    bad = False
+    for member_file, side, coax_file in REMOVABLE_MEMBERS:
+        member = trimesh.load(member_file)
+        pts = trimesh.sample.sample_surface(member, 12000, seed=0)[0]
+        obstacles, sx = _seated_obstacles(side, servo, pts0)
+        obstacles = [('coax', trimesh.load(coax_file))] + obstacles
+
+        free, report = [], []
+        for label, d in INSTALL_DIRS:
+            v = np.array(d, float) * np.array([sx, 1.0, 1.0])
+            blocked = []
+            for t in range(2, 42, 2):
+                p = pts + v * t
+                if any(int(contains_chunked(ob, p).sum()) for _, ob in obstacles):
+                    blocked.append(t)
+            if blocked:
+                report.append(f'{label} blocked {blocked[0]}..{blocked[-1]}mm')
+            else:
+                free.append(label)
+        if free:
+            print(f'   OK    {member_file}: installable along {", ".join(free)}')
+        else:
+            bad = True
+            print(f'TRAP  {member_file}: enclosed on ALL {len(INSTALL_DIRS)} axes with '
+                  f'the femur+servo seated -- it has a valid seat and no way to '
+                  f'reach it. Cannot be assembled at any tolerance. See #226.')
+            print(f'        ({"; ".join(report)})')
+
+    # SELF-TEST: a member parked clear of everything must read installable, or
+    # this gate is stuck-on-fail and its TRAP verdicts mean nothing.
+    ctrl = trimesh.load(REMOVABLE_MEMBERS[0][0])
+    ctrl.apply_transform(trimesh.transformations.translation_matrix([0, 120, 0]))
+    cpts = trimesh.sample.sample_surface(ctrl, 4000, seed=0)[0]
+    coax = trimesh.load('coax_R.stl')
+    free_ctrl = [lab for lab, d in INSTALL_DIRS
+                 if not any(int(contains_chunked(coax, cpts + np.array(d, float) * t).sum())
+                            for t in range(2, 42, 2))]
+    if len(free_ctrl) != len(INSTALL_DIRS):
+        bad = True
+        print(f'   FAIL  self-test: a member parked 120mm clear read as blocked on '
+              f'{len(INSTALL_DIRS) - len(free_ctrl)} axes -- this gate is broken, '
+              f'ignore its verdicts above')
+    else:
+        print(f'   OK    self-test: a member parked clear reads installable on all '
+              f'{len(INSTALL_DIRS)} axes (gate is not stuck-on-fail)')
+    return bad
+
+
+# ---------------------------------------------------------------------------
+# JOINT LOAD-PATH SECTIONS (#226 review, 2026-07-31)
+#
+# The gates check fit, insertability, fastener reachability and printability.
+# None of them check SECTION THICKNESS in a load path -- floor_thickness_check
+# exists but is scoped to heat-set bore floors. So option C's mortise shipped
+# with a 2.0mm floor as the thinnest member in the joint's load path, measured
+# only because the CAD was reviewed by hand afterwards. This closes that: the
+# walls that carry the joint are declared, measured off the built STL, and go
+# red if a later edit thins them.
+#
+# WHY THESE WALLS ARE TIGHT, so nobody "fixes" them by moving geometry that
+# cannot move. Both axes are boxed in, MEASURED:
+#   * DOWN: BRIDGE_Z0=7.4 exists because the femur disc sweep tops at 6.35.
+#   * UP:   at bridge top z=17 the grown section hits the shoulder at haa -40
+#           (44 pts, inside the +-40 limit). 16.0 is the ceiling, not a choice.
+#   * INBOARD: any material above z=13.4 inboard of x=40 hits the shoulder at
+#           haa -40 across the FULL y width (x 35.4..39.9). Local bosses do not
+#           help -- tested.
+# The floor therefore cannot be thickened by growing the bridge in any
+# direction. If it proves inadequate the answer is a different joint topology,
+# not a dimension tweak.
+#
+# HONEST LIMIT: this measures THICKNESS, not stress. The floor's actual margin
+# depends on how the tenon's bearing distributes toward the free edge at the
+# mortise mouth, and hand estimates for it span 15 MPa to yielding. That is an
+# open question for a real load check, and this gate does not answer it -- it
+# only stops the section shrinking without anyone noticing.
+# ZIP-BORE CAPTURE (#226 review follow-up). A cable tie in a bore whose wall is
+# missing is not retained -- it can escape sideways. coax.scad's own header flags
+# that its front-pad bore runs past the exterior wall ("a thin slot on the
+# exterior face, not a fully round hole") and accepts it, because closing the gap
+# means growing the wall outboard into a KNOWN femur-rim graze. That acceptance
+# lived only in a comment; this makes it a declared number that goes red if it
+# worsens.
+#
+# MEASURED FIRST, and it corrected two of my own assumptions:
+#   * the tibia is NOT better than the coax -- both read 155 deg open. This is a
+#     consistent design choice across the strap joints, not a coax defect.
+#   * a naive "the bore must be closed" check would be WRONG. These are through-
+#     bores that deliberately cross the servo cavity, so mid-length stations read
+#     up to 235 deg open on correct geometry. Asserting closure everywhere would
+#     fire on a part that is fine -- the same class of error this file exists to
+#     catch.
+# So the check is at the ENTRY face only, which is where the tie is actually
+# retained, with the observed 155 deg declared as the accepted state.
+ZIP_ENTRY_MAX_OPEN_DEG = 160.0
+ZIP_BORES = [
+    # (label, part, bore axis, entry point, probe radius)
+    ('coax +x front-pad', 'coax_R.stl', (0, 1, 0), (15.60, -18.5, -31.0), 2.5),
+    ('coax -x front-pad', 'coax_R.stl', (0, 1, 0), (-15.60, -18.5, -31.0), 2.5),
+    ('tibia +y strap',    'tibia_R.stl', (0, 0, 1), (31.0, 15.60, -20.0), 2.5),
+    ('tibia -y strap',    'tibia_R.stl', (0, 0, 1), (31.0, -15.60, -20.0), 2.5),
+]
+
+
+def _open_arc(mesh, axis, ctr, r, n=72):
+    axis = np.asarray(axis, float); axis /= np.linalg.norm(axis)
+    e1 = np.cross(axis, [0, 0, 1.0])
+    e1 = e1 / np.linalg.norm(e1) if np.linalg.norm(e1) > 1e-6 else np.array([0, 1.0, 0])
+    e2 = np.cross(axis, e1)
+    ring = np.array([np.asarray(ctr, float) + r * (np.cos(a) * e1 + np.sin(a) * e2)
+                     for a in np.linspace(0, 2 * np.pi, n, endpoint=False)])
+    return 360.0 * int((~contains_chunked(mesh, ring)).sum()) / n
+
+
+def zip_capture_checks():
+    print('-- zip-bore capture at the ENTRY face (#226 follow-up) --')
+    bad = False
+    cache = {}
+    for label, part, axis, entry, r in ZIP_BORES:
+        if part not in cache:
+            cache[part] = trimesh.load(part)
+        arc = _open_arc(cache[part], axis, np.asarray(entry, float)
+                        + np.asarray(axis, float) * 1.0, r)
+        if arc > ZIP_ENTRY_MAX_OPEN_DEG:
+            bad = True
+            print(f'OPEN  {label}: entry wall {arc:.0f}deg open (> '
+                  f'{ZIP_ENTRY_MAX_OPEN_DEG:.0f}) -- the tie is not retained here')
+        else:
+            print(f'   OK    {label}: entry wall {arc:.0f}deg open '
+                  f'(accepted <= {ZIP_ENTRY_MAX_OPEN_DEG:.0f})')
+    return bad
+
+
+# The HFE block's two retention bores are DELIBERATELY different: a 4.6mm insert
+# cannot travel the mortise to reach them (see insert_path_checks). 4.0mm-OD
+# insert, 6.0 long -> 3.5 bore, 6.5 deep.
+BLOCK_HEATSET_D = 3.5
+BLOCK_HEATSET_L = 6.5
+BLOCK_INSERT_OD = 4.0
+BLOCK_INSERT_L  = 6.0
+
+#: (label, member_stl, parent_stl, axis, bolt centres, declared length mm,
+#:  insert length mm). Axis is the direction a driver approaches from.
+FASTENER_SPANS = [
+    ('HFE block -> coax retention', 'coax_hfe_block.stl', 'coax_R.stl',
+     (1, 0, 0), [(5.0, 11.7), (18.0, 11.7)], 16.0, BLOCK_INSERT_L),
+]
+#: Minimum thread engagement into the insert. 1xD is the usual floor for steel
+#: into a brass insert; M3 -> 3.0 mm.
+MIN_ENGAGEMENT_MM = 3.0
+
+
+def fastener_span_checks():
+    """Does the DECLARED screw length actually fit between the head seat and
+    the bottom of a blind insert pocket?
+
+    WHY THIS EXISTS (2026-08-02). `coax_hfe_block.scad` and
+    `docs/fastener-schedule.md` both specified **M3x22** for this joint and
+    both said "MEASURED on the built STLs". They were measured -- at #234,
+    when `MORT_X0` was 43.8. #235 moved it to 46.4, and the insert pocket is
+    placed relative to it (`coax.scad`: translate([MORT_X0 - HEATSET_L, ...])),
+    so the pocket travelled 2.6 mm outboard and nothing re-measured. Against
+    the geometry that exists today the span is 16.8 mm, so the specified screw
+    BOTTOMS OUT 5.2 mm early in a blind hole: the head never seats, there is no
+    preload, and torquing it jacks the block off the mortise or strips the
+    insert. Every other gate stayed green throughout -- they check holes, not
+    screws.
+
+    A comment cannot hold a number that another file's constant moves. This
+    derives both ends from the meshes, so the next such move fails here.
+    """
+    print('-- fastener span: declared screw length vs the real seat-to-pocket gap --')
+    bad = False
+    for label, member_f, parent_f, axis, bolts, length, insert in FASTENER_SPANS:
+        member, parent = trimesh.load(member_f), trimesh.load(parent_f)
+        ax = np.asarray(axis, float)
+        lo, hi = member.bounds[0] @ ax, member.bounds[1] @ ax
+        for (b, c) in bolts:
+            def ring(t, r):
+                return np.array([[t, b + r * np.cos(a), c + r * np.sin(a)]
+                                 for a in np.linspace(0, 2 * np.pi, 16, endpoint=False)])
+            # head seat: marching inboard, the first station where the member is
+            # solid OUTSIDE the clearance hole but inside the counterbore radius
+            seat = None
+            for t in np.arange(hi + 1.0, lo, -0.05):
+                if member.contains(ring(t, 2.3)).any():
+                    seat = float(t)
+                    break
+            # insert pocket: first solid in the parent along the same axis, then
+            # the far end of the void behind it
+            face = bottom = None
+            for t in np.arange(seat if seat else hi, lo - 25.0, -0.05):
+                if parent.contains(ring(t, 2.3)).all():
+                    face = float(t)
+                    break
+            if face is not None:
+                for t in np.arange(face - 12.0, face, 0.05):
+                    if not parent.contains(ring(t, 1.6)).all():
+                        bottom = float(t)
+                        break
+            if seat is None or face is None or bottom is None:
+                bad = True
+                print(f'FAIL  {label} @ y={b}: could not locate '
+                      f'seat/face/pocket (got {seat}, {face}, {bottom})')
+                continue
+            span = seat - bottom
+            engage = length - (seat - face)
+            if length > span:
+                bad = True
+                print(f'FAIL  {label} @ y={b}: M3x{length:.0f} BOTTOMS OUT -- span is '
+                      f'{span:.1f}mm (seat {seat:.1f} -> pocket bottom {bottom:.1f}), '
+                      f'screw over-runs by {length - span:.1f}mm')
+            elif engage < MIN_ENGAGEMENT_MM:
+                bad = True
+                print(f'FAIL  {label} @ y={b}: only {engage:.1f}mm of thread engagement '
+                      f'(need >= {MIN_ENGAGEMENT_MM})')
+            else:
+                print(f'   OK    {label} @ y={b}: M3x{length:.0f} in a {span:.1f}mm span, '
+                      f'{engage:.1f}mm engagement of the {insert}mm insert')
+    return bad
+
+
+#: (label, part, bore-mouth point, axis pointing OUT to the world, insert OD).
+#: The axis is the direction the insert TRAVELS FROM: it is pushed along -axis.
+INSERT_PATHS = [
+    ('coax_R block retention y=5',  'coax_R.stl', (46.4,  5.0, 11.7), (1, 0, 0), BLOCK_INSERT_OD),
+    ('coax_R block retention y=18', 'coax_R.stl', (46.4, 18.0, 11.7), (1, 0, 0), BLOCK_INSERT_OD),
+    ('coax_L block retention y=5',  'coax_L.stl', (-46.4,  5.0, 11.7), (-1, 0, 0), BLOCK_INSERT_OD),
+    ('coax_L block retention y=18', 'coax_L.stl', (-46.4, 18.0, 11.7), (-1, 0, 0), BLOCK_INSERT_OD),
+    ('femur_R knee-arm (65,-8)', 'femur_R.stl', (65.0, -8.0, 17.75), (0, 0, 1), 4.6),
+    ('femur_R knee-arm (75,+8)', 'femur_R.stl', (75.0,  8.0, 17.75), (0, 0, 1), 4.6),
+]
+INSERT_PATH_MM = 30.0     # how far out to sweep before calling it open air
+
+
+def insert_path_checks():
+    """Can the INSERT physically reach its bore, or only a ray?
+
+    WHY (2026-08-02). Every heat-set on this robot passed the reachability gate
+    above, which casts a RAY from the bore to an exterior face. A ray has no
+    diameter. The HFE block's two inserts sit at the blind end of the mortise
+    and have to travel ~10mm down it -- and that slot measured 4.00mm against a
+    4.6mm insert. Not a tolerance problem: the insert could not be delivered at
+    any print accuracy, a valid seat with no path to it, which is the exact
+    failure that retired this joint's inboard cap. The fix was a slimmer,
+    longer insert (4.0 x 6.0, 92% of the pull-out area) plus a 0.4mm slot.
+
+    This sweeps a DISC of the insert's own diameter along the path and reports
+    the tightest station, so the next bore that is reachable-but-not-fillable
+    fails here instead of on the bench.
+    """
+    print('-- insert delivery path: can the INSERT diameter reach the bore? --')
+    bad = False
+    cache = {}
+    for label, part, mouth, axis, od in INSERT_PATHS:
+        if part not in cache:
+            cache[part] = trimesh.load(part)
+        mesh = cache[part]
+        ax = np.asarray(axis, float)
+        u = np.array([1.0, 0, 0]) if abs(ax[0]) < 0.9 else np.array([0, 1.0, 0])
+        e1 = np.cross(ax, u)
+        e1 /= np.linalg.norm(e1)
+        e2 = np.cross(ax, e1)
+        origin = np.asarray(mouth, float)
+        tightest, worst_t = float('inf'), None
+        for t in np.arange(0.5, INSERT_PATH_MM, 0.5):
+            centre = origin + ax * t
+            # largest disc that fits here, probed outward in 0.1mm steps
+            fits = 0.0
+            for r in np.arange(0.2, od / 2 + 1.1, 0.1):
+                ring = np.array([centre + e1 * r * np.cos(a) + e2 * r * np.sin(a)
+                                 for a in np.linspace(0, 2 * np.pi, 16, endpoint=False)])
+                if mesh.contains(ring).any():
+                    break
+                fits = 2 * r
+            if fits < tightest:
+                tightest, worst_t = fits, t
+        if tightest < od:
+            bad = True
+            print(f'FAIL  {label}: only {tightest:.2f}mm of clear diameter at '
+                  f'{worst_t:.1f}mm along the path -- a {od:.1f}mm insert cannot '
+                  f'be delivered to this bore')
+        else:
+            print(f'   OK    {label}: {od:.1f}mm insert clears the whole path '
+                  f'(tightest station {tightest:.2f}mm = {tightest - od:+.2f}mm margin)')
+    # negative control: the same path with an insert too fat for it MUST fail
+    label, part, mouth, axis, _ = INSERT_PATHS[0]
+    mesh = cache[part]
+    ax = np.asarray(axis, float)
+    fat = 6.0
+    blocked = False
+    for t in np.arange(0.5, INSERT_PATH_MM, 0.5):
+        c = np.asarray(mouth, float) + ax * t
+        ring = np.array([[c[0], c[1] + (fat / 2) * np.cos(a), c[2] + (fat / 2) * np.sin(a)]
+                         for a in np.linspace(0, 2 * np.pi, 16, endpoint=False)])
+        if mesh.contains(ring).any():
+            blocked = True
+            break
+    if blocked:
+        print(f'   OK    self-test: a {fat:.1f}mm insert IS blocked on the same path '
+              f'(gate is not stuck-on-pass)')
+    else:
+        bad = True
+        print(f'FAIL  self-test: a {fat:.1f}mm insert reads deliverable down a '
+              f'{MORT_SLOT_NOTE}mm slot -- this gate proves nothing')
+    return bad
+
+
+MORT_SLOT_NOTE = 4.4
+
+
+MIN_SECTION_MM = 1.5          # the boss-wall floor docs/fastener-schedule uses
+# Probe points track the geometry: MORT_Z1 went 13.5 -> 13.9 (2026-08-02, the
+# 4.4mm slot the slim insert needs) and the retention bore went 4.0 -> 3.5 dia,
+# so the old 13.6 / 13.7 / 9.3 stations now sit in the wrong material.
+JOINT_SECTIONS = [
+    ('mortise floor',   (50.0, 11.6,  9.4), (0, 0, -1), 'tenon bears on this'),
+    ('mortise ceiling', (50.0, 11.6, 14.0), (0, 0,  1), 'tenon bears on this'),
+    ('mortise y0 wall', (50.0, -0.2, 11.5), (0, -1, 0), 'mortise side'),
+    ('mortise y1 wall', (50.0, 23.4, 11.5), (0,  1, 0), 'mortise side'),
+    ('M3 bore roof',    (43.0,  5.0, 13.5), (0, 0,  1), 'insert containment'),
+    ('M3 bore floor',   (43.0,  5.0,  9.9), (0, 0, -1), 'insert containment'),
+]
+
+
+def joint_section_checks():
+    print('-- joint load-path sections (#226: thickness, NOT stress) --')
+    bad = False
+    coax = trimesh.load('coax_R.stl')
+    for label, pt, d, why in JOINT_SECTIONS:
+        d = np.asarray(d, float)
+        p0 = np.asarray(pt, float)
+        t = 0.0
+        for k in np.arange(0, 8.0, 0.05):
+            if not contains_chunked(coax, (p0 + d * k)[None, :])[0]:
+                break
+            t = k
+        if t < MIN_SECTION_MM:
+            bad = True
+            print(f'THIN  coax_R.stl {label}: {t:.2f}mm (< {MIN_SECTION_MM}mm) -- {why}')
+        else:
+            print(f'   OK    {label}: {t:.2f}mm  ({why})')
+    return bad
+
+
 # #67 fix (2026-07-12): mount-hardware gate for the coax_hfe cap's fastener.
 # A prior attempt against this same joint (rejected, never merged) added a
 # FASTENER_GROUPS mechanism with genuinely axis-general MERGE/dot checks but
@@ -930,7 +1346,7 @@ MIN_DOT_DEPTH = 0.5      # a side-marker dimple must cut at least this deep
 # leg_v6_common.scad constants (OpenSCAD-side; mirrored here byte-for-byte --
 # `include` doesn't reach across into this Python gate)
 M3_CLEAR  = 3.4    # general M3 clearance
-HEATSET_D = 4.0    # Ruthex M3 insert bore
+HEATSET_D = 4.0    # robot-wide M3 insert bore (4.6mm-OD insert)
 HEATSET_L = 6.2    # bore depth: 5.7 insert + 0.5 seat
 
 # (cap_part, stub_part, hole (x,y,z) = where the cap's clearance ends and
@@ -946,17 +1362,27 @@ HEATSET_L = 6.2    # bore depth: 5.7 insert + 0.5 seat
 # RIGHT cap gets 1 marker dot (LA-2 convention); LEFT gets 2 (the base dot,
 # mirrored, plus its own 2nd disambiguation dot -- see coax_hfe_plate_L.
 # scad's header).
+# #226 option C (2026-07-31): retargeted from the retired inboard cap to the
+# OUTBOARD block. Two M3 now instead of one, bored -X from the mortise blind
+# end (x=MORT_X0=46.4) into the grown bridge, driven from +X open air -- so
+# `axis` (blind end -> exterior) is +X on the R part and -X on the mirrored L.
+# That access is the whole reason the removable member moved outboard: the cap
+# had 0.8-4.5mm of driver run where 15-20mm was needed.
 FASTENER_GROUPS = [
-    dict(cap_part='coax_hfe_plate.stl', stub_part='coax_R.stl',
-         holes=[(15.9, 24.0, 10.4)], axis=(0, 1, 0),
-         bore_d=M3_CLEAR, head_d=5.5, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
-         dot_off=(0, 1.4),
-         dots=[(14.1, 7.15, -8.0, 0, -1, 0)]),
-    dict(cap_part='coax_hfe_plate_L.stl', stub_part='coax_L.stl',
-         dot_off=(0, 1.4),
-         holes=[(-15.9, 24.0, 10.4)], axis=(0, 1, 0),
-         bore_d=M3_CLEAR, head_d=5.5, heatset_d=HEATSET_D, heatset_l=HEATSET_L,
-         dots=[(-14.1, 7.15, -8.0, 0, -1, 0), (-14.1, 7.15, -11.0, 0, -1, 0)]),
+    dict(cap_part='coax_hfe_block.stl', stub_part='coax_R.stl',
+         holes=[(46.4, 5.0, 11.7), (46.4, 18.0, 11.7)], axis=(1, 0, 0),
+         bore_d=M3_CLEAR, head_d=6.0, heatset_d=BLOCK_HEATSET_D, heatset_l=BLOCK_HEATSET_L,
+         # 3.0, not the cap's old 1.4: that offset was sized to a 1.4mm-wide
+         # wall, and it sits INSIDE this d=3 dot's own 1.5mm radius -- the refs
+         # land in the dimple and the depth cancels to 0.00mm. The gusset face
+         # is 32mm in y and 13.4 in z, so real undisturbed refs exist here.
+         dot_off=(3.0, 3.0),
+         dots=[(62.3, 19.6, 6.0, 1, 0, 0)]),
+    dict(cap_part='coax_hfe_block_L.stl', stub_part='coax_L.stl',
+         dot_off=(3.0, 3.0),
+         holes=[(-46.4, 5.0, 11.7), (-46.4, 18.0, 11.7)], axis=(-1, 0, 0),
+         bore_d=M3_CLEAR, head_d=6.0, heatset_d=BLOCK_HEATSET_D, heatset_l=BLOCK_HEATSET_L,
+         dots=[(-62.3, 19.6, 6.0, -1, 0, 0), (-62.3, 19.6, 1.0, -1, 0, 0)]),
 ]
 
 
@@ -1074,7 +1500,7 @@ def fastener_checks():
     return bad
 
 
-# BUGFIX gate 2026-07-12 (full-leg assembly audit): the 4x M2.5 HFE horn bolts
+# BUGFIX gate 2026-07-12 (full-leg assembly audit): the 4x HFE horn bolts (M3)
 # (BCD r7 about the hfe X-axis at y=HFE_Y, z=HFE_Z) are driven -X through the
 # empty HAA pocket into the femur's servo horn to capture the coax<->femur
 # joint. The #53 "nothing left to cut here" note was written when the whole
@@ -1086,15 +1512,207 @@ def fastener_checks():
 # This gate closes that hole: it scans all 4 BCD channels through the coax stub
 # (coax_R/coax_L) and asserts each is clear across the ARM_THK bolt span.
 HORN_BCD_R = 7.0            # HORN_BCD/2 (leg_v6_common.scad)
-HORN_M25   = 2.9           # M25_CLEAR bolt-shank clearance
+HORN_BOLT_CLEAR = 3.4      # M3_CLEAR bolt-shank clearance. 2026-08-02: was
+                           # HORN_M25 = 2.9, because the disc screws were
+                           # believed M2.5. FEETECH's own spec draws both discs
+                           # "4-M3" and an M3 threaded into an outer BCD hole on
+                           # the bench. Probing a 2.9 channel through a 3.4 hole
+                           # under-tests it by 0.5mm and could miss an
+                           # obstruction a real M3 would hit.
 HORN_ANGLES = (45, 135, 225, 315)
+
+
+#: Every fastener joint on the leg, as (label, part, hole list, axis, screw
+#: length, screw diameter, probe radius, depth available beyond the exit face,
+#: what that depth is, accepted-thin value or None).
+#:
+#: `probe_r` sits between the clearance-hole radius and the counterbore radius,
+#: so the solid run it finds IS the grip: it starts at the head seat (or the bare
+#: face where there is no counterbore) and ends at the exit face.
+_M25_PROBE, _M3_PROBE = 1.8, 2.2
+FASTENER_ENGAGEMENT = [
+    ('horn -> HFE  (coax_R inboard arm)', 'coax_R.stl', 'bcd_x', (33.8, 11.6, -9.5),
+     (-1, 0, 0), 5.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.15),
+    ('wheel -> HFE (coax_hfe_block)', 'coax_hfe_block.stl', 'bcd_x', (33.8, 11.6, -9.5),
+     (-1, 0, 0), 8.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.50),
+    ('horn -> KFE  (knee_arm)', 'knee_arm.stl', 'bcd_z', (47.9, 0.0, 0.0),
+     (0, 0, -1), 6.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.35),
+    ('wheel -> KFE (femur_R bottom boss)', 'femur_R.stl', 'bcd_z_up', (106.9, 0.0, 0.0),
+     (0, 0, 1), 8.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.50),
+    ('horn -> HAA  (shoulder_plate)', 'shoulder_plate.stl', 'bcd_y', (39.05, 0.0, 0.0),
+     (0, -1, 0), 6.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.35),
+    ('wheel -> HAA (shoulder rear wall)', 'shoulder.stl', 'bcd_y_up', (39.05, 0.0, 0.0),
+     (0, 1, 0), 14.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.30),
+    # DEFERRED to fastener_span_checks(), which measures this joint end to end
+    # (seat 57.0 -> pocket bottom 39.85 = 17.2mm span, 5.2mm engagement). The
+    # probe window here is only 1.7 < r < 2.0 -- above the M3 clearance, below
+    # the 4.08mm tenon -- and inside it the ring sees the tenon alone, missing
+    # the 0.8mm of arm above the split plane. One joint, one measurement.
+    ('HFE block -> coax (retention)', 'coax_hfe_block.stl', 'list',
+     [(63.0, 5.0, 11.7), (63.0, 18.0, 11.7)], (-1, 0, 0), 16.0, 3.0, 1.9,
+     None, 'see fastener_span_checks', None),
+    ('knee_arm -> femur shelf', 'knee_arm.stl', 'list',
+     [(6.0, -8.0, 8.0), (6.0, 8.0, 8.0), (16.0, -8.0, 8.0), (16.0, 8.0, 8.0)],
+     (0, 0, -1), 8.0, 3.0, _M3_PROBE, HEATSET_L, 'M3 insert bore', None),
+    ('shoulder_plate -> deck', 'shoulder_plate.stl', 'list',
+     [(27.0, 6.2, 48.0), (27.0, 14.0, 48.0), (51.0, 6.2, 48.0), (51.0, 14.0, 48.0)],
+     (0, 0, -1), 6.0, 3.0, _M3_PROBE, HEATSET_L, 'M3 insert bore', None),
+]
+#: Thread engagement floor. 1xD is the usual rule for steel into steel/brass.
+MIN_ENGAGE_D = 1.0
+#: ACCEPTANCE RATIONALE REWRITTEN 2026-08-02 -- the old one was wrong twice.
+#: It read "accepted at 0.88-0.97xD ... the target is a STEEL horn disc". Both
+#: halves failed:
+#:   * the ratios were computed against a 2.5 screw. The discs are M3 (FEETECH
+#:     PRODUCT SPECIFICATION STS3215 A/0 section 10, "4-M3", confirmed on the
+#:     bench). The real figures are 0.73-0.81xD on the horn rows and
+#:     0.47-0.52xD on the wheel rows.
+#:   * the discs are NOT steel. The same spec calls them 6061 anodised
+#:     aluminium. That matters: the "passes the screw's tensile capacity well
+#:     below 1xD" argument is a steel-into-steel argument. Aluminium generally
+#:     wants ~1.5-2xD to develop the same capacity.
+#: The ENGAGEMENT IN MM DID NOT MOVE (2.20 / 1.56 / 2.42 / 1.56 / 2.40 / 1.40).
+#: The geometry is unchanged; only the denominator and the material were wrong.
+#: These rows stay ACCEPTED on a different and honest basis: this is the
+#: MANUFACTURER'S OWN JOINT. FEETECH ships a 2.1mm aluminium disc tapped M3 and
+#: expects it to be bolted -- the disc thickness is a hard cap no screw length
+#: can beat (a longer one bottoms). We are not choosing a thin joint; we are
+#: using the one the servo provides.
+#: OPEN LEVER, not taken here: a deeper head counterbore DOES buy thread on the
+#: wheel rows. They sit at 1.56mm of a possible 2.10mm because the head seats
+#: 0.54mm too high; ~0.54mm more counterbore would take the tightest joint on
+#: the robot from 0.52xD to 0.70xD. Cost is wall behind the c'bore (real depth
+#: is already 1.6 of ARM_THK 4.0). That is a design call for #255's author.
+
+
+def _holes_for(kind, spec):
+    """Expand a joint's hole spec into (start point) tuples."""
+    if kind == 'list':
+        return [np.asarray(h, float) for h in spec]
+    cx, cy, cz = spec
+    out = []
+    for a in HORN_ANGLES:
+        s, c = np.sin(np.radians(a)), np.cos(np.radians(a))
+        if kind == 'bcd_x':       # circle in (y,z), screw runs along x
+            out.append(np.array([cx + 30, cy + HORN_BCD_R * s, cz + HORN_BCD_R * c]))
+        elif kind == 'bcd_z':     # circle in (x,y), screw runs -z from above
+            out.append(np.array([cx + HORN_BCD_R * c, cy + HORN_BCD_R * s, cz + 12]))
+        elif kind == 'bcd_z_up':  # ... or +z from below
+            out.append(np.array([cx + HORN_BCD_R * c, cy + HORN_BCD_R * s, cz - 40]))
+        elif kind == 'bcd_y':     # circle in (x,z), screw runs -y
+            out.append(np.array([cx + HORN_BCD_R * c, cy + 30, cz + HORN_BCD_R * s]))
+        elif kind == 'bcd_y_up':  # ... or +y
+            out.append(np.array([cx + HORN_BCD_R * c, cy - 40, cz + HORN_BCD_R * s]))
+    return out
+
+
+def _grip(mesh, start, axis, probe_r, span=60.0, step=0.02):
+    """Length of the FIRST solid run along the axis at `probe_r`.
+
+    That run is the grip: it begins at the head seat (a counterbore floor, or
+    the bare face where there is none, because at probe_r the counterbore reads
+    as void and the material beside the clearance hole reads as solid) and ends
+    where the screw leaves the printed part.
+    """
+    d = np.asarray(axis, float)
+    u = np.array([0, 1.0, 0]) if abs(d[0]) > 0.9 else np.array([1.0, 0, 0])
+    e1 = np.cross(d, u)
+    e1 /= np.linalg.norm(e1)
+    e2 = np.cross(d, e1)
+    ring_a = np.linspace(0, 2 * np.pi, 12, endpoint=False)
+    seat = None
+    for t in np.arange(0, span, step):
+        c = np.asarray(start, float) + d * t
+        ring = np.array([c + e1 * probe_r * np.cos(a) + e2 * probe_r * np.sin(a)
+                         for a in ring_a])
+        solid = mesh.contains(ring).all()
+        if solid and seat is None:
+            seat = t
+        elif not solid and seat is not None:
+            return seat, t - seat
+    return (seat, span - seat) if seat is not None else (None, None)
+
+
+def engagement_checks():
+    """How much THREAD does each screw actually get?
+
+    WHY (2026-08-02). Three fastener defects surfaced in one day -- a screw
+    specified 6mm too long for its blind pocket, an insert that could not be
+    delivered to its bore, and two joints with no screw recorded anywhere -- and
+    every geometry gate stayed green through all of them, because they check
+    holes and these are questions about the fastener. The span and insert-path
+    gates closed the first two. This closes the one they still leave open: a
+    screw can pass every clearance check and still have almost no thread in what
+    it is holding.
+
+    Grip is measured off the mesh, so it tracks a counterbore or a plate
+    thickness changing underneath the declared screw length.
+
+    ACCEPTED-THIN is explicit and carries its value. The wheel joints are known
+    marginal (the disc is ~2.1mm, so length cannot buy engagement -- only a
+    deeper counterbore can), and the point of recording the number is that a
+    REGRESSION goes red while the accepted state stays visible instead of silent.
+    """
+    print('-- fastener engagement: how much thread is actually in the target? --')
+    bad = False
+    cache = {}
+    for (label, part, kind, spec, axis, slen, sdia, probe_r,
+         avail, target, accepted) in FASTENER_ENGAGEMENT:
+        if part not in cache:
+            cache[part] = trimesh.load(part)
+        mesh = cache[part]
+        grips = [] if avail is not None else [0.0]
+        for start in _holes_for(kind, spec):
+            if mesh.contains(np.array([start])).any():
+                bad = True
+                print(f'FAIL  {label}: probe starts INSIDE the part at '
+                      f'{np.round(start, 1).tolist()} -- grip would be measured '
+                      f'from the wrong face, so this row cannot be trusted')
+                continue
+            seat, g = _grip(mesh, start, axis, probe_r)
+            if g is not None:
+                grips.append(g)
+        if avail is None:
+            print(f'   DEFER {label}: measured end-to-end by fastener_span_checks()')
+            continue
+        if not grips:
+            bad = True
+            print(f'FAIL  {label}: found no material on any bolt axis -- '
+                  f'coordinates or probe radius are wrong, so this row proves nothing')
+            continue
+        # MIN, not mean/median: the weakest bolt governs the joint, and an
+        # average is exactly how one bad hole hides behind three good ones.
+        g = float(np.max(grips))          # most grip = least thread = worst case
+        spread = float(np.max(grips) - np.min(grips))
+        if spread > 0.15:
+            print(f'   NOTE  {label}: grip varies {spread:.2f}mm across the 4 bolts '
+                  f'({[round(x, 2) for x in grips]}) -- worst case used')
+        eng = slen - g
+        want = MIN_ENGAGE_D * sdia
+        if eng > avail + 0.05:
+            bad = True
+            print(f'FAIL  {label}: M{sdia:g}x{slen:g} BOTTOMS -- grip {g:.2f}mm leaves '
+                  f'{eng:.2f}mm of screw against {avail:.2f}mm of {target}')
+        elif eng >= want:
+            print(f'   OK    {label}: grip {g:.2f} -> {eng:.2f}mm into {avail:.2f}mm '
+                  f'of {target} ({eng / sdia:.2f}xD)')
+        elif accepted is not None and eng >= accepted - 0.05:
+            print(f'   THIN  {label}: grip {g:.2f} -> {eng:.2f}mm ({eng / sdia:.2f}xD) '
+                  f'into {avail:.2f}mm of {target} -- ACCEPTED at {accepted:.2f}mm; '
+                  f'the disc caps it, only a deeper c\'bore buys thread')
+        else:
+            bad = True
+            print(f'FAIL  {label}: only {eng:.2f}mm of thread ({eng / sdia:.2f}xD) into '
+                  f'{avail:.2f}mm of {target}; want >= {want:.2f}mm')
+    return bad
+
 HFE_Y, HFE_Z = 11.6, -9.5  # hfe axis (coax.scad); FEMUR_MID = horn-face x
 FEMUR_MID = 33.8
 ARM_THK = 4.0              # horn couple channel length (leg_v6_common.scad)
 
 
 def horn_bolt_checks():
-    print('-- HFE horn-bolt gate (4x M2.5 BCD channels must clear through the coax stub) --')
+    print('-- HFE horn-bolt gate (4x M3 BCD channels must clear through the coax stub) --')
     bad = False
     for part in ('coax_R.stl', 'coax_L.stl'):
         m = trimesh.load(part)
@@ -1111,7 +1729,7 @@ def horn_bolt_checks():
             # re-thickening (the #67 regression) can't hide just outside it.
             base = np.array([sx * (FEMUR_MID + 0.5), y, z])
             blocked = _axis_scan(m, base, [-sx, 0, 0],
-                                 -0.5, ARM_THK + MARGIN_MM, r=HORN_M25 / 2 - 0.1)
+                                 -0.5, ARM_THK + MARGIN_MM, r=HORN_BOLT_CLEAR / 2 - 0.1)
             if blocked:
                 bad = True
                 print(f'BLOCK {part}: horn bolt a={a:3d} (y={y:+.1f},z={z:+.1f}) '
@@ -1128,8 +1746,8 @@ def horn_bolt_checks():
 # yoke and the tibia hosts the KFE servo (verified: "KFE servo in tibia
 # pocket"). Three bolt circles capture the joint, all about the kfe Z-axis at
 # femur-frame x=FEMUR_LEN:
-#   * TOP    knee_arm.stl 4x M2.5 horn BCD -> the tibia servo horn
-#   * BOTTOM femur_R/L wheel BCD 4x M2.5   -> the tibia idler wheel
+#   * TOP    knee_arm.stl 4x M3 horn BCD -> the tibia servo horn
+#   * BOTTOM femur_R/L wheel BCD 4x M3     -> the tibia idler wheel
 #   * MOUNT  knee_arm 4x M3 -> femur shelf heat-sets (holds the top plate on)
 # Every scan carries a solid-material guard (a ring at r+1.2 must read solid):
 # a bare centerline-void test reads a FALSE clear in empty space -- exactly the
@@ -1173,7 +1791,7 @@ def _blind_pocket(mesh, cx, cy, z_top, dirn, depth):
 def kfe_bolt_checks():
     print('-- KFE joint gate (knee-arm horn BCD + femur wheel BCD + knee-arm mount) --')
     bad = False
-    r25 = HORN_M25 / 2
+    r25 = HORN_BOLT_CLEAR / 2
     # 1. knee_arm horn BCD (single part, no mirror) -> tibia servo horn
     ka = trimesh.load('knee_arm.stl')
     for a in HORN_ANGLES:
@@ -1270,6 +1888,11 @@ def main():
         bad = sweep_checks(servo, pts0) or bad
     if '--insertion' in sys.argv or do_sweep:
         bad = insertion_checks(servo, pts0) or bad
+    if '--removable' in sys.argv or do_sweep:
+        bad = removable_member_checks(servo, pts0) or bad
+    if '--sections' in sys.argv or do_sweep:
+        bad = joint_section_checks() or bad
+        bad = zip_capture_checks() or bad
     if '--shoulder' in sys.argv or do_sweep:
         bad = shoulder_checks(servo, pts0) or bad
     if '--through' in sys.argv or do_sweep:
@@ -1278,6 +1901,9 @@ def main():
         bad = cable_checks() or bad
     if '--fastener' in sys.argv or do_sweep:
         bad = fastener_checks() or bad
+        bad = fastener_span_checks() or bad
+        bad = insert_path_checks() or bad
+        bad = engagement_checks() or bad
         bad = horn_bolt_checks() or bad
         bad = kfe_bolt_checks() or bad
     sys.exit(1 if bad else 0)

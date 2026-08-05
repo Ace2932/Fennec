@@ -66,7 +66,7 @@ def leg_mesh():
     M_tib = S @ M_f @ Tk @ rot(KFE, [0, 0, 1])
     out = []
     for m, Tm in [(trimesh.load(f'{LEG}/coax_R.stl'), np.eye(4)),
-                  (trimesh.load(f'{LEG}/coax_hfe_plate.stl'), np.eye(4)),  # #53 fix: bolt-on inboard HFE arm
+                  (trimesh.load(f"{LEG}/coax_hfe_block.stl"), np.eye(4)),  # #226 option C: bolt-on OUTBOARD HFE arm
                   (servo, coax_pose),
                   (trimesh.load(f'{LEG}/femur_R.stl'), S @ M_f),
                   (arm, S @ M_f),

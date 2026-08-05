@@ -92,7 +92,9 @@ chirality-swaps the rear legs vs the URDF/IK.) Trunk-end→hip-station is
 77.7mm at BOTH ends → front/rear shoulders are THE SAME PART, translated.
 Per side the shoulder carries:
 - REARWARD arm: Ø19 boss through the coax floor window, bolts the haa
-  WHEEL (4× M2.5, counterbored — NO center screw: idler side, #51/LA-5) — assembled once.
+  WHEEL (4× **M3**, counterbored — NO center screw: idler side, #51/LA-5) — assembled once.
+  🔴 *was "4× M2.5 + ctr"; thread corrected 2026-08-02 (#263), the phantom center screw
+  was already removed in #51.*
 - FORWARD arm = **BOLT-ON PLATE** (knee_arm pattern: prints seat-face-down,
   4× M3 into crossmember heat-sets, diagonal pair close-fit): bolts the haa
   HORN. **A whole leg detaches in 4 M3 + one cable unplug** — horn stays on

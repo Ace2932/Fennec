@@ -1,4 +1,15 @@
 // LEFT shoulder horn plate = X-mirror of the right.
+//
+// HANDEDNESS IS NOMINAL (measured 2026-08-02, full working in
+// shoulder_plate.scad's header). The R body is symmetric about its own
+// midplane x=39, so the mirror below is a pure TRANSLATION -- this part and
+// the R are the SAME SHAPE, and the only difference between the two STLs is
+// the 2nd dot added here (volume delta 7.41 mm^3 = one dot).
+//   -> PRINT HORN-SEAT-DOWN, same orientation as the R. LA-3's "L variants do
+//      not share the R orientation" applies to femur_L/tibia_L (Z-mirrors),
+//      NOT to this part.
+//   -> A plate fitted to the wrong side is mechanically a non-event. The dots
+//      are bookkeeping here, unlike femur/tibia/coax where a swap is real.
 $fn = 64;
 use <shoulder_plate.scad>
 // LA-2 fix (2026-07-11): shoulder_plate_L carried no marker at all (just
