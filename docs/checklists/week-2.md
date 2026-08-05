@@ -115,15 +115,29 @@
 - [ ] Download + install Bambu Studio (latest)
 - [ ] **AMS HF bypassed for PA6-CF.** Configure Bambu Studio for **external single-spool feed**: SpacePi X4 → 4 mm PTFE Bowden tube → P1S top-side input. PA stays in heated dryer chamber the entire print; AMS holds nothing.
 - [ ] Run PA6-CF in Creality SpacePi X4 dryer **24 h @ 70 °C** before first print. Keep dryer running at 60-70 °C during print (chamber stays sealed).
-- [x] Confirm hardened steel hotend installed in P1S (PA6-CF mandatory — brass dies in <1 spool)
-      — ✅ **2026-08-03: 0.4 mm Bambu "Obsidian", HIGH FLOW variant** (user-confirmed).
-      Hardened, rated for abrasives. Recorded by NAME in `hardware/cad/dimensions.md` §
-      "Printer" so this can never again be satisfied by the adjective "hardened" with no part
-      behind it. ⚠️ Note the stock `Bambu Lab P1S 0.4 nozzle` machine profile declares
-      `nozzle_type = ['stainless_steel','stainless_steel']` — that is the STOCK nozzle, not
-      this one, so the profile understates what is fitted. Selecting **High Flow** in Bambu
-      Studio is correct for this nozzle; it just buys nothing on PA6-CF, which caps at
-      8–10 mm³/s regardless.
+- [ ] Confirm hardened steel hotend installed in P1S (PA6-CF mandatory — brass dies in <1 spool)
+      — 🔴 **RE-OPENED 2026-08-04. The Obsidian High Flow was REMOVED** after it partially
+      clogged (see `project-hotend-clog` / support ticket). A 0.4 mm nozzle has been fitted in
+      its place, **but whether that nozzle is HARDENED or the STOCK STAINLESS one is NOT
+      CONFIRMED** — and this box must stay unticked until it is. Ticking it on an assumption is
+      how this item went unresolved for months the first time.
+      ⚠️ **If it is the stock stainless nozzle, PA6-CF will wear it** — chopped CF eats
+      stainless in the low kilograms. That may still be an acceptable stopgap while the warranty
+      claim runs, but it is a decision to take knowingly, not by default, because the wear is
+      **gradual and invisible**: the orifice widens, extrusion over-runs, and the 0.15 mm
+      `CLR_TENON` / `CLR_HORN` fits in `leg_v6_common.scad` drift out of spec with nothing
+      announcing it.
+      ✅ **Detector:** the recorded print receipts. `tibia_R` = 66.43 g held to 0.12 % on
+      re-slice, so a widening orifice shows up as mass creeping above predicted. Weigh every
+      part and watch the trend.
+      — Prior state, for history: **2026-08-03: 0.4 mm Bambu "Obsidian", HIGH FLOW variant**
+      (user-confirmed), hardened and rated for abrasives. It obstructed after at most 17 print
+      hours. ⚠️ Note the stock `Bambu Lab P1S 0.4 nozzle` machine profile declares
+      `nozzle_type = ['stainless_steel','stainless_steel']` — **reading the profile does NOT
+      tell you what is fitted**, in either direction.
+      🔧 **Before the next print:** set the correct nozzle type in the printer AND slicer, then
+      re-run flow-rate + pressure-advance calibration. Confirmation that the setting took: the
+      *"not recommended … with 0.4mm High Flow nozzle: Bambu PA6-CF"* warning should disappear.
 - [ ] Add **Magigoo PA** to next order (Bambu liquid glue not rated for PA per Bambu wiki — PA6-CF first-layer detachment likely with stock glue)
 - [ ] First-article print test: small fit-test coupon in PA6-CF (NOT a benchy — too generic). Print a hip-pocket fragment with bearing seat + servo cutout to validate Bowden feed tension, bed adhesion, and dimensional accuracy in one print.
 

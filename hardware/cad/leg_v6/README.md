@@ -193,7 +193,13 @@ rating with splayed push-up).
 3. **M3** countersink flush (heads must NOT proud into the yoke arm plane).
    Use **button** heads on the wheel ×8/×14: an M3 SHCS head stands ~1.4 mm
    proud of the 1.6 mm counterbore, a button ~0.05 mm.
-4. Heat-set bore Ø4.6 — check insert purchase in PA6-CF at 5.7 deep.
+4. Heat-set **bore Ø4.0** — check insert purchase in PA6-CF at 5.7 deep. The **4.6 is the
+   INSERT OD**, not the bore; `HEATSET_D = 4.0` in `leg_v6_common.scad` and a **Ø4.6 bore
+   drops straight through** (row 14 of the fastener table above says exactly this, and calls
+   it an audit catch — this line had reproduced the error the table was written to prevent).
+   ⚠️ Two different inserts exist by design: **4.6 OD × 5.7 everywhere** (ruthex
+   `B08BCRZZS3`) and **4.0 OD × 6.0 slim for the HFE block ONLY** (uxcell `B07R9SP532`) —
+   the slim one is NOT a substitute in a Ø4.0 bore, where it would have zero interference.
 5. Yoke gap: tibia end floats with 0.2-0.6 play. PA6-CF shrinks 0.2-0.8% —
    if the gap CLAMPS the discs, sand the arm faces or reprint at +0.3% Z.
 
