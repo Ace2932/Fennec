@@ -78,33 +78,32 @@ jobs:
     # Python 3.10 + ROS dev libs, which is the reason it was excluded rather
     # than an argument that it should stay excluded.
     #
-    # ⚠ CURRENTLY FAILS, ON PURPOSE LEFT IN — and it found a real problem on its
-    # first run. `workflow_dispatch` only for now so it does not gate PRs or
-    # redden main while the fix is decided.
+    # ✅ FIXED 2026-08-01 (#190) and re-enabled on pull_request/push. This job was
+    # quarantined behind `workflow_dispatch` because it genuinely failed — and it
+    # was right to. What it found:
     #
     #   rcutils/src/time_unix.c:76: error: implicit declaration of function
     #   'clock_gettime'   ->  Failed <<< rcutils
     #
-    # ROOT CAUSE: `platform = teensy` in platformio.ini is UNPINNED. CI resolves
+    # ROOT CAUSE: `platform = teensy` was UNPINNED, so CI resolved
     # toolchain-gccarmnoneeabi-teensy@1.150201.0 (GCC 15.2), where an implicit
     # function declaration is an ERROR rather than a warning. micro_ros_platformio
     # ships the clock_gettime DEFINITION (platform_code/arduino/clock_gettime.cpp)
-    # but rcutils compiles without a declaration in scope.
+    # but rcutils compiles without a declaration in scope. The Jetson kept building
+    # only on a stale cached toolchain — the firmware was reproducible by accident,
+    # and CI simply reached the cliff first.
     #
-    # So the micro-ROS build does not work against current tooling at all. It
-    # works on the Jetson only because that machine has an older cached
-    # toolchain — which means a fresh checkout there, or any platform update,
-    # breaks flashing. That is exactly the class of thing pinning lib_deps was
-    # meant to stop, and the platform was left unpinned.
+    # THE FIX: `platform = teensy@5.0.0`, pinned in [teensy_base] so teensy41_ci
+    # validates the same compiler that ships. Pinning the TOOLCHAIN alone was tried
+    # and is wrong — it fixes the compile, then fails at link on
+    # `--no-warn-rwx-segments` (a mismatched new-platform/old-toolchain pair) and
+    # breaks teensy41_ci too. Full reasoning in platformio.ini [teensy_base].
     #
-    # TO FIX (needs the Jetson's known-good versions, so not guessed here):
-    #   1. On the Jetson: `pio platform list` + `pio pkg list -e teensy41`
-    #   2. Pin `platform = teensy@<that version>` and/or
-    #      `platform_packages = platformio/toolchain-gccarmnoneeabi-teensy@<ver>`
-    #   3. Re-enable pull_request/push triggers below.
-    # Do NOT "fix" it with -Wno-error=implicit-function-declaration: that hides a
-    # real missing declaration in code that runs the servo bus.
-    if: github.event_name == 'workflow_dispatch'
+    # Proof it compiles the real ROS layer rather than a stub: micro-ros-build
+    # produces ~112,216 B FLASH against the Arduino-only build's ~21,220 — 5.3x.
+    #
+    # Do NOT "fix" a future recurrence with -Wno-error=implicit-function-declaration:
+    # that hides a real missing declaration in code that runs the servo bus.
     runs-on: ubuntu-latest
     container: ros:humble
     steps:
