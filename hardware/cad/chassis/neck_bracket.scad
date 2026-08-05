@@ -86,6 +86,24 @@ WALL_Z0 = 79.55; WALL_Z1 = 106;   // rises from the deck to under the L2 body
 HM_Z    = [89, 100];               // bolt rows (tall couple vs the fwd moment)
 HM_Y    = 10;                      // bolt half-span (centered bore<->edge for insert wall; matches head)
 
+// ---- side webs (see the module for the 2026-08-05 reshape) ------------------
+WEB_X1     = 131;   // forward end, unchanged
+WEB_T      = 4.0;   // full section, forward of the taper
+WEB_T_THIN = 1.0;   // over the x117 deck bolt: max possible is 1.25 (M3 head
+                    // reaches y17.25, wall outboard face is y16) -> 0.25 spare
+WEB_H      = 12;    // unchanged
+// The thin->full transition is RAMPED, not stepped. The first cut of this
+// reshape butted the two sections at x121 and measured 0.95 -> 4.00 mm in a
+// single plane: a 3 mm re-entrant shoulder in a 12 mm web, sitting exactly at
+// the wall's front face where the wall root is being tied down. Printability
+// was never the constraint (the web is a vertical surface at any angle, no
+// overhang) — the notch effect was.
+WEB_X_T0   = 120.0; // taper start. The M3 head ends at x119.75, so this is the
+                    // earliest the section may grow at all: 0.25 mm clear.
+WEB_X_T1   = 123.0; // taper end. 3.05 mm of rise over 3.0 mm of run ~= 45 deg,
+                    // and it still leaves x123..131 = 8 mm of FULL section
+                    // bearing along the head boss (x121..133).
+
 module gusset(x_apex, z_apex, x_base0, x_base1, y0, y1) {
     // wedge in the x-z plane, extruded across y
     hull() {
@@ -109,10 +127,50 @@ module neck_bracket() {
             // from z84 up, so any bracket web forward of the wall would collide
             // it — the base plate alone bridges the deck window there.)
             gusset(WALL_X0, WALL_Z1 - 6, 107, WALL_X0 + EPS, -WALL_Y, WALL_Y);
-            // side webs: tie the wall ends down to the spine edges (roll)
-            for (sy = [-1, 1])
-                translate([WALL_X0, sy * WALL_Y - (sy > 0 ? 0 : 4), DECK_TOP])
-                    cube([WALL_X1 - WALL_X0 + 10, 4, 12]);
+            // side webs: tie the wall ends down to the spine edges (roll).
+            //
+            // RESHAPED 2026-08-05. This was ONE 4 x 18 mm block (x113..131,
+            // y16..20) sitting directly on top of the x117 deck bolts, and it
+            // made them impossible to install: mesh-probed, BOTH were BLOCKED
+            // z83.75..91.50 for an M3 head AND for a bare 2.5 mm hex key, and
+            // the block covered 50 % of the Ø3.4 hole mouth (hole y18.30..21.70
+            // vs web to y20.00). The NO-DRILL fix (2026-07-10) created it by
+            // moving the front pair x110 -> x117 — at x110 they cleared the web
+            // entirely (verified by probing that position on the same mesh).
+            //
+            // Split by FUNCTION, because the two jobs live at different x and
+            // never actually overlap:
+            //   FORWARD (x121..131): full WEB_T section. This is the stretch
+            //     alongside the head BOSS (x121..133), i.e. the part that
+            //     guides the thing that slides in. The bolt head ends at
+            //     x119.75, so the section may start growing at x120 and is at
+            //     full WEB_T by WEB_X_T1.
+            //   OVER THE BOLT (x113..120): thins to a WEB_T_THIN fillet merged
+            //     into the wall's outboard face, keeping the wall-root tie.
+            //     1.25 mm is the hard ceiling here (M3 head reaches y17.25,
+            //     wall face is y16); 1.0 leaves 0.25 mm.
+            //   BETWEEN THEM: a ~45 deg RAMP, not a step. See WEB_X_T0/T1.
+            //
+            // NB the webs are NOT in neck_bracket_analysis.py — it models the
+            // bare 32x8 wall — so thinning them does not invalidate that audit.
+            // Roll has never been analysed either way; see the study note.
+            for (sy = [-1, 1]) {
+                // thin -> full RAMP (hull of a thin slab and a full-width one)
+                hull() {
+                    translate([WEB_X_T0, sy > 0 ? WALL_Y : -WALL_Y - WEB_T_THIN,
+                               DECK_TOP])
+                        cube([EPS, WEB_T_THIN, WEB_H]);
+                    translate([WEB_X_T1, sy > 0 ? WALL_Y : -WALL_Y - WEB_T,
+                               DECK_TOP])
+                        cube([EPS, WEB_T, WEB_H]);
+                }
+                // full section, forward of the ramp — guides the head boss
+                translate([WEB_X_T1, sy * WALL_Y - (sy > 0 ? 0 : WEB_T), DECK_TOP])
+                    cube([WEB_X1 - WEB_X_T1, WEB_T, WEB_H]);
+                // thin root fillet across the wall footprint — clears the bolt
+                translate([WALL_X0, sy * WALL_Y - (sy > 0 ? 0 : WEB_T_THIN), DECK_TOP])
+                    cube([WALL_X1 - WALL_X0, WEB_T_THIN, WEB_H]);
+            }
         }
         // ---- deck-through bolt holes (M3 clearance; land in the shoulder's
         // modeled M3x3.8 heat-sets below — no drilling) ----
