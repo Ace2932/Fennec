@@ -15,6 +15,7 @@ coax_hfe cap mount-hardware gate alone).
 
 Exit 0 = clean, 1 = interference (clusters printed).
 """
+import math
 import pathlib
 import sys
 
@@ -1107,11 +1108,51 @@ def zip_capture_checks():
 
 # The HFE block's two retention bores are DELIBERATELY different: a 4.6mm insert
 # cannot travel the mortise to reach them (see insert_path_checks). 4.0mm-OD
-# insert, 6.0 long -> 3.5 bore, 6.5 deep.
+# insert -> 3.5 bore, 6.5 deep.
 BLOCK_HEATSET_D = 3.5
 BLOCK_HEATSET_L = 6.5
 BLOCK_INSERT_OD = 4.0
+
+#: SOURCED 2026-08-03: uxcell B07R9SP532, "M3 x 6mm(L) x 4mm(OD)", M3x0.5, 50pcs.
+#: This is EXACTLY the dimension the joint was designed for, and finding it
+#: retired a switch to M2.5 that was already half-implemented on the strength of
+#: "4.0-OD M3 does not exist". It does; it is simply NON-STANDARD (the industry
+#: table puts M3 at OD 4.6), which is a reason to name the part, not to assume it
+#: is unavailable. See insert_sourcing_checks.
 BLOCK_INSERT_L  = 6.0
+BLOCK_THREAD    = 'M3'
+#: Nominal major diameter of BLOCK_THREAD, for the 1xD engagement floor.
+BLOCK_THREAD_D  = 3.0
+#: A specific, orderable part for the NON-STANDARD OD above. The gate requires
+#: this to be non-empty precisely because the OD is off-standard: an unusual
+#: dimension is allowed, an unusual dimension nobody has sourced is not.
+BLOCK_INSERT_SOURCE = 'uxcell B07R9SP532 (M3 x 6mm L x 4mm OD, M3x0.5, 50pcs)'
+
+#: Standard heat-set insert OD by thread size, from the industry dimension table
+#: (Albany County Fasteners, and it agrees with ruthex / Adafruit / McMaster):
+#:
+#:      thread   hole    OD     length range   min wall
+#:      M2       3.2     3.5    3-5 mm         0.75
+#:      M2.5     3.7     4.0    3.5-6 mm       0.75
+#:      M3       4.0     4.6    4-6 mm         0.95
+#:      M4       5.3     6.0    5-8 mm         1.25
+#:
+#: WHY THIS TABLE IS IN A GATE (2026-08-03). This joint specifies a "SLIM M3
+#: heat-set: 4.0 mm OD x 6.0 long", chosen because 4.0 is what fits down the 4.4 mm
+#: mortise slot. That OD is **non-standard for M3** -- the table puts M3 at OD 4.6
+#: with a 0.95 mm wall, and OD 4.0 is the **M2.5** row exactly.
+#:
+#: Reading that, I concluded the part did not exist and started converting the joint
+#: to M2.5. **It does exist**: uxcell B07R9SP532 is a thin-wall M3 at OD 4.0 x 6.0,
+#: 0.5 mm of brass. The table describes what is STANDARD, not what is manufactured,
+#: and I treated the two as the same thing -- the same error class as reading a
+#: modelled hole diameter off a STEP and calling it a thread spec.
+#:
+#: So the rule below is deliberately NOT "OD must equal the standard". It is: an
+#: off-standard OD is allowed **only while a specific orderable part is named**.
+#: That flags the real risk (nobody has checked you can buy it) without asserting a
+#: falsehood, and it goes red the moment the source line goes blank.
+INSERT_STD_OD = {"M2": 3.5, "M2.5": 4.0, "M3": 4.6, "M4": 6.0}
 
 #: (label, member_stl, parent_stl, axis, bolt centres, declared length mm,
 #:  insert length mm). Axis is the direction a driver approaches from.
@@ -1120,8 +1161,62 @@ FASTENER_SPANS = [
      (1, 0, 0), [(5.0, 11.7), (18.0, 11.7)], 16.0, BLOCK_INSERT_L),
 ]
 #: Minimum thread engagement into the insert. 1xD is the usual floor for steel
-#: into a brass insert; M3 -> 3.0 mm.
-MIN_ENGAGEMENT_MM = 3.0
+#: into a brass insert. Keyed to BLOCK_THREAD so it moves with the joint instead
+#: of silently staying at M3's 3.0 after a thread change.
+MIN_ENGAGEMENT_MM = BLOCK_THREAD_D
+
+#: Cyclic tensile load per retention bolt at this joint (fastener-schedule: the
+#: tenon carries the moment in BEARING, these two bolts are retention only).
+RETENTION_LOAD_N = 66.0
+#: Heat-set pull-out shear on the plastic side, N/mm^2 of pi*OD*L interface.
+#: Bracketed wet/dry because PA6-CF's own strength is 75/151 MPa wet/dry; the
+#: ~160-225 N figure the schedule quotes for a 75 mm^2 interface implies ~2.1-3.0.
+PULLOUT_N_PER_MM2_WET = 2.1
+PULLOUT_N_PER_MM2_DRY = 3.0
+
+
+def insert_sourcing_checks():
+    """Is the specified insert a PART THAT EXISTS, not just a dimension that fits?
+
+    WHY THIS EXISTS (2026-08-03). The joint was solved for a "SLIM M3 heat-set:
+    4.0 mm OD x 6.0 long" because 4.0 is what fits down the 4.4 mm mortise slot,
+    and for weeks nobody checked whether that dimension is a part you can order.
+    It is (uxcell B07R9SP532) -- but only just: 4.0 is NON-STANDARD for M3, it is
+    the standard M2.5 OD, and the first part actually bought at that OD was 2 mm
+    short of the pocket.
+
+    Every other gate here asks "does the hole fit the fastener". This one asks the
+    question none of them could: "can you buy the fastener at all". It passes an
+    off-standard dimension only while a specific part is NAMED, and warns to check
+    the thread on arrival whenever that OD collides with another thread's standard
+    -- because a substitution at the same OD is the silent failure here.
+    """
+    bad = False
+    thread = BLOCK_THREAD              # what FASTENER_SPANS drives into this insert
+    std = INSERT_STD_OD[thread]
+    print(f'-- insert sourcing ({thread} thread, OD {BLOCK_INSERT_OD}, '
+          f'L {BLOCK_INSERT_L})')
+    if abs(BLOCK_INSERT_OD - std) < 0.05:
+        print(f'   OK    {thread} at OD {BLOCK_INSERT_OD} is the standard size')
+    elif not BLOCK_INSERT_SOURCE:
+        clash = [k for k, od in INSERT_STD_OD.items() if abs(od - BLOCK_INSERT_OD) < 0.05]
+        bad = True
+        print(f'FAIL  OD {BLOCK_INSERT_OD} is NOT standard for {thread} (standard is {std}) '
+              f'and no orderable part is named. A dimension that merely fits the geometry '
+              f'is not a fastener.')
+        if clash:
+            print(f'      NB OD {BLOCK_INSERT_OD} IS the standard {clash[0]} OD, so anything '
+                  f'you find at this OD may well be {clash[0]}-threaded -- check the thread, '
+                  f'not just the OD.')
+    else:
+        clash = [k for k, od in INSERT_STD_OD.items() if abs(od - BLOCK_INSERT_OD) < 0.05]
+        print(f'   OK    OD {BLOCK_INSERT_OD} is non-standard for {thread} (standard {std}), '
+              f'but a specific part is named: {BLOCK_INSERT_SOURCE}')
+        if clash:
+            print(f'         ^ CHECK THE THREAD ON ARRIVAL: OD {BLOCK_INSERT_OD} is also the '
+                  f'standard {clash[0]} OD, so a mislabelled or substituted part at this OD '
+                  f'is most likely {clash[0]}, which a {thread} screw will not enter.')
+    return bad
 
 
 def fastener_span_checks():
@@ -1178,19 +1273,39 @@ def fastener_span_checks():
                       f'seat/face/pocket (got {seat}, {face}, {bottom})')
                 continue
             span = seat - bottom
-            engage = length - (seat - face)
+            # Engagement into the BORE. This is what the check used to test, and it
+            # is not the same thing as engagement into the INSERT: threaded length
+            # cannot exceed the insert, no matter how deep the bore is.
+            engage_bore = length - (seat - face)
+            engage = min(engage_bore, insert)
+            # Pull-out is a shear area on the plastic side: pi * OD * L. The thread
+            # size does not enter it, which is exactly why an M2.5 insert at the same
+            # OD and length is just as strong in the plastic.
+            area = math.pi * BLOCK_INSERT_OD * insert
+            sf_lo, sf_hi = PULLOUT_N_PER_MM2_WET * area / RETENTION_LOAD_N, \
+                           PULLOUT_N_PER_MM2_DRY * area / RETENTION_LOAD_N
             if length > span:
                 bad = True
-                print(f'FAIL  {label} @ y={b}: M3x{length:.0f} BOTTOMS OUT -- span is '
+                print(f'FAIL  {label} @ y={b}: {BLOCK_THREAD}x{length:.0f} BOTTOMS OUT -- span is '
                       f'{span:.1f}mm (seat {seat:.1f} -> pocket bottom {bottom:.1f}), '
                       f'screw over-runs by {length - span:.1f}mm')
             elif engage < MIN_ENGAGEMENT_MM:
                 bad = True
                 print(f'FAIL  {label} @ y={b}: only {engage:.1f}mm of thread engagement '
-                      f'(need >= {MIN_ENGAGEMENT_MM})')
+                      f'(need >= {MIN_ENGAGEMENT_MM}) -- bore offers {engage_bore:.1f}mm '
+                      f'but the insert is only {insert:.1f}mm long, and thread cannot '
+                      f'exist past the end of the insert')
             else:
-                print(f'   OK    {label} @ y={b}: M3x{length:.0f} in a {span:.1f}mm span, '
-                      f'{engage:.1f}mm engagement of the {insert}mm insert')
+                extra = ''
+                if engage_bore > insert + 0.05:
+                    extra = (f' [capped by the insert: the bore offers {engage_bore:.1f}mm, '
+                             f'so {engage_bore - insert:.1f}mm of the screw turns in EMPTY '
+                             f'bore past the insert end]')
+                print(f'   OK    {label} @ y={b}: {BLOCK_THREAD}x{length:.0f} in a {span:.1f}mm span, '
+                      f'{engage:.1f}mm engagement of the {insert}mm insert{extra}')
+                print(f'         pull-out area pi*{BLOCK_INSERT_OD}*{insert} = {area:.1f}mm^2 '
+                      f'-> SF {sf_lo:.1f}-{sf_hi:.1f} against {RETENTION_LOAD_N:.0f}N/bolt cyclic'
+                      + ('  <== THIN' if sf_lo < 2.0 else ''))
     return bad
 
 
@@ -1532,15 +1647,24 @@ HORN_ANGLES = (45, 135, 225, 315)
 _M25_PROBE, _M3_PROBE = 1.8, 2.2
 FASTENER_ENGAGEMENT = [
     ('horn -> HFE  (coax_R inboard arm)', 'coax_R.stl', 'bcd_x', (33.8, 11.6, -9.5),
-     (-1, 0, 0), 5.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.15),
+#: 🔴 HORN DISC IS 2.40, NOT 3.05 (corrected 2026-08-03). These rows carried 3.05
+#: for months and it is the raised HUB (R 3-4, z 14.75..18.65), not the PLATE at
+#: R=7 where the BCD screws actually pass -- which Aiden calipered at 2.40,
+#: matching servo.stl and the STEP. A correct measurement of the wrong feature,
+#: used as the engagement limit. The accept thresholds moved with it (2.15->2.10,
+#: 2.35->2.20). The wheel rows' 2.10 was right all along.
+#: NB the BCD holes are THROUGH, with 1.90mm of air behind the horn and 1.25 behind
+#: the wheel, so "engagement > disc thickness" is NOT a bottoming failure here --
+#: the screw exits into that gap. It is capped by the disc only for PULL-OUT.
+     (-1, 0, 0), 5.0, 3.0, _M3_PROBE, 2.40, 'horn disc', 2.10),
     ('wheel -> HFE (coax_hfe_block)', 'coax_hfe_block.stl', 'bcd_x', (33.8, 11.6, -9.5),
      (-1, 0, 0), 8.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.50),
     ('horn -> KFE  (knee_arm)', 'knee_arm.stl', 'bcd_z', (47.9, 0.0, 0.0),
-     (0, 0, -1), 6.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.35),
+     (0, 0, -1), 6.0, 3.0, _M3_PROBE, 2.40, 'horn disc', 2.20),
     ('wheel -> KFE (femur_R bottom boss)', 'femur_R.stl', 'bcd_z_up', (106.9, 0.0, 0.0),
      (0, 0, 1), 8.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.50),
     ('horn -> HAA  (shoulder_plate)', 'shoulder_plate.stl', 'bcd_y', (39.05, 0.0, 0.0),
-     (0, -1, 0), 6.0, 3.0, _M3_PROBE, 3.05, 'horn disc', 2.35),
+     (0, -1, 0), 6.0, 3.0, _M3_PROBE, 2.40, 'horn disc', 2.20),
     ('wheel -> HAA (shoulder rear wall)', 'shoulder.stl', 'bcd_y_up', (39.05, 0.0, 0.0),
      (0, 1, 0), 14.0, 3.0, _M3_PROBE, 2.1, 'wheel disc', 1.30),
     # DEFERRED to fastener_span_checks(), which measures this joint end to end
@@ -1902,6 +2026,7 @@ def main():
     if '--fastener' in sys.argv or do_sweep:
         bad = fastener_checks() or bad
         bad = fastener_span_checks() or bad
+        bad = insert_sourcing_checks() or bad
         bad = insert_path_checks() or bad
         bad = engagement_checks() or bad
         bad = horn_bolt_checks() or bad

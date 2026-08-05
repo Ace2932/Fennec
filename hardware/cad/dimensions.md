@@ -44,8 +44,12 @@ was 0.6 mm too narrow.**
 |---|---|---|
 | Case box | x −35.2..+10.2 · y ±12.4 · z −15.5..+14.7 | ✅ mesh 2026-07-02 |
 | Rear top cap ridge | to z 17.4 (x −34.8..−28.5, y ±7) | ✅ mesh |
-| Output HORN disc | Ø20 × ~3.05, z 14.7..**17.75** (+boss to 20.2) | ✅ mesh + CALIPER 2026-07-10 |
-| Bottom WHEEL disc | Ø20 × ~2.15, z **−17.75**..−15.6 — **standard-fitted** | ✅ mesh + CALIPER 2026-07-10 |
+| Output HORN disc — **PLATE at the BCD** | Ø20 × **2.40** (z 16.25..18.65) | ✅ **CALIPERED 2026-08-03** (Aiden); matches `servo.stl` 2.40 and the STEP 2.5 |
+| ⤦ central HUB (R≈3–4) | **3.90** thick, z 14.75..18.65. The old **~3.05** = 17.75 − 14.7, i.e. hub underside → reconciled seat plane | ✅ mesh profile 2026-08-03 |
+| ⤦ centre pip (R≤2) | to z 20.15 | ✅ mesh |
+| 🔴 *what changed 2026-08-03* | This row read **Ø20 × ~3.05** and `fastener-schedule.md` used 3.05 as the **screw-engagement limit** — the **wrong feature**. 3.05 is the raised HUB; the BCD sits at **R=7**, where the plate is **2.40**. A correct measurement of the wrong thing, propagated into a derived calculation. Aiden diagnosed it: *"the 3.05 could be the upraised one since the center comes out more than the rest of the body."* | — |
+| ⚠️ BCD holes are **THROUGH** | no disc material at any of the four hole angles (45/135/225/315°). Air behind: **1.90 mm** (horn) / **1.25 mm** (wheel) before the servo case → **4.30 / 3.35 mm** total usable depth | ✅ mesh probe 2026-08-03 |
+| Bottom WHEEL disc | Ø20 × **2.1** (z −17.70..−15.65) — **standard-fitted** | ✅ **CALIPERED 2026-08-03** (Aiden); matches `servo.stl` 2.05 |
 | Disc screw pattern (BOTH discs) | 4× **M3** on Ø14 BCD ±45° + center — 🔴 *was "M2.5"; O3.0 nominal confirmed 2026-08-02, though tapped-M3 vs PA3.0 self-tap pilot is open (#262) — see note 4, whose ∅2.5="M2.5 clearance" reasoning is retracted* | ✅ mesh (pattern), spec sheet (thread) |
 | Connector bay | rear-bottom to z −19.4 over x<−5.3, **FULL width ±12.35**; 2× 3-pin sockets mid-body facing rear | ✅ mesh (fit-gate catch) |
 | **REAL case mounting** | the 4 case-screw columns (Ø2 self-tap, heads at the bay): (−8.3, ±10.2) & (−32.8, ±10.25) — use longer M2 through the printed floor | ✅ mesh |
@@ -599,10 +603,10 @@ mounts. Dims kept here only for future re-introduction reference.
 | Dim | Value | Status |
 |---|---|---|
 | Build volume X × Y × Z | 256 × 256 × 256 | ✅ |
-| Nozzle | **0.4 mm Bambu "Obsidian", HIGH FLOW variant** — hardened, rated for abrasives. CONFIRMED INSTALLED in the P1S 2026-08-03 (user). Supersedes the unnamed "project hardened steel" this row used to read; the checklist item in `docs/checklists/week-2.md` is now satisfiable by name rather than by adjective | ✅ user-confirmed 2026-08-03 |
+| Nozzle | 🔴 **CHANGED 2026-08-04 — the Obsidian High Flow was REMOVED** after partially clogging at ≤17 print hours (warranty ticket open). A **0.4 mm** nozzle is now fitted, but **hardened vs stock stainless is UNCONFIRMED**. If stock stainless, PA6-CF will wear it (CF eats stainless in the low kg) and the 0.15 mm `CLR_TENON`/`CLR_HORN` fits drift silently as the orifice widens — detect via print-receipt mass creep, `tibia_R` = 66.43 g ±0.12 %. Reading the machine profile does NOT establish what is fitted, in either direction. Prior: 0.4 mm Bambu "Obsidian" HIGH FLOW, hardened, user-confirmed 2026-08-03 | ⚠️ needs bench confirmation |
 | PA6-CF max volumetric speed | **8–10 mm³/s** (`Bambu PA6-CF @BBL X1C`, Bambu Studio preset) | ✅ vendor preset |
 | ⤦ what that implies | At 0.20 × 0.42 mm line, 8 mm³/s = **95.2 mm/s** — so the filament's own volumetric cap already enforces `patterns.md`'s "≤ 100 mm/s" CF rule. **Do not hand-set a speed cap**; it is redundant and will drift from the preset. It also means the HIGH-FLOW nozzle's extra headroom is **unused** for PA6-CF: the filament, not the nozzle, is the bottleneck | ✅ derived from the two rows above |
-| PA6-CF nozzle temp | **275 °C** (vendor preset, both extruder entries) — ⚠️ `hardware/cad/README.md:45` says "280 °C"; the vendor preset is the authority and 275 is what actually gets used unless someone overrides it | ⚠️ README disagrees |
+| PA6-CF nozzle temp | 🔴 **USE 280 °C — the README was right and this row was wrong.** Bambu's own filament-guide wiki, under the CF/GF nozzle guidelines, gives an explicit clog-mitigation instruction: *"Set the nozzle temperature to 280 °C."* The vendor preset's **275 °C** is a general default, NOT the anti-clog number, so "the preset is the authority" was the wrong tie-break for this particular field. The 2026-08-03 print that clogged the hotend ran at **275**. That is not proof of causation — but it is a named, cheap, already-flagged discrepancy sitting directly upstream of the failure, and it had been resolved the wrong way in this very row. Set 280 explicitly; do not rely on the preset default | 🔴 corrected 2026-08-04 from the Bambu wiki |
 | Chamber | enclosed | ✅ |
 | AMS HF | bypassed for PA6-CF (see BOM §8) | ✅ |
 
@@ -740,7 +744,18 @@ the *hole*, which need not run the full plate thickness.
    an assumed-correct M2×22, which is why "M2×22 fits" kept confirming itself. See
    the M2×9 / M2×13 correction in `docs/fastener-schedule.md`.
 
-⚠️ **What the STEP CANNOT tell us: the disc thread.** ∅2.5 has **three** readings:
+✅ **RESOLVED ON THE BENCH 2026-08-03 — the discs are TAPPED M3.** Aiden threaded an
+M3 into a disc; the screws the servo *ships with* are M3, and a **machine screw only
+works in a tapped hole**, so this is settled on the part rather than inferred. That
+retires the whole ambiguity below and, with it, the plain-pilot reading. Keep the
+analysis for the method, not the conclusion — and note it took a 10-second physical
+act to close what three documents could not.
+
+⚠️ *Still unmeasured:* the disc's real **thread DEPTH**. Every engagement figure in
+`fastener-schedule.md` assumes one. Wind a screw to the stop, mark it at the disc
+face, caliper mark-to-tip.
+
+~~⚠️ **What the STEP CANNOT tell us: the disc thread.**~~ (historical) ∅2.5 had **three** readings:
 - the **M3×0.5 tap drill** (3.0 − 0.5 = 2.5) → M3 machine screw into a tapped hole
 - the **M2.5 nominal major**, drawn as a plain cylinder at callout size
 - a **plain pilot for a Ø3.0 thread-forming screw** — and the vendor ships exactly

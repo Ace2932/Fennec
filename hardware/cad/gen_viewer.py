@@ -65,6 +65,11 @@ def mat_list(M):
 CH = f"{CAD}/chassis"
 MESHES = {
     "coax_R": f"{CAD}/leg_v6/coax_R.stl",
+    # ADDED 2026-08-03. coax_hfe_block is the removable outboard block from #226
+    # option C (created 2026-07-31) and was never added here, so every render of
+    # this robot since then has shown the HFE joint WITHOUT the part that makes
+    # it work -- visually the pre-option-C architecture it replaced.
+    "coax_hfe_block": f"{CAD}/leg_v6/coax_hfe_block.stl",
     "femur_R": f"{CAD}/leg_v6/femur_R.stl",
     "tibia_R": f"{CAD}/leg_v6/tibia_R.stl",
     "knee_arm": f"{CAD}/leg_v6/knee_arm.stl",
@@ -123,6 +128,9 @@ SHOE_OFF = mat_list(T([129, 0, -30.5]) @ R(54, [0, 0, 1]) @ T([0, -7.0, 0]))
 #       ["knee", KNEE] | ["kfe"] (rot about z at knee origin) | ["mf"] | ...
 PART_CHAIN = {
     "coax":  [],
+    # bolts into the coax's mortise, so it is RIGID with the coax: same (empty)
+    # chain. It is not on the hfe side of the joint -- the femur is.
+    "hfeblock": [],
     "femur": ["hfe", "mf"],
     "knee":  ["hfe", "mf", "arm"],
     "tibia": ["hfe", "mf", "knee", "kfe"],
@@ -202,13 +210,49 @@ STATIC = [
     {"mesh": "jbar", "M": mat_list(MY_BAR), "grp": "elec", "expl": [0, 0, 55]},
 ]
 
+# ---- coverage: an omission must be DECLARED, not defaulted -----------------
+# WHY (2026-08-03). coax_hfe_block was created 2026-07-31 by #226 option C and
+# simply never added to MESHES, so the viewer rendered the HFE joint without it
+# for three days and nobody could tell. check_generated_fresh.py cannot catch
+# that: it compares robot_viewer.html against what THIS script produces, so a
+# part missing from the script makes an artifact that matches its producer
+# perfectly and passes green. It verifies the output is CURRENT, never that the
+# input list is COMPLETE.
+#
+# So every leg_v6 STL must be either rendered or excluded WITH A REASON here.
+# Same fix shape as femur's supports= field: make the silence impossible.
+VIEWER_EXCLUDED = {
+    # the L meshes are mirrors; legPartMesh() deliberately renders the R mesh for
+    # both sides and lets each leg's base transform (MY) do the mirroring, so
+    # loading these would double-mirror.
+    "coax_L": "rendered by mirroring coax_R via the leg base",
+    "femur_L": "rendered by mirroring femur_R via the leg base",
+    "tibia_L": "rendered by mirroring tibia_R via the leg base",
+    "coax_hfe_block_L": "rendered by mirroring coax_hfe_block via the leg base",
+    # genuinely not placed yet
+    "strap": "TODO: 2 per leg (coax + tibia tails), needs its own frame placement",
+    "cable_clip": "TPU accessory, no fixed pose in the assembly",
+    "grommet_insert": "TPU accessory, no fixed pose in the assembly",
+}
+_leg_stls = {q.stem for q in pathlib.Path(f"{CAD}/leg_v6").glob("*.stl")}
+_shown = {k.rsplit("/", 1)[-1][:-4] for k in MESHES.values() if "/leg_v6/" in k}
+_unaccounted = _leg_stls - _shown - set(VIEWER_EXCLUDED)
+if _unaccounted:
+    raise SystemExit(
+        "gen_viewer: leg_v6 STL(s) neither rendered nor excluded: "
+        + ", ".join(sorted(_unaccounted))
+        + "\n  Add to MESHES (+PART_CHAIN/legParts/legPartMesh) or to "
+          "VIEWER_EXCLUDED with a reason.")
+print(f"  coverage: {len(_shown)} rendered, {len(VIEWER_EXCLUDED)} excluded-with-reason, "
+      f"0 unaccounted (of {len(_leg_stls)} leg_v6 STLs)")
+
 DATA = {
     "geo": geo, "legs": LEGS, "hipPt": HIP_PT, "haaSign": HAA_SIGN,
     "static": STATIC, "chain": PART_CHAIN,
     "Mf": Mf, "hfePt": HFE_PT, "knee": KNEE, "arm": ARM_OFF, "shoe": SHOE_OFF,
     # leg part -> mesh key uses side; explode factors (proximal->distal)
-    "legParts": {"coax": 0.0, "femur": 45, "knee": 45, "tibia": 95,
-                 "kneebump": 95, "shoe": 140},
+    "legParts": {"coax": 0.0, "hfeblock": 22, "femur": 45, "knee": 45,
+                 "tibia": 95, "kneebump": 95, "shoe": 140},
     "rom": {"haaIn": 15, "haaOut": 40, "hfeMin": -86, "hfeMax": 50,
             "kfe": 109},
 }
@@ -343,6 +387,7 @@ function legPartMesh(part,side){
   // (matches preview_assembly — the L meshes are X-mirrors and would
   // double-mirror here).
   if(part==='coax')return 'coax_R';
+  if(part==='hfeblock')return 'coax_hfe_block';
   if(part==='femur')return 'femur_R';
   if(part==='tibia')return 'tibia_R';
   if(part==='knee')return 'knee_arm';

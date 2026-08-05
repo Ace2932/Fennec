@@ -130,11 +130,33 @@ module neck_bracket() {
                 cylinder(d = 6.5, h = 3);          // rear counterbore for the head
         }
         // aft-gusset DRIVER NOTCH: 2 channels for the LOWER (z89) bolts — the
-        // gusset (x107..113) blocks that approach; the upper z100 is above its
-        // apex. Ø9 clears a ball-key/socket to the recessed bolt head.
+        // gusset (x107..113) blocks that approach. Ø9 to x115 also opens the
+        // counterbore mouth, so a socket can reach this row's head.
         for (sy = [-1, 1])
             translate([103, sy * HM_Y, HM_Z[0]]) rotate([0, 90, 0])
                 cylinder(d = 9, h = 12);           // x103..115
+        // UPPER (z100) DRIVER NOTCH — added 2026-08-05. This row was documented
+        // as "above the apex" and therefore needing no notch. It is NOT above
+        // it: the apex is WALL_Z1-6 = 100, EXACTLY the bolt height, so the
+        // gusset feather sits in the approach. Mesh-probed before the fix:
+        // solid at x111.7..112.9 for a Ø9 socket, and x112.7..112.9 even for a
+        // 2.5 mm hex key. (The hex key would in practice have gone in anyway —
+        // the feather is 0.37 mm there, under one 0.42 mm extrusion, so the
+        // slicer cannot render it. The claim was accidentally true, not right.)
+        //
+        // Unlike the lower notch this one STOPS REARWARD OF THE WALL FACE
+        // (x113), for two reasons:
+        //   1. neck_bracket_analysis.py hardcodes the wall as a whole 32x8
+        //      section (Z = 32*8^2/6). Cutting 2 mm in would drop Z by 44 % and
+        //      take the faceplant SF from ~12 to ~7 — at the row that carries
+        //      the tipping moment's TENSION, which is the worst place to do it.
+        //   2. The Ø6.5 counterbore and its bearing floor stay untouched.
+        // Consequence, stated so it is not rediscovered: this row is BALL-END
+        // HEX KEY access, not socket. That is the correct tool for a
+        // counterbored M3 SHCS anyway; the lower row keeps socket access.
+        for (sy = [-1, 1])
+            translate([103, sy * HM_Y, HM_Z[1]]) rotate([0, 90, 0])
+                cylinder(d = 9, h = 10.05);        // x103..113.05 (EPS into face)
         // ---- deck lightening-window passthrough (cable route L2->trunk) ----
         // a slot in the base plate over the window center for the L2 pigtail
         // to drop into the C-box / trunk (RJ45 + DC plug; caliper).
