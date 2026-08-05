@@ -21,8 +21,16 @@
 //    do NOT share the R orientation, because those are Z-mirrors and the flip
 //    changes which face is flat. That warning does NOT extend here: an
 //    X-mirror of an X-symmetric body rests on the same face. Print
-//    shoulder_plate and shoulder_plate_L both HORN-SEAT-DOWN, same transform,
+//    shoulder_plate and shoulder_plate_L both BACK-FACE-DOWN, same transform,
 //    nest them together.
+//    🔴 This line said HORN-SEAT-DOWN until 2026-08-05. That is knee_arm's
+//    doctrine copied onto a part that cannot obey it, and THIS FILE'S OWN
+//    HEADER (below) already called it geometrically impossible: the flange
+//    runs to y=2.00, which is 15.75 mm below the horn-seat plane at y=17.75,
+//    so the part physically cannot rest on that face. print-batch.md was
+//    corrected on 2026-08-02 and slice_plate.py's registry says down="+Y";
+//    only this comment was left behind, in the file someone actually opens
+//    before slicing. Bed face is y = FACE_Y1 = 21.75.
 //
 // 2. A SWAPPED PLATE IS A NON-EVENT. Fitting an "R" plate on the left side is
 //    mechanically identical -- it is the same part. LA-2 added the dots
@@ -45,9 +53,14 @@
 // states a material. Inferred from the leg batch and from knee_arm, whose
 // seating doctrine this part follows and which IS specified PA6-CF.
 // CONFIRM before the first structural print.
-// Print: PA6-CF, back face DOWN (perfect seat on the horn face, knee_arm doctrine)
-// -- the flange dips below the horn-seat plane, so "horn-seat face down"
-// is geometrically impossible; the achievable bed face is the back face.
+// Print: PA6-CF, BACK FACE DOWN — bed face is y = FACE_Y1 = 21.75.
+// -- the flange dips to y=2.00, 15.75 mm below the horn-seat plane at y=17.75,
+// so "horn-seat face down" is geometrically impossible; the achievable bed
+// face is the back face. (This line used to justify back-face-down with
+// "perfect seat on the horn face, knee_arm doctrine" — the reasoning for the
+// orientation this part CANNOT use, attached to the one it can. Borrowing
+// knee_arm's justification is exactly what put the wrong orientation here in
+// the first place; see consequence 1 above.)
 // rev 3 (2026-07-10): seat plane moved 17.2->17.75 (caliper gap fix — see
 // leg_v6_common.scad HORN_Z1); matches shoulder.scad's HORN_Y.
 //
