@@ -22,12 +22,32 @@ CTR = 126.5; L2_BCD = 18;          // L2 Ø51 pattern at 45° -> holes at ±18
 module l2_adapter() {
     difference() {
         union() {
-            translate([104, -24, Z0]) cube([42, 48, T]);       // main plate x104..146
+            // MAIN PLATE. x104..149, NOT ..146 (2026-08-06). The L2's front
+            // bolts sit at x144.5 and their O6.2 countersinks need 3.1 mm of
+            // radius -> material to x147.6. At x146 they had 1.5 mm and BOTH
+            // BROKE OUT: not holes at all but open notches, no head seat on the
+            // outboard side, the L2 hanging on two of its four bolts. Aiden
+            // spotted it on a slicer preview.
+            //
+            // Root cause: head.scad's crown was "grown to hold the REAL L2
+            // pattern (+-18)" -> CROWN_X1 = 148. The plate carrying the same
+            // bolts was left behind at 146.
+            //
+            // The 2026-07-08 clash fix (main plate must stop at x146 so the
+            // crown lip only ever hooks the THIN tongue) still holds: the lip
+            // is y-15..+15, so the band beyond |y|=15 is free. The cut below
+            // keeps the lip band at x146 and lets only the outboard wings run
+            // to 149, where the bolts actually are.
+            translate([104, -24, Z0]) cube([45, 48, T]);       // main plate x104..149
             translate([146, -14, Z0]) cube([12, 28, 2]);        // front tongue x146..158, 2 thin
                                                                 // (starts at x146 = crown-lip start so the
                                                                 //  lip only ever hooks the THIN tongue, never
                                                                 //  the 5mm main plate — clash fix 2026-07-08)
         }
+        // keep the CROWN-LIP BAND at x146: the lip (head.scad, y-15..+15,
+        // z127..132.5) must only ever hook the 2 mm tongue, never the 5 mm
+        // plate. Cut from Z0+2 up so the tongue itself survives.
+        translate([146, -15, Z0 + 2]) cube([5, 30, T - 2 + EPS]);
         // 4x L2 bolts: CSK from the BOTTOM (heads flush), M3 up into the L2 base
         for (sx = [-1, 1], sy = [-1, 1]) {
             translate([CTR + sx * L2_BCD, sy * L2_BCD, Z0 - EPS])
