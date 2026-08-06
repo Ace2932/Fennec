@@ -191,6 +191,23 @@ need supports; 16 must have them OFF.** Check this before every print.
 | `head` | **tree** | PA6-CF | MANUAL crown/pad-down |
 | `control_pod` | normal | PETG-CF | MANUAL column-face-down |
 
+⚠️ **`femur` — supports ON is CORRECT, but BLOCK THEM OVER THE CABLE TUNNEL (found 2026-08-05).**
+The femur legitimately needs `normal` supports for 882 mm² of external overhang. But it also has a
+**fully closed internal cable tunnel** whose roof is a **19.00 mm unsupported bridge** — measured on
+the mesh at the throat (x 36–39): floor solid to z−20.0, air z−19.5..−14.0, roof solid from z−13.5,
+free passage **5.90 mm tall × 19.00 mm wide**. Printed −Z down, that roof spans 19 mm in mid-air, so
+the slicer fills the tunnel with support — and a servo connector head (measured **9.8 × 4.6 mm**)
+then will not pass, despite 1.3 mm of nominal clearance. Aiden hit this on the 8/2 femur and had to
+open it with a file and pliers.
+
+**Next femur: paint a support blocker over the tunnel, or set "support on build plate only"** so
+external overhangs still get support and enclosed cavities do not. PA6-CF bridges 19 mm unaided.
+
+Two notes so this is not re-diagnosed from scratch: the tunnel is **identical in every femur
+revision** (77dc74c 7/16, 7955d1b 8/2, 0abd9e1 8/3 — all 5.90 × 19.00), so it is not a staleness
+issue; and `overhang_checks()` cannot see it, because that gate measures unsupported area **reaching
+the bed** and has no concept of support landing inside a passage that must stay clear.
+
 **SUPPORTS OFF — turning them on can TRAP MATERIAL, not merely waste it:**
 `cable_clip`, `case_slot_grommet`, `floor_plate`, `grommet_insert`,
 `jetson_case_mount`, `jetson_clamp_bar`, `knee_arm`, `knee_bumper`, `l2_adapter`,
