@@ -87,6 +87,20 @@ STEP = 1.0
 # seed: a point known to sit inside the tunnel, in the part's own frame.
 # block_x: cells with x below this are the servo bay -- not a legal exit.
 # escape_z: a plane unambiguously outside the part.
+# Parts that use sts_pocket_neg but are deliberately NOT flood-checked, each with
+# the reason. Anything using the shared pocket must appear here or in PARTS --
+# see _assert_coverage(). Silently skipping a part is the failure this whole gate
+# exists to catch, so it is made impossible rather than discouraged.
+EXCLUDED = {
+    "coax": "its pocket is rotated so the tunnel points at the part's own BOTTOM "
+            "face and runs past it (tunnel to z-42.4, part bottom z-38.4) -- it "
+            "breaks out by construction, no groove involved. VERIFIED 2026-08-05: "
+            "walls present at y8/12/20, channel at y16, and a straight-down probe "
+            "from (0,16.85,-35) reaches outside. The flood machinery below is "
+            "x-axis-specific (block_x) and would need a per-part bay axis to run "
+            "here, which is not worth it for a tunnel with no floor to block it.",
+}
+
 PARTS = {
     "femur_R": dict(seed=(37.0, 0.0, -16.85), box=((34, 64), (-15, 15), (-38, -12)),
                     block_x=35.0, escape_z=-32.0),
@@ -160,8 +174,29 @@ def patency(mesh, cfg, step=STEP):
     return escaped, n
 
 
+def _assert_coverage(here):
+    """Every user of the shared pocket must be checked or explicitly excluded."""
+    users = set()
+    for f in pathlib.Path(here).glob("*.scad"):
+        if f.name == "leg_v6_common.scad":
+            continue
+        if "sts_pocket_neg" in f.read_text():
+            users.add(f.stem.replace("_L", ""))
+    covered = {k.replace("_R", "").replace("_L", "") for k in PARTS}
+    unaccounted = users - covered - set(EXCLUDED)
+    if unaccounted:
+        raise SystemExit(
+            f"FAIL: {', '.join(sorted(unaccounted))} use(s) sts_pocket_neg and its cable "
+            f"tunnel is neither checked nor listed in EXCLUDED. A part can inherit the "
+            f"shared tunnel and never get an exit -- that is the bug this gate exists for. "
+            f"Add it to PARTS with a tunnel seed, or to EXCLUDED with a reason.")
+    print(f"   coverage: {len(covered)} checked, {len(EXCLUDED)} excluded-with-reason, "
+          f"0 unaccounted (of {len(users)} parts using sts_pocket_neg)")
+
+
 def main(argv):
     cad_contains.install()   # #195 -- reproducible containment
+    _assert_coverage(os.path.dirname(os.path.abspath(__file__)))
     here = os.path.dirname(os.path.abspath(__file__))
     targets = argv[1:] or sorted(PARTS)
     bad = 0
