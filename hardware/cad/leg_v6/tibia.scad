@@ -33,6 +33,14 @@
 // Print: PA6-CF, tab face (-Z) down; support pillars under the blade slab.
 
 include <leg_v6_common.scad>
+
+// ---- cable groove cross-section (2026-08-06) --------------------------------
+// TOP must equal the tunnel's 19.0: any narrower and the wire drops out of a
+// 19 mm channel onto a ledge. BOTTOM adds a 1.5 mm/side 45 deg flare so the
+// skin opening is a funnel, not a square-edged slot.
+GRV_W_TOP = 19.0;
+GRV_W_BOT = 22.0;
+
 // toe_profile.scad (stock outline extraction) retired from the build —
 // kept on disk as the stock-toe reference only.
 
@@ -188,11 +196,24 @@ module tibia_v6() {
         // otherwise eat the tunnel overlap that makes the 9.8 x 4.6 plug fit.
         // Full depth by x37; the groove breaks the tunnel floor (-19.80) at
         // about x36.3, leaving ~6.7 mm of overlap against a tunnel ending x43.
+        // WIDTH MATCHED TO THE TUNNEL + CHAMFERED MOUTH (2026-08-06).
+        // The groove was 16 wide against a 19-wide tunnel, so the wire came
+        // along a 19 mm channel and had to squeeze into a 16 mm one over a
+        // 1.5 mm SHARP LEDGE each side, exactly where it drops out. Aiden hit
+        // this feeding a lead ("the 90 deg bends block and I gotta shave
+        // away"). The ledge was not a print artifact -- I copied the femur's 16
+        // without checking it against the tunnel's 19, and the femur has the
+        // same defect for the same reason.
+        //   top    GRV_W_TOP = 19.0, flush with the tunnel -> no ledge at all
+        //   bottom GRV_W_BOT = 22.0, a 1.5 mm/side 45 deg flare at the skin so
+        //          the exit is a funnel rather than a square-edged slot
+        // Wall left at the worst station (tibia narrows to 14.3 half-width by
+        // x58): 14.3 - 11.0 = 3.3 mm, against this part's WALL spec of 3.2.
         hull() {
-            translate([34, -8, SLAB_Z0 - EPS]) cube([EPS, 16, EPS]);
-            translate([37, -8, SLAB_Z0 - EPS])
-                cube([20, 16, (-19.05) - (SLAB_Z0 - EPS)]);
-            translate([60 - EPS, -8, SLAB_Z0 - EPS]) cube([EPS, 16, EPS]);
+            translate([34, -GRV_W_BOT/2, SLAB_Z0 - EPS]) cube([EPS, GRV_W_BOT, EPS]);
+            translate([37, -GRV_W_BOT/2, SLAB_Z0 - EPS]) cube([20, GRV_W_BOT, EPS]);
+            translate([37, -GRV_W_TOP/2, -19.05 - EPS]) cube([20, GRV_W_TOP, EPS]);
+            translate([60 - EPS, -GRV_W_BOT/2, SLAB_Z0 - EPS]) cube([EPS, GRV_W_BOT, EPS]);
         }
 
         // zip anchors: flank the tunnel exit (strain relief before the

@@ -56,6 +56,14 @@
 
 include <leg_v6_common.scad>
 
+// ---- cable groove cross-section (2026-08-06) --------------------------------
+// TOP must equal the tunnel's 19.0: any narrower and the wire drops out of a
+// 19 mm channel onto a ledge. BOTTOM adds a 1.5 mm/side 45 deg flare so the
+// skin opening is a funnel, not a square-edged slot.
+GRV_W_TOP = 19.0;
+GRV_W_BOT = 22.0;
+
+
 FEMUR_LEN = 106.9;            // hfe -> kfe axis distance (MEASURED, B2)
 SLAB_W    = 2*(CASE_HW + CLR_POCKET + WALL);   // 32.1
 SLAB_Z0   = FLOOR_BOT;                          // -22.2
@@ -264,11 +272,14 @@ module femur_v6() {
         // square re-entrant corners on this part's tension face). Taper starts
         // at x34 so the near ramp does not eat the tunnel overlap; full depth
         // by x37, tunnel floor broken at ~x36.3 against a tunnel ending x42.4.
+        // Width matched to the tunnel + chamfered mouth -- see tibia.scad for
+        // the reasoning. Same 1.5 mm/side ledge existed here and this is the
+        // part Aiden actually had to file and plier open.
         hull() {
-            translate([34, -8, SUB_FLOOR - EPS]) cube([EPS, 16, EPS]);
-            translate([37, -8, SUB_FLOOR - EPS])
-                cube([16, 16, (-19.05) - (SUB_FLOOR - EPS)]);
-            translate([56 - EPS, -8, SUB_FLOOR - EPS]) cube([EPS, 16, EPS]);
+            translate([34, -GRV_W_BOT/2, SUB_FLOOR - EPS]) cube([EPS, GRV_W_BOT, EPS]);
+            translate([37, -GRV_W_BOT/2, SUB_FLOOR - EPS]) cube([16, GRV_W_BOT, EPS]);
+            translate([37, -GRV_W_TOP/2, -19.05 - EPS]) cube([16, GRV_W_TOP, EPS]);
+            translate([56 - EPS, -GRV_W_BOT/2, SUB_FLOOR - EPS]) cube([EPS, GRV_W_BOT, EPS]);
         }
         // zip anchors: flank the tunnel exit + at the block edge.
         // LA-4 fix (2026-07-11): h=12 was a BLIND pocket (top z-11.2, 25.9mm
