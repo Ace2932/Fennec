@@ -143,6 +143,58 @@ module tibia_v6() {
         // strap pilots (into the raised bosses)
         strap_pilot_neg(31, 14.25, SLAB_Z1 + 3.2);
 
+        // ---- CABLE GROOVE: tunnel exit -> underside (added 2026-08-05) ----
+        // 🔴 THE TUNNEL HAD NO EXIT. sts_pocket_neg's cable tunnel (shared, 19
+        // wide x 5.9 tall, floor z-19.80) ran x36..~43 and then stopped in
+        // SOLID MATERIAL: mesh-probed cross-sections showed the tunnel walled
+        // on all four sides at x40, and x44/x48 solid across the whole
+        // y[-17,17] z[-23,-7] window except the two O3.2 zip bores. A blind
+        // pocket. The KFE servo's cable could not leave the tibia.
+        //
+        // femur.scad has exactly this groove and its LA-1 comment says why:
+        // the earlier shallow version "left a solid membrane that DEAD-ENDED
+        // the HFE cable". That fix was made on the femur and never propagated
+        // here, even though both parts get their tunnel from the SAME shared
+        // module. The x44 anchors are even commented "flank the tunnel exit",
+        // which reads as confirmation that an exit exists.
+        //
+        // Geometry mirrors the femur's: cut from the underside exterior
+        // (MEASURED flat at z-22.15 across x38..60; SLAB_Z0 = -22.2) up to
+        // z-19.05, i.e. 0.75mm PAST the tunnel floor at -19.80, so the void is
+        // continuous rather than leaving another membrane. 16 wide clears the
+        // 9.8mm servo connector head. Spans both zip anchors (x44, x58) so the
+        // cable is captured in the groove, as on the femur.
+        //
+        // ⚠️ check_fit.py's cable_checks() did NOT catch this: it measures the
+        // knee-loop SPAN between anchors and assumes the cable can reach them.
+        // x0 = 36, NOT 40. The groove must OVERLAP the tunnel by more than the
+        // connector is thick, or the cable can reach the opening and still not
+        // get through it. Tunnel runs x36..~43; starting at 40 leaves a 3 mm
+        // downward slot against a 4.6 mm connector head, and a O4.6 sphere
+        // cannot traverse it (flood-fill verified). Starting at 36 makes the
+        // overlap 7 mm and the sphere passes. NB the femur's groove starts at
+        // 40 against a tunnel ending at 42.4 -- a 2.4 mm slot -- and fails the
+        // same test; that is the part Aiden had to open with a file and pliers.
+        // RAMPED ENDS, not square (2026-08-05). A raw cube leaves 90 deg
+        // re-entrant steps on the UNDERSIDE -- the TENSION fibre under ground
+        // reaction, cyclically loaded. That is precisely the defect CR-6 fixed
+        // on this same part's vent window ("zero fillet on its 4 vertical
+        // reentrant corners (FDM crack risk)"), so a square groove would be
+        // re-introducing it two features later. Nominal SF at the groove is
+        // 31-42 wet against the vent's 13.5, but a sharp corner (Kt ~3) hands
+        // most of that margin straight back.
+        //
+        // The taper starts at x34, NOT x36: ramping the near end would
+        // otherwise eat the tunnel overlap that makes the 9.8 x 4.6 plug fit.
+        // Full depth by x37; the groove breaks the tunnel floor (-19.80) at
+        // about x36.3, leaving ~6.7 mm of overlap against a tunnel ending x43.
+        hull() {
+            translate([34, -8, SLAB_Z0 - EPS]) cube([EPS, 16, EPS]);
+            translate([37, -8, SLAB_Z0 - EPS])
+                cube([20, 16, (-19.05) - (SLAB_Z0 - EPS)]);
+            translate([60 - EPS, -8, SLAB_Z0 - EPS]) cube([EPS, 16, EPS]);
+        }
+
         // zip anchors: flank the tunnel exit (strain relief before the
         // plug — cable tension must never reach the servo socket), plus
         // the original pair along the blade.

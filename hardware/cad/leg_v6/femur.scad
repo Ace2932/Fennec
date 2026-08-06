@@ -253,7 +253,23 @@ module femur_v6() {
         // across its whole x[40,56] footprint (x40..44 sit on the ramp,
         // where the true exterior is shallower than SUB_FLOOR -- cutting
         // past it there is harmless, already-open air, not solid).
-        translate([40, -8, SUB_FLOOR - EPS]) cube([16, 16, (-19.05) - (SUB_FLOOR - EPS)]);
+        // x0 = 36, NOT 40 (2026-08-05). LA-1 made this groove reach the tunnel
+        // FLOOR; it never checked the groove reached it over enough LENGTH. The
+        // tunnel ends at x42.4, so starting at 40 left a 2.4 mm downward slot --
+        // against a servo connector head MEASURED at 9.8 x 4.6. A O4.6 sphere
+        // cannot traverse it (flood-fill verified), which is consistent with
+        // Aiden having to open this exact hole with a file and pliers on the
+        // 2026-08-02 femur. Starting at 36 gives a 6.4 mm overlap and it passes.
+        // Ramped ends -- see tibia.scad for the reasoning (CR-6 precedent: no
+        // square re-entrant corners on this part's tension face). Taper starts
+        // at x34 so the near ramp does not eat the tunnel overlap; full depth
+        // by x37, tunnel floor broken at ~x36.3 against a tunnel ending x42.4.
+        hull() {
+            translate([34, -8, SUB_FLOOR - EPS]) cube([EPS, 16, EPS]);
+            translate([37, -8, SUB_FLOOR - EPS])
+                cube([16, 16, (-19.05) - (SUB_FLOOR - EPS)]);
+            translate([56 - EPS, -8, SUB_FLOOR - EPS]) cube([EPS, 16, EPS]);
+        }
         // zip anchors: flank the tunnel exit + at the block edge.
         // LA-4 fix (2026-07-11): h=12 was a BLIND pocket (top z-11.2, 25.9mm
         // of solid slab remained above it to SLAB_Z1 14.7) -- a zip tie could

@@ -116,6 +116,21 @@ jobs:
         working-directory: hardware/cad/leg_v6
         run: python servo_orientation_gate.py
 
+      - name: Cable-exit patency
+        # Can the servo lead actually LEAVE the part? sts_pocket_neg's tunnel is
+        # SHARED, but the groove that lets it reach daylight is cut per-part, so
+        # a part can inherit the tunnel and never get an exit. tibia.scad did
+        # exactly that and shipped a blind pocket; check_fit's cable_checks()
+        # could not see it because it measures the loop SPAN BETWEEN ANCHORS and
+        # assumes the cable reaches them.
+        #
+        # Listed HERE and not left to build_all.sh: the mesh-health step above
+        # carries a note that it "ran ONLY from build_all.sh, which no workflow
+        # invokes — so the guard was never enforced in CI". Wiring a new gate
+        # into build_all.sh alone would repeat that exactly.
+        working-directory: hardware/cad/leg_v6
+        run: python check_cable_exit.py
+
   head-clearance:
     # #47 (SAFETY): FINE front-leg <-> head clearance. This existed as a script
     # since 2026-07 and was run by NOTHING -- no workflow, no build_all.sh. It
