@@ -19,7 +19,8 @@ CONVENTIONS
   * Unknown leg -> the intersection of the FRONT and REAR envelopes.
   * The table is a CLEARANCE boundary, not first contact: it was swept with a
     proximity test at rom_envelope_table.CLEARANCE_MM, so the required gap is
-    already inside the stored numbers. MARGIN_DEG is an extra hook, now 0.
+    already inside the stored numbers. MARGIN_DEG adds 1.5 deg ON TOP of that,
+    covering the producer's measured sampling scatter — see the constant.
 
 ⚠ This is the KINEMATIC truth. The scalars derived from it downstream —
 LegParams.hfe_max, nova.urdf.xacro hfe_fold, sim/nova_mjx/build_mjcf.HFE_FOLD and
@@ -48,9 +49,28 @@ from nova_ops.rom_envelope_table import ENVELOPE, HAAS, KFES
 # degree is not a distance: the retired 5 deg was worth ~5 mm at haa +40 but
 # noticeably more at haa 0, so it silently varied by posture.
 #
-# Kept at 0 as a deliberate hook — set it only to add margin ON TOP of the
-# measured gap, never as a substitute for regenerating the table.
-MARGIN_DEG = 0.0
+# NO LONGER 0 (2026-08-06). The table's per-cell number is not repeatable to the
+# tenth it is printed to: hfe_envelope.py poses a MONTE-CARLO point cloud
+# (trimesh.sample.sample_surface, 4000-5000 points per part), so re-drawing that
+# cloud moves the swept boundary even with the geometry byte-identical.
+#
+# MEASURED on this table's own producer, 150 cells (FL+RR x kfe -109/0/75 x all
+# 25 haa), geometry held fixed:
+#     two processes, same sample seed   ->   0/150 cells differ  (it IS
+#                                            deterministic; #195 seeding holds)
+#     four different sample seeds       -> 142/150 cells differ
+#                                          max spread 1.36 deg, p95 0.89,
+#                                          median 0.31
+# Reproduce by monkeypatching the `seed=` that load_leg_parts() passes to
+# sample_surface and re-running hfe_envelope.edge() over the same cells.
+#
+# So a stored bound can sit ~1.4 deg LOOSER than the geometry, and loose is the
+# unsafe direction — it grants fold the chassis does not actually allow. The
+# bisection's advertised ~0.08 deg resolves the SCAN, not the cloud.
+#
+# 1.5 covers the measured max with room. Cost is 1.5 deg of fold headroom; the
+# trot peak (+59.4 at haa 0) still clears by 5.4 deg.
+MARGIN_DEG = 1.5
 
 #: The ONE front/rear partition in this module. Everything end-keyed reads it —
 #: a second copy of this split is how a frame convention drifts out of sync with
@@ -136,8 +156,25 @@ def hfe_bounds(leg: Optional[str], haa: float, kfe: float) -> Tuple[float, float
     # measured front skirt contact at ~+55 and the published cap was +50.
     # Policy lives here, not in the table, so the margin is tunable and the
     # measurement stays a measurement.
-    lo, hi = lo + MARGIN_DEG, hi - MARGIN_DEG
-    if lo > hi:  # margin swallowed the cell — refuse it all
-        mid = 0.5 * (lo + hi)
-        lo = hi = mid
+    #
+    # THE MARGIN MAY NOT CROSS HOME. hfe 0 is the pose the table itself treats
+    # as always-admissible — a fully blocked cell is stored (0.0, 0.0), not as
+    # an empty interval — and the near-blocked cells around it are only a few
+    # tenths wide, so a 1.5 deg back-off would push their bounds PAST 0 and
+    # invert them. That is not conservatism, it is a fabricated answer: the
+    # consumer then has to invent a point, neighbouring cells invent DIFFERENT
+    # points, and the intersection over kfe that firmware_limits takes comes out
+    # empty — which is how the firmware backstop ended up advertising a -0.6 deg
+    # fold at a posture where the host allows exactly 0.0 (caught by
+    # test_firmware_window_is_NEVER_looser_than_the_host_gate). Clamping each
+    # end at home keeps every window non-empty and keeps home in all of them.
+    #
+    # Both ends are pulled toward `clamp(0, lo, hi)` and stop there, so the
+    # result can never invert and the old "margin swallowed the cell -> return
+    # the midpoint" branch is gone. It was unreachable at MARGIN_DEG = 0 and
+    # wrong the moment the margin was raised, which is the worst combination:
+    # a fallback nothing exercises until the day it decides a safety bound.
+    lo0, hi0 = lo, hi
+    lo = min(lo0 + MARGIN_DEG, max(lo0, min(0.0, hi0)))
+    hi = max(hi0 - MARGIN_DEG, min(hi0, max(0.0, lo0)))
     return math.radians(lo), math.radians(hi)

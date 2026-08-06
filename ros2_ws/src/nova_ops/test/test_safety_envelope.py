@@ -393,3 +393,33 @@ def test_rear_rows_are_kfe_dependent_again():
     i0 = HAAS.index(0)
     his = [ENVELOPE["RL"][k][i0][1] for k in KFES]
     assert max(his) - min(his) > 3.0, f"rear still flat across kfe: {his}"
+
+
+def test_margin_covers_the_producers_MEASURED_sampling_scatter():
+    """The table is printed to 0.1 deg it does not have (2026-08-06).
+
+    hfe_envelope.py poses a Monte-Carlo point cloud (sample_surface, 4000-5000
+    points per part). Re-drawing that cloud with the GEOMETRY BYTE-IDENTICAL
+    moved 142 of 150 measured cells, max spread 1.36 deg -- 17x the ~0.08 deg
+    the bisection advertises. Same seed twice is bit-identical, so this is
+    sampling noise, not the #195 nondeterminism.
+
+    A cell that lands LOOSE grants fold the chassis does not allow, so
+    MARGIN_DEG has to cover the observed spread. This asserts the constant did
+    not quietly go back to 0 (or below the number that justified it) -- and
+    that it is actually APPLIED, which a constant alone does not prove.
+    """
+    import math
+
+    from nova_ops.rom_envelope import MARGIN_DEG, hfe_bounds
+    from nova_ops.rom_envelope_table import ENVELOPE, HAAS
+
+    MEASURED_SCATTER_DEG = 1.36
+    assert MARGIN_DEG >= MEASURED_SCATTER_DEG, MARGIN_DEG
+
+    # applied, not merely declared: the returned bound must be exactly the
+    # front table cell pulled in by the margin.
+    i0 = HAAS.index(0)
+    raw_hi = ENVELOPE["FL"][0][i0][1]
+    got_hi = math.degrees(hfe_bounds("FL", 0.0, 0.0)[1])
+    assert got_hi == pytest.approx(raw_hi - MARGIN_DEG, abs=1e-6), (raw_hi, got_hi)

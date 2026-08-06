@@ -64,6 +64,22 @@ HFE_LO, HFE_HI = -95.0, 95.0
 # 5x the steps costs ~3 min for the whole sweep.
 COARSE = 0.5                              # deg, scan step
 FINE_ITERS = 5                            # bisection refinement -> ~0.08 deg
+# ...OF THE SCAN. That 0.08 is NOT the precision of the printed number, and the
+# table is printed to 0.1 as if it were. leg_cloud() poses a MONTE-CARLO point
+# cloud (load_leg_parts -> sample_surface, 4000-5000 points per part), so
+# re-drawing the cloud moves the boundary this bisects toward.
+#
+# MEASURED 2026-08-06, 150 cells (FL+RR x kfe -109/0/75 x all 25 haa), geometry
+# byte-identical, by overriding the seed= that load_leg_parts passes:
+#     same seed, two processes  ->   0/150 cells differ   (deterministic; the
+#                                    #195 seeding does hold here)
+#     four different seeds      -> 142/150 cells differ, max spread 1.36 deg,
+#                                  p95 0.89, median 0.31  -- ~17x the 0.08
+# A cell can therefore sit ~1.4 deg LOOSER than the geometry, which is the
+# unsafe direction. The consumer carries that as nova_ops.rom_envelope
+# MARGIN_DEG = 1.5; raising the sample counts here would shrink the scatter as
+# 1/sqrt(n) (4x the points to halve it) and is the real fix if the headroom is
+# ever needed back.
 
 
 def targets():
