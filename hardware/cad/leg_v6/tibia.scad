@@ -175,8 +175,25 @@ module tibia_v6() {
         // overlap 7 mm and the sphere passes. NB the femur's groove starts at
         // 40 against a tunnel ending at 42.4 -- a 2.4 mm slot -- and fails the
         // same test; that is the part Aiden had to open with a file and pliers.
-        translate([36, -8, SLAB_Z0 - EPS])
-            cube([24, 16, (-19.05) - (SLAB_Z0 - EPS)]);
+        // RAMPED ENDS, not square (2026-08-05). A raw cube leaves 90 deg
+        // re-entrant steps on the UNDERSIDE -- the TENSION fibre under ground
+        // reaction, cyclically loaded. That is precisely the defect CR-6 fixed
+        // on this same part's vent window ("zero fillet on its 4 vertical
+        // reentrant corners (FDM crack risk)"), so a square groove would be
+        // re-introducing it two features later. Nominal SF at the groove is
+        // 31-42 wet against the vent's 13.5, but a sharp corner (Kt ~3) hands
+        // most of that margin straight back.
+        //
+        // The taper starts at x34, NOT x36: ramping the near end would
+        // otherwise eat the tunnel overlap that makes the 9.8 x 4.6 plug fit.
+        // Full depth by x37; the groove breaks the tunnel floor (-19.80) at
+        // about x36.3, leaving ~6.7 mm of overlap against a tunnel ending x43.
+        hull() {
+            translate([34, -8, SLAB_Z0 - EPS]) cube([EPS, 16, EPS]);
+            translate([37, -8, SLAB_Z0 - EPS])
+                cube([20, 16, (-19.05) - (SLAB_Z0 - EPS)]);
+            translate([60 - EPS, -8, SLAB_Z0 - EPS]) cube([EPS, 16, EPS]);
+        }
 
         // zip anchors: flank the tunnel exit (strain relief before the
         // plug — cable tension must never reach the servo socket), plus

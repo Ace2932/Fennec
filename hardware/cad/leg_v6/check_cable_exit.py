@@ -44,11 +44,14 @@ while writing this, so they are recorded rather than rediscovered:
 
 WHAT IT DOES NOT PROVE
 ----------------------
-A sphere is a conservative proxy. The real connector is a prism that can enter
-nose-first and pivot, so a part failing this gate is not necessarily
-unassemblable -- the pre-2026-08-05 femur failed it and Aiden did get a lead
-through, with a file and pliers. Read a FAIL as "this needs force", which is
-its own defect on a part that must be serviced.
+The kernel is the plug's cross-section held in ONE orientation (wide axis across
+the tunnel, thin axis vertical). A real plug can enter nose-first and pivot, so a
+part failing this gate is not necessarily unassemblable -- the pre-2026-08-05
+femur failed it and Aiden did get a lead through, with a file and pliers. Read a
+FAIL as "this needs force", which is its own defect on a part that gets serviced.
+
+It also says nothing about the plug's LENGTH: a long housing may still foul on a
+corner the cross-section clears.
 """
 import os
 import pathlib
@@ -62,9 +65,23 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 import cad_contains  # noqa: E402  (#195 -- installed in main(); contains() is
                      # nondeterministic unseeded, and this gate is ALL contains())
 
-# Servo lead connector head MEASURED 2026-08-05: 9.8 x 4.6 mm. The thin axis is
-# what has to clear, so the passage must admit a sphere of that diameter.
-CONNECTOR_R = 2.3
+# Servo lead connector head MEASURED 2026-08-05: 9.8 x 4.6 mm.
+#
+# The kernel is the PLUG'S ACTUAL CROSS-SECTION, not a sphere. A sphere of the
+# thin axis (r=2.3) was the first version and it is BLIND TO WIDTH: it passes a
+# 5 mm groove, which cannot admit a 9.8 mm plug. That is the same "runs, reports
+# success, does not cover what it claims" failure this gate exists to catch, so
+# it is fixed rather than documented.
+#
+# Orientation: the plug travels along x with its WIDE axis across the tunnel
+# (19 mm wide, 5.9 mm tall) and its thin axis vertical -- the only way it fits.
+CONN_W = 9.8    # y, across the tunnel
+CONN_H = 4.6    # z, the thin axis
+CONN_L = 4.6    # x. NOT the housing length -- the smallest footprint the plug
+                # can present along the travel direction when pivoted nose-down.
+                # It must be non-zero: a purely 2D y-z kernel passes a 3 mm-long
+                # downward slot, which is how the x40 groove and main's femur
+                # (2.4 mm slot) slipped through the second version of this gate.
 STEP = 1.0
 
 # seed: a point known to sit inside the tunnel, in the part's own frame.
@@ -82,18 +99,23 @@ PARTS = {
 }
 
 
-def _passable(mesh, box, step, rad):
-    """Air cells with `rad` of clearance in every direction."""
+def _passable(mesh, box, step, w=CONN_W, h=CONN_H, l=CONN_L):
+    """Air cells that can host the plug: l in x, w in y, h in z."""
     (x0, x1), (y0, y1), (z0, z1) = box
     xs = np.arange(x0, x1 + step, step)
     ys = np.arange(y0, y1 + step, step)
     zs = np.arange(z0, z1 + step, step)
     pts = np.array([[x, y, z] for x in xs for y in ys for z in zs])
     air = (~mesh.contains(pts)).reshape(len(xs), len(ys), len(zs))
-    n = int(np.ceil(rad / step))
+    # anisotropic kernel: half-extents of the plug in y and z. x is left free --
+    # the plug is long in the travel direction and the flood handles that.
+    ni = int(np.floor((l / 2) / step))
+    nj = int(np.floor((w / 2) / step))
+    nk = int(np.floor((h / 2) / step))
     offs = [(i, j, k)
-            for i in range(-n, n + 1) for j in range(-n, n + 1) for k in range(-n, n + 1)
-            if (i * step) ** 2 + (j * step) ** 2 + (k * step) ** 2 <= rad * rad]
+            for i in range(-ni, ni + 1)
+            for j in range(-nj, nj + 1)
+            for k in range(-nk, nk + 1)]
     ok = air.copy()
     for i, j, k in offs:
         sh = np.roll(np.roll(np.roll(air, i, 0), j, 1), k, 2)
@@ -109,8 +131,8 @@ def _passable(mesh, box, step, rad):
     return xs, ys, zs, ok
 
 
-def patency(mesh, cfg, rad=CONNECTOR_R, step=STEP):
-    xs, ys, zs, ok = _passable(mesh, cfg["box"], step, rad)
+def patency(mesh, cfg, step=STEP):
+    xs, ys, zs, ok = _passable(mesh, cfg["box"], step)
     si = (int(np.abs(xs - cfg["seed"][0]).argmin()),
           int(np.abs(ys - cfg["seed"][1]).argmin()),
           int(np.abs(zs - cfg["seed"][2]).argmin()))
@@ -143,7 +165,7 @@ def main(argv):
     here = os.path.dirname(os.path.abspath(__file__))
     targets = argv[1:] or sorted(PARTS)
     bad = 0
-    print(f"-- cable-exit patency (O{2*CONNECTOR_R:.1f} connector head, flood fill from inside the tunnel) --")
+    print(f"-- cable-exit patency ({CONN_W} x {CONN_H} mm connector head, flood fill from inside the tunnel) --")
     for t in targets:
         stl = t if os.path.exists(t) else os.path.join(here, t + ".stl")
         key = os.path.basename(stl).replace(".stl", "")
@@ -157,9 +179,9 @@ def main(argv):
             print(f"   FAIL  {key}: seed is inside solid — the tunnel is not where this gate expects it")
             bad = 1
         elif esc:
-            print(f"   OK    {key}: a O{2*CONNECTOR_R:.1f} head can reach the outside ({n} cells)")
+            print(f"   OK    {key}: a {CONN_W} x {CONN_H} head can reach the outside ({n} cells)")
         else:
-            print(f"   FAIL  {key}: NO EXIT for a O{2*CONNECTOR_R:.1f} head — {n} cells of passable "
+            print(f"   FAIL  {key}: NO EXIT for a {CONN_W} x {CONN_H} head — {n} cells of passable "
                   f"void, none reaching outside. The servo lead cannot leave the part "
                   f"without force.")
             bad = 1

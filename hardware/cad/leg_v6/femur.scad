@@ -260,7 +260,16 @@ module femur_v6() {
         // cannot traverse it (flood-fill verified), which is consistent with
         // Aiden having to open this exact hole with a file and pliers on the
         // 2026-08-02 femur. Starting at 36 gives a 6.4 mm overlap and it passes.
-        translate([36, -8, SUB_FLOOR - EPS]) cube([20, 16, (-19.05) - (SUB_FLOOR - EPS)]);
+        // Ramped ends -- see tibia.scad for the reasoning (CR-6 precedent: no
+        // square re-entrant corners on this part's tension face). Taper starts
+        // at x34 so the near ramp does not eat the tunnel overlap; full depth
+        // by x37, tunnel floor broken at ~x36.3 against a tunnel ending x42.4.
+        hull() {
+            translate([34, -8, SUB_FLOOR - EPS]) cube([EPS, 16, EPS]);
+            translate([37, -8, SUB_FLOOR - EPS])
+                cube([16, 16, (-19.05) - (SUB_FLOOR - EPS)]);
+            translate([56 - EPS, -8, SUB_FLOOR - EPS]) cube([EPS, 16, EPS]);
+        }
         // zip anchors: flank the tunnel exit + at the block edge.
         // LA-4 fix (2026-07-11): h=12 was a BLIND pocket (top z-11.2, 25.9mm
         // of solid slab remained above it to SLAB_Z1 14.7) -- a zip tie could
