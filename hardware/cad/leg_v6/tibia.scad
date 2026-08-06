@@ -167,8 +167,16 @@ module tibia_v6() {
         //
         // ⚠️ check_fit.py's cable_checks() did NOT catch this: it measures the
         // knee-loop SPAN between anchors and assumes the cable can reach them.
-        translate([40, -8, SLAB_Z0 - EPS])
-            cube([20, 16, (-19.05) - (SLAB_Z0 - EPS)]);
+        // x0 = 36, NOT 40. The groove must OVERLAP the tunnel by more than the
+        // connector is thick, or the cable can reach the opening and still not
+        // get through it. Tunnel runs x36..~43; starting at 40 leaves a 3 mm
+        // downward slot against a 4.6 mm connector head, and a O4.6 sphere
+        // cannot traverse it (flood-fill verified). Starting at 36 makes the
+        // overlap 7 mm and the sphere passes. NB the femur's groove starts at
+        // 40 against a tunnel ending at 42.4 -- a 2.4 mm slot -- and fails the
+        // same test; that is the part Aiden had to open with a file and pliers.
+        translate([36, -8, SLAB_Z0 - EPS])
+            cube([24, 16, (-19.05) - (SLAB_Z0 - EPS)]);
 
         // zip anchors: flank the tunnel exit (strain relief before the
         // plug — cable tension must never reach the servo socket), plus

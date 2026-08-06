@@ -34,6 +34,12 @@ ls -la *_R.stl *_L.stl
 $PY ../mesh_health.py *_R.stl *_L.stl knee_arm.stl knee_bumper.stl shoulder.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl strap.stl grommet_insert.stl coax_hfe_block.stl coax_hfe_block_L.stl
 $PY check_fit.py --sweep
 $PY check_shoe.py
+# Can the servo lead actually LEAVE the part? sts_pocket_neg's cable tunnel is
+# SHARED, but the groove that lets it reach daylight is cut per-part -- so a
+# part can inherit the tunnel and never get an exit. tibia.scad did exactly
+# that and shipped a blind pocket; cable_checks() could not see it because it
+# measures the loop SPAN BETWEEN ANCHORS and assumes the cable reaches them.
+$PY check_cable_exit.py
 # Proves the hfe/kfe servos still seat only ONE way round. This is what backs
 # the derived hfe/kfe servo signs in nova_ops/safety_envelope/derived_signs.py:
 # loosen an arm relief and the flipped servo starts fitting, which silently
