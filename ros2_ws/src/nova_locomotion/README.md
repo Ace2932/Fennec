@@ -68,6 +68,23 @@ Roadmap: `docs/roadmap-trot-balance.md`. All pure-math, no rclpy in tests.
 - `tools/trot_metrics.py` — stage-3 tuning score (lower = better) +
   CSV CLI: `python -m nova_locomotion.tools.trot_metrics run.csv`.
 
+## Modules (added 2026-08-06, sim->real policy bridge, #289)
+- `policy_runner.py` — moved here verbatim from `sim/nova_mjx/deploy/`
+  (pure numpy, no ROS deps): the 105-d obs assembly + numpy MLP inference
+  the sim-trained RL policy needs. One copy; `sim/nova_mjx/deploy`'s own
+  tests still run against it (path-inserted at the new location).
+- `policy_node.py` — the rclpy glue (`ros2 run nova_locomotion policy_node`
+  / `ros2 launch nova_locomotion policy.launch.py`): `/joint_states` +
+  `/imu` + `/cmd_vel` -> policy_runner -> `/joint_commands`, through the
+  SAME `SafeJointCommandPublisher`/`_CountsAdapter` path `gait_node` uses.
+  Replaces the old `sim/nova_mjx/deploy/policy_node.py` scaffold, which
+  published to `/joint_goal_ticks` (zero subscribers) from outside the
+  buildable workspace. `PolicyGate` (pure, in this file) refuses inference
+  unless preflight has PASSed (reuses `controller.PreflightGate`), all 12
+  joints are calibrated, `/imu` is live, and `/nova/policy_enable` is
+  explicitly True — never auto-arms. Ramps from the measured pose to the
+  policy's own output over the first `ramp_ticks` after enable (anti-snap).
+
 ## ⚠️ Geometry status (updated 2026-07-06)
 Link lengths + hip offset MEASURED (106.9/129.0/64.3). Joint limits =
 the CAD gate ROM (haa ±15 conservative until homing fills the inboard

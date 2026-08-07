@@ -3,6 +3,12 @@ meet — on hardware a silent mismatch drives 12 servos with garbage. Numpy-only
 (no jax/brax), so it runs anywhere and fast.
 
   python -m pytest deploy/test_policy_contract.py -q
+
+policy_runner.py moved to nova_locomotion/policy_runner.py (#289; zero ROS
+imports, so it belongs beside nova_locomotion's other pure modules rather
+than forked). Path-inserted here rather than package-imported so this file
+keeps running standalone with no PYTHONPATH help, same as every other script
+in this directory (test_script_imports.py's whole point).
 """
 import os
 import sys
@@ -10,7 +16,9 @@ import tempfile
 
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "../../../ros2_ws/src/nova_locomotion/nova_locomotion")))
 from policy_runner import NovaPolicy, HIST, PROP   # noqa: E402
 
 OBS = HIST * PROP + 3 + 12   # 105

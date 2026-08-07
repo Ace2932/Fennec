@@ -102,6 +102,24 @@ class PreflightGate:
         return (not self.require) or self.passed
 
 
+def preflight_all_critical_ok(status_list) -> bool:
+    """True iff `status_list` (a DiagnosticStatus[], from a preflight
+    DiagnosticArray) has at least one 'critical' entry and none of them are
+    non-OK. The verdict PreflightGate.observe() needs (#285); pure so it is
+    shared rather than re-derived per subscriber (#289's policy_node gates on
+    the same /preflight/status the same way gait_node's node.py does).
+    DiagnosticStatus.OK == 0 by diagnostic_msgs convention — accepting plain
+    KeyValue-bearing objects here keeps this module rclpy/message-import-free.
+    """
+    OK = 0
+    critical = [
+        s
+        for s in status_list
+        if any(kv.key == "critical" and kv.value == "True" for kv in s.values)
+    ]
+    return bool(critical) and all(s.level == OK for s in critical)
+
+
 def positions_to_pose(positions, id_map: Dict[str, int]) -> Pose:
     """Inverse of pose_to_positions (e.g. /joint_states -> start_pose)."""
     pose: Dict[str, list] = {leg: [0.0, 0.0, 0.0] for leg in LEGS}
