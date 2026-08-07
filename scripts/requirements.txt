@@ -1,0 +1,13 @@
+# scripts/ dependency set (#287). Install: proj/.venv/bin/pip install -r scripts/requirements.txt
+#
+# pyserial: set-servo-ids.py talks raw Feetech protocol over a serial port
+# (FE-URT-1 / Teensy USB-CDC). Was imported with no declared dependency
+# anywhere in the repo before this file.
+pyserial
+
+# PyYAML: set-servo-ids.py --verify-fleet loads joint_id_map.yaml directly
+# (repo-relative, not via the nova_ops/ROS package). Also undeclared as a
+# pip dependency anywhere in the repo pre-#287 — nova_ops/nova_calibration
+# only get it via ROS's package.xml rosdep, which this standalone script
+# doesn't go through.
+pyyaml
