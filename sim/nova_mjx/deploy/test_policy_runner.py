@@ -3,6 +3,11 @@ builds must equal the obs the policy trained on, or transfer silently fails.
 
 Needs the sim venv (jax/brax/mujoco). Run from sim/nova_mjx/:
   JAX_PLATFORMS=cpu python deploy/test_policy_runner.py
+
+policy_runner.py moved to nova_locomotion/policy_runner.py (#289; zero ROS
+imports, so it belongs beside nova_locomotion's other pure modules rather
+than forked) — path-inserted below rather than package-imported so this
+still runs standalone with no PYTHONPATH help.
 """
 import os
 import pickle
@@ -12,6 +17,9 @@ import tempfile
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "../../../ros2_ws/src/nova_locomotion/nova_locomotion")))
 
 
 def _export_untrained_npz(path):

@@ -108,8 +108,6 @@ before training. **Headless (Colab/servers): `MUJOCO_GL=egl python rollout.py �
 
 ## 5. Deploy to the Jetson
 
-Scaffold is in `deploy/`. Pipeline:
-
 ```bash
 # export the trained policy (on the training machine / Colab)
 python export_policy.py --policy nova_policy.pkl   # -> nova_policy.npz (+ .onnx)
@@ -119,21 +117,31 @@ python export_policy.py --policy nova_policy.pkl   # -> nova_policy.npz (+ .onnx
   MLP) into `nova_policy.npz` (**numpy weights — the Jetson runs it with zero
   heavy deps**) and `nova_policy.onnx` (portable, optional). Verified numerically
   against the Brax policy (~1e-8).
-- **`deploy/policy_runner.py`** — framework-free runner (numpy only). `build_obs`
-  reproduces sim's 105-d history obs EXACTLY; `joint_targets(sensors) -> 12 rad targets`.
-- **`deploy/policy_node.py`** — ROS 2 node: joint state + IMU + `cmd_vel` @ 50 Hz
-  → policy → `/joint_commands`, gated on `/safety_state`. Moves into
-  `nova_locomotion` beside the scripted-trot fallback when real.
-- **`deploy/test_policy_runner.py`** — cross-checks `build_obs` against the sim
-  env byte-for-byte (obs mismatch = silent transfer failure). Passing.
+- The ROS 2 bridge is `ros2_ws/src/nova_locomotion/nova_locomotion/policy_node.py`
+  (#289) — a real colcon package now, not a scaffold. `joint_states` + `imu` +
+  `cmd_vel` @ 50 Hz → policy → `/joint_commands`, through the SAME
+  `SafeJointCommandPublisher` + homing-calibration path `gait_node` uses,
+  gated on preflight + full (12/12) calibration + a live `/imu` + explicit
+  arming (`/nova/policy_enable`, default off):
+  `ros2 launch nova_locomotion policy.launch.py policy_npz:=nova_policy.npz`.
+  `deploy/policy_runner.py` moved with it, to
+  `nova_locomotion/policy_runner.py` — same pure numpy module, one copy.
+  `deploy/policy_node.py` is now a deprecation stub (raises on import) so the
+  old `/joint_goal_ticks` topic (zero subscribers) can't come back by accident.
+- **`policy_runner.py`** (now under `nova_locomotion/`) — framework-free
+  runner (numpy only). `build_obs` reproduces sim's 105-d history obs
+  EXACTLY; `joint_targets(sensors) -> 12 rad targets`.
+- **`deploy/test_policy_runner.py`** / **`deploy/test_policy_contract.py`** —
+  still live here (path-inserted at the new `policy_runner.py` location) and
+  still pass; `test_policy_runner.py` cross-checks `build_obs` against the sim
+  env byte-for-byte (obs mismatch = silent transfer failure), `test_policy_contract.py`
+  checks the same numpy-only, no jax/brax needed. `nova_locomotion/test/test_policy_runner.py`
+  carries the numpy-only contract checks into the ros-pytest CI job.
 
-⚠ **Bench-blocked hardware bindings** (marked ⛏ in `policy_node.py`), each
-transfer-critical: **joint order** (URDF ↔ Feetech IDs via `joint_id_map.yaml`),
-**rad↔ticks** (nova_calibration home offsets — same zeros the sim assumes), **IMU
-frame** (ICM-42688-P axes → trunk frame; needs the IMU integrated), **foot
-contact** (no sensors — estimate or retrain without those 4 obs), **safety**
-(clamp to limits, ramp from current pose, harness bring-up). See the
-sim-to-real reality-check before trusting any of it.
+⚠ Still bench-blocked: no IMU driver yet (#14) — `policy_node.py` refuses to
+enable without a live `/imu` stream, by design, until the ICM-42688-P lands.
+And no checkpoint has been pulled onto the robot yet (#288) — the node refuses
+to start at all without a `policy_npz` that exists on disk.
 
 ## Provisional / to refine
 
