@@ -45,6 +45,18 @@ class JogRefused(Exception):
 # ---- pure logic (no rclpy — testable directly) --------------------------
 
 
+def deg_to_raw(deg: float) -> float:
+    """Degrees -> raw servo counts, no calibration (--raw mode only).
+
+    RAW_PER_RAD is counts per RADIAN (firmware_limits.py), so degrees must
+    go through radians() first — skipping that step here was a 57x
+    overshoot (5 deg computed as 3259 counts instead of ~56.9) and made the
+    --raw safety cap unreachable (15 deg computed as 9779 counts, past the
+    whole 0..4095 range).
+    """
+    return math.radians(deg) * RAW_PER_RAD
+
+
 def resolve_joint(joint_arg: str, id_map: Dict[str, int]) -> Tuple[int, str]:
     """--joint accepts a name (e.g. FL_hfe) or a bus id (1-12)."""
     if joint_arg.lstrip("-").isdigit():
@@ -193,11 +205,12 @@ def _run(node, args) -> int:
             file=sys.stderr,
         )
         present = raw_positions[bus_id - 1]
-        delta = args.delta_deg * RAW_PER_RAD if args.delta_deg is not None else None
-        to = args.to_deg * RAW_PER_RAD if args.to_deg is not None else None
+        delta = deg_to_raw(args.delta_deg) if args.delta_deg is not None else None
+        to = deg_to_raw(args.to_deg) if args.to_deg is not None else None
         try:
             target, clamped = compute_target(
-                present, delta, to, RAW_MIN, RAW_MAX, cap_deg * RAW_PER_RAD, args.force
+                present, delta, to, RAW_MIN, RAW_MAX,
+                deg_to_raw(cap_deg), args.force,
             )
         except JogRefused as e:
             print(f"refusing: {e}", file=sys.stderr)

@@ -17,8 +17,36 @@ from nova_ops.jog import (
     check_calibration,
     clamp_hfe_posture,
     compute_target,
+    deg_to_raw,
     resolve_joint,
 )
+
+
+# ---- deg_to_raw (--raw mode unit conversion) ------------------------------
+
+
+def test_deg_to_raw_five_degrees_is_about_57_counts():
+    """5 deg should be ~4096*5/360 ~= 56.9 raw counts. Locks the bug where
+    RAW_PER_RAD (counts per RADIAN) was applied straight to a degrees value
+    with no radians() step, an ~57x overshoot (5 deg -> 3259 counts)."""
+    assert deg_to_raw(5.0) == pytest.approx(4096 * 5 / 360, rel=1e-3)
+
+
+def test_raw_mode_cap_refuses_large_delta_without_force():
+    """Negative control for the cap-never-binds half of the same bug: with
+    the fix, deg_to_raw(20) > deg_to_raw(15) so a 20 deg raw-mode delta must
+    REFUSE without --force. Before the fix both were computed in COUNTS
+    already past 0..4095 for any joint, so raw mode's cap could never bind."""
+    with pytest.raises(JogRefused, match="exceeds the"):
+        compute_target(
+            present=2048.0,
+            delta=deg_to_raw(20.0),
+            to=None,
+            lower=0.0,
+            upper=4095.0,
+            cap=deg_to_raw(15.0),
+            force=False,
+        )
 
 
 # ---- compute_target ------------------------------------------------------
