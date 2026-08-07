@@ -461,7 +461,8 @@ def test_the_trot_has_a_SMALL_BUT_REAL_inboard_haa_tolerance():
 
 def test_deep_inboard_haa_plus_deep_fold_is_REFUSED():
     """The failure this exists to catch: a host bug commanding the leg inboard
-    under the LiPo AND folded. The gate caps fold at +13.8 deg at haa -15."""
+    under the LiPo AND folded. The gate caps fold at +12.3 deg at haa -15
+    (13.8 measured, less rom_envelope.MARGIN_DEG)."""
     import math
 
     from nova_ops.safety_envelope.firmware_limits import (
@@ -479,7 +480,7 @@ def test_deep_inboard_haa_plus_deep_fold_is_REFUSED():
         if body[o] <= haa_raw <= body[o + 1]:
             assert not (body[o + 2] <= bad_raw <= body[o + 3]), (
                 "a +50 deg fold at haa -15 must be refused: the gate caps it "
-                "at +13.8 deg there, which is why a scalar cannot do this job"
+                "at +12.3 deg there, which is why a scalar cannot do this job"
             )
             return
     raise AssertionError("no bucket contains haa -15")

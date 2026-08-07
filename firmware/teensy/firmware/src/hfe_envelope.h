@@ -5,11 +5,16 @@
 // far a leg may fold depends on where that leg's HIP is. Measured on the
 // chassis gate (nova_ops.rom_envelope), front leg:
 //
-//     haa   0 -> fold cap +67.9 deg
-//     haa -15 -> fold cap +13.8 deg      leg tucked inboard, under the LiPo
+//     haa   0 -> fold cap +66.4 deg
+//     haa -15 -> fold cap +12.3 deg      leg tucked inboard, under the LiPo
+//
+// (Those are the HOST's numbers, i.e. the table with rom_envelope.MARGIN_DEG
+// applied — 1.5 deg since 2026-08-06, covering the producer's measured sampling
+// scatter. The raw table cells are 67.9 and 13.8; what gets published here is
+// the margined pair, so quote the margined pair.)
 //
 // A scalar cap is therefore permissive exactly where the hazard is. One that
-// covered the whole legal haa range would have to be +13.8, which deletes the
+// covered the whole legal haa range would have to be +12.3, which deletes the
 // gait (the trot peaks at +59.4). So the bound has to see posture.
 //
 // WHAT THIS IS NOT. It is not a chassis model and does no geometry. The host
