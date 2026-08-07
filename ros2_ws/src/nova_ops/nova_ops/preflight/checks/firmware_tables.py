@@ -37,6 +37,16 @@ class FirmwareTablesCheck(Check):
         return "firmware_tables"
 
     def run(self, node) -> "CheckResult":
+        # ROS imports are deferred to run() ON PURPOSE, same convention as
+        # bus_ping.py: importing the check REGISTRY must not require a ROS
+        # runtime. This file's module-scope comment (below) described that
+        # convention but nobody actually put the imports here (#283) — every
+        # call to run() raised NameError on QoSProfile/rclpy/String, so
+        # preflight could never pass a single robot.
+        import rclpy
+        from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
+        from std_msgs.msg import String
+
         latest = {"val": None}
 
         def cb(msg):
