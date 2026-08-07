@@ -128,8 +128,9 @@ seat is a cone.
 2. **Bag and label the M2×8 and M2×12 separately.** That kit is mostly 14–25 mm in the same
    head and finish, and **anything over 12 bottoms** in the 7 mm blind column.
 
-⬜ Still open: **M3 nyloc ×4** (shoulder flange feet, CR-8 #2). The owned kit has 140 *plain*
-M3 nuts, not nylon-insert. Small buy.
+✅ **M3 nyloc — ORDERED 2026-08-06, arrives Thu 2026-08-07** (shoulder flange feet ×4, CR-8 #2):
+Vifmy 230 pc M3-0.5 nylon-insert, 304 SS A2-70, `B0CPJF21KP`, $10.76. Was the last open
+fastener line — the owned kit has 140 *plain* M3 nuts, not nylon-insert.
 
 ### ✅ Owned M3 inventory — CONTENTS RECORDED 2026-08-03
 
