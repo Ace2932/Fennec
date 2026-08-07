@@ -305,7 +305,7 @@ Post-Jetson-flash install list (Phase 1):
    - Verify INA226 per-rail I²C reads sane current/voltage values under load.
 
 3. **Servo bring-up**
-   - **ID assignment via Pattern A path** (FE-URT-1 → single servo on bench): can be done pre-PCB (Week 1-2 while waiting for PCB v6) by wiring FE-URT-1 directly to servo, or post-PCB by flipping `JP_BUS_MASTER` to A. Assign IDs **1-12 for v1** (4 hips, 8 femur/tibia), label each. IDs 13-18 reserved for future arm. Use Feetech FD (Windows) or SCServo SDK Python.
+   - **ID assignment via Pattern A path** (FE-URT-1 → single servo on bench): can be done pre-PCB (Week 1-2 while waiting for PCB v6) by wiring FE-URT-1 directly to servo, or post-PCB by flipping `JP_BUS_MASTER` to A. Assign IDs **1-12 for v1** (4 hips, 8 femur/tibia), label each. IDs 13-18 reserved for future arm. Use `scripts/set-servo-ids.py` (byte-correct raw Feetech protocol, no external SDK) — full walkthrough + `--verify-fleet` in `docs/setup-servos.md`.
    - **Flip `JP_BUS_MASTER` to Pattern B** (v1 default). Teensy firmware running: micro-ROS + half-duplex driver via SN74LVC125A.
    - Single-servo test via Teensy: subscribe to `/joint_commands`, publish `/joint_states`. Verify with `ros2 topic echo` from Jetson.
    - Full 12-servo daisy chain: continuity check unpowered, then ping-all powered via Teensy.
