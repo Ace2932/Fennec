@@ -446,6 +446,19 @@ setsid bash -c "source /opt/ros/humble/setup.bash && \
 
 ### 14.8 Smoke test
 
+⚠ **`/joint_commands` is RAW SERVO COUNTS (0..4095), not radians, and NOT
+degrees.** `main.cpp`'s `joint_cmd_callback` (firmware/teensy/firmware/src/
+main.cpp:568-574) writes `msg.position[i]` straight into
+`latched_cmd_position[i]`, and `broadcast_servo_commands()` (main.cpp:
+342-414) casts that DIRECTLY to a `uint16_t` and sync-writes it to the bus —
+no unit conversion, no calibration. There is also no in-process wrapper on
+this topic outside the gait controller (`SafeJointCommandPublisher` +
+`_CountsAdapter`, `nova_locomotion/node.py`) — a bare `ros2 topic pub` goes
+straight to the firmware. `{position: [0.1, 0, ...]}`, which reads like a
+tiny radian nudge, actually commands raw count ~0 on every joint: one end of
+travel, on every leg, at once. **Never `ros2 topic pub` to `/joint_commands`
+by hand.**
+
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/local_setup.bash
@@ -455,8 +468,29 @@ ros2 topic list
 
 ros2 topic echo /heartbeat            # 1 Hz Int32, increments
 ros2 topic echo /loop_p99_us --once   # 200 Hz loop p99 in microseconds
-ros2 topic pub --once /joint_commands sensor_msgs/msg/JointState \
-  '{position: [0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}'
+ros2 topic echo /joint_states --once  # confirm the bridge is alive BEFORE commanding anything
+```
+
+**After homing** (calibration artifact present, `nova_calibration`'s homing
+run has completed), jog a single joint with `ros2 run nova_ops jog` (#286):
+it reads `/joint_states`, converts through the same calibration + limits
+table + posture envelope the gait controller uses, and republishes all 12
+joints (the other 11 held at their present position, never zeros):
+
+```bash
+ros2 run nova_ops jog --joint FL_hfe --delta-deg 5   # +5 deg nudge, clamped + capped at 15 deg
+ros2 topic echo /joint_cmd_rx_count --once           # increments by 1 per cmd
+```
+
+**Before homing** (no calibration yet — the state this smoke test usually
+runs in), `jog` refuses to convert through calibration that doesn't exist.
+Use `--raw --delta-deg 0`: with a zero delta the target equals the joint's
+own present raw count, so the republished 12-vector is identical to what
+`/joint_states` already reported — nothing moves — but `/joint_commands`
+still gets a message, which is all `joint_cmd_rx_count` is checking:
+
+```bash
+ros2 run nova_ops jog --joint FL_haa --delta-deg 0 --raw
 ros2 topic echo /joint_cmd_rx_count --once   # increments by 1 per cmd
 ```
 

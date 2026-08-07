@@ -49,6 +49,11 @@ setup(
             "watchdog_node = nova_ops.watchdog.node:main",
             # `ros2 run nova_ops lidar_selffilter_node` — drop the robot's own ear-mast returns before SLAM
             "lidar_selffilter_node = nova_ops.lidar_selffilter.node:main",
+            # `ros2 run nova_ops jog` — safe single-joint jog CLI (#286): reads
+            # /joint_states, converts+clamps through the same calibration/limits/
+            # posture path gait_node uses, replaces the raw `ros2 topic pub`
+            # smoke-test hazard (raw servo counts, no clamp, all-12-joints).
+            "jog = nova_ops.jog:main",
         ],
     },
 )
