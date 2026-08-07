@@ -14,6 +14,15 @@ Topology (the project-policy publish path, wrapper.py docstring):
   SafeJointCommandPublisher (clamp/refuse) -> _CountsAdapter ->
   /joint_commands
 
+PREFLIGHT GATE (#285): bringup.launch.py documents "gait controller MUST
+run preflight and check exit code before enabling motion" but nothing
+implemented it. This node subscribes to /preflight/status (the
+DiagnosticArray preflight already publishes on every ~/run) and feeds a
+PreflightGate (controller.py, pure/tested rclpy-free): GaitController
+refuses to leave idle until every critical check has reported OK at
+least once. Bypass with the `require_preflight:=false` param for bench
+debugging without a preflight chain up — logs a loud warning once.
+
 UNITS — WIRE-AT-CALIBRATION: positions here are RADIANS end to end;
 firmware main.cpp reads /joint_commands as RAW STS3215 COUNTS. The
 conversion happens AFTER the envelope (limits are radians), in both
@@ -43,6 +52,7 @@ purpose: the firmware reads the whole array in ONE unit.
 from __future__ import annotations
 
 import rclpy
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
@@ -51,6 +61,7 @@ from std_msgs.msg import String
 from nova_locomotion.controller import (
     ControllerParams,
     GaitController,
+    PreflightGate,
     positions_to_pose,
 )
 from nova_locomotion.gait.backlash import BacklashComp
@@ -152,9 +163,23 @@ class GaitNode(Node):
         self.declare_parameter("home_raw", [0.0] * 12)
         self.declare_parameter("urdf_sign", [0] * 12)  # 0 = unknown
         self.declare_parameter("calibration_path", DEFAULT_CALIBRATION_PATH)
+        # #285: refuse motion modes until preflight has been observed to
+        # pass. True is the safe default; bench debugging without a
+        # preflight chain up needs an explicit, loud opt-out.
+        self.declare_parameter("require_preflight", True)
 
         self.id_map = load_joint_id_map()
-        self.controller = GaitController(ControllerParams(), BacklashComp())
+        require_preflight = bool(self.get_parameter("require_preflight").value)
+        if not require_preflight:
+            self.get_logger().warn(
+                "!!! require_preflight:=false — gait_node will accept motion "
+                "modes WITHOUT ever observing a preflight PASS. Bench "
+                "debugging only. Do not run this against real servos. !!!"
+            )
+        self.preflight_gate = PreflightGate(require=require_preflight)
+        self.controller = GaitController(
+            ControllerParams(), BacklashComp(), gate=self.preflight_gate
+        )
         self.cmd_vel = (0.0, 0.0)  # stored for the stage-4 Raibert lane
         self._current_positions = None  # last /joint_states positions
 
@@ -168,6 +193,12 @@ class GaitNode(Node):
         self.create_subscription(JointState, "/joint_states", self._on_states, 10)
         self.create_subscription(String, "/nova/mode", self._on_mode, 10)
         self.create_subscription(Twist, "/cmd_vel", self._on_cmd_vel, 10)
+        # Absolute topic name — preflight.launch.py remaps its node-relative
+        # ~/status to this (#285). Not namespace-relative: gait_node may run
+        # under a different namespace than preflight.
+        self.create_subscription(
+            DiagnosticArray, "/preflight/status", self._on_preflight_status, 10
+        )
         self.create_timer(1.0 / RATE_HZ, self._tick)
         self.get_logger().info("gait_node up: modes idle|stand_up|sit|crawl|trot")
 
@@ -221,6 +252,18 @@ class GaitNode(Node):
                 if converted is not None:
                     pos = converted
             self._current_positions = pos
+
+    def _on_preflight_status(self, msg: DiagnosticArray) -> None:
+        # Mirrors PreflightNode._on_run's own verdict (critical FAIL blocks):
+        # pass iff there's at least one critical entry and none of them are
+        # non-OK. KeyValue 'critical' is stringified True/False (node.py).
+        critical = [
+            s
+            for s in msg.status
+            if any(kv.key == "critical" and kv.value == "True" for kv in s.values)
+        ]
+        ok = bool(critical) and all(s.level == DiagnosticStatus.OK for s in critical)
+        self.preflight_gate.observe(ok)
 
     def _on_mode(self, msg: String) -> None:
         mode = msg.data.strip()

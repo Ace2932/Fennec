@@ -12,6 +12,7 @@ from nova_locomotion.controller import (
     LEGS,
     ControllerParams,
     GaitController,
+    PreflightGate,
     gait_pose,
     pose_to_positions,
     positions_to_pose,
@@ -118,6 +119,48 @@ def test_gait_modes_produce_rom_valid_poses_over_a_cycle():
 def test_gait_pose_rejects_non_gait_mode():
     with pytest.raises(ValueError):
         gait_pose("stand_up", 0.0, P)
+
+
+# ---- preflight gate (#285) --------------------------------------------------
+
+
+def test_preflight_gate_allows_idle_before_any_observation():
+    gate = PreflightGate()
+    assert gate.allows("idle") is True
+    assert gate.allows("trot") is False
+
+
+def test_preflight_gate_blocks_motion_modes_until_observed_ok():
+    gate = PreflightGate()
+    assert gate.allows("stand_up") is False
+    gate.observe(False)  # e.g. preflight ran and a critical check FAILed
+    assert gate.allows("stand_up") is False
+    gate.observe(True)
+    assert gate.allows("stand_up") is True
+
+
+def test_preflight_gate_bypass_when_not_required():
+    gate = PreflightGate(require=False)
+    assert gate.allows("trot") is True  # no observe() needed
+
+
+def test_gait_controller_set_mode_refuses_motion_before_preflight():
+    gate = PreflightGate()
+    c = GaitController(P, gate=gate)
+    with pytest.raises(ValueError):
+        c.set_mode("stand_up", now=0.0)
+    assert c.mode == "idle"  # refused switch left the mode machine alone
+    # idle itself is never refused
+    c.set_mode("idle", now=0.0)
+    assert c.mode == "idle"
+
+
+def test_gait_controller_set_mode_accepts_motion_after_preflight_observed():
+    gate = PreflightGate()
+    gate.observe(True)
+    c = GaitController(P, gate=gate)
+    c.set_mode("stand_up", now=0.0)
+    assert c.mode == "stand_up"
 
 
 # ---- backlash wiring --------------------------------------------------------

@@ -100,11 +100,17 @@ PROFILES = {
                 "foxglove_bridge",
                 {"port": 8765, "address": "0.0.0.0"},
             ),
-            # Gait controller doesn't exist yet (Phase 2 deliverable).
-            # ('node', 'nova_gait', 'gait_controller', {}),
-            # Safety envelope is a library wrapped INSIDE gait_controller's
+            # Gait controller (#285 — this used to say package 'nova_gait',
+            # executable 'gait_controller', neither of which ever existed;
+            # verified against nova_locomotion/setup.py entry_points:
+            # "gait_node = nova_locomotion.node:main"). Refuses to leave
+            # idle until it observes a preflight PASS on /preflight/status
+            # (see nova_locomotion/node.py PreflightGate; bypass with the
+            # require_preflight:=false node param for bench debugging).
+            ("node", "nova_locomotion", "gait_node", {}),
+            # Safety envelope is a library wrapped INSIDE gait_node's
             # publisher path — no separate node. The counters topic is
-            # published by gait_controller via the wrapper.
+            # published by gait_node via the wrapper.
         ],
     },
     "full": {
