@@ -89,15 +89,18 @@ def _compose(context, *args, **kwargs):
             out.append(LogInfo(msg=f'  [unknown] {action}'))
 
     # Preflight gate — but we don't BLOCK launch, just log a reminder.
-    # Real gating happens at the gait-controller level via the CLI exit
-    # code (the gait controller's startup script should run
-    # `ros2 run nova_ops preflight` and refuse to spawn the gait loop on
-    # non-zero exit). Mention this loudly.
+    # Real gating (#285) happens inside gait_node: it subscribes to
+    # /preflight/status (the DiagnosticArray preflight already publishes)
+    # and refuses to leave idle/command motion until every critical check
+    # has reported OK. Bypass is the require_preflight:=false node param
+    # (bench debugging only). Bringup itself still doesn't enforce launch
+    # ORDER — this is a reminder, not a guarantee.
     if profile.get('preflight') and not no_preflight and not dry_run:
         out.append(LogInfo(
-            msg='[bringup] gate: gait controller MUST run '
-                '`ros2 run nova_ops preflight` and check exit code before '
-                'enabling motion. Bringup does not enforce this.'))
+            msg='[bringup] gate: gait_node refuses motion until it observes '
+                'a preflight PASS on /preflight/status (see nova_locomotion '
+                'node.py PreflightGate). Start preflight before commanding '
+                'motion modes.'))
 
     return out
 

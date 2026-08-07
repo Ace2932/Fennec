@@ -51,6 +51,15 @@ def adapter_cls():
     _stub("std_msgs.msg", String=type("String", (), {}),
           Bool=type("Bool", (), {}), Int32=type("Int32", (), {}),
           Float32MultiArray=type("Float32MultiArray", (), {}))
+    _stub("diagnostic_msgs")
+    _stub(
+        "diagnostic_msgs.msg",
+        DiagnosticArray=type("DiagnosticArray", (), {}),
+        # #285: gait_node's preflight gate reads .level against these.
+        DiagnosticStatus=type(
+            "DiagnosticStatus", (), {"OK": 0, "WARN": 1, "ERROR": 2, "STALE": 3}
+        ),
+    )
 
     from nova_locomotion.node import _CountsAdapter
 

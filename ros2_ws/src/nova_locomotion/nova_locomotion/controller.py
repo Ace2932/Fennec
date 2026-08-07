@@ -68,6 +68,40 @@ def pose_to_positions(pose: Pose, id_map: Dict[str, int]) -> List[float]:
     return out
 
 
+class PreflightGate:
+    """Pure require/observe interlock (#285).
+
+    bringup.launch.py documents "gait controller MUST run preflight and
+    check exit code before enabling motion", but nothing implemented it —
+    gait_node never consulted preflight. This is the minimal mechanism:
+    node.py's /preflight/status subscription (the DiagnosticArray
+    preflight already publishes) feeds observe(), GaitController.set_mode
+    consults allows() before leaving idle. idle never publishes motion
+    (GaitController.update returns None/holds), so gating mode changes is
+    sufficient to gate motion commands.
+
+    require=False bypasses the gate entirely for bench debugging without
+    a preflight chain up — callers MUST log a loud warning when
+    constructing with require=False (see GaitNode.__init__).
+    """
+
+    def __init__(self, require: bool = True):
+        self.require = require
+        self.passed = False
+
+    def observe(self, all_critical_ok: bool) -> None:
+        """Feed the latest preflight verdict (all critical checks OK?)."""
+        self.passed = bool(all_critical_ok)
+
+    def allows(self, mode: str) -> bool:
+        """May the controller switch to `mode`? idle is always allowed (it
+        never commands motion); every other mode needs either an observed
+        preflight PASS or an explicit bypass."""
+        if mode == "idle":
+            return True
+        return (not self.require) or self.passed
+
+
 def positions_to_pose(positions, id_map: Dict[str, int]) -> Pose:
     """Inverse of pose_to_positions (e.g. /joint_states -> start_pose)."""
     pose: Dict[str, list] = {leg: [0.0, 0.0, 0.0] for leg in LEGS}
@@ -112,9 +146,11 @@ class GaitController:
         self,
         params: ControllerParams = ControllerParams(),
         backlash: Optional[BacklashComp] = None,
+        gate: Optional[PreflightGate] = None,
     ):
         self.p = params
         self.backlash = backlash  # keyed by joint NAME when present
+        self.gate = gate  # #285 preflight interlock; None = no gating
         self.mode = "idle"
         self._t0 = 0.0
         self._frames: List[Pose] = []  # active choreo sequence
@@ -127,6 +163,13 @@ class GaitController:
         (post-E-stop rule, choreo/stand.py)."""
         if mode not in MODES:
             raise ValueError(f"unknown mode {mode!r} (modes: {MODES})")
+        if self.gate is not None and not self.gate.allows(mode):
+            raise ValueError(
+                f"preflight gate: refusing to switch to {mode!r} until a "
+                "preflight PASS has been observed on /preflight/status "
+                "(bypass with the require_preflight:=false launch arg for "
+                "bench debugging)"
+            )
         start = current_pose or self._hold
         if mode == "stand_up":
             self._frames = list(stand_up(self.p.choreo, start_pose=start))
