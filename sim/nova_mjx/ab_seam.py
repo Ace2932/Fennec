@@ -128,12 +128,17 @@ def foot_x(xml_path):
     return float(d.geom_xpos[g][0])
 
 
-def run_arm(xml_path, policy_path, episodes, steps, vx, wz):
+def run_arm(xml_path, policy_path, episodes, steps, vx, wz, heightmap=False):
     """Roll the policy in one geometry. Returns a dict of per-episode arrays."""
     from env import NovaJoystick
     from rollout import load_policy          # normalize_observations fix lives there
 
-    env = NovaJoystick(xml=xml_path)
+    # heightmap= must match what the CHECKPOINT was trained with, or
+    # load_policy's normalizer shape-mismatches against env.observation_size
+    # (a 226-d teacher against a 234-d env is how this first surfaced). Every
+    # checkpoint on Drive as of 2026-08-08 is a tier-2 teacher, so this flag is
+    # not optional for any of them.
+    env = NovaJoystick(xml=xml_path, heightmap=heightmap)
     policy = load_policy(policy_path, env.observation_size, env.action_size)
     act = jax.jit(policy)
     jit_reset, jit_step = jax.jit(env.reset), jax.jit(env.step)
@@ -239,6 +244,9 @@ def main():
                     help="exercise the guards without a checkpoint: build the three "
                          "geometries, confirm they differ by the right amounts, and "
                          "plant the failures the guards exist to catch")
+    ap.add_argument("--heightmap", action="store_true",
+                    help="build the PRIVILEGED teacher env (obs 234, not the blind 105). "
+                         "Required for every checkpoint currently on Drive.")
     ap.add_argument("--episodes", type=int, default=32)
     ap.add_argument("--steps", type=int, default=500)
     ap.add_argument("--vx", type=float, default=0.5)
@@ -275,7 +283,7 @@ def main():
     res = {}
     for k, p in xmls.items():
         print(f"rolling {k} ({args.episodes} eps x {args.steps} steps)...")
-        res[k] = run_arm(p, args.policy, args.episodes, args.steps, args.vx, args.wz)
+        res[k] = run_arm(p, args.policy, args.episodes, args.steps, args.vx, args.wz, args.heightmap)
 
     print("\nper-arm means")
     for k in ARMS:
