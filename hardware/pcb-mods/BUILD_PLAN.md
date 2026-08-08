@@ -311,11 +311,40 @@ Leaded first, lead-free in brackets. These are *tip setpoints*, not pad temperat
 | stages | parts | tip | setpoint |
 |---|---|---|---|
 | 1, 2, 5 | 0603, SOT-23, SOD-123F | TS-ILS | **320 °C** (350) |
+| **5 — `BATT_NEG` ends only** | **`D1`.2 · `R_gs1`.2 · `C_gs1`.2** | **TS-D24** | **380 °C** |
 | 3 | U8 SOIC-8, U7 SOIC-14 — drag/wick | TS-K | **330 °C** (355) |
 | **4, 7, 8** | **L1, SW1.2, Q1.3, U1.4, XT30/XT60, buck stations** | **TS-C4** | **380–400 °C** (400) |
 | 6 | headers, JST, IDC | TS-D24 | **330 °C** (355) |
 | 9 | electrolytics — **≤3 s per lead** | TS-D24 | **340 °C** (360) |
 | 10 | module headers / sockets | TS-D24 | **330 °C** (355) |
+
+🔴 **STAGE 5 IS NOT A UNIFORM STAGE — three of its eight pads are heavy copper.** Found at
+the bench 2026-08-08: solder would not wet one pad of a stage-5 part. Read out of the board
+file, the widest trace touching each stage-5 pad:
+
+| pad | net | widest trace |
+|---|---|---|
+| **`D1`.2** | `BATT_NEG` | **3.00 mm** |
+| **`R_gs1`.2** | `BATT_NEG` | **3.00 mm** |
+| **`C_gs1`.2** | `BATT_NEG` | sits on the **F.Cu `BATT_NEG` pour** |
+| `D1`.1 · `R_gs1`.1 · `C_gs1`.1 · `R17`.1 · `R17`.2 | — | 0.20 mm |
+
+Every stage-5 part therefore has **one ordinary end and one heavy end** — 15× the copper,
+running back to `J1`'s 36 mm² XT60 pad, `Q1`'s tab and the pour. Note it is the **trace**,
+not the pour touching the pad: the pour stops at y 67.5 while `D1`.2/`R_gs1`.2 sit at
+y 70–72. `C_gs1`.2 at y 67.75 is on the pour edge and is the worst of the three.
+
+**This stage was filed under "small parts" because most of it is small** — the same mistake
+that put `L1` among the ordinary 0603s in the retired checklist, and it contradicts §2a's own
+rule that **TS-ILS never goes on a plane-tied pad**. Fix: **TS-D24 at 380 °C for the three
+`BATT_NEG` ends**, TS-ILS 320 °C for the other five. TS-C4 also works but is clumsy on 0603.
+Separate flux on the heavy end, tin the tip first, and land the flat so it touches pad *and*
+trace. **Tack the 0.20 mm end first**, then change tips — the part is then located and cannot
+shift while you work the heavy end.
+
+⚠️ Do **not** answer a non-wetting heavy pad by pressing a fine tip harder for longer. A
+low-mass tip sags against 3 mm of copper, and the dwell is what lifts pads — see the
+hotter-is-gentler note below.
 
 **Do not set a WORKING temperature above 400 °C.** Past that the flux flashes off
 before it can wet, tip plating degrades quickly, and you get *worse* joints, not
