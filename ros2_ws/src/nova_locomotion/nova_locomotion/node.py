@@ -69,6 +69,7 @@ from nova_locomotion.gait.backlash import BacklashComp
 from nova_ops.joint_map import load_joint_id_map
 from nova_ops.safety_envelope.calibration_io import (
     DEFAULT_CALIBRATION_PATH,
+    apply_haa_confirmations,
     resolve_calibration,
 )
 from nova_ops.safety_envelope.firmware_limits import (
@@ -186,6 +187,7 @@ class GaitNode(Node):
 
         raw_pub = self.create_publisher(JointState, "/joint_commands", 10)
         self.calib = self._load_calib()
+        self._load_haa_confirmations()
         adapter = _CountsAdapter(raw_pub, self.calib, logger=self.get_logger())
         self.safe_pub = SafeJointCommandPublisher(
             node=self, limits=load_default_limits(), raw_publisher=adapter
@@ -257,6 +259,31 @@ class GaitNode(Node):
                 "to drive on."
             )
         return calib
+
+    def _load_haa_confirmations(self) -> None:
+        """Load persisted haa sign confirmations into limits.HAA_INBOARD_SIGN
+        (#194) — the other half of record_haa_confirmation() having a real
+        caller now. Without this, a confirmation recorded by a prior
+        `confirm_haa_sign` run/process never reaches THIS process: the sign
+        lives in nova_ops.safety_envelope.limits' module-global state, which
+        starts back at all-None on every fresh interpreter. Same reasoning as
+        _load_calib() above, for the OTHER sign (HAA_INBOARD_SIGN, not
+        urdf_sign) — must run before load_default_limits() so the wrapper's
+        ROM table reflects it.
+        """
+        path = self.get_parameter("calibration_path").value
+        try:
+            applied = apply_haa_confirmations(path)
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().error(
+                f"haa confirmations at {path} are unreadable: {exc}. haa "
+                f"stays on the conservative symmetric clamp until fixed."
+            )
+            return
+        if applied:
+            self.get_logger().info(
+                f"loaded {applied} confirmed haa sign(s) from {path}"
+            )
 
     def _on_states(self, msg: JointState) -> None:
         self.safe_pub.on_joint_states(msg)  # envelope load window

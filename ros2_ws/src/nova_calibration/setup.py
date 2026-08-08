@@ -30,6 +30,10 @@ setup(
             # `ros2 run nova_calibration actuator_char_node` — STS3215 step-
             # response logger feeding the sim actuator model.
             'actuator_char_node = nova_calibration.actuator_char.node:main',
+            # `ros2 run nova_calibration confirm_haa_sign` — bench probe that
+            # fills HAA_INBOARD_SIGN via a bounded haa nudge + operator
+            # observation, cross-checked against the CAD derivation (#194).
+            'confirm_haa_sign = nova_calibration.servo_homing.haa_confirm:main',
         ],
     },
 )

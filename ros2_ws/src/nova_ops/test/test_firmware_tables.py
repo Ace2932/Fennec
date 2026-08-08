@@ -8,12 +8,17 @@ run never reached the runtime.
 
 import pytest
 
+from nova_ops.safety_envelope import limits as limits_mod
 from nova_ops.safety_envelope.calibration_io import (
     CalibrationFormatError,
+    apply_haa_confirmations,
     calibration_from_doc,
+    haa_confirmations_from_doc,
     read_calibration,
+    read_haa_confirmations,
 )
 from nova_ops.safety_envelope.firmware_limits import build_firmware_tables
+from nova_ops.safety_envelope.limits import HaaSignConfirmation
 
 
 def _doc(n=12, sign=+1, home=2048):
@@ -129,6 +134,132 @@ def test_round_trips_through_nova_calibration_REAL_writer(tmp_path, monkeypatch)
     for j in range(1, 13):
         assert calib[j].home_raw == float(2000 + j)
         assert calib[j].urdf_sign == (+1 if j % 2 else -1)
+
+
+# ---- haa confirmations: the other half of #194 ---------------------------
+#
+# record_haa_confirmation() now has a real caller (nova_calibration's
+# confirm_haa_sign probe), but that only mutates the CALLING process's copy
+# of limits.HAA_INBOARD_SIGN. This is the loader: (iv) a persisted
+# confirmation must survive a restart, the same way urdf_sign does above.
+
+
+def _haa_doc(sign=+1):
+    return {
+        "schema": 1,
+        "haa_confirmations": {
+            1: {
+                "sign": sign,
+                "observed_utc": "2026-08-06T18:00:00",
+                "method": "bench probe",
+                "assembly": "leg_v6 rev2 / FL / servo 1",
+            }
+        },
+    }
+
+
+def test_haa_confirmations_from_doc_reads_every_field():
+    out = haa_confirmations_from_doc(_haa_doc())
+    assert out[1] == HaaSignConfirmation(
+        sign=1,
+        observed_utc="2026-08-06T18:00:00",
+        method="bench probe",
+        assembly="leg_v6 rev2 / FL / servo 1",
+    )
+
+
+def test_haa_confirmations_missing_or_empty_is_the_PRE_CONFIRM_state():
+    assert haa_confirmations_from_doc({}) == {}
+    assert read_haa_confirmations("/nonexistent/servo_offsets_latest.yaml") == {}
+
+
+def test_haa_confirmations_malformed_entry_raises_rather_than_defaulting():
+    bad = _haa_doc()
+    del bad["haa_confirmations"][1]["assembly"]
+    with pytest.raises(CalibrationFormatError, match="missing field"):
+        haa_confirmations_from_doc(bad)
+
+
+def test_haa_confirmation_round_trips_through_nova_calibration_REAL_writer(
+    tmp_path, monkeypatch
+):
+    """(iv) — write with the REAL save_haa_confirmation(), read with the real
+    loader, same cross-package-seam doctrine as the urdf_sign round trip
+    above: a hand-built dict would agree with a stale reader too."""
+    storage = pytest.importorskip(
+        "nova_calibration.servo_homing.storage",
+        reason="nova_calibration not on the path",
+    )
+    monkeypatch.setattr(storage, "CALIB_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        limits_mod, "HAA_INBOARD_SIGN", dict(limits_mod.HAA_INBOARD_SIGN)
+    )
+    monkeypatch.setattr(
+        limits_mod, "HAA_SIGN_CONFIRMATION", dict(limits_mod.HAA_SIGN_CONFIRMATION)
+    )
+
+    confirmation = HaaSignConfirmation(
+        sign=+1,
+        observed_utc="2026-08-06T18:00:00",
+        method="bench probe: +50 raw counts, operator observed INBOARD",
+        assembly="leg_v6 rev2 / FL / servo 1",
+    )
+    storage.save_haa_confirmation(1, confirmation)
+
+    # a FRESH read, as a newly-started process would do it
+    loaded = read_haa_confirmations(str(tmp_path / storage.LATEST))
+    assert loaded[1] == confirmation
+
+    # and the actual point of #194: it reaches the runtime state
+    assert limits_mod.HAA_INBOARD_SIGN[1] is None  # not yet applied
+    applied = apply_haa_confirmations(str(tmp_path / storage.LATEST))
+    assert applied == 1
+    assert limits_mod.HAA_INBOARD_SIGN[1] == +1
+    assert limits_mod.confirmed_haa_sign(1) == +1
+
+    # idempotent: calling again applies nothing new
+    assert apply_haa_confirmations(str(tmp_path / storage.LATEST)) == 0
+
+
+def test_saving_a_haa_confirmation_preserves_existing_joints_and_other_haa_entries(
+    tmp_path, monkeypatch
+):
+    """save_haa_confirmation() must not clobber what save_offsets() (or a
+    prior confirmation) already wrote to the SAME artifact."""
+    storage = pytest.importorskip(
+        "nova_calibration.servo_homing.storage",
+        reason="nova_calibration not on the path",
+    )
+    monkeypatch.setattr(storage, "CALIB_DIR", str(tmp_path))
+
+    class R:
+        def __init__(self, jid):
+            self.joint_id = jid
+            self.name = f"j{jid}"
+            self.home_raw = 2048
+            self.stop_pos_raw = 3000
+            self.peak_load = 210
+            self.urdf_sign = +1
+
+    storage.save_offsets([R(2), R(3)])  # hfe/kfe of FL, as a real sweep would
+    storage.save_haa_confirmation(
+        1,
+        HaaSignConfirmation(
+            sign=+1, observed_utc="t1", method="m1", assembly="FL"
+        ),
+    )
+    storage.save_haa_confirmation(
+        10,
+        HaaSignConfirmation(
+            sign=-1, observed_utc="t2", method="m2", assembly="RR"
+        ),
+    )
+
+    calib = read_calibration(str(tmp_path / storage.LATEST))
+    assert sorted(calib) == [2, 3]  # the earlier sweep survived
+
+    haa = read_haa_confirmations(str(tmp_path / storage.LATEST))
+    assert sorted(haa) == [1, 10]  # BOTH confirmations survived
 
 
 # ---- publish-or-not ------------------------------------------------------
