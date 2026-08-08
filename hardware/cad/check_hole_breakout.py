@@ -52,8 +52,420 @@ MARGIN = 0.30       # mm outside the hole wall to sample
 MIN_R = 0.9         # ignore sub-fastener detail (vents, chamfer slivers)
 MAX_R = 8.0         # ignore big architectural bores (wheel window, cable tunnel)
 
-# Cuts that are MEANT to leave the part. Key: "part:x,y" rounded to 0.1.
+# Cuts that are MEANT to leave the part, or that this checker cannot
+# correctly evaluate. Key: "part:x,y,z" (position rounded to 0.1mm; see
+# check()'s `by_pos` key -- axis is NOT part of the key, so two features at
+# the same rounded xyz would collide; that has not happened in this tree).
+#
+# #281 triage (2026-08-07), full tree-wide sweep, every entry below grounded
+# against its .scad source (module + line), not guessed from coordinates.
+# Grouped by feature via _allow() so one reason covers every hole a feature
+# cuts, and organized per part below. Three DELIBERATE sub-classes:
+#   (a) genuinely open by design -- a slot, vent, channel, grommet, driver-
+#       access pocket, or ID-marking dimple that is SUPPOSED to reach air.
+#   (b) a checker limitation, not a part defect: a fastener's straight shank
+#       and its countersink/counterbore are cut as two cylinders that don't
+#       share a Z position (the countersink starts partway up the shank), so
+#       the "test only the largest radius at this position" merge (this
+#       file's own docstring, see check()) never fires and the shank's own
+#       ring reads the countersink's wider void as a breakout. Or: a guard-
+#       band cut (h deliberately overshoots the real local wall so the
+#       OpenSCAD subtraction is unambiguous) reaches past the true material
+#       into an adjacent legitimate void (open interior, a servo pocket
+#       cavity, open air past a thin wall) -- verified per-entry by sampling
+#       height stations across the cut and confirming the part's own probed
+#       comments/measurements account for it, not just "it's some other cut".
+#   (c) a parser bug (not a hole at all): parse_cuts() flags ANY cylinder
+#       found inside a difference()'s braces, including ones in the FIRST
+#       (additive) child -- e.g. a union() of cylinders that IS the part's
+#       own body. Confirmed on spacer (own shaft, r=4.00), grommet_insert
+#       (flange disc r=7.30 + barrel/nose r=6.35 x2 -- the issue's own write-
+#       up mis-cited r=7.30 as "the through bore"; the real bore, r=4.50, was
+#       never flagged and is fine), strap (own hull-of-2-circles body,
+#       r=4.00 x2) and tibia_L/tibia's strap bosses (r=3.50 x2, raised
+#       material, not holes). A tree-based re-parse (differentiating a
+#       difference()'s child0/additive from child1+/subtrahend) confirms
+#       these 8 are never on the subtrahend side. Root-causing parse_cuts()
+#       itself is out of scope here (ALLOW population + CI wiring, per
+#       #281); flagged in the PR body as a follow-up worth a real fix.
+#
+# NOT included below (left to fail, on purpose): trunk's 3 FOOT countersinks
+# (-59.5,-42/-59.5,42/59.5,42, r=3.20) and oled_mount's 2 pod-foot M2 holes
+# (-96/-71, y=23) -- both are SUSPECT, not deliberate: measured directly
+# against the mesh, both leave <=0.2mm of real wall on one side. See the PR
+# body for the measurements. Silencing those would defeat the gate.
+
+
+# GOTCHA (found populating this list, #281): the ALLOW key's rounding
+# (Python's round() called on a numpy float64, in check()'s `key` tuple) and
+# this script's own FAIL-message coordinates (built with an :.1f format spec
+# on the same numpy float64) do NOT always agree on an exact .x5 half value
+# -- e.g. base z=3.85 rounds to "3.8" for the key but prints as "3.9" in the
+# FAIL line. Copying coordinates straight off a FAIL message into ALLOW
+# silently no-ops for every such entry (30 of 121 in the #281 sweep). Every
+# coordinate below was verified against the real by_pos key, not read off
+# printed output.
+def _allow(label, reason, *coords):
+    return {f"{label}:{x},{y},{z}": reason for (x, y, z) in coords}
+
+
 ALLOW = {}
+
+# ---- case_slot_grommet.scad -------------------------------------------------
+ALLOW.update(_allow(
+    "case_slot_grommet",
+    "zip-tie strain-relief tab hole (TAB_HOLE=3.4mm) in the TAB_T=1.6mm tab "
+    "-- L161-217; the hole is wider than the tab it's cut in, by design "
+    "(cable_clip.scad's own zip-tie-hole idiom).",
+    ("-5.0", "-49.8", "62.8"), ("5.0", "-49.8", "62.8"),
+))
+
+# ---- control_pod.scad --------------------------------------------------------
+ALLOW.update(_allow(
+    "control_pod",
+    "cable grommet through the column (Ø12, E-stop NC + OLED SPI drop), cut "
+    "starting AT the column's own rear face by design -- L81-83.",
+    ("-70.0", "0.0", "63.0"),
+))
+
+# ---- floor_plate.scad --------------------------------------------------------
+ALLOW.update(_allow(
+    "floor_plate",
+    "rear cutout over the trunk's rear floor opening -- a hull() of 4 r=4 "
+    "corner circles forming one big rounded-rectangle vent/inspection "
+    "opening, not a fastener hole; each corner cylinder gets flagged "
+    "individually by the checker -- L110-112.",
+    ("-58.0", "-22.0", "3.8"), ("-58.0", "22.0", "3.8"),
+    ("-48.0", "-22.0", "3.8"), ("-48.0", "22.0", "3.8"),
+))
+ALLOW.update(_allow(
+    "floor_plate",
+    "battery-sandwich M3 clearance hole (r=1.70) + its 90deg countersink "
+    "(r=3.4, d1=3.4/d2=6.8) don't share a Z base (shank z=3.85, csk z=4.2) "
+    "so the largest-radius merge never fires; the shank's own ring reads "
+    "the countersink's wider cone above it as open. Verified directly "
+    "against the CSG (both cuts dumped) and confirmed non-directional "
+    "(fails uniformly at all 32 angles -- an axial/radial cone effect, not "
+    "an edge). Not near any edge: BAT_Y=27.5 vs plate half-width HW=48 "
+    "(20.5mm margin) -- L94-100.",
+    ("-35.0", "-27.5", "3.8"), ("-35.0", "27.5", "3.8"),
+    ("0.0", "-27.5", "3.8"), ("0.0", "27.5", "3.8"),
+    ("40.0", "-27.5", "3.8"), ("40.0", "27.5", "3.8"),
+))
+
+# ---- head.scad ----------------------------------------------------------------
+ALLOW.update(_allow(
+    "head",
+    "D456 mount hole's own +-3mm Z-tolerance slot (MOUNT_SLOT): a hull() of "
+    "2 cylinders at the slot's ends, each flagged individually -- L226-230.",
+    ("137.1", "-47.2", "111.1"), ("139.9", "-47.2", "116.5"),
+))
+ALLOW.update(_allow(
+    "head",
+    "D456 driver-access pocket (Ø11), explicitly an open pocket so a "
+    "screwdriver can reach the mount bolt -- L231-236.",
+    ("137.7", "-47.2", "114.2"), ("137.7", "47.2", "114.2"),
+))
+
+# ---- neck_bracket.scad --------------------------------------------------------
+ALLOW.update(_allow(
+    "neck_bracket",
+    "driver-access notch (Ø9 socket/hex-key channel) for the head-mount "
+    "bolts, explicitly cut open to the gusset/aft face -- L190-217.",
+    ("103.0", "-10.0", "89.0"), ("103.0", "10.0", "89.0"),
+    ("103.0", "-10.0", "100.0"), ("103.0", "10.0", "100.0"),
+))
+ALLOW.update(_allow(
+    "neck_bracket",
+    "head-mount bolt rear counterbore (Ø6.5), cut from the wall's own rear "
+    "face (WALL_X0-EPS) inward -- open at that face by design -- L187-188.",
+    ("113.0", "-10.0", "89.0"), ("113.0", "10.0", "89.0"),
+))
+
+# ---- riser_bay.scad ------------------------------------------------------------
+ALLOW.update(_allow(
+    "riser_bay",
+    "control-pod cable grommet (Ø10), cut from the pad's pocket face "
+    "(POD_BOSS_X-EPS) inward -- open at that face by design -- L237-238.",
+    ("-66.6", "0.0", "63.5"),
+))
+ALLOW.update(_allow(
+    "riser_bay",
+    "riser<->flange M3 clearance shank, cut from the true outer wall face "
+    "(OUT_X+EPS) with h=8.2 deliberately overshooting the WALL=3.2mm wall "
+    "into the open bay interior -- guard-band idiom, not a breakout -- "
+    "L219-225.",
+    ("-63.4", "-40.0", "67.4"), ("-63.4", "40.0", "67.4"),
+    ("63.4", "-40.0", "67.4"), ("63.4", "40.0", "67.4"),
+))
+ALLOW.update(_allow(
+    "riser_bay",
+    "CASE_SLOT cable-drop opening: rounded_slot() hull() of 4 corner "
+    "circles (r=2.0), same shape as floor_plate's rear cutout -- L113-121, "
+    "159-163, 205.",
+    ("-28.0", "-47.0", "67.8"), ("-28.0", "-42.0", "67.8"),
+    ("28.0", "-47.0", "67.8"), ("28.0", "-42.0", "67.8"),
+))
+
+# ---- spacer.scad ----------------------------------------------------------------
+ALLOW.update(_allow(
+    "spacer",
+    "PARSER BUG, not a hole: this is the spacer's own outer cylinder body "
+    "(d=8, the minuend of the top-level difference()), not the bore. The "
+    "real bore (r=1.70) is a genuine cut and correctly passes. Confirmed "
+    "via a tree-based re-parse that separates a difference()'s additive "
+    "(child0) side from its subtrahend (child1+) side.",
+    ("0.0", "0.0", "0.0"),
+))
+
+# ---- trunk.scad -----------------------------------------------------------------
+ALLOW.update(_allow(
+    "trunk",
+    "belly-battery M3 clearance bore, deliberately cut BATT_BORE_Z0=-2 to "
+    "BATT_BORE_H=8 -- 'starts below the floor bottom / ends well above the "
+    "floor top -- clean cut' per the file's own comment -- against a "
+    "probed-solid floor only ~3.9mm thick (probe_trunk.py). Guard-band "
+    "overshoot into open air both sides, not a breakout -- L67-73, 121-124.",
+    ("-35.0", "-27.5", "-2.0"), ("-35.0", "27.5", "-2.0"),
+    ("0.0", "-27.5", "-2.0"), ("0.0", "27.5", "-2.0"),
+    ("40.0", "-27.5", "-2.0"), ("40.0", "27.5", "-2.0"),
+))
+ALLOW.update(_allow(
+    "trunk",
+    "shoulder-foot M3 clearance SHANK (FOOT_BORE_H=8, 'through + margin "
+    "above' per the file's own comment) -- verified by height-station "
+    "sampling that it is fully solid within the real ~3.9mm floor "
+    "(z0.0-3.9, where the fastener actually needs clearance) and only "
+    "shows gaps in the guard-band region above the floor, where it grazes "
+    "the corner-post structure -- irrelevant to the fastener, which never "
+    "reaches that far. The FOOT CSK itself (r=3.20, the near-edge-relevant "
+    "part) is deliberately NOT allow-listed here -- see the PR body's "
+    "SUSPECT list -- L92-96, 126-133.",
+    ("-59.5", "-42.0", "1.5"), ("-59.5", "42.0", "1.5"),
+    ("59.5", "-42.0", "1.5"), ("59.5", "42.0", "1.5"),
+))
+
+# ---- leg_v6/cable_clip.scad ------------------------------------------------------
+ALLOW.update(_allow(
+    "cable_clip",
+    "bundle channel (Ø6, the cable passage the clip exists for), starting "
+    "1mm before the clip's own body by design -- L87-89.",
+    ("-1.0", "0.0", "4.0"),
+))
+ALLOW.update(_allow(
+    "cable_clip",
+    "bell-mouth horn (bend-radius control at the clip's cable exits), "
+    "explicitly a flared-open mouth at each end -- L90-96.",
+    ("5.0", "0.0", "4.0"), ("13.0", "0.0", "4.0"),
+))
+ALLOW.update(_allow(
+    "cable_clip",
+    "zip-tie hole crossing the bundle channel -- both features are "
+    "deliberate and meant to intersect (the tie loops around the bundle "
+    "sitting in the channel) -- L87-89, 97-101.",
+    ("9.0", "-5.0", "-0.0"), ("9.0", "5.0", "-0.0"),
+))
+
+# ---- leg_v6/coax.scad (coax_L is coax.scad mirrored) -----------------------------
+ALLOW.update(_allow(
+    "coax_L",
+    "front strap zip-tie bore -- coax.scad's own header extensively "
+    "documents this exact partial-open condition as analysed and accepted "
+    "('the opening faces exactly OUTBOARD ... the clamp force acts ALONG "
+    "the bore axis ... this trade is sound') -- L451-509.",
+    ("-15.6", "-18.6", "-31.0"), ("15.6", "-18.6", "-31.0"),
+))
+ALLOW.update(_allow(
+    "coax_L",
+    "case-column M2 screw countersink (d1=4.6) + shank (M2_CLEAR) don't "
+    "share a Z base, same checker-limitation class as floor_plate/trunk -- "
+    "leg_v6_common.scad L294-301, called from pocket_platform_pos().",
+    ("-10.2", "22.2", "-8.3"), ("10.2", "22.2", "-8.3"),
+    ("-10.2", "23.2", "-32.8"), ("-10.2", "23.2", "-8.3"),
+    ("10.2", "23.2", "-32.8"), ("10.2", "23.2", "-8.3"),
+))
+ALLOW.update(_allow(
+    "coax_L",
+    "zip anchor flanking the tunnel exit / HAA connector-bay, explicit "
+    "through-hole starting inside an already-open void -- L586-603, "
+    "605-638.",
+    ("-7.0", "17.0", "-36.0"), ("7.0", "17.0", "-36.0"),
+    ("-7.0", "19.0", "-27.0"), ("7.0", "19.0", "-27.0"),
+))
+ALLOW.update(_allow(
+    "coax_L",
+    "L/R identity marking dimple (2 dots = LEFT), coax_L.scad's own "
+    "mirrored 2nd-dot cut -- L15-16.",
+    ("12.0", "22.2", "-8.0"),
+))
+ALLOW.update(_allow(
+    "coax_L",
+    "horn-coupling M3 bolt clearance (horn_couple_neg, BCD r=7 about the "
+    "hfe axis) -- extensively analysed in this file's #7-fix (BAND_* "
+    "engagement bands, measured SF at these exact bolts) -- L343-350.",
+    ("16.1", "6.7", "-14.4"), ("16.1", "6.7", "-4.6"),
+))
+
+# ---- leg_v6/coax_hfe_block.scad --------------------------------------------------
+ALLOW.update(_allow(
+    "coax_hfe_block",
+    "2x M3 tenon-retention bolt clearance, driven from +X open air -- "
+    "L166-173.",
+    ("46.4", "5.0", "11.7"), ("46.4", "18.0", "11.7"),
+))
+ALLOW.update(_allow(
+    "coax_hfe_block",
+    "M3 SHCS head counterbore, opens on the outboard face by design -- "
+    "L171-172.",
+    ("57.2", "5.0", "11.7"), ("57.2", "18.0", "11.7"),
+))
+ALLOW.update(_allow(
+    "coax_hfe_block",
+    "wheel-screw head counterbore (wheel_couple_neg, 4x at the BCD) -- "
+    "leg_v6_common.scad, called L163-164.",
+    ("61.4", "6.7", "-14.4"), ("61.4", "6.7", "-4.6"),
+    ("61.4", "16.5", "-14.4"), ("61.4", "16.5", "-4.6"),
+))
+
+# ---- leg_v6/coax_hfe_block_L.scad ------------------------------------------------
+ALLOW.update(_allow(
+    "coax_hfe_block_L",
+    "L/R identity marking dimple (2 dots = LEFT), cut STARTING OUTSIDE the "
+    "face by design -- L14-22.",
+    ("-62.7", "19.6", "1.0"),
+))
+
+# ---- leg_v6/femur.scad (femur_L is femur.scad mirrored) --------------------------
+ALLOW.update(_allow(
+    "femur_L",
+    "case-column M2 screw shank: passes through a ~1mm floor straight "
+    "into the STS servo pocket cavity (its intended destination), so the "
+    "ring reads the pocket's own open interior as a breakout -- uniform "
+    "across all 32 angles at every station (verified with a per-angle "
+    "probe), i.e. not an edge, a legitimate internal void -- "
+    "leg_v6_common.scad COL_PTS/sts_pocket_neg, femur.scad L11-12.",
+    ("8.3", "-10.2", "-23.2"), ("8.3", "10.2", "-23.2"),
+    ("32.8", "-10.2", "-23.2"), ("32.8", "10.2", "-23.2"),
+))
+ALLOW.update(_allow(
+    "femur_L",
+    "side-wall vent window (CR-6 fix, stadium profile r=2.5, SF-calculated "
+    "safety cutout) -- L210-227.",
+    ("16.5", "-17.0", "0.0"), ("21.5", "-17.0", "0.0"),
+))
+ALLOW.update(_allow(
+    "femur_L",
+    "zip anchor (zip_pair_neg), explicit through-hole per the LA-4 fix -- "
+    "L284-294.",
+    ("44.0", "-5.0", "-27.6"), ("44.0", "5.0", "-27.6"),
+    ("52.0", "-5.0", "-27.6"), ("52.0", "5.0", "-27.6"),
+))
+
+# ---- leg_v6/grommet_insert.scad --------------------------------------------------
+ALLOW.update(_allow(
+    "grommet_insert",
+    "PARSER BUG, not a hole: flange disc (r=7.30, d=FLG_OD-0.4) + barrel "
+    "(r=6.35, d=BARREL_OD) + entry-chamfer nose (r=6.35) are all additive "
+    "union() geometry (the grommet's own body), not subtracted cuts. The "
+    "real bore (r=4.50) and its rounded exit (r=5.70) are genuine cuts and "
+    "both correctly pass -- confirmed via the tree-based re-parse -- "
+    "L88-111.",
+    ("0.0", "0.0", "0.0"), ("0.0", "0.0", "1.2"), ("0.0", "0.0", "5.4"),
+))
+
+# ---- leg_v6/knee_arm.scad --------------------------------------------------------
+ALLOW.update(_allow(
+    "knee_arm",
+    "M3 mount hole + its Ø6.4 head counterbore don't share a Z base, same "
+    "checker-limitation class as floor_plate -- L47-55; not near any edge "
+    "(holes at +-8 well inside the TIP_R=15.85 rounded plate).",
+    ("6.0", "-8.0", "-0.0"), ("6.0", "8.0", "-0.0"),
+    ("16.0", "-8.0", "-0.0"), ("16.0", "8.0", "-0.0"),
+))
+
+# ---- leg_v6/shoulder.scad ---------------------------------------------------------
+ALLOW.update(_allow(
+    "shoulder",
+    "trunk-flange heat-set bore, drilled from the flange's own rearward "
+    "(open trunk-end) face -- trunk.scad's own header independently "
+    "confirms this exact bore's path is already open ('the side wall is "
+    "solid from x-50..48.8, then OPEN ... at every one of the 4 (y,z) "
+    "combinations') -- shoulder.scad L335-338.",
+    ("-51.8", "-77.8", "-14.0"), ("51.8", "-77.8", "-14.0"),
+))
+
+# ---- leg_v6/shoulder_plate.scad ---------------------------------------------------
+ALLOW.update(_allow(
+    "shoulder_plate",
+    "flange mount hole (M3 clear or close-fit dowel) + its Ø6.4 head "
+    "counterbore don't share a Z base, same checker-limitation class as "
+    "floor_plate -- L106-113.",
+    ("27.0", "6.2", "41.4"), ("27.0", "14.0", "41.4"),
+    ("51.0", "6.2", "41.4"), ("51.0", "14.0", "41.4"),
+))
+ALLOW.update(_allow(
+    "shoulder_plate",
+    "horn locating recess (Ø6.5 x 0.4 deep), a shallow facing cut right at "
+    "the horn mating face -- open there by design -- L95-100.",
+    ("39.0", "17.7", "0.0"),
+))
+
+# ---- leg_v6/strap.scad -------------------------------------------------------------
+ALLOW.update(_allow(
+    "strap",
+    "PARSER BUG, not a hole: this is the strap's own body outline, "
+    "hull() of 2 Ø8 circles (the plate's additive minuend), not a "
+    "fastener hole -- L26-28. Confirmed via the tree-based re-parse.",
+    ("0.0", "-13.0", "0.0"), ("0.0", "13.0", "0.0"),
+))
+ALLOW.update(_allow(
+    "strap",
+    "zip-tie bore (Ø3.2), explicitly documented as 1.44mm clear of the "
+    "plate's own outer edge (TRIMESH-PROBED, >=1.0mm) -- L4-17, 29-30.",
+    ("0.0", "-15.6", "-0.1"), ("0.0", "15.6", "-0.1"),
+))
+
+# ---- leg_v6/tibia.scad (tibia_L is tibia.scad Z-mirrored) --------------------------
+ALLOW.update(_allow(
+    "tibia_L",
+    "case-column M2 screw shank into the STS servo pocket cavity, same "
+    "checker limitation as femur_L -- leg_v6_common.scad COL_PTS.",
+    ("8.3", "-10.2", "-23.2"), ("8.3", "10.2", "-23.2"),
+    ("32.8", "-10.2", "-23.2"), ("32.8", "10.2", "-23.2"),
+))
+ALLOW.update(_allow(
+    "tibia_L",
+    "side-wall vent window (stadium profile), same feature as femur_L.",
+    ("16.5", "-17.0", "0.0"), ("21.5", "-17.0", "0.0"),
+))
+ALLOW.update(_allow(
+    "tibia_L",
+    "retention-strap zip-tie bore (strap_pilot_neg): the file's own header "
+    "explicitly analyses and accepts the outboard side's thin margin "
+    "('that side is the boss's exterior shoulder, not a cavity wall ... "
+    "nothing breaks through') -- leg_v6_common.scad L428-472, called "
+    "tibia.scad L152.",
+    ("31.0", "-15.6", "-25.2"), ("31.0", "15.6", "-25.2"),
+))
+ALLOW.update(_allow(
+    "tibia_L",
+    "PARSER BUG, not a hole: strap boss (Ø7 raised material the strap "
+    "seats on), additive union() geometry -- tibia.scad L81-84. Confirmed "
+    "via the tree-based re-parse.",
+    ("31.0", "-14.2", "14.6"), ("31.0", "14.2", "14.6"),
+))
+ALLOW.update(_allow(
+    "tibia_L",
+    "L/R identity marking dimple -- tibia.scad L149, tibia_L.scad L12-17.",
+    ("37.0", "-10.0", "-14.9"), ("39.0", "10.0", "13.9"),
+))
+ALLOW.update(_allow(
+    "tibia_L",
+    "zip anchor (zip_pair_neg / the x62/84 through-hole convention), "
+    "explicit through-holes along the blade -- L219-254.",
+    ("58.0", "-5.0", "-23.2"), ("58.0", "5.0", "-23.2"),
+    ("62.0", "0.0", "-23.2"), ("84.0", "0.0", "-23.2"),
+))
 
 
 def _openscad():
