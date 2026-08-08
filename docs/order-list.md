@@ -223,7 +223,27 @@ Independent last line: balance-plug buzzer alarm set to **3.3 V/cell**, plugged 
 SW1 is on. ✅ OWNED (verified 2026-06-12): FLY RC 5-pack purchased 2026-05-16, pre-set 3.3 V.
 Operational rule: buzzer rides the balance plug any time the robot is switched on.
 - ✅ UBEC module VERIFIED OWNED (2026-06-12): SoloGood 5V/5A UBEC ×2, purchased 2026-05-03
-  (input 5.5–35 V covers 4S; 5 A ≈ 10× the V5_AUX load; second unit = shelf spare).
+  (input 5.5–35 V covers 4S; second unit = shelf spare). Listing re-confirmed 2026-08-08.
+  ⚠️ **"5 A ≈ 10× the V5_AUX load" was WRONG — it is 3.3×.** `power-budget.md` Rail 5 totals
+  **1.5 A continuous** (switch 0.6 + fans 0.5 + OLED/WS2812B 0.3) and says "3× headroom".
+  Still ample, but 30% rail utilisation is not 10%, and the inflated figure is exactly what
+  would later justify hanging another load on this rail.
+  ⚠️ Also note these hobby UBECs are commonly rated **5 A peak / ~3 A continuous**; the
+  datasheet claim is not split. Against 1.5 A that is still fine — but the headroom is
+  ~2× on the conservative reading, not 3.3×.
+
+  **Wiring to `J2` (4 wires into a 3-pin header — documented nowhere until now):**
+
+  | UBEC wire | goes to |
+  |---|---|
+  | input **red** | `J2`.1 `VBAT_PROTECTED` |
+  | input **black** | `J2`.2 `GND` |
+  | output **red** (servo plug) | `J2`.3 `V5_AUX` |
+  | output **black** (servo plug) | `J2`.2 — **same pin, commoned** |
+
+  The module has separate input and output grounds; the board has one GND pin. **Splice the
+  two blacks into a single pigtail before the header** — the input lead is ~20 AWG and will
+  not share a 1 mm hole with the servo lead.
   Buzzer still required — the spare doesn't help mid-run.
 
 ### ⚠️ TVS regen clamps for servo rails — ~$5 (gap found 2026-06-12, NOT in original order)

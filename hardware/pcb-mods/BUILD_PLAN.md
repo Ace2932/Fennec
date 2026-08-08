@@ -403,6 +403,12 @@ part is heat-sensitive — that is the move that damages it.
 | stage | part | HEAVY pads (TS-C4 400 °C) | rest (TS-D24 330 °C) |
 |---|---|---|---|
 | 6 | `J2` | **all 3** — VBAT_PROTECTED plane 13782, GND 15183, V5_AUX 1.5 mm | — |
+
+⚠️ **`J2` takes FOUR wires into THREE pins.** The SoloGood UBEC has separate input and
+output grounds: input red → `J2`.1, input black → `J2`.2, output red → `J2`.3, output black
+→ `J2`.2 **as well**. Splice the two blacks into one pigtail before the header — the ~20 AWG
+input lead will not share a 1 mm hole with the servo lead. See `docs/order-list.md`.
+
 | 6 | `M1` | **both** | — |
 | 6 | `J8` | 1 (GND), 2 (`V7V5_LEG` **2.0 mm**) | 3 |
 | 6 | `J20` | 1, 2 (V5_AUX 1.5 mm), **3, 4, 10, 11, 12** (GND) | 5–9 |
