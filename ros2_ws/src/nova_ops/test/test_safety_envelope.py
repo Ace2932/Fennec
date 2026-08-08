@@ -79,6 +79,7 @@ class _FakeNode:
     def __init__(self):
         self._ns = 0
         self.logs = []
+        self.errors = []
         self._clock = types.SimpleNamespace(
             now=lambda: types.SimpleNamespace(nanoseconds=self._ns)
         )
@@ -98,6 +99,9 @@ class _FakeNode:
 
             def info(self, m):
                 node.logs.append(m)
+
+            def error(self, m):
+                node.errors.append(m)
 
         return _L()
 
@@ -223,6 +227,41 @@ def _cmd_with(leg_ids, haa, hfe, kfe):
     haa_id, hfe_id, kfe_id = leg_ids
     pos[haa_id - 1], pos[hfe_id - 1], pos[kfe_id - 1] = haa, hfe, kfe
     return _CmdMsg(pos)
+
+
+def test_joint_map_load_failure_logs_ERROR_and_disables_the_gate(monkeypatch):
+    """#282: `except Exception: self._leg_ids = None` had no log and no
+    observable state — a missing/malformed joint_id_map.yaml silently removed
+    the chassis posture gate and the node still looked healthy. It must now
+    say so at ERROR (not just warn/info) and expose a flag so something
+    outside the wrapper can observe it (the preflight check reads this via
+    gait_node's posture_gate_state topic)."""
+    import nova_ops.joint_map as joint_map
+
+    def _boom():
+        raise ValueError("malformed yaml: missing top-level 'joint_id_map' key")
+
+    monkeypatch.setattr(joint_map, "load_joint_id_map", _boom)
+
+    node = _FakeNode()
+    pub = _FakePub()
+    sw = SafeJointCommandPublisher(
+        node=node, limits=JointLimits({1: _hard_limit()}), raw_publisher=pub
+    )
+
+    assert sw._leg_ids is None
+    assert sw.posture_gate_active is False, "flag must say the gate is down"
+    assert any("malformed yaml" in m for m in node.errors), (
+        f"no ERROR logged with the actual reason; errors={node.errors}"
+    )
+
+
+def test_joint_map_load_success_marks_the_gate_active():
+    """Negative control's twin: the flag must also say True on the happy
+    path, or a check that trusts it would never pass a healthy robot."""
+    sw, _, _ = _wrapper(12)
+    assert sw._leg_ids is not None, "real joint_id_map.yaml should load in CI"
+    assert sw.posture_gate_active is True
 
 
 def test_posture_gate_clamps_fold_that_would_reach_the_skirt():

@@ -96,9 +96,23 @@ class SafeJointCommandPublisher:
         # Leg -> (haa_id, hfe_id, kfe_id) for the posture gate. PER-LEG-
         # SEQUENTIAL bus map: each leg is haa, hfe, kfe in consecutive IDs.
         # Built from the yaml so it tracks the canonical map rather than
-        # re-deriving it; if the map is unavailable the posture gate is simply
-        # inactive (the per-joint scalars still apply).
+        # re-deriving it.
+        #
+        # If the map is unavailable the posture gate goes inactive, and that
+        # is NOT covered by the per-joint scalars (#282). limits.py sets hfe
+        # to mechanical (+86 deg) *because* this gate is assumed live — see
+        # its own "RE-LOOSENED to mechanical" comment — and at haa -15 deg
+        # the real chassis cap is +12.3 deg, nowhere near +86. The genuine
+        # fallback is the firmware hfe_envelope
+        # (firmware_limits.build_hfe_envelope_data), which is EMPTY until
+        # every haa+hfe joint is calibrated — i.e. exactly the pre-homing
+        # window when nova_calibration's servo_homing publishes
+        # /joint_commands directly, driving joints toward hard stops. So a
+        # load failure here is a real safety gap, not a graceful degrade:
+        # fail loud and expose it (posture_gate_active), so the
+        # `posture_gate` preflight check can refuse bringup on it.
         self._leg_ids: Optional[Dict[str, tuple]] = None
+        self.posture_gate_active: bool = False
         try:
             from nova_ops.joint_map import load_joint_id_map
 
@@ -119,8 +133,17 @@ class SafeJointCommandPublisher:
                 except KeyError:
                     continue  # not a 3-joint leg (e.g. the Phase-4 arm)
             self._leg_ids = self._leg_ids or None
-        except Exception:
+            self.posture_gate_active = self._leg_ids is not None
+        except Exception as exc:
             self._leg_ids = None
+            self.posture_gate_active = False
+            self.node.get_logger().error(
+                f"posture gate DISABLED: joint_id_map failed to load ({exc!r}). "
+                f"_clamp_posture will not run for any publisher. The firmware "
+                f"hfe_envelope is the only remaining layer, and it is EMPTY "
+                f"until every haa+hfe joint is calibrated — i.e. nothing "
+                f"protects the chassis before homing completes."
+            )
 
     # ---- /joint_states callback (load tracking) -----------------------
 
