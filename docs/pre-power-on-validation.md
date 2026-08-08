@@ -165,6 +165,41 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 - [x] **RESOLVED 2026-06-30 — 4th INA = L2 LiDAR (0x45), not arm.** LiDAR is live + nav-critical/brownout-sensitive; the arm rail is DNP (Phase-4) so an INA there would read nothing. Firmware enabled: `-D NOVA_INA226_L2` in `platformio.ini` `[env]` + publish expanded to 12 floats (`/power_rails[9..11]` = l2 v/a/w). **Arm INA deferred to a 5th module when the arm is built.** So bead the 4th module to **0x45 (A0+A1→VS)** and wire its IN± to the **L2 rail**.
 - [ ] **INA current-sense wiring** (per §1 medium): each module's IN+/IN− must be wired inline to its rail (PCB has no shunt); leaving IN± fully unwired makes **both** current AND voltage invalid (needs an IN−/VBUS tap even for voltage-only).
 
+## 🔴 1f. SOIC lead-bond check — `U8` / `U7` (DEFERRED FROM STAGE 3, 2026-08-08)
+
+Stage 3's resistance sweep passed on both chips (9 probes on `U8`, 8 on `U7` — see
+`hardware/pcb-mods/BUILD_PLAN.md` §6). **It proves NO BRIDGES. It does not prove the leads
+are BONDED**, and that is not a nuance — the sweep measures pad-to-pad through the *board*
+network, which reads correct with no chip attached at all. On `U7` it is worse: **OL was the
+expected answer for most pins**, so an unbonded lead is indistinguishable from a pass.
+
+Deferred deliberately, not forgotten: neither chip ever gets buried (`U8`'s nearest future
+neighbour is an electrolytic ~21 mm away, `L1` is 73 mm off; `U7`'s nearest are headers
+14–16 mm away), so the check costs the same later as now. A magnified visual on every lead
+was taken at stage 3 as the interim cover. **This is where the real check lands. Do it
+before first power.**
+
+**Method — probe net-pad to net-pad, NOT the lead.** A lead is one continuous piece of metal
+into the die, so touching it reaches the die whether or not the solder joint is any good:
+lead-probing tests the *chip*, and the chip is not what is in question. Going pad-to-pad
+forces the path through board → pad → **solder joint** → lead → die → substrate → the GND
+pin's **joint** → board. A dead joint anywhere reads OL. The parallel resistor network
+cannot fake a pass: diode mode sources ~1 mA, so a 7–39 kΩ path exceeds compliance and
+reads OL, while a junction reads 0.4–0.8 V.
+
+- [ ] **`U8`** — red probe on `J13`.1 (GND); black on `J20`.9 (pin 1) · `C7`.1 (pins 2+6) ·
+      `R5`.1 (pin 3) · `R7`.1 (pin 5) · `Q2`.1 (pin 7). Each **0.4–0.8 V**.
+- [ ] **`U7`** — red on `J20`.3 (logic board GND); black on `U6`.5 · `U6`.3 · `JP1`.3 ·
+      `U6`.6 · `JP1`.2 · `U6`.4 (pins 1–6). Each **0.4–0.8 V**.
+- [ ] **Reverse the leads on any one of them — must go OL.** That is the control proving the
+      reading is a junction and not a resistor.
+- [ ] **Judge by agreement across the set, not absolutes.** Same input structure ⇒ within
+      tens of mV of each other. One pin at OL while its siblings read 0.6 V is the defect.
+
+⚠️ **What this still cannot separate:** `U8` pins 2 and 6 share `VSENSE`, and `U7`'s three
+GND and three +3V3 pins are each paralleled — inside those groups one bad joint hides behind
+its siblings. Note it rather than trust it.
+
 ## 🟡 2. Trip-point calibration (ratiometric to V5_AUX)
 VREF tracks the UBEC, VSENSE tracks the battery. UBEC sag shifts trips LOWER (later).
 Verified-on-paper trips: BATT_LOW 13.0V, HARDCUT 12.4V (resistor math confirmed 2026-06-13).
