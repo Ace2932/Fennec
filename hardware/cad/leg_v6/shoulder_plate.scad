@@ -21,8 +21,9 @@
 //    do NOT share the R orientation, because those are Z-mirrors and the flip
 //    changes which face is flat. That warning does NOT extend here: an
 //    X-mirror of an X-symmetric body rests on the same face. Print
-//    shoulder_plate and shoulder_plate_L both HORN-SEAT-DOWN, same transform,
-//    nest them together.
+//    shoulder_plate and shoulder_plate_L both BACK-FACE-DOWN (see the PRINT
+//    line below — NOT "horn-seat-down"; the flange dips below that plane, so
+//    that pose is geometrically impossible), same transform, nest together.
 //
 // 2. A SWAPPED PLATE IS A NON-EVENT. Fitting an "R" plate on the left side is
 //    mechanically identical -- it is the same part. LA-2 added the dots

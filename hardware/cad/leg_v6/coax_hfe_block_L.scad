@@ -1,5 +1,12 @@
 // LEFT coax HFE block = X-mirror of the right (same convention as
 // coax_L.scad / coax_hfe_plate_L.scad, which this pair supersedes).
+// PRINT: PA6-CF (as coax_hfe_block.scad), MATING FACE (x=SPLIT_X) DOWN —
+//   mirrored to **-X**, NOT +X. coax_hfe_block_L is an X-mirror
+//   (mirror([1,0,0]) coax_hfe_block_R()), and the R directive is expressed on
+//   the X axis, so the mirror FLIPS which face is flat — the same trap LA-3
+//   records for femur_L/tibia_L's Z-mirror. Measured (slice_plate.py): +X
+//   gives 54.4 mm^2 (s=2.14, an edge), -X gives 366.4 mm^2 (s=0.83) on this
+//   mesh. supports=normal, under the 0.5-2.0mm shelf (as coax_hfe_block.scad).
 $fn = 64;
 use <coax_hfe_block.scad>
 // side marker: 2 dots = LEFT. The base (RIGHT) dot sits on the block's own

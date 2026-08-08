@@ -45,8 +45,15 @@
 // ASSEMBLY: press the upright BASE heat-sets (from below) + TOP heat-sets (from
 //   above) -> bolt the cradle to the deck -> drop the assembled case in -> set
 //   the 2 clamp bars + 4x M2x8 down into the upright tops. Bezel is already on.
-// Print: base-down (deck face on the bed); uprights rise (no overhangs now).
-//   PA6-CF, ONE piece. Bars print separately (jetson_clamp_bar.scad, x2, flat).
+// PRINT: PA6-CF, base-down (deck face on the bed); uprights rise (no
+//   overhangs now). ONE piece — the clamp bars print separately
+//   (jetson_clamp_bar.scad, x2, flat). (#184: material was on the line below
+//   this one, invisible to slice_plate.py's parser (reads only the opening
+//   "Print:"/"PRINT:" line) and to a header skim; moved up. This also
+//   corrected a REAL contradiction: slice_plate.py's registry said PETG-CF
+//   while this file already said PA6-CF — the case cradle bears the same
+//   250-510g lift load as jetson_clamp_bar.scad, which IS PA6-CF, so the
+//   file's own explicit decision wins; the registry entry is now PA6-CF too.)
 //
 // Fit gate: check_fit.py (the case is an AABB envelope there). build_all.sh.
 

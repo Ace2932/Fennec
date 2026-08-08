@@ -1,6 +1,11 @@
 // =============================================================================
 // V6 KNEE BUMPER (TPU 95A) — collapse strike guard, backlog #15 "B"
 // =============================================================================
+// PRINT: TPU 95A, U-opening UP — names a feature, not an axis. Measured
+//   (slice_plate.py): no dominant flat face (-Z 381, +X 200, -X 199 mm^2); it
+//   is a curved wrap, so the metric cannot pick a pose for you. All 5 are
+//   already printed, so this is not blocking anything (#184).
+// =============================================================================
 // Replaces the RETIRED tibia_pad (which sat on the LATERAL MID-blade face and
 // never led into the ground). collapse_study.py + strike-trace 2026-07-07:
 // on a hard-power-loss limp fold the LOW knee-region contact is the TIBIA's

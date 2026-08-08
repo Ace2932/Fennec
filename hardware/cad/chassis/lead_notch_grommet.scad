@@ -1,6 +1,10 @@
 // =============================================================================
 // LEAD-NOTCH GROMMET — TPU edge liner, shoulder battery-lead notch (print: TPU 95A)
 // =============================================================================
+// PRINT: TPU 95A, flat, zero supports, 100% infill — as case_slot_grommet.scad
+//   and the rest of the TPU liner family. (#184: this used to be only the
+//   parenthetical "(print: TPU 95A)" on the title line above, lowercase and
+//   mid-line, which is not a header a PRINT:-line parser can find.)
 // AUD-12b (2026-07-10): leg_v6/shoulder.scad's battery-lead notch (flange
 // bottom center, x +/-10, z -38.1..-26 — REAR end: pack->MRBF leads; FRONT
 // end, same part: D456 right-angle USB-C) was a zero-radius 90deg through-cut
