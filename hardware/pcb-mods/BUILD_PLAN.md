@@ -477,7 +477,7 @@ minimum: bottom SMD, then top SMD, then THT.
 | **0** | — | ✅ **DONE 2026-08-01** — bare-board: continuity `VBAT`↔`VBAT_PROTECTED` open (SW1 not fitted), no `VBAT`–`GND` short | Cheapest possible fault-find. A plane short after 33 THT parts is a nightmare. ⚠️ Applies to **the board it was run on** — five of each were ordered, so if the meter went on a spare rather than the build board, this is not carried over. Re-run on the actual build board before stage 1 if in doubt; it costs one minute. |
 | **1** ✅ **DONE 2026-08-02** (15 power 0603 + 3 logic 1k) | **B** | Bottom 0603: R2–R9, R11–R16, C7 (+ logic R3–R5) | Smallest, flattest, most numerous, and all on one face — do them in one sitting with the top still bare. |
 | **2** | **B** | Q2–Q4 (SOT-23) | Same face, still small, still cold. |
-| **3** | **B** | U8 (SOIC-8) — and U7 (SOIC-14) on the logic board | Fine-pitch, wants flux + drag or wick. Before anything tall spoils the iron angle. **The stage most likely to want hot air for a bridge.** |
+| **3** | **B** | U8 (SOIC-8) — and U7 (SOIC-14) on the logic board | Fine-pitch, wants flux + drag or wick. Before anything tall spoils the iron angle. **The stage most likely to want hot air for a bridge.** **Includes the `U8` 8↔4 bypass tack — see below.** |
 | **4** | **B** | **L1** (12×12 SMD inductor) | Last of the bottom SMD. Plane-tied both sides → fat tip. Last stage where the top face is bare, so the last one a *contact* plate could serve (§2). |
 | **5** | **F** | Top SMD: D1 (SOD-123F), R17, R\_gs1, C\_gs1 (+ logic C1, FB1) | Flip once. Only 4 top-side SMD parts — mind D1 polarity. |
 | **6** | **F** | Low THT: J2, M1, J8, J20 (+ logic JP1, J9, J10, J21, J11, J20) | Headers and JSTs seat flush; do them before the board stops sitting flat. |
@@ -485,6 +485,30 @@ minimum: bottom SMD, then top SMD, then THT.
 | **8** | **F** | XT30 ×8 + XT60 J1, buck stations U1–U4, **and Q1 (TO-220)** | The bulk of the high-current THT, plus Q1 — pad 3 is a 14 A GND inject. **Last preheat stage; see the note below.** Soldered from the bottom face, which already carries 20 SMD parts — hence C1–C6 must still be off. |
 | **9** | B + F | Electrolytics: C1–C6 (bottom), C8–C9 (top) | Tall, polarised, **~105 °C-rated — below the 100–130 °C board preheat.** After every preheat joint, and after stage 8 because the bottom cans would block access to stage 8's solder side. |
 | **10** | **F** | Modules: **U9–U12** (INA226 ×4 — see §4, U12 is the L2 monitor), U6 (Teensy 4.1), U12-logic (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. Note `U12` names *different* parts on the two boards: INA226 on power, Arduino Nano on logic. |
+
+### 🔴 Stage 3 also carries a bodge: `U8` has NO supply decoupling on the board
+
+Verified from `nova_pcb_v6_power_v2.kicad_pcb` 2026-08-06 by full capacitor census, with
+a negative control: **C1–C5** sit on `V7V5_LEG`/`V12_HIP`, **C6** on `V12_L2`, **C8/C9**
+on `VBAT_PROTECTED`, and **C7 100nF is `VSENSE`↔GND — the sense filter, not a bypass.**
+Scanning every footprint for one touching both `V5_AUX` and GND returns only `J2`, `J20`
+and `U8` itself. **No two-pad part decouples `V5_AUX` anywhere on the board.** `U8`'s
+supply pin is fed from `J2`'s UBEC down a wire with nothing local to it.
+
+So a **100nF hand-tack across `U8` pins 8 (`V5_AUX`) and 4 (GND)** is a required build
+step, not a nicety — without it the comparator trips are liable to chatter.
+
+**It cannot be a plain 0603 bridge.** Pins 8 and 4 are **6.25 mm apart** (pin 8 at
+x 91.905/y 130.525, pin 4 at 88.095/135.475) and an 0603 spans 1.6 mm. There is no GND
+via nearby — the board has only **four** GND vias and none are close — and the nearest
+GND pad is `Q2`.2 at 4.8 mm, still too far. So it needs a link: tack the 0603 to pin 8
+and run a fine wire to pin 4. **Pull two or three strands out of the solder wick** for
+that link — pre-tinned, ~0.1 mm, and far less likely to lever the 0603 off its joint
+than the 22 AWG solid. Keep the loop short and flat, then confirm **4→8 ≈ 9.83 k**
+(§6) — ~0 Ω means the tack shorted the rail.
+
+⚠️ **Do not carry this bodge to `U7`.** The logic board's `C1` 100nF is a real routed
+part on `GND`↔`+3V3` (stage 5). U7 is decoupled by design; U8 is not.
 
 ### Per-stage parts, with VALUES
 
@@ -688,6 +712,54 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
   **hard-cuts at 13.0 V *before* the 12.5 V warning ever fires** — it just shuts down
   early, forever, and never announces why. They are the only 1 % parts in the stage-1
   reel and they are adjacent values.
+- 🔴 **AFTER stage 3 — the SOIC probe tables.** Computed from the two `.kicad_pcb`
+  netlists (resistors only; caps open, semiconductors off), 2026-08-06. **Clean before
+  probing** — wet flux shunts the 1M-range readings.
+
+  **`U8` LM393 (power_v2, B.Cu).** Drag bridges only occur within a row, so these six
+  adjacent pairs are the hunt. Every one is distinctly non-zero:
+
+  | pins | expect | ~0 Ω means |
+  |---|---|---|
+  | 1–2 | 1029 k (2M range) | `BATT_LOW` shorted to `VSENSE` |
+  | 2–3 | 29.5 k | `VSENSE` into `VREF_G` |
+  | 3–4 | 7.47 k | `VREF_G` to GND — reference dead, board trips forever |
+  | 5–6 | 29.5 k | `VREF_H` into `VSENSE` |
+  | 6–7 | 38.9 k | `VSENSE` into `HARDCUT` |
+  | 7–8 | 9.02 k | `HARDCUT` tied to rail — hardcut never fires |
+
+  Supply and baselines: **4→8 = 9.83 k** (V5_AUX↔GND via R4+R5 ∥ R6+R7 ∥ R9+R16 — this
+  is also the check on the 8↔4 bypass tack; **~0 Ω = shorted, OL = something open**.
+  ⚠️ It is *not* OL). **4→7 = 16.89 k** and **1→3 = 1000 k** are the pre-`U8` baselines
+  already measured as 16.87 k / 1M (`J20`.3 = GND, `J20`.9 = `BATT_LOW`).
+
+  ⚠️ **`U8` pins 2 and 6 are the same net (`VSENSE`) — 0 Ω between them is CORRECT.**
+  ⚠️ Pins 1 and 4 are the **same row, opposite ends**; pin 1 is directly across from
+  pin 8. Not diagonal.
+
+  **`U7` 74LVC125 (logic, F.Cu).** R1/R2/R6/R7 are stage 5, so with only `U7` fitted
+  **every adjacent pair reads OL** — with one exception:
+
+  ⚠️ **pins 13 and 14 are the same net (`+3V3`) — 0 Ω there is CORRECT.** Anything else
+  adjacent reading below OL is a bridge. Pins 9/12 are GND, 10/13/14 are `+3V3`,
+  **8 and 11 are unconnected**.
+
+  **Diode mode is the only test that proves the CHIP rather than the network.** The
+  meter sources ~1 mA, so a 7–39 kΩ path exceeds its compliance and displays OL, while
+  a junction displays 0.4–0.8 V — resistors read OL, silicon reads a number. Reference
+  the GND pin (`U8`.4 / `U7`.7) and **judge by matched pairs, not absolutes** (same
+  doctrine that saved the R4/R6 check):
+
+  - `U8` — **2 and 6** (both IN−, *same net*, must read identically), **3 and 5**
+    (both IN+), **1 and 7** (both open-collector outputs). Skip pin 8; the 9.83 k
+    network makes it ambiguous, and the 4→8 resistance already covers it.
+  - `U7` — **8 and 11 connect to nothing on the board**, so any reading there is purely
+    the die: the cleanest proof those leads actually bonded. Then **9/12** (same net),
+    **10/13** (same net), and function twins **1/4**, **2/5**, **3/6**.
+
+  A pin at OL both directions is a lead that looks wetted and is not bonded — the one
+  defect a resistance sweep cannot see, because the network around the pad measures
+  correct with no chip attached to it.
 - After **stage 4** — reflow-quality check on L1 and both SOICs before tall
   parts block the view. Wick any bridge now.
 - After **stage 9**, before **stage 10** — this is the last moment the board is
