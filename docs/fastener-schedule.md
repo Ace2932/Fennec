@@ -103,6 +103,34 @@ interference one. **Use M3 BUTTON head** (ISO 7380, Ø5.7 × 1.65 tall): it drop
 the protrusion to ~0.05 mm, effectively flush, and Ø5.7 still clears the 6.0
 c'bore. That is why the 6.0 figure was chosen over the 5.5 an SHCS alone needs.
 
+🔴 **BUTTON IS MANDATORY AT THE HORN POSITIONS, AND FOR A DIFFERENT REASON —
+BENCH-FOUND 2026-08-07.** Everything above is about the WHEEL counterbores and
+concludes "snag/scuff, not interference". That reasoning does not carry to the
+horn side, and reading it as if it did is the trap:
+
+* the horn positions have **NO head counterbore at all** (`horn_couple_neg()`
+  cuts `M3_CLEAR` straight through `ARM_THK`), so the *entire* head height
+  projects off the arm face — 1.65 mm for a button, **3.00 mm for a socket cap**;
+* at **horn → HFE** that face is the coax INBOARD arm, and the volume the head
+  projects into is the **HAA servo pocket**. The HAA servo drops into that same
+  space afterwards (README "Assembly order": bolt femur↔coax first, *through the
+  empty haa pocket*, then plug and drop the haa servo). So a head that is
+  merely "proud" here is not scuffing air — it is eating the servo's seat.
+
+Aiden hit this with real parts: cap heads "take a ton of space" in the pocket the
+second servo has to fit. **Use M3 BUTTON (ISO 7380) at all three horn positions.**
+The servo's own stock M3×6 screws are button-profile and are the correct screw
+for horn → HAA and horn → KFE, which is 32 of the 96 disc screws already in the
+servo boxes; horn → HFE takes M3×5 (`B08H2FN2FP`, ordered 2026-08-03).
+
+⚠️ An attempt to measure the remaining gap against the placed servo mesh on
+2026-08-07 did **not** produce a trustworthy number — three probes each latched
+onto the wrong feature (a pocket rib, then the deepest solid rather than the
+arm's inboard face, then a seat plane that is not at x 16.05 in `coax_R.stl`).
+The constraint is recorded here on the strength of the physical fit, not a
+model measurement. **FIRST-ARTICLE: caliper the arm-face-to-servo-body gap once
+the HAA servo is seated**, and put the number in this note.
+
 **cowl → upright ×2 (M2×10 SHCS + M2×4 insert, Ø5.5 c'bore)** — REMOVED
 2026-07-10 (backlog #41): `jetson_cowl.scad` retired in place, superseded by
 right-angle plug adapters (`BOM.md`). No cowl bolts/inserts to source.
@@ -255,7 +283,7 @@ Both are first-article-verifiable: seat a screw and check it neither bottoms nor
 
 ## Purchase summary (leg_v6 servo screws, MEASURED 2026-07-11 — 12 active servos: 4 HAA + 4 HFE + 4 KFE)
 - **M2 self-tap (case-mount), COUNTERSUNK**: ×40 **M2×9** (HAA×16 + KFE×16 + HFE-near×8), ×8 **M2×13** (HFE-far pair only, ramped floor). ⚠️ **This line read M2×22 / M2×25 until 2026-08-02** — the column is **7 mm blind, measured**, not the 19.9 mm assumed, so a ×22 goes 13 mm into the servo. See the CASE SCREWS block above.
-- **M3 (horn, driven side)**: ×32 **M3×6** (HAA×16 + KFE×16), ×16 **M3×5** (HFE, thinner LA-7 backing)
+- **M3 (horn, driven side)**: ×32 **M3×6** (HAA×16 + KFE×16), ×16 **M3×5** (HFE, thinner LA-7 backing). 🔴 **BUTTON HEAD, not socket cap** — there is no counterbore at any horn position, so the whole head height projects off the arm, and at horn → HFE it projects into the HAA servo's own pocket (bench-found 2026-08-07, see the head-protrusion note above)
 - **M3 (wheel, idler side, NO center screw)**: ×32 **M3×8** (HFE×16 + KFE×16), ×16 **M3×14** (HAA, long boss reach)
 - 🔴 **These two lines read M2.5 until 2026-08-02 (#263).** The FEETECH STS3215 spec gives the
   disc threads as **M3**; the M2.5 figure was this project's own inference, never sourced. Holes
