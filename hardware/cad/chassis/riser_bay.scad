@@ -17,7 +17,8 @@
 // Seating: side skirts rest on the wall tops (z 29.0, primary datum, two
 // full-length rails); end walls stop 0.1 above the wedge plateaus
 // (secondary). Lateral register: 4 tabs inside the wall inner faces
-// (0.45 clearance, leg_v6 drop-in doctrine). Fore-aft register + hold-down:
+// (0.45 clearance, leg_v6 drop-in doctrine), ROOT-GUSSETED (#307 — two snapped
+// in handling 2026-08-08; see GUSS_* below). Fore-aft register + hold-down:
 // 4x M3x12 HORIZONTAL through the shoulder-flange holes into heat-set pads
 // in the riser end walls (2 front + 2 rear, trunk y +/-40 z 65) — ZERO
 // mods to the stock shell. Riser is NEVER structural; lifts off with the
@@ -96,6 +97,18 @@ SKIRT_BOT  = 29.0;    // ON the wall tops (contact = designed seat)
 END_BOT    = 47.01;   // 0.1 above the plateaus
 DECK_BOT   = DECK_TOP - DECK_T;   // 67.9 interior ceiling
 CLR_TAB    = 0.45;    // register-tab clearance (leg_v6 drop-in doctrine)
+// Register-tab root gusset (#307, 2026-08-08). Each tab is a 2.4 x 41.9 fin
+// hanging off the deck; the part prints deck-face-down, so in print space that
+// fin is a tall thin wall whose layer lines peel under a sideways knock. TWO
+// SNAPPED IN HANDLING (not in service) 2026-08-08. Brace the root, where the
+// bending moment peaks.
+// Grows INBOARD only — the outboard face sets the 0.45 trunk-wall register and
+// must not move. Inboard there is just 1.1 to the stack, so the gusset is
+// confined to z >= GUSS_Z0 = 64.4: the mezzanine caps at 63.9, and 64.4 is
+// already this file's floor for inboard protrusions (== PAD_Z0, the end-wall
+// pads). Above 63.9 there is no stack to hit.
+GUSS_Z0    = 64.4;    // taper foot (0.5 above the 63.9 mezzanine cap)
+GUSS_G     = 3.5;     // inboard reach at the deck underside — 45 deg over the rise
 
 // ---- hardware ----------------------------------------------------------------
 HEATSET_D  = 4.0;     // Ruthex M3 insert BORE (insert OD 4.6 — bore 4.0!)
@@ -156,6 +169,22 @@ VENT_Z = [[52, 14], [33, 12]];  // [z0, height] — upper row at logic level,
 // (deck_boss / deck_bore / BOSS_H removed 2026-07-12, #72: dead code -- the
 //  head L2-column deck-boss interface was retired 2026-07-07; the modules were
 //  never called and BOSS_H was used only by them.)
+// Register-tab root gusset — 45 deg triangular brace on the tab's INBOARD face,
+// running the tab's full 16 mm length. Widest under the deck, tapering to nothing
+// at GUSS_Z0, so in print space (deck on the bed) it NARROWS as the print rises:
+// self-supporting, no overhang, no supports added.
+module tab_gusset(sx, sy) {
+    y_in = sy * (WALL_IN - CLR_TAB - 2.4);          // tab INNER face
+    hull() {
+        // full reach, fused into the deck underside
+        translate([sx * 40 - 8, min(y_in, y_in - sy * GUSS_G), DECK_BOT - EPS])
+            cube([16, GUSS_G, 2 * EPS]);
+        // taper foot, back at the tab face
+        translate([sx * 40 - 8, min(y_in, y_in - sy * EPS), GUSS_Z0])
+            cube([16, EPS, EPS]);
+    }
+}
+
 module rounded_slot(x0, x1, y0, y1, r) {
     hull() for (px = [x0 + r, x1 - r], py = [y0 + r, y1 - r])
         translate([px, py, DECK_BOT - EPS])
@@ -183,6 +212,9 @@ module riser_bay() {
                            min(sy * (WALL_IN - CLR_TAB), sy * (WALL_IN - CLR_TAB - 2.4)),
                            26])
                     cube([16, 2.4, DECK_BOT - 26 + EPS]);
+            // root gussets for those tabs (see GUSS_* above)
+            for (sx = [-1, 1], sy = [-1, 1])
+                tab_gusset(sx, sy);
             // (head L2-column deck bosses RETIRED 2026-07-07 — the head moved
             //  fwd onto the neck bracket; this riser interface is orphaned.)
             // riser<->flange heat-set pads (both end walls, inward)
