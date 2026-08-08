@@ -231,6 +231,21 @@ def _run(node, args) -> int:
 
     present_rad = convert_positions(list(raw_positions), calib, to_raw=False)
 
+    # Load any persisted haa sign confirmation (#194) before reading the ROM
+    # table — load_default_limits() reads the module-global HAA_INBOARD_SIGN,
+    # which starts all-None in a fresh process regardless of what a prior
+    # confirm_haa_sign run recorded to disk.
+    from nova_ops.safety_envelope.calibration_io import apply_haa_confirmations
+
+    try:
+        apply_haa_confirmations()
+    except Exception as exc:  # noqa: BLE001
+        print(
+            f"warning: haa confirmations unreadable: {exc!r} — haa stays on "
+            f"the conservative symmetric clamp",
+            file=sys.stderr,
+        )
+
     limits = load_default_limits()
     lim = limits.get(bus_id)
     if lim is None:

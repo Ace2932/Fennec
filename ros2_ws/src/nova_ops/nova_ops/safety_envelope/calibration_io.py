@@ -37,6 +37,9 @@ DEFAULT_CALIBRATION_PATH = os.path.expanduser(
     "~/.nova/calibration/servo_offsets_latest.yaml"
 )
 
+# haa_confirmations lives in the SAME artifact (#194) — one calibration file,
+# not two that can drift out of sync. See haa_confirmations_from_doc below.
+
 SUPPORTED_SCHEMA = 1
 
 
@@ -132,3 +135,100 @@ def read_calibration(path: Optional[str] = None) -> Dict[int, JointHomeCalib]:
         return {}
     with open(p) as f:
         return calibration_from_doc(yaml.safe_load(f))
+
+
+# ---------------------------------------------------------------------------
+# haa sign confirmations (#194)
+#
+# WHY THIS HALF EXISTS. record_haa_confirmation() (limits.py) has a real
+# caller now (nova_calibration.servo_homing.haa_confirm), but a confirmation
+# that only lives in the calling process's memory is exactly as inert as one
+# that was never wired at all — restart the node and HAA_INBOARD_SIGN is back
+# to all-None. This mirrors the urdf_sign path above: an artifact on disk,
+# read back into the runtime's global state at startup, one choke point
+# (apply_haa_confirmations) every caller of load_default_limits() passes
+# through before building a limits table.
+# ---------------------------------------------------------------------------
+
+
+def haa_confirmations_from_doc(doc: dict) -> Dict[int, "HaaSignConfirmation"]:  # noqa: F821
+    """Parsed YAML -> {bus id: HaaSignConfirmation}. Same fail-loud rule as
+    calibration_from_doc: an entry missing a field is refused, not guessed —
+    a haa sign with no provenance is precisely what record_haa_confirmation()
+    exists to prevent (#161)."""
+    from .limits import HaaSignConfirmation
+
+    if not doc:
+        return {}
+    raw = doc.get("haa_confirmations") or {}
+    if not isinstance(raw, dict):
+        raise CalibrationFormatError("'haa_confirmations' is not a mapping")
+
+    out: Dict[int, HaaSignConfirmation] = {}
+    for raw_jid, entry in raw.items():
+        try:
+            jid = int(raw_jid)
+        except (TypeError, ValueError):
+            raise CalibrationFormatError(
+                f"haa_confirmations key {raw_jid!r} is not an int"
+            )
+        if not isinstance(entry, dict):
+            raise CalibrationFormatError(
+                f"haa_confirmations[{jid}]: entry is not a mapping"
+            )
+        try:
+            out[jid] = HaaSignConfirmation(
+                sign=int(entry["sign"]),
+                observed_utc=str(entry["observed_utc"]),
+                method=str(entry["method"]),
+                assembly=str(entry["assembly"]),
+            )
+        except KeyError as exc:
+            raise CalibrationFormatError(
+                f"haa_confirmations[{jid}]: missing field {exc}"
+            )
+    return out
+
+
+def read_haa_confirmations(path: Optional[str] = None) -> Dict[int, "HaaSignConfirmation"]:  # noqa: F821, E501
+    """Load haa confirmations from disk. Missing file -> {} (pre-homing)."""
+    import yaml  # local: keeps this module importable without yaml installed
+
+    p = path or DEFAULT_CALIBRATION_PATH
+    if not os.path.exists(p):
+        return {}
+    with open(p) as f:
+        return haa_confirmations_from_doc(yaml.safe_load(f))
+
+
+def apply_haa_confirmations(path: Optional[str] = None) -> int:
+    """Load persisted haa confirmations and record them into the RUNTIME
+    limits state (limits.HAA_INBOARD_SIGN / HAA_SIGN_CONFIRMATION).
+
+    This is the missing half of #194: record_haa_confirmation() now has a
+    real caller (the bench probe CLI), but it only mutates the calling
+    process's copy of the module-global dicts. Every node that later imports
+    `nova_ops.safety_envelope.limits` in a FRESH process starts back at
+    all-None unless something reads the artifact back in — same reason
+    resolve_calibration()/read_calibration() exist for urdf_sign.
+
+    Idempotent: a joint whose runtime sign already matches its persisted
+    confirmation is left alone (record_haa_confirmation() would just rewrite
+    the same values). Returns the count of signs newly applied.
+    """
+    from .limits import confirmed_haa_sign, record_haa_confirmation
+
+    confirmations = read_haa_confirmations(path)
+    applied = 0
+    for jid, c in confirmations.items():
+        if confirmed_haa_sign(jid) == c.sign:
+            continue  # already applied — no-op
+        record_haa_confirmation(
+            jid,
+            sign=c.sign,
+            observed_utc=c.observed_utc,
+            method=c.method,
+            assembly=c.assembly,
+        )
+        applied += 1
+    return applied

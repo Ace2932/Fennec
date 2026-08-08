@@ -74,6 +74,7 @@ from nova_locomotion.policy_runner import NovaPolicy
 from nova_ops.joint_map import load_joint_id_map
 from nova_ops.safety_envelope.calibration_io import (
     DEFAULT_CALIBRATION_PATH,
+    apply_haa_confirmations,
     resolve_calibration,
 )
 from nova_ops.safety_envelope.firmware_limits import (
@@ -230,6 +231,7 @@ class PolicyNode(Node):
         )
 
         self.calib = self._load_calib()
+        self._load_haa_confirmations()
         state, missing = calibration_state(self.calib)
         self.gate.observe_calibration(state == "active")
         if state != "active":
@@ -278,6 +280,24 @@ class PolicyNode(Node):
         )
         self.get_logger().info(f"nova_policy: calibration from {source}")
         return calib
+
+    def _load_haa_confirmations(self) -> None:
+        """Load persisted haa sign confirmations (#194) — mirrors
+        gait_node._load_haa_confirmations; see that docstring for why this
+        must run before load_default_limits()."""
+        path = self.get_parameter("calibration_path").value
+        try:
+            applied = apply_haa_confirmations(path)
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().error(
+                f"haa confirmations at {path} are unreadable: {exc}. haa "
+                f"stays on the conservative symmetric clamp until fixed."
+            )
+            return
+        if applied:
+            self.get_logger().info(
+                f"loaded {applied} confirmed haa sign(s) from {path}"
+            )
 
     # ---- subscriptions -----------------------------------------------------
 

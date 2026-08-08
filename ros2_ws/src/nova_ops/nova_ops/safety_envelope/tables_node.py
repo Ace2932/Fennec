@@ -45,7 +45,11 @@ from rclpy.qos import (
 )
 from std_msgs.msg import Float32MultiArray, String
 
-from .calibration_io import DEFAULT_CALIBRATION_PATH, read_calibration
+from .calibration_io import (
+    DEFAULT_CALIBRATION_PATH,
+    apply_haa_confirmations,
+    read_calibration,
+)
 from .firmware_limits import build_firmware_tables, calibration_state
 
 
@@ -91,6 +95,24 @@ class FirmwareTablesNode(Node):
                 f"calibration at {path} is unreadable: {exc}. "
                 f"NO firmware tables will be published — the Teensy stays "
                 f"wide open. Fix the file and restart this node."
+            )
+
+        # Load any persisted haa sign confirmation (#194) BEFORE building the
+        # tables below — build_firmware_tables() -> load_default_limits()
+        # reads nova_ops.safety_envelope.limits' module-global HAA_INBOARD_SIGN,
+        # which starts all-None in a fresh process regardless of what a prior
+        # confirm_haa_sign run recorded to disk. Currently a no-op for the
+        # RAW joint_limits table itself (build_joint_limits_data still leaves
+        # haa wide open without a urdf_sign/home_raw calib entry, which this
+        # does not provide), but load_default_limits() is one shared function
+        # and this keeps it in sync everywhere it's called, not just where it
+        # happens to matter today.
+        try:
+            apply_haa_confirmations(path)
+        except Exception as exc:  # noqa: BLE001
+            self.get_logger().error(
+                f"haa confirmations at {path} are unreadable: {exc}. haa "
+                f"stays on the conservative symmetric clamp until fixed."
             )
 
         self._limits, self._env, self._state = build_firmware_tables(calib)
