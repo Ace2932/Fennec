@@ -225,7 +225,7 @@ def rollout_eval(env, act_fn, episodes, steps, vx, wz, seed0=2000):
     jit_reset, jit_step = jax.jit(env.reset), jax.jit(env.step)
     cmd = jp.array([vx, 0.0, wz])
     dt = float(env.dt)
-    fell, alive, ret, travel = [], [], [], []
+    fell, alive, ret, travel, speed = [], [], [], [], []
     for ep in range(episodes):
         rng = jax.random.PRNGKey(seed0 + ep)      # PAIRED across arms: same ep -> same seed
         st = jit_reset(rng)
@@ -244,14 +244,20 @@ def rollout_eval(env, act_fn, episodes, steps, vx, wz, seed0=2000):
                 break
         dx = float(st.pipeline_state.x.pos[0, 0]) - x0
         fell.append(down); alive.append(n); ret.append(total); travel.append(dx)
+        speed.append(dx / max(n * dt, 1e-9))          # per-episode, mirrors ab_seam.run_arm
     return dict(fell=np.array(fell, float), alive=np.array(alive, float),
-                ret=np.array(ret), travel=np.array(travel), dt=dt)
+                ret=np.array(ret), travel=np.array(travel), speed=np.array(speed), dt=dt)
 
 
-def summarise(name, r):
+def summarise(name, r, vx):
+    """Same fields + format as ab_seam.summarise, so the two harnesses read
+    identically — including SPEED AGAINST THE COMMAND. Fall rate alone can't
+    tell a stable fast walker from a stable policy that has simply stopped
+    trying to hit the command; speed vs cmd is what makes that visible."""
     print(f"  {name:<10} fell {r['fell'].mean()*100:5.1f}%   "
           f"alive {r['alive'].mean():6.1f} steps ({r['alive'].mean()*r['dt']:5.1f}s)   "
-          f"return {r['ret'].mean():8.2f}   distance {r['travel'].mean():+.3f} m")
+          f"return {r['ret'].mean():8.2f}   distance {r['travel'].mean():+.3f} m   "
+          f"speed {r['speed'].mean():+.3f} m/s (cmd {vx:+.2f})")
 
 
 # --------------------------------------------------------------------------
@@ -280,6 +286,10 @@ def main():
     ap.add_argument("--vx", type=float, default=0.5, help="matches the #288 measured condition")
     ap.add_argument("--wz", type=float, default=0.0)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--eval-only", default=None, metavar="STUDENT.pkl",
+                     help="skip BC/DAgger/export; eval an already-exported student "
+                          "params pickle (the (norm_state, policy_params) tuple "
+                          "export_student writes) against --teacher")
     args = ap.parse_args()
 
     t0 = time.time()
@@ -289,43 +299,50 @@ def main():
     print(f"loading teacher {args.teacher} ...")
     teacher_infer = jax.jit(load_policy(args.teacher, env_t.observation_size, env_t.action_size))
 
-    print(f"BC collection: {args.bc_episodes} episodes x {args.bc_steps} steps ...")
-    rng, k = jax.random.split(rng)
-    obs0, act0 = collect_bc(env_t, teacher_infer, args.bc_episodes, args.bc_steps, k)
-    print(f"  {obs0.shape[0]} (obs, action) pairs")
+    if args.eval_only:
+        print(f"--eval-only: loading student params from {args.eval_only} "
+              "(skipping BC/DAgger/export)")
+        with open(args.eval_only, "rb") as f:
+            norm_state, policy_params = pickle.load(f)
+        net, _ = build_student(jax.random.PRNGKey(0))
+    else:
+        print(f"BC collection: {args.bc_episodes} episodes x {args.bc_steps} steps ...")
+        rng, k = jax.random.split(rng)
+        obs0, act0 = collect_bc(env_t, teacher_infer, args.bc_episodes, args.bc_steps, k)
+        print(f"  {obs0.shape[0]} (obs, action) pairs")
 
-    rng, k = jax.random.split(rng)
-    net, policy_params = build_student(k)
-    norm_state = fit_normalizer(obs0)
-    print(f"BC fit: {args.epochs} epochs, batch {args.batch_size} ...")
-    rng, k = jax.random.split(rng)
-    policy_params, loss0 = train_bc(net, policy_params, norm_state, obs0, act0,
-                                     args.epochs, args.batch_size, args.lr, k)
-    print(f"  final BC MSE {loss0:.4f}")
+        rng, k = jax.random.split(rng)
+        net, policy_params = build_student(k)
+        norm_state = fit_normalizer(obs0)
+        print(f"BC fit: {args.epochs} epochs, batch {args.batch_size} ...")
+        rng, k = jax.random.split(rng)
+        policy_params, loss0 = train_bc(net, policy_params, norm_state, obs0, act0,
+                                         args.epochs, args.batch_size, args.lr, k)
+        print(f"  final BC MSE {loss0:.4f}")
 
-    student_infer = jax.jit(
-        make_inference_fn(net)((norm_state, policy_params), deterministic=True))
+        student_infer = jax.jit(
+            make_inference_fn(net)((norm_state, policy_params), deterministic=True))
 
-    print(f"DAgger round 1: {args.dagger_episodes} episodes x {args.dagger_steps} steps "
-          "(student drives, teacher labels) ...")
-    rng, k = jax.random.split(rng)
-    obs1, act1 = collect_dagger(env_t, teacher_infer, student_infer,
-                                 args.dagger_episodes, args.dagger_steps, k)
-    print(f"  {obs1.shape[0]} additional (obs, action) pairs")
+        print(f"DAgger round 1: {args.dagger_episodes} episodes x {args.dagger_steps} steps "
+              "(student drives, teacher labels) ...")
+        rng, k = jax.random.split(rng)
+        obs1, act1 = collect_dagger(env_t, teacher_infer, student_infer,
+                                     args.dagger_episodes, args.dagger_steps, k)
+        print(f"  {obs1.shape[0]} additional (obs, action) pairs")
 
-    obs_agg = np.concatenate([obs0, obs1], axis=0)
-    act_agg = np.concatenate([act0, act1], axis=0)
-    norm_state = fit_normalizer(obs_agg)          # refit normalizer on the aggregate
-    print(f"DAgger refit on {obs_agg.shape[0]} aggregated pairs, {args.epochs} epochs ...")
-    rng, k = jax.random.split(rng)
-    policy_params, loss1 = train_bc(net, policy_params, norm_state, obs_agg, act_agg,
-                                     args.epochs, args.batch_size, args.lr, k)
-    print(f"  final DAgger MSE {loss1:.4f}")
+        obs_agg = np.concatenate([obs0, obs1], axis=0)
+        act_agg = np.concatenate([act0, act1], axis=0)
+        norm_state = fit_normalizer(obs_agg)          # refit normalizer on the aggregate
+        print(f"DAgger refit on {obs_agg.shape[0]} aggregated pairs, {args.epochs} epochs ...")
+        rng, k = jax.random.split(rng)
+        policy_params, loss1 = train_bc(net, policy_params, norm_state, obs_agg, act_agg,
+                                         args.epochs, args.batch_size, args.lr, k)
+        print(f"  final DAgger MSE {loss1:.4f}")
 
-    out_prefix = Path(args.out)
-    out_prefix.parent.mkdir(parents=True, exist_ok=True)
-    pkl_path, npz_path = export_student(net, policy_params, norm_state, out_prefix, args.label)
-    print(f"exported {pkl_path.name}, {npz_path.name}")
+        out_prefix = Path(args.out)
+        out_prefix.parent.mkdir(parents=True, exist_ok=True)
+        pkl_path, npz_path = export_student(net, policy_params, norm_state, out_prefix, args.label)
+        print(f"exported {pkl_path.name}, {npz_path.name}")
 
     student_infer = jax.jit(
         make_inference_fn(net)((norm_state, policy_params), deterministic=True))
@@ -337,18 +354,22 @@ def main():
                               args.vx, args.wz)
     r_student = rollout_eval(env_b, student_infer, args.eval_episodes, args.eval_steps,
                               args.vx, args.wz)
-    summarise("teacher", r_teacher)
-    summarise("student", r_student)
+    summarise("teacher", r_teacher, args.vx)
+    summarise("student", r_student, args.vx)
     print("  (note: 'return' is not directly comparable — the teacher's reward "
           "carries extra weighted terms (swingref/gait/climb/pbrs) the blind "
-          "reward doesn't; fall-rate and distance are the comparable numbers.)")
+          "reward doesn't; fall-rate/distance/speed are the comparable numbers. "
+          "A low fall rate at a speed well below cmd is a SLOW, conservative gait, "
+          "not necessarily a better one — check speed before reading fall rate "
+          "as a win.)")
 
-    elapsed = time.time() - t0
-    n_samples = obs_agg.shape[0]
-    print(f"\nSMOKE RUN — {n_samples} samples ({obs0.shape[0]} BC + {obs1.shape[0]} DAgger), "
-          f"{args.epochs} epochs x2 fits, {elapsed:.1f}s wall time on CPU. This demonstrates "
-          "the pipeline end to end and produces a loadable artifact; it is NOT a claim that "
-          "the student is deployable — see the module docstring's RUN SIZE section.")
+    if not args.eval_only:
+        elapsed = time.time() - t0
+        n_samples = obs_agg.shape[0]
+        print(f"\nSMOKE RUN — {n_samples} samples ({obs0.shape[0]} BC + {obs1.shape[0]} DAgger), "
+              f"{args.epochs} epochs x2 fits, {elapsed:.1f}s wall time on CPU. This demonstrates "
+              "the pipeline end to end and produces a loadable artifact; it is NOT a claim that "
+              "the student is deployable — see the module docstring's RUN SIZE section.")
 
 
 if __name__ == "__main__":
