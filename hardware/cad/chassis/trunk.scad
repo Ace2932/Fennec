@@ -1,6 +1,31 @@
 // =============================================================================
 // NOVA chassis — DERIVED TRUNK (stock Nova-SM3 geometry, PRINTED holes)
 // =============================================================================
+// PRINT: PA6-CF, FLOOR-DOWN (floor slab on the bed, side walls rising, open
+//   top) — zero supports. The alternative, open-side-down, would bridge the
+//   whole floor slab across the top of the walls.
+//   ⚠ SLICE trunk.stl, NOT a render of this file — the shipped part is built
+//   by trunk_build.py (trimesh + manifold3d); OpenSCAD's boolean leaves 8
+//   sliver triangles at the side-wall notch (see that file's docstring).
+//
+// SOURCED, not guessed (2026-08-07): the upstream project documents this.
+// novaspotmicro.com/the-bones-body.html puts the frame in the "black bone
+// framework" class — "moderate to high settings, for strength and for
+// fasteners" — min layer 0.15, shell 0.8-1.2, infill 15-100% by part, and
+// "most external surfaces face upward" with the only stated exceptions being
+// the top/bottom covers (vertical) and MidArm covers (outside-down + support).
+// The trunk is not an exception, hence floor-down.
+//
+// Those are PLA-era hobby numbers. NOVA's own PA6-CF process (4 walls / 40%
+// infill / 0.2 layer) already exceeds "moderate to high" on strength, and
+// load-analysis.md §6 measures every shell-side stress under 1 MPa, so there
+// is no case for chasing 100% infill here. Material is PA6-CF because this is
+// a deep-walled box (warp behaves) whose real demand is bolt bearing and
+// creep resistance at the flange feet and the battery sandwich.
+//
+// Assembly note from the same upstream page: BLUE threadlock, never red —
+// red is permanent and every joint on this part is meant to come apart.
+// =============================================================================
 // User decision (2026-07-10): KEEP the stock Nova-SM3 trunk GEOMETRY as-is
 // (no shape redesign) but stop drilling it at assembly. This file imports
 // the stock mesh unmodified and subtracts every fastener hole that the
