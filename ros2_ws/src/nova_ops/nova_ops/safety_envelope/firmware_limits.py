@@ -203,10 +203,12 @@ def _clip(v: float) -> float:
 
 
 def build_firmware_tables(calib: Dict[int, JointHomeCalib]):
-    """The firmware tables to publish. Returns ``(limits, envelope, state)``.
+    """The firmware tables to publish. Returns ``(limits, envelope, limp_pose,
+    state)``.
 
-    Either entry may be ``None``, meaning "do not publish this one", and the two
-    follow DIFFERENT rules because the two tables fail differently.
+    Any of the first three may be ``None``, meaning "do not publish this
+    one", and each follows a DIFFERENT rule because each table fails
+    differently.
 
     ``limits`` — published whenever ANY joint is calibrated. The per-joint table
     is per-joint independent: ``build_joint_limits_data`` gives every calibrated
@@ -221,6 +223,14 @@ def build_firmware_tables(calib: Dict[int, JointHomeCalib]):
     haa, so a leg missing either joint cannot be bounded at all, and a table
     built around a guessed home would clamp against the wrong hip.
 
+    ``limp_pose`` (#145) — all-or-nothing, enforced by build_limp_pose_data
+    itself. Needs every leg's haa CONFIRMED (not just calibrated) as well,
+    since the pose needs the same 40 deg outboard splay
+    nova_locomotion.choreo.stand.pose_for('down') gates on. The firmware's
+    fallback for "no valid table has ever arrived" is the pre-#145 instant
+    torque release, which is the honest pre-homing/pre-confirmation state —
+    the same "withhold rather than guess" doctrine as envelope.
+
     THE CATCH THIS LEAVES, and why the state is returned rather than implied:
     publishing a partial ``limits`` table increments the firmware's receive
     counter exactly like a complete one, so "the firmware accepted a table" does
@@ -229,12 +239,15 @@ def build_firmware_tables(calib: Dict[int, JointHomeCalib]):
     """
     state, missing = calibration_state(calib)
     if state == "uncalibrated":
-        return None, None, state
+        return None, None, None, state
     from .limits import load_default_limits
 
     limits = build_joint_limits_data(load_default_limits(), calib)
     envelope = build_hfe_envelope_data(calib) or None
-    return limits, envelope, state
+    from .limp_pose import build_limp_pose_data
+
+    limp_pose = build_limp_pose_data(calib)
+    return limits, envelope, limp_pose, state
 
 
 def calibration_state(calib: Dict[int, JointHomeCalib]):

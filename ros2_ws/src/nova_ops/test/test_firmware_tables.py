@@ -266,10 +266,14 @@ def test_saving_a_haa_confirmation_preserves_existing_joints_and_other_haa_entri
 
 
 def test_full_calibration_yields_BOTH_tables():
-    limits, env, state = build_firmware_tables(calibration_from_doc(_doc()))
+    limits, env, limp, state = build_firmware_tables(calibration_from_doc(_doc()))
     assert state == "active"
     assert len(limits) == 24
     assert len(env) > 1
+    # limp_pose is withheld here too — full urdf_sign calibration alone is
+    # not enough, it also needs a haa CONFIRMATION (#194). See
+    # test_limp_pose.py for that gate.
+    assert limp is None
 
 
 def test_partial_calibration_STILL_PUBLISHES_the_per_joint_table():
@@ -283,7 +287,7 @@ def test_partial_calibration_STILL_PUBLISHES_the_per_joint_table():
     """
     doc = _doc()
     del doc["joints"][5]                      # FR hfe never homed
-    limits, env, state = build_firmware_tables(calibration_from_doc(doc))
+    limits, env, limp, state = build_firmware_tables(calibration_from_doc(doc))
     assert state == "partial"
     assert limits is not None
     # joint 1 is homed -> real window; joint 5 is not -> wide open
@@ -297,14 +301,14 @@ def test_partial_calibration_withholds_the_ENVELOPE():
     guessed home would clamp it against the wrong hip."""
     doc = _doc()
     del doc["joints"][5]
-    _, env, state = build_firmware_tables(calibration_from_doc(doc))
+    _, env, _limp, state = build_firmware_tables(calibration_from_doc(doc))
     assert state == "partial"
     assert env is None
 
 
 def test_no_calibration_publishes_NOTHING():
-    limits, env, state = build_firmware_tables({})
-    assert limits is None and env is None
+    limits, env, limp, state = build_firmware_tables({})
+    assert limits is None and env is None and limp is None
     assert state == "uncalibrated"
 
 
@@ -316,10 +320,10 @@ def test_a_partial_table_is_INDISTINGUISHABLE_to_the_firmware():
     "every joint is protected" — pinned here because #187's preflight check
     would otherwise be free to assume it.
     """
-    full, _, _ = build_firmware_tables(calibration_from_doc(_doc()))
+    full, _, _, _ = build_firmware_tables(calibration_from_doc(_doc()))
     doc = _doc()
     del doc["joints"][5]
-    part, _, _ = build_firmware_tables(calibration_from_doc(doc))
+    part, _, _, _ = build_firmware_tables(calibration_from_doc(doc))
     assert len(part) == len(full) == 24        # same shape, same validity
     assert part != full                        # but not the same protection
 

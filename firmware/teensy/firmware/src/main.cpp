@@ -12,6 +12,7 @@
 #include "ina226_telemetry.h"
 #include "hfe_envelope.h"
 #include "safety_state.h"
+#include "limp_controller.h"
 
 // Joint count = 12 (4 legs × 3 joints). Names/frame_id stay empty in
 // skeleton — Nova URDF wiring lands once gait controller is on the Jetson.
@@ -50,6 +51,25 @@ uint32_t cmd_stale_events = 0;    // lifetime count, for diagnostics
 // latch is active. Definition body lives in safety_state.h.
 nova::SafetyFSM safety_fsm;
 volatile bool safety_clear_request = false;
+
+// ---------------- Soft-fault controlled limp (#145) ----------------
+// This used to be a single unconditional set_fleet_torque(false) the
+// instant any latch tripped. See limp_controller.h for exactly which
+// faults now get a controlled limp (command a pose, hold torque ~1s, then
+// release) instead of that instant release, and why. Declared up here
+// (not next to the other host-table state below) because poll_one_servo()'s
+// overload path needs to reset it and that function is defined before the
+// rest of this file's table-publishing state.
+//
+// `limp_pose` sub: 12 raw counts, bus-ID order — the SAME host-table
+// mechanism as joint_limits/hfe_envelope below (nova_ops safety_envelope/
+// limp_pose.py). Until it has arrived at least once, limp_pose_valid stays
+// false and main.cpp falls back to the pre-#145 instant release — a
+// guessed pose commanded during a live fault is a worse hazard than none.
+uint16_t limp_pose_raw[NOVA_JOINT_COUNT];
+bool limp_pose_valid = false;
+volatile uint32_t limp_pose_rx_count = 0;
+nova::LimpController limp_controller;
 
 // Boot self-test result bitmap — set in setup() after GPIO pinMode but
 // before the tick timer starts. Bits:
@@ -260,6 +280,10 @@ void poll_one_servo() {
       servo_stall_mask |= stall_bit;
       safety_fsm.trip_overload();
       set_fleet_torque(false);   // LIMP now — first trip cuts torque fleet-wide
+      // #145: overload never gets a controlled limp (see limp_controller.h)
+      // — abort one in progress (e.g. tripped mid battery-low limp) rather
+      // than leave it dangling active with torque already cut.
+      limp_controller.reset();
     }
   } else {
     servo_read_err_count++;
@@ -340,11 +364,21 @@ inline void slew_init_all() {
 }
 
 void broadcast_servo_commands() {
-  if (!safety_fsm.motion_enabled()) return;
+  // #145: a controlled limp keeps writing (torque stays on, ramping toward
+  // the fault pose) even though motion_enabled() is false — it bypasses
+  // ONLY this fault gate, not the pipeline below it (per-joint clamp, slew
+  // limiter, PASS 4 hfe backstop). The limp target is a commanded pose like
+  // any other, not a bypass of them.
+  const bool limping = limp_controller.active();
+  if (!safety_fsm.motion_enabled() && !limping) return;
   // Never write the bus before the first real command arrives — the latched
   // array boots as all-zeros, and SYNC_WRITEing raw 0 to 12 servos at
-  // power-on would slam every joint to one end of travel.
-  if (joint_cmd_rx_count == 0) return;
+  // power-on would slam every joint to one end of travel. A controlled limp
+  // is exempt: its target comes from limp_pose_raw (a host-published table),
+  // never from latched_cmd_position, so it does not depend on /joint_commands
+  // ever having arrived — the whole point of the firmware fault path is to
+  // not depend on the host being alive.
+  if (!limping && joint_cmd_rx_count == 0) return;
   cmd_decimate_count++;
   if (cmd_decimate_count < CMD_BROADCAST_DECIMATE) return;
   cmd_decimate_count = 0;
@@ -360,7 +394,11 @@ void broadcast_servo_commands() {
   // before the slew limiter, which then ramps toward the corrected goal.
   for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
     ids[i] = SERVO_ID_BASE + i;
-    double v = latched_cmd_position[i];
+    // #145: while limping, ignore whatever the host is (or isn't) commanding
+    // and target the fault pose instead — the host may be crashed, stale, or
+    // the very thing that is unreachable right now.
+    double v = limping ? (double)limp_controller.target()[i]
+                        : latched_cmd_position[i];
     // NaN guard: (uint16_t)NaN is UB and NaN bypasses both range checks below
     // (NaN<0 and NaN>4095 are both false). Floor to 0 like a negative; slew
     // limiter still bounds the resulting step. Host should never publish NaN.
@@ -553,6 +591,7 @@ rcl_publisher_t joint_cmd_rx_pub;
 // published and silently rejected must not look like a table installed.
 rcl_publisher_t joint_limits_rx_pub;
 rcl_publisher_t hfe_envelope_rx_pub;
+rcl_publisher_t limp_pose_rx_pub;
 rcl_publisher_t hfe_envelope_clamps_pub;
 rcl_publisher_t servo_present_pub;
 rcl_publisher_t servo_read_err_pub;
@@ -566,6 +605,7 @@ rcl_subscription_t joint_cmd_sub;
 rcl_subscription_t safety_clear_sub;
 rcl_subscription_t joint_limits_sub;
 rcl_subscription_t hfe_envelope_sub;
+rcl_subscription_t limp_pose_sub;
 
 std_msgs__msg__Int32 heartbeat_msg;
 std_msgs__msg__Int32 loop_max_msg;
@@ -577,6 +617,7 @@ std_msgs__msg__Int32 safety_state_msg;
 std_msgs__msg__Int32 joint_cmd_rx_msg;
 std_msgs__msg__Int32 joint_limits_rx_msg;
 std_msgs__msg__Int32 hfe_envelope_rx_msg;
+std_msgs__msg__Int32 limp_pose_rx_msg;
 std_msgs__msg__Int32 hfe_envelope_clamps_msg;
 std_msgs__msg__Int32 servo_present_msg;
 std_msgs__msg__Int32 servo_read_err_msg;
@@ -606,6 +647,10 @@ float joint_limits_rx_buf[2 * NOVA_JOINT_COUNT];
 // hfe_envelope sub: 1 + 4 legs * N buckets * 4 floats, all raw counts (#142)
 std_msgs__msg__Float32MultiArray hfe_envelope_msg;
 float hfe_envelope_rx_buf[nova::HFE_ENV_MAX_FLOATS];
+// limp_pose sub: 12 raw counts, bus-ID order — the soft-fault controlled-
+// limp target (#145)
+std_msgs__msg__Float32MultiArray limp_pose_msg;
+float limp_pose_rx_buf[NOVA_JOINT_COUNT];
 
 // Backing storage for JointState arrays (pub + sub). Names + frame_id stay
 // empty for now — see header note.
@@ -672,6 +717,27 @@ void hfe_envelope_callback(const void* msgin) {
   // against the old, which is worse than either alone. Tested natively in
   // test/test_hfe_envelope.
   if (hfe_envelope.load(m->data.data, m->data.size)) hfe_envelope_rx_count++;
+}
+
+// `limp_pose` callback — the soft-fault controlled-limp target, in RAW
+// COUNTS, bus-ID order (#145). Same whole-message discipline as
+// joint_limits/hfe_envelope: validate everything BEFORE writing anything,
+// reject the entire update on any fault (NaN or outside the servo's 0..4095
+// range). No pair/ordering constraint here (unlike joint_limits) — this is
+// twelve independent absolute targets, not six (min,max) windows.
+void limp_pose_callback(const void* msgin) {
+  const std_msgs__msg__Float32MultiArray* m =
+      (const std_msgs__msg__Float32MultiArray*)msgin;
+  if (m->data.size != NOVA_JOINT_COUNT) return;
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    float v = m->data.data[i];
+    if (isnan(v) || v < 0.0f || v > 4095.0f) return;
+  }
+  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
+    limp_pose_raw[i] = (uint16_t)m->data.data[i];
+  }
+  limp_pose_valid = true;
+  limp_pose_rx_count++;
 }
 
 // /safety_clear sub callback — Bool; data=true requests a latch clear.
@@ -923,6 +989,11 @@ void setup() {
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "hfe_envelope_rx"));
   RCCHECK(rclc_publisher_init_default(
+      &limp_pose_rx_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "limp_pose_rx"));
+  RCCHECK(rclc_publisher_init_default(
       &hfe_envelope_clamps_pub,
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
@@ -1023,6 +1094,19 @@ void setup() {
   hfe_envelope_msg.layout.dim.capacity = 0;
   hfe_envelope_msg.layout.data_offset  = 0;
 
+  RCCHECK(rclc_subscription_init_default(
+      &limp_pose_sub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
+      "limp_pose"));
+  limp_pose_msg.data.data     = limp_pose_rx_buf;
+  limp_pose_msg.data.size     = 0;
+  limp_pose_msg.data.capacity = NOVA_JOINT_COUNT;
+  limp_pose_msg.layout.dim.data     = NULL;
+  limp_pose_msg.layout.dim.size     = 0;
+  limp_pose_msg.layout.dim.capacity = 0;
+  limp_pose_msg.layout.data_offset  = 0;
+
   joint_state_bind(&joint_states_msg, js_position, js_velocity, js_effort);
   joint_state_bind(&joint_cmd_msg,    cmd_position, cmd_velocity, cmd_effort);
   for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
@@ -1030,10 +1114,11 @@ void setup() {
     latched_cmd_position[i] = 0.0;
   }
 
-  // Executor sized for 4 subs: joint_commands + safety_clear + joint_limits
-  // + hfe_envelope. This count MUST match the add_subscription calls below —
-  // rclc silently refuses the extra handle if it is short.
-  RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator));
+  // Executor sized for 5 subs: joint_commands + safety_clear + joint_limits
+  // + hfe_envelope + limp_pose (#145). This count MUST match the
+  // add_subscription calls below — rclc silently refuses the extra handle
+  // if it is short.
+  RCCHECK(rclc_executor_init(&executor, &support.context, 5, &allocator));
   RCCHECK(rclc_executor_add_subscription(
       &executor, &joint_cmd_sub, &joint_cmd_msg,
       &joint_cmd_callback, ON_NEW_DATA));
@@ -1046,6 +1131,9 @@ void setup() {
   RCCHECK(rclc_executor_add_subscription(
       &executor, &hfe_envelope_sub, &hfe_envelope_msg,
       &hfe_envelope_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(
+      &executor, &limp_pose_sub, &limp_pose_msg,
+      &limp_pose_callback, ON_NEW_DATA));
 
   heartbeat_msg.data = 0;
   estop_msg.data = false;
@@ -1145,13 +1233,38 @@ void loop() {
       safety_clear_request = false;
     }
     nova::SafetyState curr_safety = safety_fsm.state();
-    // LIMP on any latch (E-stop / battery-low; the stall path already cut
-    // torque itself before tripping): holding the last pose with torque
-    // enabled fights the operator and cooks servos against whatever caused
-    // the stop. The robot is EXPECTED to collapse on E-stop — catch it or
-    // let it sit down. (system-audit item "E-stop limp", closed 2026-07-06)
+    // #145: on any NEW latch (E-stop / battery-low; the stall path already
+    // cut torque itself before tripping, above), decide instant release vs
+    // controlled limp per fault type — see limp_controller.h. Holding the
+    // last pose with torque enabled indefinitely fights the operator and
+    // cooks servos against whatever caused the stop; the difference #145
+    // adds is a SHORT, bounded, commanded settle for the faults where that
+    // is safe. (system-audit item "E-stop limp", closed 2026-07-06)
     if (curr_safety != nova::SAFETY_NORMAL && prev_safety == nova::SAFETY_NORMAL) {
+      if (nova::fault_gets_controlled_limp(curr_safety) && limp_pose_valid) {
+        limp_controller.start(limp_pose_raw, handler_start_us);
+        // Torque stays ON. broadcast_servo_commands() (already called this
+        // tick, above) starts ramping toward limp_controller.target() on the
+        // NEXT tick; set_fleet_torque(false) is deferred to the hold-elapsed
+        // check below.
+      } else {
+        // E-stop, overload, or a battery-low fault with no pose on record
+        // yet (pre-homing / haa sign unconfirmed): fail safe to the original
+        // instant release rather than guess a pose or delay an E-stop.
+        set_fleet_torque(false);
+      }
+    }
+    // E-stop always wins, even over an in-progress controlled limp — a
+    // human pressing E-stop mid-limp must not wait out the remaining hold
+    // window. (The FSM itself won't relatch state on top of an existing
+    // fault, so this reads the RAW pin rather than curr_safety.)
+    if (limp_controller.active() && estop_now) {
       set_fleet_torque(false);
+      limp_controller.reset();
+    } else if (limp_controller.tick(handler_start_us)) {
+      // Hold window elapsed — release exactly like the instant path always did.
+      set_fleet_torque(false);
+      limp_controller.reset();
     }
     // On any transition back to NORMAL (clear succeeded), reset the slew
     // history so the next broadcast accepts the current target verbatim
@@ -1162,6 +1275,7 @@ void loop() {
       set_fleet_torque(true);
       servo_stall_mask = 0;
       for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) servo_stall_count[i] = 0;
+      limp_controller.reset();   // defensive — should already be idle here
     }
 
 #ifdef NOVA_USE_MICRO_ROS
@@ -1244,6 +1358,8 @@ void loop() {
     RCSOFTCHECK(rcl_publish(&joint_limits_rx_pub, &joint_limits_rx_msg, NULL));
     hfe_envelope_rx_msg.data = (int32_t)hfe_envelope_rx_count;
     RCSOFTCHECK(rcl_publish(&hfe_envelope_rx_pub, &hfe_envelope_rx_msg, NULL));
+    limp_pose_rx_msg.data = (int32_t)limp_pose_rx_count;
+    RCSOFTCHECK(rcl_publish(&limp_pose_rx_pub, &limp_pose_rx_msg, NULL));
     hfe_envelope_clamps_msg.data = (int32_t)hfe_envelope.clamp_count();
     RCSOFTCHECK(rcl_publish(&hfe_envelope_clamps_pub, &hfe_envelope_clamps_msg, NULL));
     servo_present_msg.data = (int32_t)servo_present_mask;
