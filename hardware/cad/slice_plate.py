@@ -455,10 +455,19 @@ PARTS = {
         doc="print-batch §2: floor_plate flat (zero supports)",
     ),
     # As neck_bracket: -Z 667 mm^2 vs 116 for the next-best, 5.7x.
+    #
+    # MATERIAL CORRECTED 2026-08-07 (#184): this was PETG-CF here while
+    # jetson_case_mount.scad's own header already said PA6-CF (buried on a
+    # continuation line, so this file's check_material_agreement() never saw
+    # it either — the parser only reads the opening "Print:" line). Same shape
+    # as the battery_pocket correction above: two files, one part, opposite
+    # answers, resolved toward the part's own dated decision rather than
+    # picked here. PA6-CF also matches jetson_clamp_bar.scad, which shares
+    # this part's 250-510g case-retention load path and IS PA6-CF.
     "jetson_case_mount": Part(
-        _chassis("jetson_case_mount.stl"), "PETG-CF", down=None,
+        _chassis("jetson_case_mount.stl"), "PA6-CF", down=None,
         scad=_chassis("jetson_case_mount.scad"),
-        doc="Print: base-down (deck face on the bed); uprights rise (no overhangs now).",
+        doc="PRINT: PA6-CF, base-down (deck face on the bed); uprights rise (no overhangs now).",
     ),
     "control_pod": Part(
         _chassis("control_pod.stl"), "PETG-CF",

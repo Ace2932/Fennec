@@ -45,12 +45,16 @@
 //   ON THE BENCH (rear screws unreachable installed).
 // FIT GATE: check_fit.py HEAD case (head+bracket vs trunk/riser/case/shoulders
 //   + the front-leg sweep at hfe -50 + the L2 360/CoM), at the forward x.
-// PRINT: the EARS print SEPARATELY (head_ear.scad ×2) — the head body is then
-//   compact (x74..150, z84..131, no tall spans). Orient CROWN/PAD-DOWN (the flat
-//   crown top on the bed = best L2-seat + ear-pad surface); the boss + tilted
-//   face + cheeks rise -> tree supports under the tilted-face + cheek overhangs.
-//   PA6-CF. ⚠ verify the support layout in the slicer (the tilted face is the
-//   one real overhang). Alt: face-plate-down (tilt 27°) for the cleanest face.
+// PRINT: PA6-CF. The EARS print SEPARATELY (head_ear.scad ×2) — the head body
+//   is then compact (x74..150, z84..131, no tall spans). Orient CROWN/PAD-DOWN
+//   (the flat crown top on the bed = best L2-seat + ear-pad surface); the boss
+//   + tilted face + cheeks rise -> tree supports under the tilted-face + cheek
+//   overhangs. (#184: material was already in this block, just on a
+//   continuation line instead of the opening PRINT: line — invisible to
+//   slice_plate.py's parser, which only reads the line starting "PRINT:", and
+//   to a human skimming the header for the same reason.) ⚠ verify the support
+//   layout in the slicer (the tilted face is the one real overhang). Alt:
+//   face-plate-down (tilt 27°) for the cleanest face.
 
 $fn = 64;
 EPS = 0.05;

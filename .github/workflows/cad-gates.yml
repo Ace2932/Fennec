@@ -267,6 +267,15 @@ jobs:
         # later is in scope without anyone remembering to add it.
         run: python -u hardware/cad/check_seeding.py
 
+      - name: Every printed part's .scad states its material (#184)
+        # slice_plate.py's PARTS registry was the ONLY place material lived
+        # for 16 parts (79% of build mass) -- invisible to a human opening the
+        # .scad before slicing. slice_plate.py's own check_material_agreement()
+        # already catches this, but only when someone runs an actual slice;
+        # this runs it as a gate on every PR that touches a header, no
+        # OrcaSlicer needed (pure text parse).
+        run: python -u hardware/cad/check_print_directives.py
+
   rom-envelope-freshness:
     # Split out of generated-freshness because it is ~15x the cost of the other
     # three combined: regenerating rom_envelope_table.py replays the check_fit

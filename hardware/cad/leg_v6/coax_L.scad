@@ -1,4 +1,9 @@
 // LEFT coax = X-mirror of the right part (lateral axis = X in coax frame).
+// PRINT: PA6-CF (as coax.scad — INFERRED, NOT SOURCED, see that file's #184
+//   note), rear face (+Y) DOWN — SAME as coax_R. An X-mirror does not flip
+//   this face (unlike coax_hfe_block_L, whose directive is expressed on the
+//   X axis and DOES flip); the y-normal is unaffected by mirror([1,0,0]).
+//   supports=normal under the yoke bridge span, brim — as coax_R.
 $fn = 64;
 use <coax.scad>
 // LA-2 fix (2026-07-11): the old 2nd dot (-12,-17.25,8) targeted the same

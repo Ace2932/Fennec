@@ -1,6 +1,10 @@
 // =============================================================================
 // NOVA chassis — FLOOR PLATE (part 5): drill template + load spreader
 // =============================================================================
+// PRINT: PETG-CF, flat, zero supports — non-structural spreader (#184: this
+//   was previously buried mid-sentence near the rear-cutout paragraph below,
+//   "...inspection). Print: flat, zero supports, PETG-CF fine..." — not a
+//   header a PRINT:-line parser, or a human skimming the header, could find).
 // Top-level design: docs/design-outline.md. Trunk frame (+x FRONT).
 // Sits ON the stock trunk floor (top z 3.9), 2.0 thick -> top plane 5.9 =
 // the mezzanine seat (the riser's headroom math budgeted exactly this).

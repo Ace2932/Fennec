@@ -7,7 +7,14 @@
 // panel that FACES -X (rearward) beside + behind the mushroom, readable by an
 // operator behind the robot. The pod deck is symmetric again.
 // SPI cable (7-wire) drops off the panel back down to the Arduino Nano in the bay.
-// World/trunk frame (matches control_pod). PRINT: PETG/PA6-CF, foot-down, ~5 g.
+// World/trunk frame (matches control_pod).
+// PRINT: OPEN ITEM (#184) — not a directive this file can state yet. The part
+//   is deliberately UNPRINTABLE right now (see below: no board mount holes
+//   until #35's caliper session lands). The old note here, "PETG/PA6-CF,
+//   foot-down, ~5 g", was never a real answer either: "PETG/PA6-CF" names two
+//   materials, and "foot-down" names a feature, not an axis. Both are still
+//   open once #35 lands. slice_plate.py carries the full reasoning under
+//   UNRESOLVED["oled_mount"]; do not resolve either one here by guessing.
 //
 // -----------------------------------------------------------------------------
 // 2026-07-28 (#35): panel RESIZED to the real board; mount holes REMOVED.
