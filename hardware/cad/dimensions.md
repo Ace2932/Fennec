@@ -540,15 +540,74 @@ mounts. Dims kept here only for future re-introduction reference.
 ### ✅ Active in v1
 
 ### SSD1331 OLED 0.95" 96 × 64 color (ACTIVE)
-**Source:** common SSD1331 module
+**Source: CALIPERED off the owned board, 2026-08-08** (LA-17 / #35). Supersedes
+"common SSD1331 module" — see the retraction below.
 
 | Dim | Value | Status |
 |---|---|---|
-| Board L × W | 25.7 × 22.2 | ✅ |
-| Module L × W × H (incl pins) | 31 × 28 × 11 | ⚠️ REVIEW (varies by manufacturer) |
-| Mount holes | not standardized; many modules have none | ⚠️ REVIEW |
-| Active display area | 21.7 × 14.5 (0.95") | ✅ |
-| Pin header | 7-pin SPI, 2.54 mm pitch | ✅ |
+| Board L × W | **30.6 × 27.3** | ✅ **CALIPERED 2026-08-08** |
+| Mount holes | **4× corner, Ø2.1 (M2 clear)**; pitch **26.1 along the 30.6 axis**, **22.8 along the 27.3 axis**, centre-to-centre | ✅ **CALIPERED 2026-08-08** |
+| Hole inset from every edge | **2.25** (derived; both pitches agree — see below) | ✅ derived, self-checked |
+| Module L × W × H (incl pins) | 31 × 28 × 11 | ⚠️ REVIEW — L/W now superseded by the calipered outline; **H unmeasured** |
+| Display aperture (window target) | **23.3 × 15.8**, sitting **2.0 in from each long edge** and **5.5 from the TOP edge / 9.3 from the BOTTOM** | ✅ **CALIPERED 2026-08-08** — borders close on both axes |
+| Display centre offset | **1.9 mm off board centre, toward the TOP edge**; horizontally centred | ✅ derived from the borders |
+| Black mask / lit region | ~20.4 × 14.7 | ⚠️ approximate (measured with the display off) |
+| ~~Active display area 21.7 × 14.5~~ | superseded | ⚠️ never verified; kept only to explain the retraction |
+| Pin header | 7-pin SPI, 2.54 mm pitch | ✅ pitch/count; ⬜ **which edge, and pin-1 position from datum, unmeasured** |
+| PCB thickness / back-component height | — | ⬜ unmeasured; sets bracket standoff |
+
+⚠️ **RETRACTED: "Board L × W = 25.7 × 22.2 ✅".** It was wrong by 4.9 × 5.1 mm and
+carried a ✅ the whole time. The vendor drawing quoted in `chassis/oled_mount.scad`
+(27.3 × 30.7) was right to 0.1 mm; this table was the outlier. A ✅ in this file means
+"someone wrote a plausible number", not "someone measured the part" — treat every
+remaining ✅ on a *module* row as unproven until it says CALIPERED.
+
+**Why the axis assignment is not a guess.** Each pitch implies the same edge margin:
+(30.6 − 26.1)/2 = 2.25 and (27.3 − 22.8)/2 = 2.25. The opposite mapping is physically
+impossible — 26.1 across the 27.3 axis puts hole centres 0.6 mm from the edge, and a
+Ø2.1 hole there breaks out of the board. So the pattern is symmetric at 2.25 mm inset
+on all four sides, and the 26.1 pitch runs along the long (30.6) axis.
+
+⚠️ **Screw-head seating is tight on both sides, and it is checkable with a ruler.** Hole
+edge sits **1.2 mm** from the board edge (2.25 − 2.1/2). An M2 pan head (DIN 7985,
+Ø3.8, r 1.9) centred on a hole reaches:
+
+- **outboard: 2.25 − 1.9 = 0.35 mm** short of the board edge — it fits, barely, with no
+  room for a washer.
+- **inboard: 2.25 + 1.9 = 4.15 mm** in from the edge. **So the glass must start no closer
+  than 4.15 mm from any edge** or the head fouls it and the board sits skewed.
+
+**RESOLVED by the border measurements, and the fix is to reverse the stack.** The display
+starts 5.5 mm from the top edge and 2.0 mm from each long edge — so on the long edges it
+is *closer* than the 4.15 mm an M2 pan head reaches, and front-side screw heads would
+foul it regardless of centring. **Mount from behind:** panel in front carrying the
+window, board behind it, four bosses on the panel's rear face, screws entering from
+behind the board into heat-sets in those bosses. Heads bear on the back of the PCB and
+never touch the front face. This also pulls the board flat against the window.
+
+### ⚠️ The glass reading and the border readings CONTRADICT — borders win
+
+A measured glass outline of 24.3 × 17.4 **cannot fit** the measured borders: 2 + 24.3 + 2
+= 28.3 on a 27.3 mm board, and 5.5 + 17.4 + 9.3 = 32.2 on a 30.6 mm board. Both exceed the
+part, so that reading was taken across something wider than the glass — bezel lip or
+protective film. The border numbers close on both axes and are the ones carried.
+
+It does not block the cut, because all three readings bracket the same aperture:
+
+| bound | long axis | short axis |
+|---|---|---|
+| must exceed the mask | 20.4 | 14.7 |
+| **bordered region (carried)** | **23.3** | **15.8** |
+| must stay inside glass | 24.3 | 17.4 |
+
+Cutting the full bordered region lands strictly between mask and glass under every
+reading, so the 1–1.6 mm disagreement cannot reach the printed part. **Do not shrink the
+window to "split the difference"** — the vertical slack between mask and aperture is only
+1.1 mm total, and trimming it is how a 0.3 mm placement error starts clipping pixels.
+
+⚠️ **The old provisional window (20 × 16, centred) was wrong in both size and position**:
+20 is *narrower* than the ~20.4 mask, so it clipped the display, and centring it misplaced
+it by the 1.9 mm the board is asymmetric. Both faults are now sourced.
 
 ### HC-SR04 ultrasonic distance (CUT v1)
 **Source:** common HC-SR04 datasheet
