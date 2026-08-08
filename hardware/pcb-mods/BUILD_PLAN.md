@@ -375,6 +375,69 @@ seconds, shiny on both faces. Every pad here is easier than that one.
 `J20` are pour-tied. `JP1` and `J21` are entirely ordinary and `J10`'s five SPI pins are
 0.25 mm, so TS-D24 330 °C is correct there.
 
+### 📋 PER-COMPONENT TIP PLAN — every remaining pad, both boards (2026-08-08)
+
+Generated from the two `.kicad_pcb` files: for each pad, the widest trace touching it and the
+area of any same-net pour containing it. **HEAVY** = in a pour > 300 mm² or on a trace
+≥ 1.0 mm. This replaces the per-stage rows above wherever the two disagree.
+
+**TS-C4 380–400 °C on every HEAVY pad. TS-D24 330 °C on the rest.**
+
+#### 🔴 The electrolytics are the one that matters — and the instinct is backwards
+
+**`C1`–`C6` have BOTH pads HEAVY** (`V7V5_LEG` 7258 mm² / `V12_HIP` / `V12_L2` on one side,
+the 15183 mm² GND pour on the other) — and they are also the **heat-sensitive ≤ 3 s/lead**
+parts. Those two facts fight, and the stage-9 row above (TS-D24 340 °C) loses: a D24 at
+340 °C will **not** wet a 15000 mm² pour inside 3 s, so you end up dwelling — which is
+precisely what cooks an electrolytic.
+
+**Use TS-C4 at 400 °C and get out in ~2 s.** Hotter is *gentler* here, same as §2a's
+plane-tied argument: 400 °C for 2 s puts far less energy into the can than 340 °C for 12 s
+spent waiting for a joint that never quite flows. Do not lower the temperature because the
+part is heat-sensitive — that is the move that damages it.
+
+`C8`/`C9` are easier: GND pad HEAVY, `VBAT_PROTECTED` pad light.
+
+#### Power board
+
+| stage | part | HEAVY pads (TS-C4 400 °C) | rest (TS-D24 330 °C) |
+|---|---|---|---|
+| 6 | `J2` | **all 3** — VBAT_PROTECTED plane 13782, GND 15183, V5_AUX 1.5 mm | — |
+| 6 | `M1` | **both** | — |
+| 6 | `J8` | 1 (GND), 2 (`V7V5_LEG` **2.0 mm**) | 3 |
+| 6 | `J20` | 1, 2 (V5_AUX 1.5 mm), **3, 4, 10, 11, 12** (GND) | 5–9 |
+| 7 | `SW1` | **both** — pad 1 `VBAT` 3.0 mm, pad 2 the 13782 plane | — |
+| 7 | `SW2` | 1 (GND) | 2 (`EN_SW`) |
+| 8 | `J1` XT60 | **both** — 3.0 mm each | — |
+| 8 | `J3` `J4` `J5` `J6` | **both each** — GND pour + `V7V5_LEG` 7258 | — |
+| 8 | `J7` `J12` `J13` `J14` | **both each** | — |
+| 8 | `U1` | 1, 2 (×3 GND), 4 | 3 (`EN_BUCKS`) |
+| 8 | `U2` | 1, 2 (×3) | 3, 4 |
+| 8 | `U3` | 2 (×3), 4 | 1, 3 |
+| 8 | `U4` | 4 only | 1, 2, 3 |
+| 8 | `Q1` | **3** (the 14 A GND inject) | 1, 2 |
+| **9** | **`C1`–`C6`** | **BOTH pads — see the box above, C4 400 °C, ≤ 3 s** | — |
+| 9 | `C8` `C9` | 2 (GND) | 1 |
+| 10 | `U9`–`U12` INA | 7 (GND) | 4, 5, 6 |
+
+⚠️ `J20` pad 3 measures outside the pour outline while pads 4/10/11/12 sit inside it. Treat
+**all five GND pins as heavy** — the difference is a polygon edge, not a thermal one.
+
+#### Logic board
+
+| stage | part | HEAVY pads (TS-C4 400 °C) | rest (TS-D24 330 °C) |
+|---|---|---|---|
+| 6 | `J9` | 1 (GND 8490) | 2 |
+| 6 | `J10` | 1 (GND), 2 (`V5_AUX` 7969) | 3–7 (SPI, all 0.25 mm) |
+| 6 | `J11` | 1 (`V5_AUX`), 2 (GND) | 3 |
+| 6 | `J20` | 1, 3, 4, 10, 11, 12 | 2, 5–9 |
+| 6 | `J21` · `JP1` | **none** | all |
+| 10 | `U6` Teensy | **none** — all 12 pads light | all |
+| 10 | `U12` Nano | 4, 29 (GND) | the other 28 |
+
+`U6` being entirely light is worth knowing: the Teensy socket is 12 ordinary pads and needs
+no tip change at all.
+
 **Do not set a WORKING temperature above 400 °C.** Past that the flux flashes off
 before it can wet, tip plating degrades quickly, and you get *worse* joints, not
 faster ones. **The 420 °C boost below is the deliberate exception** — it is held
