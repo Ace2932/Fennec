@@ -553,8 +553,13 @@ mounts. Dims kept here only for future re-introduction reference.
 | Display centre offset | **1.9 mm off board centre, toward the TOP edge**; horizontally centred | ✅ derived from the borders |
 | Black mask / lit region | ~20.4 × 14.7 | ⚠️ approximate (measured with the display off) |
 | ~~Active display area 21.7 × 14.5~~ | superseded | ⚠️ never verified; kept only to explain the retraction |
-| Pin header | 7-pin SPI, 2.54 mm pitch | ✅ pitch/count; ⬜ **which edge, and pin-1 position from datum, unmeasured** |
-| PCB thickness / back-component height | — | ⬜ unmeasured; sets bracket standoff |
+| Pin header | 7-pin SPI, 2.54 mm pitch, on the **TOP edge** (the 5.5 mm border side) — cable exits **upward** | ✅ edge confirmed 2026-08-08; ⬜ pin-1 position along that edge, and whether pins run in-plane or perpendicular, unmeasured |
+| FPC / driver bond | **BOTTOM edge** (the 9.3 mm border side) — that band is why the display sits 1.9 mm high | ✅ 2026-08-08 |
+| Depth, glass front → tallest back component (**excl. pins**) | **4.8** | ✅ **CALIPERED 2026-08-08** |
+| Header pins | **perpendicular to the board, protruding from the BACK** (same side as the components) | ✅ 2026-08-08 — so the panel needs **no** relief notch; pins point into the cable space behind |
+| Depth, glass front → **PCB back face** | **3.4** | ✅ **CALIPERED 2026-08-08 — this is the boss height** |
+| Back components, height above PCB rear face | **1.4** (= 4.8 − 3.4) | ✅ derived |
+| Pin protrusion + mating shell | — | ⬜ sets total standoff from the shoulder, not the bracket itself. A straight Dupont shell adds ~14 mm; right-angle much less |
 
 ⚠️ **RETRACTED: "Board L × W = 25.7 × 22.2 ✅".** It was wrong by 4.9 × 5.1 mm and
 carried a ✅ the whole time. The vendor drawing quoted in `chassis/oled_mount.scad`
