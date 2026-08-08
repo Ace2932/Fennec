@@ -44,6 +44,11 @@ POSES = {
     "sit":  {"FL": STAND_LEG, "FR": STAND_LEG, "RL": SIT_LEG, "RR": SIT_LEG},
     "down": {leg: SIT_LEG for leg in LEG_NAMES},
 }
+# END-AGNOSTIC by measurement (#180): the hfe cap is end-keyed, but both poses
+# rendered here sit inside the intersection of the two ends' ranges — SIT_LEG
+# hfe +0.698 rad (40 deg), STAND_LEG +0.600 (34 deg), against +-0.873 — so the
+# front's pair below renders a legal picture at either end. Widen either pose
+# past +-0.873 and this needs build_mjcf.hfe_range(sx) per leg.
 J_LO = {leg: np.array([-HAA_IN if SIDE[leg] > 0 else -HAA_OUT, -HFE_EXT, -KFE])
         for leg in LEG_NAMES}
 J_HI = {leg: np.array([HAA_OUT if SIDE[leg] > 0 else HAA_IN, HFE_FOLD, KFE])

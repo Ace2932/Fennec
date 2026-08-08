@@ -52,7 +52,13 @@ from build_mjcf import (   # noqa: E402
 P = LegParams()
 TAU = np.array([EFF_HIP, EFF_LEG, EFF_LEG])          # haa, hfe, kfe (N*m)
 JNAMES = ["haa", "hfe", "kfe"]
-# joint ranges as emitted into nova.xml (canonical/left-leg sign convention)
+# joint ranges as emitted into nova.xml (canonical/left-leg sign convention).
+# END-AGNOSTIC, and that is MEASURED, not assumed (#180): the hfe cap sits on
+# opposite signs front vs rear, but every pose this sweep visits lands in
+# hfe +0.134..+0.853 rad — inside the intersection of both ends' ranges
+# (+-0.873), so the numbers below hold for a front OR a rear leg. If a future
+# sweep widens past +-0.873 this stops being true; use build_mjcf.hfe_range(sx)
+# then, as probe_lift_envelope.py does.
 LO = np.array([-HAA_IN, -HFE_EXT, -KFE])
 HI = np.array([HAA_OUT, HFE_FOLD, KFE])
 

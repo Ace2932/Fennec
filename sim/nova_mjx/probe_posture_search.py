@@ -42,15 +42,30 @@ from scripted_crawl_climber import (   # noqa: E402
 from nova_locomotion.kinematics.leg_ik import (   # noqa: E402
     inverse_kinematics, Unreachable,
 )
-from build_mjcf import HAA_IN, HAA_OUT, HFE_FOLD, HFE_EXT, KFE   # noqa: E402
+from build_mjcf import HAA_IN, HAA_OUT, KFE, hfe_range   # noqa: E402
 from terrain import STAIR_RISE   # noqa: E402
 
-LO = np.array([-HAA_IN, -HFE_EXT, -KFE])
-HI = np.array([HAA_OUT, HFE_FOLD, KFE])
+# PER-LEG, END-KEYED (#180). These used to be ONE pair built from
+# (-HFE_EXT, +HFE_FOLD) — the FRONT's range — and applied to all four legs.
+# The MJCF hfe axis is "0 1 0" everywhere, so canonical +hfe swings every foot
+# REARWARD: toward the trunk at the front, AWAY from it at the rear. The
+# conservative chassis fold cap therefore lands on OPPOSITE SIGNS at the two
+# ends, which is exactly what build_mjcf.hfe_range(sx) returns and what #163/
+# #164 established for the runtime gate. Applying the front's pair to the rear
+# let this search spend rear fold it does not have: the pre-fix optimum planted
+# both rear legs at hfe -52.4 deg against a -50.0 deg rear cap.
+_HFE = {sx: hfe_range(sx) for sx in (1, -1)}
+LO_LEG = np.array([[-HAA_IN, _HFE[sx][0], -KFE] for sx in np.sign(HB[:, 0])])
+HI_LEG = np.array([[HAA_OUT, _HFE[sx][1], KFE] for sx in np.sign(HB[:, 0])])
+# Guard the whole point of the fix: front and rear must NOT share an hfe row.
+# A future refactor that collapses these back to one pair fails here rather
+# than silently re-permitting rear folds the chassis gate refuses.
+assert LO_LEG[0][1] != LO_LEG[2][1] and HI_LEG[0][1] != HI_LEG[2][1], \
+    "hfe range must be END-KEYED (front != rear) — see #180"
 JN = ["haa", "hfe", "kfe"]
 
 
-def leg_solve(foot_w, hip_w, R, side):
+def leg_solve(foot_w, hip_w, R, side, leg_i):
     """Validated IK for one leg from a world foot + world hip + body rotation.
     Returns (theta, knee_branch) for whichever branch is in range, else None."""
     vec_body = R.T @ (foot_w - hip_w)
@@ -60,12 +75,12 @@ def leg_solve(foot_w, hip_w, R, side):
             t = np.array(inverse_kinematics(canon, PARAMS, knee_forward=kf))
         except Unreachable:
             continue
-        if np.all(t >= LO - 1e-9) and np.all(t <= HI + 1e-9):
+        if np.all(t >= LO_LEG[leg_i] - 1e-9) and np.all(t <= HI_LEG[leg_i] + 1e-9):
             return t, kf
     return None
 
 
-def binding(foot_w, hip_w, R, side):
+def binding(foot_w, hip_w, R, side, leg_i):
     """Diagnose WHY a target failed: which joint left range, or unreachable."""
     vec_body = R.T @ (foot_w - hip_w)
     canon = (vec_body[0], side * vec_body[1], vec_body[2])
@@ -76,8 +91,9 @@ def binding(foot_w, hip_w, R, side):
         except Unreachable as e:
             msgs.append(f"branch{int(kf)}: unreachable ({e})")
             continue
-        bad = [f"{JN[i]} {t[i]:+.3f} outside [{LO[i]:+.3f},{HI[i]:+.3f}]"
-               for i in range(3) if t[i] < LO[i] - 1e-9 or t[i] > HI[i] + 1e-9]
+        lo, hi = LO_LEG[leg_i], HI_LEG[leg_i]
+        bad = [f"{JN[i]} {t[i]:+.3f} outside [{lo[i]:+.3f},{hi[i]:+.3f}]"
+               for i in range(3) if t[i] < lo[i] - 1e-9 or t[i] > hi[i] + 1e-9]
         msgs.append(f"branch{int(kf)}: " + ("; ".join(bad) if bad else "OK"))
     return " | ".join(msgs)
 
@@ -90,7 +106,7 @@ def stance_ok(z_b, pitch, footholds, swing_i):
         if i == swing_i:
             continue
         hip_w = Pb + R @ HB[i]
-        if leg_solve(footholds[i], hip_w, R, SIDE[i]) is None:
+        if leg_solve(footholds[i], hip_w, R, SIDE[i], i) is None:
             return False, R, Pb
     return True, R, Pb
 
@@ -107,11 +123,11 @@ def max_swing_height(z_b, pitch, dy, footholds, swing_i):
     # even sit at its own foothold with this lateral offset, the pose is infeasible.
     lo = float(footholds[swing_i][2])
     hi = lo + 0.30
-    if leg_solve(np.array([fx, fy, lo]), hip_w, R, SIDE[swing_i]) is None:
+    if leg_solve(np.array([fx, fy, lo]), hip_w, R, SIDE[swing_i], swing_i) is None:
         return None
     for _ in range(44):                       # bisect the highest feasible foot z
         mid = 0.5 * (lo + hi)
-        if leg_solve(np.array([fx, fy, mid]), hip_w, R, SIDE[swing_i]) is not None:
+        if leg_solve(np.array([fx, fy, mid]), hip_w, R, SIDE[swing_i], swing_i) is not None:
             lo = mid
         else:
             hi = mid
@@ -130,8 +146,11 @@ def main():
     print("=" * 100)
     print("POSTURE SEARCH — max swing-foot clearance over body height, pitch, abduction")
     print(f"swing leg = {LEG_NAMES[swing_i]}; nominal body height {z_nom*100:.2f} cm")
-    print(f"joint ranges: haa [{LO[0]:+.3f},{HI[0]:+.3f}]  hfe [{LO[1]:+.3f},{HI[1]:+.3f}]"
-          f"  kfe [{LO[2]:+.3f},{HI[2]:+.3f}]  (hfe fold cap = the chassis riser skirt)")
+    print(f"joint ranges: haa [{LO_LEG[0][0]:+.3f},{HI_LEG[0][0]:+.3f}]  "
+          f"hfe FRONT [{LO_LEG[0][1]:+.3f},{HI_LEG[0][1]:+.3f}] "
+          f"REAR [{LO_LEG[2][1]:+.3f},{HI_LEG[2][1]:+.3f}]  "
+          f"kfe [{LO_LEG[0][2]:+.3f},{HI_LEG[0][2]:+.3f}]  "
+          f"(hfe fold cap = the chassis riser skirt, END-KEYED per #180)")
     print("=" * 100)
 
     base = max_swing_height(z_nom, 0.0, 0.0, footholds, swing_i)
@@ -176,12 +195,12 @@ def main():
             fw = np.array([footholds[i, 0], footholds[i, 1] + SIDE[i] * d, h])
         else:
             fw = footholds[i]
-        r = leg_solve(fw, hip_w, R, SIDE[i])
+        r = leg_solve(fw, hip_w, R, SIDE[i], i)
         if r is None:
             print(f"    {LEG_NAMES[i]}: (no solution)")
             continue
         t, kf = r
-        flags = "".join("*" if (abs(t[j]-LO[j]) < 2e-3 or abs(t[j]-HI[j]) < 2e-3) else " "
+        flags = "".join("*" if (abs(t[j]-LO_LEG[i][j]) < 2e-3 or abs(t[j]-HI_LEG[i][j]) < 2e-3) else " "
                         for j in range(3))
         tag = "SWING" if i == swing_i else "stance"
         print(f"    {LEG_NAMES[i]} {tag:6}: {np.round(t,3)} {flags} knee_fwd={kf}")

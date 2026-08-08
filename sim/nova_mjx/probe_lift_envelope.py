@@ -46,15 +46,25 @@ from nova_locomotion.kinematics.leg_ik import (   # noqa: E402
 )
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_mjcf import (   # noqa: E402
-    EFF_HIP, EFF_LEG, VMAX_HIP, VMAX_LEG, HAA_IN, HAA_OUT, HFE_FOLD, HFE_EXT, KFE,
+    EFF_HIP, EFF_LEG, VMAX_HIP, VMAX_LEG, HAA_IN, HAA_OUT, KFE, hfe_range,
 )
 
 P = LegParams()
 TAU = np.array([EFF_HIP, EFF_LEG, EFF_LEG])        # haa, hfe, kfe stall (N*m)
 OMG = np.array([VMAX_HIP, VMAX_LEG, VMAX_LEG])     # no-load speed (rad/s)
 JN = ["haa", "hfe", "kfe"]
-LO = np.array([-HAA_IN, -HFE_EXT, -KFE])
-HI = np.array([HAA_OUT, HFE_FOLD, KFE])
+# WHICH END (#180). This tool models ONE leg, and the hfe range is NOT the same
+# at both: canonical +hfe swings every foot rearward, so the conservative fold
+# cap sits on opposite signs front vs rear (build_mjcf.hfe_range). Running it
+# front-only was not neutral — MEASURED on the pre-fix version, 4446 of the
+# 23557 poses it accepted (18.9%) were front-legal and REAR-ILLEGAL, the worst
+# at -86.0 deg against the rear's -50.0 deg cap. Default stays FRONT so the
+# recorded numbers keep their meaning; pass `rear` to get the other end.
+END = -1 if (len(sys.argv) > 1 and sys.argv[1].lower().startswith("r")) else 1
+END_NAME = "REAR" if END < 0 else "FRONT"
+_HFE_LO, _HFE_HI = hfe_range(END)
+LO = np.array([-HAA_IN, _HFE_LO, -KFE])
+HI = np.array([HAA_OUT, _HFE_HI, KFE])
 MU = 1.2                                            # nova.xml foot/floor friction
 MASS = 2.83 + 4 * (0.0836 + 0.1219 + 0.1110 + 0.0039)
 WEIGHT = MASS * 9.81
