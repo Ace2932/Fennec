@@ -314,7 +314,8 @@ Leaded first, lead-free in brackets. These are *tip setpoints*, not pad temperat
 | **5 — `BATT_NEG` ends only** | **`D1`.2 · `R_gs1`.2 · `C_gs1`.2** | **TS-D24** | **380 °C** |
 | 3 | U8 SOIC-8, U7 SOIC-14 — drag/wick | TS-K | **330 °C** (355) |
 | **4, 7, 8** | **L1, SW1.2, Q1.3, U1.4, XT30/XT60, buck stations** | **TS-C4** | **380–400 °C** (400) |
-| 6 | headers, JST, IDC | TS-D24 | **330 °C** (355) |
+| 6 — signal pins only | headers, JST, IDC | TS-D24 | **330 °C** (355) |
+| **6 — GND + rail pins (power board = MOST of the stage)** | **`J2` all 3 · `M1` both · `J8` all 3 · `J20` GND×5 + V5_AUX×2** | **TS-C4** | **380–400 °C** |
 | 9 | electrolytics — **≤3 s per lead** | TS-D24 | **340 °C** (360) |
 | 10 | module headers / sockets | TS-D24 | **330 °C** (355) |
 
@@ -345,6 +346,34 @@ shift while you work the heavy end.
 ⚠️ Do **not** answer a non-wetting heavy pad by pressing a fine tip harder for longer. A
 low-mass tip sags against 3 mm of copper, and the dwell is what lifts pads — see the
 hotter-is-gentler note below.
+
+**GENERALISATION: a per-stage tip/temperature spec is wrong the moment one pad in that stage
+sits on different copper. Check trace width and pour membership PER PAD, not per stage.**
+
+### 🔴 STAGE 6 IS THE SAME TRAP, LARGER — 19 of the power board's 20 pads are heavy
+
+Checked *ahead* of the iron 2026-08-08 by applying the rule above, rather than discovered by
+a pad that would not wet:
+
+| connector | heavy pads | on what |
+|---|---|---|
+| `J2` | **3 of 3** | `VBAT_PROTECTED` (the whole-board **In2.Cu** plane) · GND · `V5_AUX` 1.50 mm |
+| `M1` | **2 of 2** | `VBAT_PROTECTED` plane · GND |
+| `J8` | **3 of 3** | GND · `V7V5_LEG` **2.00 mm** (servo rail) · `BUS_SERVO` |
+| `J20` | **11 of 12** | GND ×5 · `V5_AUX` ×2 at 1.50 mm · rest in small local pours |
+
+So stage 6 on power_v2 is not "headers and JSTs" — it is **mostly plane-tied through-hole**.
+**TS-C4 at 380–400 °C on every GND and rail pin**; keep TS-D24 330 °C for the signal pins
+(`SDA` / `SCL` / `BATT_LOW` / `+3V3` / `BUS_SERVO`), which sit in small local pours and
+behave normally.
+
+**No new bench test is needed to justify this** — §7's preheat trial already passed at exactly
+this setup on `Q1`.3, the 14 A GND inject and the worst THT pad on the board: wetted in
+seconds, shiny on both faces. Every pad here is easier than that one.
+
+**LOGIC board stage 6 is much lighter.** Only the GND / `V5_AUX` pins on `J9`, `J10`, `J11`,
+`J20` are pour-tied. `JP1` and `J21` are entirely ordinary and `J10`'s five SPI pins are
+0.25 mm, so TS-D24 330 °C is correct there.
 
 **Do not set a WORKING temperature above 400 °C.** Past that the flux flashes off
 before it can wet, tip plating degrades quickly, and you get *worse* joints, not
