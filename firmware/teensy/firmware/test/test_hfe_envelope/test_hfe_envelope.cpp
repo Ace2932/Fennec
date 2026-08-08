@@ -238,6 +238,190 @@ static void test_clamp_counter_only_moves_when_it_bites() {
   TEST_ASSERT_EQUAL_UINT32(1, env.clamp_count());
 }
 
+// ---- #280 present-position tightening -------------------------------------
+
+// Two asymmetric buckets: bucket 0 (haa < 2048) is WIDE (cap 3500), bucket 1
+// (haa >= 2048) is TIGHT (cap 800) — mirrors the real table's shape (open
+// haa = permissive fold, tucked haa = restrictive) without needing degree
+// conversions. leg 0 = FL, used throughout.
+static size_t build_asymmetric(float* out) {
+  out[0] = 2.0f;
+  size_t i = 1;
+  for (size_t leg = 0; leg < HFE_ENV_LEGS; leg++) {
+    out[i++] = 0.0f;    out[i++] = 2048.0f; out[i++] = 0.0f; out[i++] = 3500.0f;
+    out[i++] = 2048.0f; out[i++] = 4095.0f; out[i++] = 0.0f; out[i++] = 800.0f;
+  }
+  return i;
+}
+
+static void test_present_telemetry_further_tightens_the_selected_window() {
+  float buf[HFE_ENV_MAX_FLOATS];
+  size_t n = build_asymmetric(buf);
+  HfeEnvelope env;
+  TEST_ASSERT_TRUE(env.load(buf, n));
+
+  uint16_t t[12] = {0};
+  uint16_t present[12] = {0};
+  t[hfe_env_haa_index(0)] = 100;     // bucket 0 (wide, cap 3500)
+  t[hfe_env_hfe_index(0)] = 2500;    // legal under bucket 0 alone
+
+  // No present telemetry passed at all -> old target-only behaviour, no clamp.
+  env.apply(t);
+  TEST_ASSERT_EQUAL_UINT16(2500, t[hfe_env_hfe_index(0)]);
+  TEST_ASSERT_EQUAL_UINT32(0, env.clamp_count());
+
+  // Present haa says this leg's hip is ACTUALLY already tucked (bucket 1,
+  // cap 800) even though the commanded haa target is still in bucket 0 —
+  // tighter-of-two must catch what target-only misses.
+  t[hfe_env_hfe_index(0)] = 2500;
+  present[hfe_env_haa_index(0)] = 3000;   // bucket 1
+  env.apply(t, present, /*present_mask=*/(uint16_t)(1u << hfe_env_haa_index(0)));
+  TEST_ASSERT_EQUAL_UINT16(800, t[hfe_env_hfe_index(0)]);
+  TEST_ASSERT_EQUAL_UINT32(1, env.clamp_count());
+}
+
+static void test_present_position_unknown_falls_back_to_target_only() {
+  // present_mask bit clear (servo never answered a poll) must not be
+  // trusted — same choice as the anti-snap seed in main.cpp: fall back
+  // rather than block motion on missing telemetry.
+  float buf[HFE_ENV_MAX_FLOATS];
+  size_t n = build_asymmetric(buf);
+  HfeEnvelope env;
+  TEST_ASSERT_TRUE(env.load(buf, n));
+
+  uint16_t t[12] = {0};
+  uint16_t present[12] = {0};
+  t[hfe_env_haa_index(0)] = 100;           // bucket 0 (wide, cap 3500)
+  t[hfe_env_hfe_index(0)] = 2500;
+  present[hfe_env_haa_index(0)] = 3000;    // would select the tight bucket...
+  // ...but the presence bit for this leg's haa is NOT set.
+  env.apply(t, present, /*present_mask=*/0);
+  TEST_ASSERT_EQUAL_UINT16(2500, t[hfe_env_hfe_index(0)]);
+  TEST_ASSERT_EQUAL_UINT32(0, env.clamp_count());
+}
+
+// ---- #280 pipeline: pre-slew (PASS 2) alone vs +post-slew (PASS 4) --------
+//
+// Reproduces main.cpp's actual PASS 2 / PASS 3 / PASS 4 arithmetic for one
+// leg. haa needs little travel (crosses the tight bucket almost immediately)
+// while hfe needs a lot (mirrors the real stand->tuck move, where haa
+// reaches the restrictive station long before hfe unfolds out of it) — both
+// endpoints are legal (hfe's far target, 500, is well under the tight
+// bucket's 800 cap), so a pre-slew check on the far target alone can never
+// clamp it, exactly as measured on the real table in the issue (30.4 deg
+// residual violation either way). Calling apply() AGAIN post-slew, on what
+// is actually about to be written, closes it.
+static void test_pass2_alone_permits_a_path_violation_pass4_does_not() {
+  float buf[HFE_ENV_MAX_FLOATS];
+  size_t n = build_asymmetric(buf);
+  HfeEnvelope env;
+  TEST_ASSERT_TRUE(env.load(buf, n));
+
+  constexpr uint16_t SLEW_MAX = 200;   // test-local, doesn't need to match FW
+  const uint16_t target_haa = 2100, target_hfe = 500;   // both legal at rest
+  const uint16_t start_haa = 1900, start_hfe = 3000;
+
+  auto slew = [](uint16_t last, uint16_t target) -> uint16_t {
+    int32_t delta = (int32_t)target - (int32_t)last;
+    if (delta > (int32_t)SLEW_MAX) delta = SLEW_MAX;
+    if (delta < -(int32_t)SLEW_MAX) delta = -(int32_t)SLEW_MAX;
+    return (uint16_t)((int32_t)last + delta);
+  };
+
+  // -- target-only (PASS 2, pre-slew) with NO PASS 4: reproduce the bug --
+  {
+    HfeEnvelope local = env;
+    uint16_t last_haa = start_haa, last_hfe = start_hfe;
+    bool violated = false;
+    for (int tick = 0; tick < 20; tick++) {
+      uint16_t targets[12] = {0};
+      targets[hfe_env_haa_index(0)] = target_haa;
+      targets[hfe_env_hfe_index(0)] = target_hfe;
+      local.apply(targets);   // PASS 2 only — selects by the FAR target
+      last_haa = slew(last_haa, targets[hfe_env_haa_index(0)]);
+      last_hfe = slew(last_hfe, targets[hfe_env_hfe_index(0)]);
+      // Legal RIGHT NOW means: hfe <= the cap selected by haa's OWN value
+      // this tick. Check it directly against the table via a probe call.
+      uint16_t probe[12] = {0};
+      probe[hfe_env_haa_index(0)] = last_haa;
+      probe[hfe_env_hfe_index(0)] = 4095;   // force worst case -> ceiling out
+      HfeEnvelope ceiling_probe = env;
+      ceiling_probe.apply(probe);
+      if (last_hfe > probe[hfe_env_hfe_index(0)]) violated = true;
+    }
+    TEST_ASSERT_TRUE_MESSAGE(violated,
+        "target-only PASS 2 was expected to permit a path violation here "
+        "(matches the issue's measured 30.4 deg residual) — if this now "
+        "passes, the scenario stopped reproducing the bug");
+  }
+
+  // -- target-only PASS 2 + post-slew PASS 4 on the same scenario --
+  {
+    HfeEnvelope local = env;
+    uint16_t last_haa = start_haa, last_hfe = start_hfe;
+    bool violated = false;
+    for (int tick = 0; tick < 20; tick++) {
+      uint16_t targets[12] = {0};
+      targets[hfe_env_haa_index(0)] = target_haa;
+      targets[hfe_env_hfe_index(0)] = target_hfe;
+      local.apply(targets);                       // PASS 2
+      last_haa = slew(last_haa, targets[hfe_env_haa_index(0)]);
+      last_hfe = slew(last_hfe, targets[hfe_env_hfe_index(0)]);
+
+      uint16_t goals[12] = {0};
+      goals[hfe_env_haa_index(0)] = last_haa;      // this tick's OWN output
+      goals[hfe_env_hfe_index(0)] = last_hfe;
+      local.apply(goals);                          // PASS 4
+      last_hfe = goals[hfe_env_hfe_index(0)];       // keep slew state in sync
+
+      uint16_t probe[12] = {0};
+      probe[hfe_env_haa_index(0)] = last_haa;
+      probe[hfe_env_hfe_index(0)] = 4095;
+      HfeEnvelope ceiling_probe = env;
+      ceiling_probe.apply(probe);
+      if (last_hfe > probe[hfe_env_hfe_index(0)]) violated = true;
+    }
+    TEST_ASSERT_FALSE_MESSAGE(violated,
+        "PASS 4 (post-slew re-check on what is actually about to be "
+        "written) should never let hfe exceed the window its OWN this-tick "
+        "haa output selects");
+    // And it must actually have reached the far target eventually, i.e. the
+    // fix does not just permanently pin the joint.
+    TEST_ASSERT_EQUAL_UINT16(target_hfe, last_hfe);
+  }
+}
+
+// ---- #186 install/report state ---------------------------------------------
+//
+// main.cpp publishes joint_limits_rx_count / hfe_envelope_rx_count only when
+// their callback's load() returned true, and hfe_envelope_clamps straight
+// from clamp_count() — so the REPORTED state is exactly this object's
+// active()/buckets()/clamp_count() triple. This tests that triple directly:
+// it must read all-zero/inactive before any table, and a REJECTED update
+// must never move it, so "accepted" can never be confused with "received".
+static void test_report_state_reflects_only_ACCEPTED_tables() {
+  HfeEnvelope env;
+  TEST_ASSERT_FALSE(env.active());
+  TEST_ASSERT_EQUAL_UINT8(0, env.buckets());
+  TEST_ASSERT_EQUAL_UINT32(0, env.clamp_count());
+
+  float bad[HFE_ENV_MAX_FLOATS];
+  size_t bn = build(bad);
+  bad[5] = NAN;
+  TEST_ASSERT_FALSE(env.load(bad, bn));
+  // A rejected table must not move ANY reported field, not even buckets().
+  TEST_ASSERT_FALSE(env.active());
+  TEST_ASSERT_EQUAL_UINT8(0, env.buckets());
+  TEST_ASSERT_EQUAL_UINT32(0, env.clamp_count());
+
+  float good[HFE_ENV_MAX_FLOATS];
+  size_t gn = build(good, 3);
+  TEST_ASSERT_TRUE(env.load(good, gn));
+  TEST_ASSERT_TRUE(env.active());
+  TEST_ASSERT_EQUAL_UINT8(3, env.buckets());
+  TEST_ASSERT_EQUAL_UINT32(0, env.clamp_count());   // installed != clamped
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_wellformed_table_loads);
@@ -251,5 +435,9 @@ int main() {
   RUN_TEST(test_each_leg_uses_its_OWN_hip_not_a_neighbours);
   RUN_TEST(test_only_hfe_joints_are_touched);
   RUN_TEST(test_clamp_counter_only_moves_when_it_bites);
+  RUN_TEST(test_present_telemetry_further_tightens_the_selected_window);
+  RUN_TEST(test_present_position_unknown_falls_back_to_target_only);
+  RUN_TEST(test_pass2_alone_permits_a_path_violation_pass4_does_not);
+  RUN_TEST(test_report_state_reflects_only_ACCEPTED_tables);
   return UNITY_END();
 }

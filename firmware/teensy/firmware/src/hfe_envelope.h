@@ -105,31 +105,100 @@ class HfeEnvelope {
     return true;
   }
 
-  // Clamp each leg's hfe target into the window its OWN haa target selects.
-  // Call with targets that have already been through the per-joint table, so
-  // the bucket is chosen by the haa the servos will actually be sent rather
-  // than by the raw request — and before the slew limiter, so the ramp heads
-  // for the corrected goal.
-  void apply(uint16_t* targets) {
+  // Clamp each leg's hfe value into the window selected by that SAME
+  // vector's own haa value, optionally tightened further by a second,
+  // independent haa reading (#280).
+  //
+  // main.cpp calls this TWICE per broadcast, at two different points in the
+  // pipeline, because a single call cannot cover both hazards:
+  //
+  //   PASS 2 (pre-slew, on the FAR commanded target): catches a target that
+  //   is illegal AT REST — both joints landing somewhere the chassis gate
+  //   would refuse even once the ramp finishes.
+  //
+  //   PASS 4 (post-slew, on `goals[]` — what is actually about to be
+  //   WRITTEN this tick): catches a target where BOTH endpoints are legal
+  //   but the PATH between them is not. PASS 3 slews haa and hfe
+  //   independently at one shared rate, so whichever has less travel
+  //   arrives first and nothing re-evaluates the pair mid-ramp. Modelled on
+  //   the real table, a stand->tuck move (haa 0->-15, hfe +60->+10, both
+  //   endpoints legal) put the leg 33.9 deg inside the belly-pack exclusion
+  //   0.07 s in.
+  //
+  // A PRE-slew check cannot close that second hazard no matter which haa
+  // value selects the bucket: the far hfe target (+10) is already legal at
+  // its own final (tightest, since -15 is the most-tucked point on this
+  // path) bucket, so nothing ever clamps it, and PASS 3 then chases that
+  // already-legal number with no awareness that the intermediate values on
+  // the way there are not legal for wherever haa currently is. Measured by
+  // simulating PASS 1-3 against the scenario above: a pre-slew call, even
+  // intersected with a live present-haa reading, left the violation at
+  // 30.4 deg — no different from target-only, because the far target was
+  // never the thing that needed clamping. Calling this AGAIN post-slew, on
+  // `goals[]`, closes it to 0.0 deg: each leg's own just-computed haa OUTPUT
+  // (zero lag relative to its own hfe output — both came out of the same
+  // PASS-3 tick) is exactly "where this tick is telling the hip to go", and
+  // bounding hfe against THAT rather than the far-off goal is what "the
+  // window opens as haa opens" actually requires.
+  //
+  // present_position/present_mask (default nullptr/0) let a caller ALSO
+  // intersect with a live MEASURED haa reading (servo_position_raw, already
+  // polled at 50 Hz) — a second, optional layer against the physical leg
+  // having overshot or lagged the command (backlash, stall): a measured
+  // reading can only make the selected window tighter, never wider, since
+  // it is intersected in, not substituted. Per LEG, present is used only
+  // when that leg's haa servo has answered at least one poll (present_mask
+  // bit set, mirrors servo_present_mask in main.cpp) — an unknown/stale
+  // present sample must not be trusted to narrow the window, and refusing
+  // to clamp at all on missing telemetry would block motion outright, a
+  // worse hazard than the gap this closes. So an absent present sample
+  // falls back to using `targets`'s own haa alone, same as if the caller
+  // had not passed present_position at all.
+  void apply(uint16_t* targets,
+             const volatile uint16_t* present_position = nullptr,
+             uint16_t present_mask = 0) {
     if (n_ == 0 || targets == nullptr) return;
     for (size_t leg = 0; leg < HFE_ENV_LEGS; leg++) {
-      const uint16_t haa = targets[hfe_env_haa_index(leg)];
-      const size_t hi = hfe_env_hfe_index(leg);
-      for (size_t k = 0; k < n_; k++) {
-        if (haa < haa_lo_[leg][k] || haa > haa_hi_[leg][k]) continue;
-        if (targets[hi] < hfe_lo_[leg][k]) { targets[hi] = hfe_lo_[leg][k]; clamps_++; }
-        else if (targets[hi] > hfe_hi_[leg][k]) { targets[hi] = hfe_hi_[leg][k]; clamps_++; }
-        break;
+      const size_t haa_i = hfe_env_haa_index(leg);
+      const size_t hfe_i = hfe_env_hfe_index(leg);
+
+      uint16_t lo, hi;
+      // No matching bucket for the target cannot happen — load() rejects any
+      // table without gap-free 0..4095 coverage. If it somehow did, leaving
+      // hfe unclamped is the deliberate choice: pinning a joint mid-gait on a
+      // table we already know is corrupt trades one hazard for a worse one,
+      // and the per-joint table still bounds the joint.
+      if (!find_window(leg, targets[haa_i], &lo, &hi)) continue;
+
+      if (present_position != nullptr &&
+          (present_mask & (uint16_t)(1u << haa_i))) {
+        uint16_t plo, phi;
+        if (find_window(leg, (uint16_t)present_position[haa_i], &plo, &phi)) {
+          if (plo > lo) lo = plo;   // tighter-of-two: narrowest lower bound
+          if (phi < hi) hi = phi;   // tighter-of-two: narrowest upper bound
+        }
       }
-      // No matching bucket cannot happen — load() rejects any table without
-      // gap-free 0..4095 coverage. If it somehow did, leaving hfe unclamped is
-      // the deliberate choice: pinning a joint mid-gait on a table we already
-      // know is corrupt trades one hazard for a worse one, and the per-joint
-      // table still bounds the joint.
+
+      if (targets[hfe_i] < lo) { targets[hfe_i] = lo; clamps_++; }
+      else if (targets[hfe_i] > hi) { targets[hfe_i] = hi; clamps_++; }
     }
   }
 
  private:
+  // Bucket lookup shared by the target and present-position passes of
+  // apply(). Returns false if no bucket's haa range contains `haa` — cannot
+  // happen on a table that passed load()'s coverage check, but a caller must
+  // not clamp against uninitialized lo/hi if it somehow did.
+  bool find_window(size_t leg, uint16_t haa, uint16_t* lo, uint16_t* hi) const {
+    for (size_t k = 0; k < n_; k++) {
+      if (haa < haa_lo_[leg][k] || haa > haa_hi_[leg][k]) continue;
+      *lo = hfe_lo_[leg][k];
+      *hi = hfe_hi_[leg][k];
+      return true;
+    }
+    return false;
+  }
+
   uint16_t haa_lo_[HFE_ENV_LEGS][HFE_ENV_MAX_BUCKETS];
   uint16_t haa_hi_[HFE_ENV_LEGS][HFE_ENV_MAX_BUCKETS];
   uint16_t hfe_lo_[HFE_ENV_LEGS][HFE_ENV_MAX_BUCKETS];

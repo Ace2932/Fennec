@@ -373,8 +373,11 @@ void broadcast_servo_commands() {
     targets[i] = target;
   }
 
-  // PASS 2 — posture-aware chassis backstop (#142). No-op until the host has
-  // published an envelope.
+  // PASS 2 — posture-aware chassis backstop (#142), first check: the FAR
+  // commanded endpoint itself. No-op until the host has published an
+  // envelope. This alone does NOT close #280 (see PASS 4 below) — kept
+  // because it still catches a host publishing a flagrantly illegal target
+  // outright, before any slewing starts.
   hfe_envelope.apply(targets);
 
   // PASS 3 — slew limit and write.
@@ -410,6 +413,50 @@ void broadcast_servo_commands() {
     last_cmd_goal[i] = out;
     goals[i] = out;
   }
+
+  // PASS 4 — path-safety re-check (#280). PASS 2 only proves the FAR
+  // commanded endpoint is legal; nothing above couples haa and hfe's
+  // independent per-joint slews, so the intermediate ramp is not covered —
+  // modelled against the real table, a stand->tuck move (haa 0->-15,
+  // hfe +60->+10, BOTH endpoints legal) put the leg 33.9 deg inside the
+  // belly-pack exclusion 0.07 s in, because haa reaches the restrictive
+  // station well before hfe (more travel, same slew rate) unfolds out of it.
+  //
+  // The issue's proposed fix (intersect the windows selected by {haa target,
+  // haa present} and clamp the FAR target with that) was measured NOT to
+  // close this: on the example above it left the violation at 30.4 deg
+  // either way, because the far hfe target (+10) is already legal at its own
+  // (tightest, since -15 is the most-tucked point on this path) bucket, so
+  // neither selection ever clamps it — the danger is entirely in PASS 3's
+  // uncoupled ramp, which a pre-slew check on the unchanging far goal cannot
+  // see regardless of which haa value picks the bucket.
+  //
+  // What actually closes it: re-apply the SAME backstop to `goals[]` — what
+  // is ABOUT TO BE WRITTEN this tick — using each leg's own JUST-COMPUTED
+  // slewed haa output to pick the window. That output has zero lag relative
+  // to hfe's own slewed output (both came out of the same PASS-3 tick), so
+  // "hfe legal for the haa we are this instant commanding" is enforced every
+  // tick, not just at the far-off end of the ramp; re-modelled with this
+  // change, the same move's worst-case violation is 0.0 deg. Passing
+  // servo_position_raw/servo_present_mask (already polled at 50 Hz) adds a
+  // second, optional layer: if the physical leg has overshot or lagged what
+  // was commanded (backlash, stall), the MEASURED haa can only make the
+  // window tighter, never wider — present_mask bit clear (never answered a
+  // poll) falls back to candidate-only rather than block motion on absent
+  // telemetry, same failure-mode choice as the anti-snap seed above.
+  //
+  // This can snap goals[hfe] harder than NOVA_SLEW_MAX_DELTA in one tick —
+  // deliberate: a jerky correction into a legal pose beats a smooth ramp
+  // into the LiPo, same "expected to collapse rather than fight the fault"
+  // philosophy as the E-stop limp path. Keep last_cmd_goal in sync with
+  // whatever this pass actually wrote so next tick's slew starts from the
+  // real (possibly clamped) position, not the pre-clamp one.
+  hfe_envelope.apply(goals, servo_position_raw, servo_present_mask);
+  for (size_t leg = 0; leg < nova::HFE_ENV_LEGS; leg++) {
+    const size_t hi = nova::hfe_env_hfe_index(leg);
+    last_cmd_goal[hi] = goals[hi];
+  }
+
   servo_bus.sync_write_goal_positions(ids, goals, NOVA_JOINT_COUNT);
 }
 
@@ -498,6 +545,15 @@ rcl_publisher_t safety_state_pub;
 rcl_publisher_t command_stale_pub;
 rcl_publisher_t power_rails_pub;
 rcl_publisher_t joint_cmd_rx_pub;
+// #186 — accepted-table + clamp-activity counters. "Accepted", not
+// "received": joint_limits_rx_count/hfe_envelope_rx_count (declared above,
+// next to the tables they belong to) are incremented only after their
+// callback's whole-message validation passes, so these mirror what the
+// firmware actually holds, not merely what arrived on the wire. A table
+// published and silently rejected must not look like a table installed.
+rcl_publisher_t joint_limits_rx_pub;
+rcl_publisher_t hfe_envelope_rx_pub;
+rcl_publisher_t hfe_envelope_clamps_pub;
 rcl_publisher_t servo_present_pub;
 rcl_publisher_t servo_read_err_pub;
 rcl_publisher_t servo_err_timeout_pub;
@@ -519,6 +575,9 @@ std_msgs__msg__Int32 loop_exec_p99_msg;
 std_msgs__msg__Int32 tick_missed_msg;
 std_msgs__msg__Int32 safety_state_msg;
 std_msgs__msg__Int32 joint_cmd_rx_msg;
+std_msgs__msg__Int32 joint_limits_rx_msg;
+std_msgs__msg__Int32 hfe_envelope_rx_msg;
+std_msgs__msg__Int32 hfe_envelope_clamps_msg;
 std_msgs__msg__Int32 servo_present_msg;
 std_msgs__msg__Int32 servo_read_err_msg;
 std_msgs__msg__Int32 servo_err_timeout_msg;
@@ -845,6 +904,29 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "joint_cmd_rx_count"));
+  // #186 — arming is unobservable without these: joint_limits_rx_count and
+  // hfe_envelope_rx_count were already incremented on ACCEPT (not receipt)
+  // but published nowhere, so a table published and silently REJECTED
+  // looked identical to a healthy one from the host. hfe_envelope_clamps
+  // is worth having alongside them per the issue: a clamp count that climbs
+  // during a gait means the host is routinely commanding postures the
+  // chassis gate would refuse, a host bug the backstop is quietly papering
+  // over.
+  RCCHECK(rclc_publisher_init_default(
+      &joint_limits_rx_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "joint_limits_rx"));
+  RCCHECK(rclc_publisher_init_default(
+      &hfe_envelope_rx_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "hfe_envelope_rx"));
+  RCCHECK(rclc_publisher_init_default(
+      &hfe_envelope_clamps_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "hfe_envelope_clamps"));
   RCCHECK(rclc_publisher_init_default(
       &servo_present_pub,
       &node,
@@ -1156,6 +1238,14 @@ void loop() {
     RCSOFTCHECK(rcl_publish(&command_stale_pub, &command_stale_msg, NULL));
     joint_cmd_rx_msg.data = (int32_t)joint_cmd_rx_count;
     RCSOFTCHECK(rcl_publish(&joint_cmd_rx_pub, &joint_cmd_rx_msg, NULL));
+    // #186 — hold at 0 until a table is ACCEPTED (see the counters'
+    // declarations); a rejected table must not move these.
+    joint_limits_rx_msg.data = (int32_t)joint_limits_rx_count;
+    RCSOFTCHECK(rcl_publish(&joint_limits_rx_pub, &joint_limits_rx_msg, NULL));
+    hfe_envelope_rx_msg.data = (int32_t)hfe_envelope_rx_count;
+    RCSOFTCHECK(rcl_publish(&hfe_envelope_rx_pub, &hfe_envelope_rx_msg, NULL));
+    hfe_envelope_clamps_msg.data = (int32_t)hfe_envelope.clamp_count();
+    RCSOFTCHECK(rcl_publish(&hfe_envelope_clamps_pub, &hfe_envelope_clamps_msg, NULL));
     servo_present_msg.data = (int32_t)servo_present_mask;
     RCSOFTCHECK(rcl_publish(&servo_present_pub, &servo_present_msg, NULL));
     servo_read_err_msg.data = (int32_t)servo_read_err_count;
