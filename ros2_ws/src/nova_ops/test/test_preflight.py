@@ -18,7 +18,7 @@ from nova_ops.preflight.checks.base import CheckResult
 #: The registry contract, in order. Adding a check SHOULD fail this test — that
 #: is the point. Update it deliberately, and say in the commit why the new check
 #: is (or is not) critical.
-EXPECTED = ["bus_ping", "estop", "battery_latch", "firmware_tables"]
+EXPECTED = ["bus_ping", "estop", "battery_latch", "firmware_tables", "posture_gate"]
 
 
 def test_registry_matches_the_expected_check_set():

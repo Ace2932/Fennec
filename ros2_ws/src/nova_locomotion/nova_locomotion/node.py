@@ -55,6 +55,7 @@ import rclpy
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import JointState
 from std_msgs.msg import String
 
@@ -188,6 +189,23 @@ class GaitNode(Node):
         adapter = _CountsAdapter(raw_pub, self.calib, logger=self.get_logger())
         self.safe_pub = SafeJointCommandPublisher(
             node=self, limits=load_default_limits(), raw_publisher=adapter
+        )
+
+        # #282: preflight needs to observe the posture gate from outside the
+        # wrapper. Latched (TRANSIENT_LOCAL) host-to-host status topic, same
+        # pattern as safety_envelope/tables_node.py's firmware_tables_state —
+        # published once, since the gate's liveness is fixed at construction.
+        self._posture_gate_pub = self.create_publisher(
+            String,
+            "posture_gate_state",
+            QoSProfile(
+                depth=1,
+                reliability=ReliabilityPolicy.RELIABLE,
+                durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            ),
+        )
+        self._posture_gate_pub.publish(
+            String(data="active" if self.safe_pub.posture_gate_active else "inactive")
         )
 
         self.create_subscription(JointState, "/joint_states", self._on_states, 10)
