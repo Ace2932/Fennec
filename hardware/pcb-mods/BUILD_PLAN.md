@@ -760,6 +760,42 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
   A pin at OL both directions is a lead that looks wetted and is not bonded — the one
   defect a resistance sweep cannot see, because the network around the pad measures
   correct with no chip attached to it.
+
+  **WHERE TO PUT THE TIPS — you do not need to touch a 1.27 mm SOIC lead.** A bridge
+  shorts the two *nets*, so measure at any pad on them. Pads read out of the board files
+  2026-08-08; `J20`/`J13`/`JP1`/`U6` are **bare** (their connectors are stages 6/8/10).
+
+  `U8` — GND reference **`J13`.1** (191.00, 128.00), a bare 14.4 mm² XT30 pad:
+
+  | checks | probe | expect |
+  |---|---|---|
+  | 1–2 | `J20`.9 ↔ `C7`.1 | 1029 k (2M range) |
+  | 2–3 | `C7`.1 ↔ `R5`.1 | 29.5 k |
+  | 3–4 | `R5`.1 ↔ `J13`.1 | 7.47 k |
+  | 5–6 | `R7`.1 ↔ `C7`.1 | 29.5 k |
+  | 6–7 | `C7`.1 ↔ `Q2`.1 | 38.9 k |
+  | 7–8 | `Q2`.1 ↔ `J20`.1 | 9.02 k |
+  | **4–8 (bypass tack)** | `J13`.1 ↔ `J20`.1 | **9.83 k** |
+  | 4–7 baseline | `J13`.1 ↔ `Q2`.1 | 16.89 k |
+  | 1–3 baseline | `J20`.9 ↔ `R5`.1 | 1000 k |
+
+  `U7` — GND **`J20`.3** (142.54, 124.00), +3V3 **`J20`.5** (145.08, 124.00):
+
+  | checks | probe | expect |
+  |---|---|---|
+  | 1–2 · 2–3 · 3–4 | `U6`.5↔`U6`.3 · `U6`.3↔`JP1`.3 · `JP1`.3↔`U6`.6 | OL |
+  | 4–5 · 5–6 · 6–7 | `U6`.6↔`JP1`.2 · `JP1`.2↔`U6`.4 · `U6`.4↔`J20`.3 | OL |
+  | 9–10 **and** 12–13 | `J20`.3 ↔ `J20`.5 | OL |
+  | **8, 11 — lead only** | each lead ↔ `J20`.3 | **OL** |
+
+  ⚠️ `U7` pins **8 and 11 connect to nothing on the board**, so no substitute pad exists
+  and they must be probed at the lead. That is also why they are the cleanest diode-mode
+  bonding test on either chip — any reading there is purely the die.
+
+  Two limits of net-level probing, so it does not mislead: it proves a bridge **exists**
+  but not **where** (on a bad reading, go back in at the pins with a fine tip), and a
+  bridge between two pins on the **same** net (`U8` 2–6, `U7` 13–14) is invisible to it —
+  which is fine, because it is also harmless.
 - After **stage 4** — reflow-quality check on L1 and both SOICs before tall
   parts block the view. Wick any bridge now.
 - After **stage 9**, before **stage 10** — this is the last moment the board is
