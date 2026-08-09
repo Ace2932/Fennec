@@ -19,6 +19,46 @@ from terrain import terrain_field
 
 _LEG_ORDER = ["FL", "FR", "RL", "RR"]                # LEG_NAMES order
 
+# ABSOLUTE numeric pin of the BLIND (105-d, deploy-artifact) stepped reward on
+# the deterministic manufactured moving case built by blind_pin_reward() below.
+# Two tests assert it — one constant, not two copies, because the two copies is
+# how a stale one survives a fix to the other.
+#
+# PROVENANCE (#315). The previous value, 0.892089664936, was labelled "captured
+# on commit 4aee167" and was NOT reproducible there, or anywhere: bisecting this
+# exact manufactured state across every commit that has touched env.py since —
+# 4aee167, bd0c4ad (v6 #139), ed3bd9c (v7 #140), 84824b0 (v8 #141), 8ec305d
+# (#147), c4acd84 (#144/#179), c17f319 (#245) — returns 0.883890092373 at ALL
+# SEVEN, identical to 12 digits, on the dependency set requirements.txt pins.
+# So the old number was never a measurement, and the file it lives in ran in no
+# CI job, so nothing could say so. The invariant it exists to defend is not the
+# casualty: v6/v7/v8 being teacher-only is exactly what that flat bisect proves,
+# with more evidence behind it now than the pin ever had.
+#
+# THIS PIN IS DEPENDENCY-VERSION SENSITIVE and requirements.txt does not fully
+# constrain it: jax and brax are ==, but mujoco/mujoco-mjx are floored (>=3.10),
+# and this number is a physics rollout. A compatible mujoco upgrade may legally
+# move it. If it does, the correct response is to re-measure and re-pin WITH the
+# version set recorded — not to widen the tolerance, which would retire the only
+# check that the deploy reward is frozen.
+BLIND_REWARD_PIN = 0.883890092373      # jax 0.6.0 / brax 0.14.2 / mujoco 3.10.0
+
+
+def blind_pin_reward():
+    """Step the BLIND env from the pinned manufactured state.
+
+    key=7, base +0.02 m, every joint qd=2.0, zero action. Returns
+    (reset_state, stepped_state) — both pin tests need the reset state too.
+    Shared so the two of them cannot drift into asserting the same constant
+    about two different states.
+    """
+    e = NovaJoystick()                             # blind (heightmap=False)
+    s = e.reset(jax.random.PRNGKey(7))
+    q = s.pipeline_state.q.at[2].add(0.02)
+    qd = s.pipeline_state.qd.at[6:].set(2.0)
+    ps = e.pipeline_init(q, qd)
+    return s, e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
+
 
 def _v6_trot_schedule(theta):
     """VERBATIM v6 trot-schedule body (GAIT_OFFSETS + GAIT_DUTY=0.5 inlined) — the
@@ -383,18 +423,11 @@ def test_envelope_zero_at_swing_edges():
 
 
 def test_blind_clearance_unchanged_numeric():
-    # I-1: ABSOLUTE numeric pin of the BLIND stepped-env reward on a deterministic
-    # manufactured moving case (key=7, base +0.02, all joints qd=2.0). Captured on
-    # commit 4aee167: reward = 0.892089664936. The blind path is untouched by the
-    # v6 clock (teacher-only) AND the v7 swing-reference term (teacher-only), so
-    # this must still hold to 1e-6 — the deploy-artifact reward is byte-frozen.
-    BLIND_REWARD_PIN = 0.892089664936
-    e = NovaJoystick()                             # blind (heightmap=False)
-    s = e.reset(jax.random.PRNGKey(7))
-    q = s.pipeline_state.q.at[2].add(0.02)
-    qd = s.pipeline_state.qd.at[6:].set(2.0)
-    ps = e.pipeline_init(q, qd)
-    s2 = e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
+    # I-1: ABSOLUTE numeric pin of the BLIND stepped-env reward. The blind path
+    # is untouched by the v6 clock (teacher-only) AND the v7 swing-reference
+    # term (teacher-only), so this must hold to 1e-6 — the deploy-artifact
+    # reward is byte-frozen. See BLIND_REWARD_PIN for the value's provenance.
+    _s, s2 = blind_pin_reward()
     assert abs(float(s2.reward) - BLIND_REWARD_PIN) < 1e-6, \
         (float(s2.reward), BLIND_REWARD_PIN)
     # blind carries the v5 one-sided clearance (active) and NO swingref term.
@@ -592,15 +625,9 @@ def test_crawl_env_reset_seeds_low_vx():
 def test_blind_reward_pin_holds():
     # v8 is TEACHER-ONLY (terrain-gait, swing_sched obs, F_MIN band) — the blind
     # 105-d deploy reward must be byte-frozen. Same manufactured moving state as
-    # test_blind_clearance_unchanged_numeric (key=7, base +0.02, all joints qd=2.0);
-    # pin captured on commit 4aee167.
-    BLIND_REWARD_PIN = 0.892089664936
-    e = NovaJoystick()                                # blind (heightmap=False)
-    s = e.reset(jax.random.PRNGKey(7))
-    q = s.pipeline_state.q.at[2].add(0.02)
-    qd = s.pipeline_state.qd.at[6:].set(2.0)
-    ps = e.pipeline_init(q, qd)
-    s2 = e.step(s.replace(pipeline_state=ps), jp.zeros(e.action_size))
+    # test_blind_clearance_unchanged_numeric — the SAME helper, so the two
+    # cannot diverge. See BLIND_REWARD_PIN for the value's provenance.
+    s, s2 = blind_pin_reward()
     assert abs(float(s2.reward) - BLIND_REWARD_PIN) < 1e-6, \
         (float(s2.reward), BLIND_REWARD_PIN)
     # blind gait is trot (schedule unused in the 105-d reward)

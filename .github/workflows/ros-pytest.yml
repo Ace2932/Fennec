@@ -129,3 +129,84 @@ jobs:
           # with `INTERNALERROR> SystemExit: 0`. It is written as a standalone
           # script, so run it as one. Same rule the sim-tests job follows.
           python hardware/pcb-mods/tools/test_fab_gate.py
+
+  # ---------------------------------------------------------------------
+  # sim/nova_mjx/test_*.py (#315).
+  #
+  # These 9 files ran in NO job. Both this workflow and cad-gates.yml list
+  # `sim/nova_mjx/**` in their path triggers — added for test_urdf_sync, which
+  # is a ros2_ws test that reads the generated MJCF — so a sim edit FIRED both
+  # workflows and neither executed a single sim test. Green, having checked
+  # none of it. That is what let test_gait_clock's BLIND_REWARD_PIN sit red
+  # since the commit that claimed to capture it; see #315 for the bisect.
+  #
+  # Separate job, not another step in `pytest`, for two reasons: the dependency
+  # set is different and heavy (jax/brax/mujoco vs pyyaml/numpy), and this one
+  # is SLOW. Keeping them apart preserves the fast pre-merge filter `pytest`
+  # exists to be.
+  #
+  # RUNTIME, every file measured on an M-series Mac with CPU jax:
+  #   terrain_relative 425 s · gait_clock 344 s · climb_reward 320 s ·
+  #   lift_clearance 226 s · distill_obs_map 72 s · heightmap 16 s ·
+  #   curriculum_resume 2 s · resume_budget 1 s · script_imports 0 s
+  # ~23 min for the set, and FOUR of the nine are minutes-long, not one or
+  # two. All nine PASS. (An earlier 300 s timeout made climb_reward look
+  # broken when only the timeout was — worth remembering before treating a
+  # red run here as a real failure.)
+  #
+  # A GitHub runner is slower than that Mac, so the 90 min ceiling below is
+  # deliberately loose: a timeout would put this job straight back into the
+  # state #315 is about — firing, and reporting nothing about the tests it was
+  # added to run. Tighten it from the per-file timings this step prints on a
+  # real runner, not from the Mac numbers above.
+  #
+  # This job is genuinely expensive in Actions minutes on every PR that
+  # touches sim/. That is a real cost and worth revisiting — but the way to
+  # revisit it is a measured split (fast subset on PR, full set on main), not
+  # dropping files quietly, which is the failure this closes.
+  sim-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # 3.12 to match the local venv these pins were validated on.
+          python-version: '3.12'
+
+      - name: Install sim deps
+        # ONE source with the training stack (#200's rule): the same
+        # requirements.txt train.py and the Colab runner install, not a
+        # hand-written list here that can drift out from under the tests.
+        run: pip install -r sim/nova_mjx/requirements.txt
+
+      - name: Record the resolved dependency set
+        # BLIND_REWARD_PIN is an absolute numeric pin on a physics rollout, and
+        # requirements.txt FLOORS mujoco/mujoco-mjx (>=3.10) rather than pinning
+        # them. So a legal upgrade can move the number. When it does, this
+        # printout is the difference between "re-measure and re-pin against
+        # these versions" and an afternoon bisecting the wrong thing.
+        run: pip list | grep -iE '^(jax|jaxlib|brax|mujoco|mujoco-mjx|flax|optax) ' || true
+
+      - name: Run sim tests
+        # Each file in its OWN process, deliberately. They are authored as
+        # standalone scripts with __main__ runners, and test_curriculum_resume
+        # stubs jax/brax into sys.modules — collecting them together under one
+        # pytest process would let that stubbing leak into whatever ran next.
+        # Run them the way they are written.
+        #
+        # No `set -e` and no early break: every file runs even after one fails,
+        # so a red run reports EVERY broken file, not just the first.
+        run: |
+          cd sim/nova_mjx
+          fail=0
+          for t in test_*.py; do
+            echo "::group::$t"
+            start=$SECONDS
+            python "$t" || { fail=1; echo "FAILED: $t"; }
+            echo "-- $t took $(( SECONDS - start ))s"
+            echo "::endgroup::"
+          done
+          exit $fail
