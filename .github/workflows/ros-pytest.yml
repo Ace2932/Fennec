@@ -145,33 +145,39 @@ jobs:
   # is SLOW. Keeping them apart preserves the fast pre-merge filter `pytest`
   # exists to be.
   #
-  # RUNTIME. Mac (M-series, CPU jax) vs a GitHub ubuntu-latest runner, both
-  # measured, not estimated:
+  # RUNTIME. Mac (M-series, CPU jax) vs GitHub ubuntu-latest, all measured:
   #
-  #     file                     Mac     runner
-  #     terrain_relative         425s     1080s
-  #     gait_clock               344s      892s
-  #     climb_reward             320s      847s
-  #     lift_clearance           226s      536s
-  #     distill_obs_map           72s       99s
-  #     heightmap                 16s       41s
+  #     file                     Mac    runner A   runner B
+  #     terrain_relative         425s      1080s      1238s
+  #     gait_clock               344s       892s      1117s
+  #     climb_reward             320s       847s       954s
+  #     lift_clearance           226s       536s       657s
+  #     distill_obs_map           72s        99s       229s
+  #     heightmap                 16s        41s        52s
   #     curriculum_resume/
   #       resume_budget/
-  #       script_imports          ~3s       10s
-  #     TOTAL                  ~23min   59m10s
+  #       script_imports          ~3s        10s         3s
+  #     TOTAL                  ~23min    59m10s     71m29s
   #
-  # The runner is ~2.5x slower, so 90 minutes is roughly 1.5x the real cost --
-  # deliberately loose rather than snug. A timeout here would put this job
-  # straight back into the state #315 is about: firing, and reporting nothing
-  # about the tests it exists to run. Do not tighten this toward 60.
+  # TWO runs of the SAME commits differ by 21%, and every file moved together,
+  # so that is runner speed, not test flakiness. That variance is why this is
+  # 120 and not 90: at 90 the slower run had 26% headroom, and one more 21%
+  # step lands at ~86 min -- close enough that the job would eventually start
+  # timing out, which is precisely the state #315 closed (a job that fires and
+  # reports nothing about the tests it exists to run). A timeout that never
+  # trips costs zero; one that trips costs the whole point of the job.
+  #
+  # An earlier version of this comment claimed 90 was "roughly 1.5x the real
+  # cost". That was written off run A alone and run B falsified it (1.26x).
+  # Set this from the SLOWEST observed run, not the first.
   #
   # This is a real cost in Actions minutes on every PR touching sim/. Worth
   # revisiting as a measured fast-subset-on-PR / full-set-on-main split -- but
-  # by measurement, not by dropping files quietly, which is the failure this
-  # closes.
+  # by measurement, not by dropping files quietly, which is the failure #315
+  # closed.
   sim-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
