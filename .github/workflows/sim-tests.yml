@@ -112,7 +112,15 @@ jobs:
         run: |
           cd sim/nova_mjx
           fail=0
-          for t in test_*.py; do
+          # `test_*.py deploy/test_*.py` -- BOTH, and the second half is here
+          # because #316 missed it. That job globbed the top level only, so the
+          # four files under deploy/ stayed in exactly the state #315 was about:
+          # no job ran them. One of them, test_policy_runner.py, is the
+          # cross-check that "the obs the robot builds must equal the obs the
+          # policy trained on, or transfer silently fails" -- the deploy seam.
+          # They self-insert their own sys.path, so no PYTHONPATH is needed;
+          # they only require the cwd to be sim/nova_mjx.
+          for t in test_*.py deploy/test_*.py; do
             echo "::group::$t"
             start=$SECONDS
             python "$t" || { fail=1; echo "FAILED: $t"; }
