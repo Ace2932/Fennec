@@ -49,6 +49,14 @@
 namespace nova {
 
 // ---- Bank 0 registers -----------------------------------------------------
+// CONFIRMED against TDK AN-000488 (EV_ICM-42688-P user guide, rev 1.2), which
+// is an authoritative source rather than recollection:
+//   * AP_AD0 LOW -> 0x68, HIGH -> 0x69.
+//   * AP_CS is a real pin and must be tied HIGH to select I2C -- the part
+//     defaults to SPI. A module that leaves CS floating reads as dead on I2C,
+//     which is the single most likely bring-up failure here.
+// That guide is the EVB manual and carries NO register addresses, so it does
+// NOT confirm the map below. WHO_AM_I remains the only guard on that.
 constexpr uint8_t ICM_ADDR          = 0x68;  // AP_AD0 low. 0x69 if the pad is
                                              // strapped high. Clear of every
                                              // INA226 (0x40/41/44/45).
