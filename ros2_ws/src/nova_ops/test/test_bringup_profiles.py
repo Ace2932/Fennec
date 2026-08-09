@@ -97,3 +97,68 @@ def test_node_action_resolves_to_a_real_entry_point(profile_name, pkg, exe):
         f'PROFILES["{profile_name}"] launches {pkg}/{exe}, but {pkg}/setup.py '
         f"console_scripts only has: {sorted(scripts)}"
     )
+
+
+# --- #289: a profile that can COMMAND JOINTS must publish the firmware tables ---
+
+#: Anything that ends up publishing /joint_commands. Add to this when a new
+#: controller appears -- that is the point: the test should start failing until
+#: someone decides whether the new controller needs the tables (it does).
+CONTROLLERS = {
+    ("node", "gait_node"),
+    ("launch", "policy.launch.py"),
+}
+
+
+def _controllers_in(profile_name):
+    got = set()
+    for a in resolve_actions(profile_name):
+        if (a[0], a[2]) in CONTROLLERS:
+            got.add(a[2])
+    return got
+
+
+def test_every_motion_profile_publishes_firmware_tables():
+    """The Teensy boots with BOTH protection tables wide open -- per-joint
+    0..4095 and the posture backstop off -- and ONLY firmware_tables narrows
+    them (#185). So a profile that can command joints without it runs the
+    servos with no firmware-side limit, an inert #142/#280 chassis backstop,
+    and no limp_pose, which silently degrades #145's controlled limp to an
+    instant torque cut.
+
+    This is not hypothetical. Until #289's profile landed, `policy_node` was in
+    NO profile at all, so the only documented way to run the learned policy was
+    `policy.launch.py` standalone -- node only, no tables. The scripted path had
+    the protection and the neural-network path did not.
+    """
+    offenders = []
+    for name in PROFILES:
+        ctrl = _controllers_in(name)
+        if not ctrl:
+            continue
+        execs = {a[2] for a in resolve_actions(name) if a[0] == "node"}
+        if "firmware_tables" not in execs:
+            offenders.append(f"{name} runs {sorted(ctrl)} without firmware_tables")
+    assert not offenders, "; ".join(offenders)
+
+
+def test_walk_and_policy_carry_the_same_stack():
+    """`walk` and `policy` must differ ONLY by their controller.
+
+    They are built from the shared _MOTION_STACK precisely so the learned path
+    cannot quietly lose protection the scripted path keeps. If someone inlines
+    one of them back into a literal list, this fails.
+    """
+    def non_controller(name):
+        return [a for a in resolve_actions(name) if (a[0], a[2]) not in CONTROLLERS]
+    assert non_controller("walk") == non_controller("policy")
+
+
+def test_walk_and_policy_are_mutually_exclusive():
+    """Both end in a controller publishing /joint_commands. If a profile ever
+    resolves to BOTH, two publishers race on the joint path and the servos take
+    whichever message landed last -- so no profile may include both."""
+    for name in PROFILES:
+        assert len(_controllers_in(name)) <= 1, (
+            f"profile {name!r} resolves to two joint-command publishers: "
+            f"{sorted(_controllers_in(name))}")
