@@ -18,6 +18,12 @@ on:
       # regenerated nova.xml.
       - 'hardware/cad/**'
       - 'sim/nova_mjx/**'
+      # #318: scripts/test_set_servo_ids.py and pcb-mods/tools/test_fab_gate.py
+      # ran in no job at all — these two paths were not even triggers, so the
+      # checks were absent rather than misleadingly green. Both suites are
+      # seconds long and run in the `pytest` job below.
+      - 'scripts/**'
+      - 'hardware/pcb-mods/tools/**'
   push:
     branches: [main]
     paths:
@@ -30,6 +36,12 @@ on:
       # regenerated nova.xml.
       - 'hardware/cad/**'
       - 'sim/nova_mjx/**'
+      # #318: scripts/test_set_servo_ids.py and pcb-mods/tools/test_fab_gate.py
+      # ran in no job at all — these two paths were not even triggers, so the
+      # checks were absent rather than misleadingly green. Both suites are
+      # seconds long and run in the `pytest` job below.
+      - 'scripts/**'
+      - 'hardware/pcb-mods/tools/**'
 
 jobs:
   pytest:
@@ -90,3 +102,30 @@ jobs:
             fi
           done
           exit $fail
+
+      # #318. These two suites also ran in NO job — `scripts/**` and
+      # `hardware/pcb-mods/tools/**` were not even path triggers, so unlike the
+      # sim case the checks were absent rather than misleadingly green. Both
+      # pass today; this is about the guard, not a live defect. Worth noting
+      # test_set_servo_ids.py exists BECAUSE of #287 item 5 ("zero offline
+      # test") — the fix for a coverage gap then ran nowhere itself.
+      #
+      # Here rather than in a job of their own: both finish in seconds, so the
+      # cost of folding them into the fast filter is nil.
+      - name: Install script-suite deps
+        # set-servo-ids.py does `import serial` / `import yaml` at MODULE level
+        # (:28-29) and the test loads it BY PATH — it stubs serial.Serial
+        # instances, not the module, so the real pyserial has to be here.
+        # requirements.txt is the declaration #291 added closing #287 item 1;
+        # installing from it rather than naming pyserial again keeps one source.
+        run: pip install -r scripts/requirements.txt
+
+      - name: Script + fab-gate suites
+        run: |
+          set -e
+          # pytest-style: collectible normally.
+          python -m pytest scripts/test_set_servo_ids.py -q
+          # NOT pytest-collectible — module-level sys.exit() makes pytest bail
+          # with `INTERNALERROR> SystemExit: 0`. It is written as a standalone
+          # script, so run it as one. Same rule the sim-tests job follows.
+          python hardware/pcb-mods/tools/test_fab_gate.py
