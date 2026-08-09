@@ -178,6 +178,30 @@ jobs:
         working-directory: hardware/cad/chassis
         run: python check_fit.py
 
+      # #321 second half. slice_plate.py also had refs=0, and
+      # docs/checklists/print-batch.md calls its registry "the authority for
+      # orientation+supports" — an authority nothing re-ran.
+      #
+      # --list is the SLICER-FREE half and it already returns non-zero: it runs
+      # cmd_list() (registry coverage — an STL nobody classified) +
+      # check_material_agreement() (.scad header vs registry, and a COUNT of
+      # what it could not check) + overhang_checks() (ray-cast unsupported area
+      # vs each part's declared `supports`). Crucially it does all of that
+      # BEFORE the `if not ORCA.exists()` bail, so no OrcaSlicer is needed.
+      #
+      # NOT --self-test: that one slices for real and does need Orca, so it
+      # cannot run here. Saying so out loud because "slice_plate is in CI" would
+      # otherwise imply more coverage than this buys.
+      #
+      # The gate this restores is the one that caught battery_pocket printing
+      # 639 mm^2 over air at a 34.8 mm drop while declaring supports="none" —
+      # the defaulted-field class (a `none` that meant "nobody decided").
+      # Negative-controlled: flipping battery_pocket back to "none" exits 1 and
+      # names the part.
+      - name: Print registry — coverage, material agreement, overhangs
+        working-directory: hardware/cad
+        run: python -u slice_plate.py --list
+
       - name: Mesh health (printable chassis parts)
         # Same guard as the leg job; also previously reachable only through
         # build_all.sh, which CI never runs.
