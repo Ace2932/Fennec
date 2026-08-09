@@ -10,6 +10,7 @@
 #include <Arduino.h>
 #include "feetech_bus.h"
 #include "ina226_telemetry.h"
+#include "icm42688.h"
 #include "hfe_envelope.h"
 #include "safety_state.h"
 #include "limp_controller.h"
@@ -94,6 +95,7 @@ uint8_t boot_self_test_flags = 0;
 #include <std_msgs/msg/float32_multi_array.h>
 #include <std_msgs/msg/string.h>
 #include <sensor_msgs/msg/joint_state.h>
+#include <sensor_msgs/msg/imu.h>
 #endif
 
 // ---------------- Pinout ----------------
@@ -152,6 +154,66 @@ constexpr uint8_t INA226_RAIL_COUNT = 3;
 nova::Rail* rails[INA226_RAIL_COUNT] = {&rail_leg, &rail_hip, &rail_jetson};
 #endif
 uint8_t ina226_rr_idx = 0;
+
+// ---------------- ICM-42688-P IMU (#14, #289 step 4) ----------------
+// The Wire transport lives HERE, not in icm42688.h, so the header stays free
+// of Arduino and the decode + filter stay native-testable (test_icm42688).
+//
+// NOT ON THE BOARD YET. The breakout is unordered (improvement-backlog item
+// 14). icm_begin() gates on WHO_AM_I, so with no chip present imu_ok stays
+// false, nothing is polled and nothing is published -- the same
+// absent-sensor discipline Rail::begin() already uses. It costs one failed
+// I2C transaction at boot.
+nova::TiltFilter imu_filter;
+nova::ImuSample imu_sample;
+bool imu_ok = false;
+uint32_t imu_last_us = 0;
+volatile uint32_t imu_sample_count = 0;
+
+static bool icm_write(uint8_t reg, uint8_t val) {
+  Wire.beginTransmission(nova::ICM_ADDR);
+  Wire.write(reg);
+  Wire.write(val);
+  return Wire.endTransmission() == 0;
+}
+
+static bool icm_read(uint8_t reg, uint8_t* buf, uint8_t n) {
+  Wire.beginTransmission(nova::ICM_ADDR);
+  Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) return false;
+  if (Wire.requestFrom((int)nova::ICM_ADDR, (int)n) != n) return false;
+  for (uint8_t i = 0; i < n; i++) buf[i] = Wire.read();
+  return true;
+}
+
+// Returns false unless WHO_AM_I reads back 0x47. That check is the only thing
+// standing between a mis-remembered register map and plausible garbage in the
+// first six dims of every observation frame -- fail closed, loudly.
+bool icm_begin() {
+  uint8_t who = 0;
+  if (!icm_read(nova::ICM_REG_WHO_AM_I, &who, 1)) return false;
+  if (who != nova::ICM_WHO_AM_I_VALUE) return false;
+  if (!icm_write(nova::ICM_REG_DEVICE_CONFIG, 0x01)) return false;  // soft reset
+  delay(2);
+  if (!icm_write(nova::ICM_REG_GYRO_CONFIG0, nova::ICM_GYRO_CFG_2000DPS_1KHZ)) return false;
+  if (!icm_write(nova::ICM_REG_ACCEL_CONFIG0, nova::ICM_ACCEL_CFG_16G_1KHZ)) return false;
+  if (!icm_write(nova::ICM_REG_PWR_MGMT0, nova::ICM_PWR_LN_BOTH)) return false;
+  delay(1);   // datasheet asks for a settling gap after leaving OFF mode
+  imu_filter.reset();
+  return true;
+}
+
+// One 12-byte burst: accel XYZ then gyro XYZ, contiguous from ACCEL_DATA_X1.
+void poll_imu(uint32_t now_us) {
+  if (!imu_ok) return;
+  uint8_t b[12];
+  if (!icm_read(nova::ICM_REG_ACCEL_DATA_X1, b, 12)) return;
+  imu_sample = nova::icm_decode(b);
+  float dt = (imu_last_us == 0) ? 0.001f : (float)(now_us - imu_last_us) * 1e-6f;
+  imu_last_us = now_us;
+  if (dt > 0.0f && dt < 0.1f) imu_filter.update(imu_sample.gyro, imu_sample.accel, dt);
+  imu_sample_count++;
+}
 
 void read_ina226_stub() {
   // Round-robin sample. Single chip per tick keeps the I²C bus + main loop
@@ -592,6 +654,11 @@ rcl_publisher_t joint_cmd_rx_pub;
 rcl_publisher_t joint_limits_rx_pub;
 rcl_publisher_t hfe_envelope_rx_pub;
 rcl_publisher_t limp_pose_rx_pub;
+// /imu -> policy_node (#14/#289). gyro + an orientation whose
+// R^T@[0,0,-1] is obs dims 3..5. Yaw is ZERO by construction and that is
+// correct: proj_grav is yaw-invariant and nothing else in the obs reads
+// yaw -- see icm42688.h.
+rcl_publisher_t imu_pub;
 rcl_publisher_t hfe_envelope_clamps_pub;
 rcl_publisher_t servo_present_pub;
 rcl_publisher_t servo_read_err_pub;
@@ -618,6 +685,7 @@ std_msgs__msg__Int32 joint_cmd_rx_msg;
 std_msgs__msg__Int32 joint_limits_rx_msg;
 std_msgs__msg__Int32 hfe_envelope_rx_msg;
 std_msgs__msg__Int32 limp_pose_rx_msg;
+sensor_msgs__msg__Imu imu_msg;
 std_msgs__msg__Int32 hfe_envelope_clamps_msg;
 std_msgs__msg__Int32 servo_present_msg;
 std_msgs__msg__Int32 servo_read_err_msg;
@@ -812,6 +880,7 @@ void setup() {
   Wire.begin();
   Wire.setClock(400000);
   for (uint8_t i = 0; i < INA226_RAIL_COUNT; i++) rails[i]->begin();
+  imu_ok = icm_begin();   // false when the breakout is absent (#14)
 
   // Slew limiter — initialize per-joint history to UNINIT so the first
   // broadcast after boot accepts the latched goal verbatim (no false ramp
@@ -993,6 +1062,11 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "limp_pose_rx"));
+  RCCHECK(rclc_publisher_init_default(
+      &imu_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+      "imu"));
   RCCHECK(rclc_publisher_init_default(
       &hfe_envelope_clamps_pub,
       &node,
@@ -1222,6 +1296,7 @@ void loop() {
 
     // Telemetry sample
     read_ina226_stub();
+    poll_imu(handler_start_us);
 
     // Safety GPIO sense + state-machine update
     bool estop_now = (digitalRead(ESTOP_PIN) == HIGH);   // HIGH = pressed/open (NC fail-safe)
@@ -1360,6 +1435,27 @@ void loop() {
     RCSOFTCHECK(rcl_publish(&hfe_envelope_rx_pub, &hfe_envelope_rx_msg, NULL));
     limp_pose_rx_msg.data = (int32_t)limp_pose_rx_count;
     RCSOFTCHECK(rcl_publish(&limp_pose_rx_pub, &limp_pose_rx_msg, NULL));
+    // Only once the chip has actually answered. Publishing a default-constructed
+    // Imu would hand policy_node a PERFECTLY LEVEL attitude it cannot tell from
+    // a real one -- its /imu liveness gate would go green on a sensor that is
+    // not there. Silence is the honest signal; the gate then refuses, which is
+    // the documented behaviour with no driver (policy_node.py:152).
+    if (imu_ok) {
+      float q[4];
+      imu_filter.quaternion(q);
+      imu_msg.orientation.w = q[0];
+      imu_msg.orientation.x = q[1];
+      imu_msg.orientation.y = q[2];
+      imu_msg.orientation.z = q[3];
+      imu_msg.angular_velocity.x = imu_sample.gyro[0];
+      imu_msg.angular_velocity.y = imu_sample.gyro[1];
+      imu_msg.angular_velocity.z = imu_sample.gyro[2];
+      // m/s^2, as sensor_msgs/Imu specifies -- the driver works in g.
+      imu_msg.linear_acceleration.x = imu_sample.accel[0] * 9.80665;
+      imu_msg.linear_acceleration.y = imu_sample.accel[1] * 9.80665;
+      imu_msg.linear_acceleration.z = imu_sample.accel[2] * 9.80665;
+      RCSOFTCHECK(rcl_publish(&imu_pub, &imu_msg, NULL));
+    }
     hfe_envelope_clamps_msg.data = (int32_t)hfe_envelope.clamp_count();
     RCSOFTCHECK(rcl_publish(&hfe_envelope_clamps_pub, &hfe_envelope_clamps_msg, NULL));
     servo_present_msg.data = (int32_t)servo_present_mask;
