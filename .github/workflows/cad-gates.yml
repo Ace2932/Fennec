@@ -178,16 +178,6 @@ jobs:
         working-directory: hardware/cad/chassis
         run: python check_fit.py
 
-      # #321. This gate had refs=0 — not in any workflow, not in any
-      # build_all.sh, not in a doc. #281 populated its 116-entry ALLOW list and
-      # was closed, but the WIRING was never done, so everything it has caught
-      # (#35's pod-foot breakout, #301's trunk countersinks) came from someone
-      # running it by hand. Tree-wide, not per-part: the defect it finds is a
-      # hole too close to an edge, and which part that happens in is exactly
-      # what you cannot predict.
-      - name: Fastener holes are fully enclosed (tree-wide)
-        run: python -u hardware/cad/check_hole_breakout.py
-
       - name: Mesh health (printable chassis parts)
         # Same guard as the leg job; also previously reachable only through
         # build_all.sh, which CI never runs.
@@ -237,6 +227,23 @@ jobs:
 
       - name: Every committed STL matches its .scad
         run: python -u hardware/cad/check_stl_fresh.py
+
+      # #321. This gate had refs=0 — not in any workflow, not in any
+      # build_all.sh, not in a doc. #281 populated its 116-entry ALLOW list and
+      # was closed, but the WIRING was never done, so everything it has caught
+      # (#35's pod-foot breakout, #301's trunk countersinks) came from someone
+      # running it by hand. Tree-wide, not per-part: the defect it finds is a
+      # hole too close to an edge, and which part that happens in is exactly
+      # what you cannot predict.
+      #
+      # IN THIS JOB rather than chassis-gates because it renders each .scad to
+      # .csg to find the cut cylinders, so it needs OPENSCAD — and this is the
+      # only job that installs it. Putting it in chassis-gates failed in CI
+      # with a bare `FAIL: openscad not found` while passing locally, which is
+      # the same shape of hole #321 is about: a gate that cannot run is not a
+      # gate. Keep it wherever openscad is provisioned.
+      - name: Fastener holes are fully enclosed (tree-wide)
+        run: python -u hardware/cad/check_hole_breakout.py
 
   generated-freshness:
     # The same question for the artifacts check_stl_fresh CANNOT see: the ones
