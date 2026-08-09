@@ -111,6 +111,13 @@ def print_fingerprint(env, terrain=0.0, dr_scale=1.0, step_frac=0.0, stair_frac=
     print("  comparable to pre-fix runs. cmd stage 2")
     print("  (reverse+lateral+turn) transiently DIPS reward as it generalizes;")
     print("  judge by a probe, not by eval_reward. A ~2700 start = stale code.")
+    print("  #310: 'as it generalizes' is ONE cause of a dip, not the only one —")
+    print("  a resumed segment also starts with Adam's moments zeroed (brax")
+    print("  restores policy+value+normalizer and nothing else). Both look the")
+    print("  same in eval_reward. run_stage prints a NOTE whenever it resumes;")
+    print("  a dip that follows one of those has two candidate causes, so the")
+    print("  probe is not just better evidence than eval_reward here, it is the")
+    print("  only evidence that separates them.")
     print("--------------------------------------------------------------")
 
 
@@ -267,7 +274,26 @@ def run_stage(env, args, terrain, stair_frac, timesteps, ckpt_dir, restore,
     `timesteps` is what this INVOCATION runs; `done_base` is what the stage
     already banked in earlier attempts. Their sum is persisted every eval so a
     resume knows how much of the stage budget is left (Brax's own step counter
-    restarts at 0 on restore, so it can't answer that)."""
+    restarts at 0 on restore, so it can't answer that).
+
+    "policy+value+normalizer" above is EXHAUSTIVE, and that is the whole of
+    #310: the ADAM OPTIMIZER STATE is not in it and cannot be. Brax builds it
+    fresh at every ppo.train() call (brax/training/agents/ppo/train.py:714,
+    `optimizer_state=optimizer.init(init_params)`) and neither restore path
+    below it — restore_checkpoint_path at :725 or restore_params at :735 —
+    touches that field; both `.replace()` only normalizer_params and
+    params.policy/value. It is never saved either: brax's checkpoints hold the
+    3-tuple, and no callback this file can pass (progress_fn, policy_params_fn)
+    is handed the optimizer state, so there is nothing to save even if we
+    wanted to. Every stage boundary and every resume therefore drops both Adam
+    moments to zero, >=4x in a normal curriculum campaign.
+
+    NOT FIXED HERE, DELIBERATELY. A real restore means vendoring brax's PPO
+    train loop (~800 lines, pinned to 0.14.2) to thread the state in and out,
+    and the COST of the reset is still unmeasured — building that on an
+    unmeasured hypothesis is the trade #310 is gated on, not an oversight.
+    What IS fixed here is attribution: the reset is announced (see the resume
+    notice below) so the transient it causes stops being invisible."""
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     net = functools.partial(
         ppo_networks.make_ppo_networks,
@@ -351,6 +377,19 @@ def run_stage(env, args, terrain, stair_frac, timesteps, ckpt_dir, restore,
         # hardware the policy has to survive, at zero cost. Constant within a
         # stage, so a resumed stage keeps its own draw.
         seed=args.seed if seed is None else seed)
+
+    # #310 resume notice. Printed for the SAME condition brax uses to decide
+    # it is restoring anything at all (either restore path non-None), because
+    # that is exactly when it also silently zeroes the Adam moments — see this
+    # function's docstring for the line numbers. Without this line a reward
+    # transient right after a stage promotion has two indistinguishable
+    # explanations (real generalization vs a momentum reset) and the operator
+    # has no way to tell which; with it, at least the second one is on record
+    # at the timestamp it happened.
+    if restore is not None or restore_params is not None:
+        print("  NOTE (#310): resuming policy+value+normalizer only — Adam "
+              "moments reset to ZERO for this segment. A reward dip in the "
+              "first evals may be that transient, not generalization.")
 
     _, params, _ = train_fn(environment=env, progress_fn=progress,
                             policy_params_fn=save_policy)
