@@ -145,25 +145,30 @@ jobs:
   # is SLOW. Keeping them apart preserves the fast pre-merge filter `pytest`
   # exists to be.
   #
-  # RUNTIME, every file measured on an M-series Mac with CPU jax:
-  #   terrain_relative 425 s · gait_clock 344 s · climb_reward 320 s ·
-  #   lift_clearance 226 s · distill_obs_map 72 s · heightmap 16 s ·
-  #   curriculum_resume 2 s · resume_budget 1 s · script_imports 0 s
-  # ~23 min for the set, and FOUR of the nine are minutes-long, not one or
-  # two. All nine PASS. (An earlier 300 s timeout made climb_reward look
-  # broken when only the timeout was — worth remembering before treating a
-  # red run here as a real failure.)
+  # RUNTIME. Mac (M-series, CPU jax) vs a GitHub ubuntu-latest runner, both
+  # measured, not estimated:
   #
-  # A GitHub runner is slower than that Mac, so the 90 min ceiling below is
-  # deliberately loose: a timeout would put this job straight back into the
-  # state #315 is about — firing, and reporting nothing about the tests it was
-  # added to run. Tighten it from the per-file timings this step prints on a
-  # real runner, not from the Mac numbers above.
+  #     file                     Mac     runner
+  #     terrain_relative         425s     1080s
+  #     gait_clock               344s      892s
+  #     climb_reward             320s      847s
+  #     lift_clearance           226s      536s
+  #     distill_obs_map           72s       99s
+  #     heightmap                 16s       41s
+  #     curriculum_resume/
+  #       resume_budget/
+  #       script_imports          ~3s       10s
+  #     TOTAL                  ~23min   59m10s
   #
-  # This job is genuinely expensive in Actions minutes on every PR that
-  # touches sim/. That is a real cost and worth revisiting — but the way to
-  # revisit it is a measured split (fast subset on PR, full set on main), not
-  # dropping files quietly, which is the failure this closes.
+  # The runner is ~2.5x slower, so 90 minutes is roughly 1.5x the real cost --
+  # deliberately loose rather than snug. A timeout here would put this job
+  # straight back into the state #315 is about: firing, and reporting nothing
+  # about the tests it exists to run. Do not tighten this toward 60.
+  #
+  # This is a real cost in Actions minutes on every PR touching sim/. Worth
+  # revisiting as a measured fast-subset-on-PR / full-set-on-main split -- but
+  # by measurement, not by dropping files quietly, which is the failure this
+  # closes.
   sim-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 90
