@@ -185,9 +185,33 @@ trip backdrive protection) · stand-up keeps feet under knees (knee ≤80%
 rating with splayed push-up).
 
 ## Verify (first-article print, before batching)
-1. Pocket DROP-IN fit (CLR_POCKET 0.45/side) — servo drops in under gravity
-   plus a wiggle, no force; location comes from the 4 column screws, not the
-   walls. (0.30/side = the v5 press-fit calibration — do NOT "fix" it back.)
+1. Pocket fit (CLR_POCKET 0.45/side) — **this is NOT a free drop all the way
+   down, and a print that needs a thumb press is not a failed print** (#167).
+   The anti-rotation ribs stand `ANTIROT_PROUD 0.35` into a 0.45 pocket, so
+   the nominal clearance AT THE RIBS is **0.10 mm/side** — inside the very
+   print tolerance that 0.45 exists to absorb. What a good part feels like:
+
+   - **free drop for the first ~1.7 mm** (`ANTIROT_Z[1]` = 13 sits that far
+     below `CASE_TOP`, so nothing touches yet), then
+   - **increasing resistance over the next 2.5 mm** as the `ANTIROT_LEADIN`
+     taper engages (full-crush zone starts at z 10.5), then
+   - **seats with a light thumb press.** Location still comes from the 4
+     column screws, not the walls.
+
+   OUT of tolerance is: needing tooling or a clamp, or the servo case galling
+   rather than sliding. Free-falling to the floor is not a pass either — it
+   means the ribs are missing or short.
+
+   (0.30/side = the v5 press-fit calibration — do NOT "fix" it back. And do
+   not "fix" the 0.10 mm either: the ribs are meant to interfere; the thin
+   tip crushes to take up print tolerance and carry torque.)
+
+   ⬜ **First article, record it:** does the RIB crush, or does the servo CASE
+   score? The ribs are PA6-CF against a much softer case, so scoring is the
+   likely outcome and is cosmetic — but `servo_pocket_analysis.py`'s wall-
+   bearing claim assumes the rib profile SURVIVES, so the answer changes that
+   analysis. Also check the seated servo for any rock about Z, which is the
+   failure the ribs exist to prevent.
 2. Knee-arm plate: seats flat on the shelf, diagonal Ø3.1 screws register
    snugly BEFORE the clearance pair; horn face flush under the plate ±0.2.
 3. **M3** countersink flush (heads must NOT proud into the yoke arm plane).
