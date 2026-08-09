@@ -203,8 +203,28 @@ its siblings. Note it rather than trust it.
 ## 🟡 2. Trip-point calibration (ratiometric to V5_AUX)
 VREF tracks the UBEC, VSENSE tracks the battery. UBEC sag shifts trips LOWER (later).
 Verified-on-paper trips: BATT_LOW 13.0V, HARDCUT 12.4V (resistor math confirmed 2026-06-13).
-- [ ] Measure UBEC output — must hold **5.0V ±2%** (4.9–5.1V). If under 4.7V, trips shift
-      ~1.3V late; swap divider or fix UBEC.
+- [x] ✅ **Measured 2026-08-08: 4.98 V — PASS** (spec 5.0 V ±2%, 4.9–5.1). Bench supply
+      (Kungber), **no load**, unit tested off-board before wiring to `J2`. Also read **4.98 V
+      at 6.0 V in** — identical, so line regulation across 6→16.8 V is essentially flat and
+      dropout is under 1 V. Direction confirmed at the same time: **bare/tinned pair = INPUT,
+      servo plug = OUTPUT.**
+      ⚠️ **This is a NO-LOAD figure.** It proves the regulator works and is set correctly; it
+      does **not** prove it holds 5.0 V at the 1.5 A rail load (`power-budget.md` Rail 5).
+      Re-read V5_AUX once the switch + fans + aux are actually drawing — sag there shifts
+      every trip point, see below.
+      ⬜ **Second unit (shelf spare) not yet measured.** Test it too, and label which is which.
+
+      **Trip points implied by the MEASURED 4.98 V** (using the measured divider 0.1794 from
+      R2 99.7k / R3 21.8k, not nominals):
+
+      | | VREF | VBAT trip |
+      |---|---|---|
+      | `BATT_LOW` warn (R4/R5) | 4.98 × 0.4695 = **2.338 V** | **13.03 V** |
+      | `HARDCUT` (R6/R7) | 4.98 × 0.4525 = **2.253 V** | **12.56 V** |
+
+      Refines the earlier 13.08 / 12.61 estimate, which assumed a nominal 5.00 V UBEC.
+      Because the references are ratiometric to V5_AUX, these scale linearly with it — a
+      UBEC sagging to 4.8 V under load would move them to ~12.6 / ~12.1 V.
 - [ ] Bench-sweep supply 13.5→12.0V, confirm BATT_LOW asserts ~13.0V, HARDCUT ~12.4V
 - [ ] Confirm hysteresis (R14 470k / R15 1M) prevents chatter at threshold
 
