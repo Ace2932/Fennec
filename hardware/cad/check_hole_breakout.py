@@ -105,6 +105,23 @@ MAX_R = 8.0         # ignore big architectural bores (wheel window, cable tunnel
 # silently no-ops for every such entry (30 of 121 in the #281 sweep). Every
 # coordinate below was verified against the real by_pos key, not read off
 # printed output.
+# SECOND GOTCHA, same family (#325): the by_pos key is a DICT key, and in
+# IEEE-754 -0.0 == 0.0, so (x, y, -0.0) and (x, y, 0.0) are the SAME BUCKET --
+# while their f-string renderings differ ("-0.0" vs "0.0"). Two cuts whose
+# rounded z differs only by signed zero therefore merge, the larger radius wins,
+# and the ALLOW string you need is whichever one WON.
+#
+# That is exactly how grommet_insert hid a real hole before #325: the parser
+# wrongly counted the part's own flange disc (r=7.30, z=0.000 -> "0.0") as a
+# cut, it landed in the same bucket as the genuine r=5.70 counterbore
+# (z=-0.050 -> "-0.0"), the disc won on radius, and the ALLOW entry written for
+# "0.0,0.0,0.0" silenced the bucket -- taking an untested real cut with it.
+#
+# Fixing the parser removes the body-shadows-cut case. Shank-under-counterbore
+# shadowing REMAINS and is intended (see check()'s own note: sampling outside a
+# shank lands inside its countersink void, so the larger radius is the binding
+# test) -- 36 such buckets exist tree-wide and every one is a shank paired with
+# its own csk/counterbore. Do not "fix" those.
 def _allow(label, reason, *coords):
     return {f"{label}:{x},{y},{z}": reason for (x, y, z) in coords}
 
