@@ -57,7 +57,8 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | FE-URT-1 USB-TTL adapter | J9 mate | ✅ owned (DIYmall, 2026-05-03) |
 | 100nF decoupling @ U7 | — | ✅ part owned; ADD footprint when routing |
 | J21 = Conn_01x02 pin header (PinHeader_1x02_P2.54mm_Vertical) | J21 | 🛒 e-stop 2nd-NC-contact sense → Teensy pin 5 (added 2026-06-14). Use PRPC040 strip already in order; mate = dupont/JST to e-stop. |
-| **Interboard J20↔J20 ribbon** — 2×6 IDC socket-both-ends, 2.54mm ×2 | J20 | 🛒 ⚠️ both J20s are MALE box headers; without this cable the two boards are electrically disconnected (I2C / servo-bus / safety lines). Hard mezzanine blocker. |
+| **Interboard J20↔J20 ribbon** — **`IDSD-06-D-09.00-T-G`** (Samtec, 2×6 IDC socket both ends, 9" ) | J20 | ✅ **IN HAND 2026-08-09** (ordered 2026-06-22, order-list §80 — this row still said 🛒). ⚠️ Both J20s are MALE box headers; without this cable the boards are electrically disconnected (I2C / servo-bus / safety lines). **It is a finished assembly — nothing to wire or crimp, it plugs on.** Do not confuse with the board-side header below. |
+| **`BHR-12-VUA` ×10 — the J20 BOARD header** | J20, **both boards** | 📦 owned. 12-way shrouded IDC **box header**, 2 rows of 6 pins out the bottom, notch in one shroud wall. **This is the part that gets soldered**; the IDSD above is the cable that links the two. All 12 pins are identical metal, so a 180° rotation seats perfectly and reverses every rail — **orientation is carried ONLY by the shroud notch. Match it to the silk; pin 1 is then the rounded-rect pad** (power (151.00, 128.89) · logic (140.00, 124.00)). |
 
 ## Phase 2 — gait/walk + status polish
 | Part | Status |
