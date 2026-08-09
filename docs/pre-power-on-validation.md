@@ -179,26 +179,30 @@ neighbour is an electrolytic ~21 mm away, `L1` is 73 mm off; `U7`'s nearest are 
 was taken at stage 3 as the interim cover. **This is where the real check lands. Do it
 before first power.**
 
-**Method — probe net-pad to net-pad, NOT the lead.** A lead is one continuous piece of metal
-into the die, so touching it reaches the die whether or not the solder joint is any good:
-lead-probing tests the *chip*, and the chip is not what is in question. Going pad-to-pad
-forces the path through board → pad → **solder joint** → lead → die → substrate → the GND
-pin's **joint** → board. A dead joint anywhere reads OL. The parallel resistor network
-cannot fake a pass: diode mode sources ~1 mA, so a 7–39 kΩ path exceeds compliance and
-reads OL, while a junction reads 0.4–0.8 V.
+**METHOD (Aiden's, 2026-08-09 — better than the diode method this section first specified):
+probe the LEAD against another pad on the SAME NET, in plain continuity.** The path is then
+lead → **solder joint** → pad → trace → the other pad, and *nothing else* — no die, no
+network. **~0 Ω = that joint is bonded. OL = it is not.**
 
-- [ ] **`U8`** — red probe on `J13`.1 (GND); black on `J20`.9 (pin 1) · `C7`.1 (pins 2+6) ·
-      `R5`.1 (pin 3) · `R7`.1 (pin 5) · `Q2`.1 (pin 7). Each **0.4–0.8 V**.
-- [ ] **`U7`** — red on `J20`.3 (logic board GND); black on `U6`.5 · `U6`.3 · `JP1`.3 ·
-      `U6`.6 · `JP1`.2 · `U6`.4 (pins 1–6). Each **0.4–0.8 V**.
-- [ ] **Reverse the leads on any one of them — must go OL.** That is the control proving the
-      reading is a junction and not a resistor.
-- [ ] **Judge by agreement across the set, not absolutes.** Same input structure ⇒ within
-      tens of mV of each other. One pin at OL while its siblings read 0.6 V is the defect.
+This beats the pad-to-pad diode approach on the one thing that mattered: **it tests every pin
+INDIVIDUALLY.** Diode mode could not separate paralleled power pins (`U7`'s three GND / three
++3V3, `U8`'s two `VSENSE`), so one bad joint hid behind its siblings. Touching a specific
+lead has no such blind spot.
 
-⚠️ **What this still cannot separate:** `U8` pins 2 and 6 share `VSENSE`, and `U7`'s three
-GND and three +3V3 pins are each paralleled — inside those groups one bad joint hides behind
-its siblings. Note it rather than trust it.
+*(The earlier reasoning — "never probe the lead, it reaches the die regardless" — is true only
+of lead-to-GND-through-the-chip. Lead-to-same-net-pad crosses the joint alone.)*
+
+- [x] ✅ **`U7` CLOSED 2026-08-09 — 12 of 14 pins individually proven, all ~0 Ω.**
+      pin 1→`U6`.5 · 2→`U6`.3 · 3→`JP1`.3 · 4→`U6`.6 · 5→`JP1`.2 · 6→`U6`.4 ·
+      7, 9, 12→`J20`.3 (GND, each separately) · 10, 13, 14→`J20`.5 (+3V3, each separately).
+      **Pins 8 and 11 are unreachable and do not matter** — they are the outputs of the two
+      disabled buffers and connect to nothing on the board.
+      ⚠️ Do this **before the Teensy socket goes on** — `U6`.3/.4/.5/.6 are the probe pads and
+      the socket covers them.
+- [ ] ⬜ **`U8` — still open, and all 8 pins are reachable this way.** Probe each lead to:
+      pin 1→`J20`.9 · 2→`C7`.1 · 3→`R5`.1 · 4→`J13`.1 · 5→`R7`.1 · 6→`C7`.1 · 7→`Q2`.1 ·
+      8→`J20`.1. Each **~0 Ω**. Note pins 2 and 6 share `VSENSE` but are still tested
+      separately, because you touch each lead in turn.
 
 ## 🟡 2. Trip-point calibration (ratiometric to V5_AUX)
 VREF tracks the UBEC, VSENSE tracks the battery. UBEC sag shifts trips LOWER (later).
