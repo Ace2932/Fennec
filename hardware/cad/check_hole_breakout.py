@@ -37,6 +37,7 @@ reason. Silence is not an option: an unlisted breakout fails.
 """
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -47,7 +48,6 @@ import trimesh
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import cad_contains  # noqa: E402  (#195 -- installed in main())
 
-OPENSCAD = "/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli"  # placeholder, see _openscad()
 MARGIN = 0.30       # mm outside the hole wall to sample
 MIN_R = 0.9         # ignore sub-fastener detail (vents, chamfer slivers)
 MAX_R = 8.0         # ignore big architectural bores (wheel window, cable tunnel)
@@ -512,11 +512,33 @@ ALLOW.update(_allow(
 
 
 def _openscad():
+    """Locate openscad the same way check_stl_fresh.py does (#321).
+
+    This used to probe two hard-coded macOS paths and nothing else -- no
+    $OPENSCAD, no PATH lookup -- so it could not run on Linux AT ALL, and
+    wiring it into CI produced a bare `FAIL: openscad not found` in a job that
+    had just apt-installed openscad and printed its version. That is most of
+    the reason this gate spent #281 unwired: it was not runnable where CI runs.
+    Same class as #166, the absolute path that pinned the chassis gate to one
+    machine.
+
+    $OPENSCAD first so a specific build can be forced (check_stl_fresh.py
+    documents that flow for reproducing its p99 threshold across versions),
+    then PATH, then the two local fallbacks.
+    """
+    env = os.environ.get("OPENSCAD")
+    if env and (os.path.exists(env) or shutil.which(env)):
+        return env
+    found = shutil.which("openscad")
+    if found:
+        return found
     for c in ("/opt/homebrew/bin/openscad",
               "/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD"):
         if os.path.exists(c):
             return c
-    raise SystemExit("FAIL: openscad not found")
+    raise SystemExit(
+        "FAIL: openscad not found -- looked at $OPENSCAD, PATH, "
+        "/opt/homebrew/bin/openscad, /Applications/OpenSCAD.app")
 
 
 def _tokenize(src):
