@@ -33,7 +33,17 @@ on:
       # compares the ROM envelope's manual copy in nova_ops. Same lesson as the
       # meshes above: a gate's trigger must cover every file it READS, not just
       # the directory it lives in.
-      - 'sim/nova_mjx/**'
+      #
+      # ...but "every file it READS" is not "the whole directory". This was
+      # `sim/nova_mjx/**`, so a colab/*.md edit fired all six CAD jobs (~7 min)
+      # that cannot read it. Narrowed to the two files that are actually the
+      # dependency, and it is PROVABLE rather than a guess: the only CAD-side
+      # reference into sim/ is check_generated_fresh.py:78, which regenerates
+      # nova.xml from build_mjcf.py -- and build_mjcf.py has ZERO imports (275
+      # lines, self-contained templating), so no other file under sim/ can
+      # change its output. If build_mjcf ever grows an import, add it here.
+      - 'sim/nova_mjx/nova.xml'
+      - 'sim/nova_mjx/build_mjcf.py'
       - 'ros2_ws/src/nova_ops/nova_ops/rom_envelope_table.py'
   push:
     branches: [main]
@@ -51,7 +61,17 @@ on:
       # compares the ROM envelope's manual copy in nova_ops. Same lesson as the
       # meshes above: a gate's trigger must cover every file it READS, not just
       # the directory it lives in.
-      - 'sim/nova_mjx/**'
+      #
+      # ...but "every file it READS" is not "the whole directory". This was
+      # `sim/nova_mjx/**`, so a colab/*.md edit fired all six CAD jobs (~7 min)
+      # that cannot read it. Narrowed to the two files that are actually the
+      # dependency, and it is PROVABLE rather than a guess: the only CAD-side
+      # reference into sim/ is check_generated_fresh.py:78, which regenerates
+      # nova.xml from build_mjcf.py -- and build_mjcf.py has ZERO imports (275
+      # lines, self-contained templating), so no other file under sim/ can
+      # change its output. If build_mjcf ever grows an import, add it here.
+      - 'sim/nova_mjx/nova.xml'
+      - 'sim/nova_mjx/build_mjcf.py'
       - 'ros2_ws/src/nova_ops/nova_ops/rom_envelope_table.py'
 
 jobs:
