@@ -241,8 +241,51 @@ ALLOW.update(_allow(
     "reaches that far. The FOOT CSK itself (r=3.20, the near-edge-relevant "
     "part) is deliberately NOT allow-listed here -- see the PR body's "
     "SUSPECT list -- L92-96, 126-133.",
-    ("-59.5", "-42.0", "1.5"), ("-59.5", "42.0", "1.5"),
-    ("59.5", "-42.0", "1.5"), ("59.5", "42.0", "1.5"),
+    # z is FOOT_CSK_H, a DERIVED value: (FOOT_CSK_D - FOOT_CLEAR_D)/2. It was
+    # 1.5 while FOOT_CSK_D was 6.4 and is 1.3 now that #301/#321 took it to 6.0.
+    #
+    # THE COUPLING IS THE HAZARD, not this edit. These keys are coordinates
+    # computed from a dimension, so changing that dimension silently ORPHANS
+    # the entries -- and an orphaned entry does not degrade quietly, it comes
+    # back as a brand-new scary FAIL. Dropping FOOT_CSK_D by 0.4mm made four
+    # of these reappear at "40% open", which reads like the change broke the
+    # part when it is the same guard-band overshoot allow-listed here all
+    # along. Verified directly: on the stock mesh, 1440 radial directions at
+    # z=1.30 and z=1.50, ZERO percent of directions have material closer than
+    # r=1.70 at any of the four corners (nearest boundary 3.30-3.90mm, about
+    # double the bore radius). Nothing opened; only the key moved.
+    ("-59.5", "-42.0", "1.3"), ("-59.5", "42.0", "1.3"),
+    ("59.5", "-42.0", "1.3"), ("59.5", "42.0", "1.3"),
+))
+
+ALLOW.update(_allow(
+    "trunk",
+    "shoulder-foot CSK MOUTH at the tightest corner, after #301/#321 took "
+    "FOOT_CSK_D 6.4 -> 6.0. This is a PROBE ARTIFACT, and the proof is a "
+    "sweep, not an assertion. MARGIN (=0.30) is this gate's sample OFFSET: it "
+    "tests containment at hole_r + 0.30. The csk mouth is now r=3.00 and the "
+    "stock shell's nearest boundary at (-59.5,+42) is r=3.30 -- measured by "
+    "radial ray-cast, 1440 directions, constant from z=0.05 to z=2.00 -- so "
+    "the gate samples EXACTLY ON the boundary surface and contains() reads "
+    "noise there (3 of 96 points). Sweeping MARGIN with the geometry fixed: "
+    "0.25 -> 0 FAILs, 0.29 -> 0, 0.30 -> 1, 0.31 -> 1. The FAIL switches on "
+    "precisely where sample radius meets the real wall.\n"
+    "        CONSEQUENCE, stated plainly: this gate cannot certify any wall "
+    "that is <= MARGIN thick, by construction. 0.30mm IS thin -- it is a 3x "
+    "improvement on the 0.10mm that #301 left, not a comfortable margin, and "
+    "it is below one 0.4mm extrusion width so expect a rim nick here.\n"
+    "        REMOVE THIS ENTRY IF: FOOT_CSK_D drops further (more wall -> "
+    "should pass on its own), or MARGIN changes, or the gate is reworked to "
+    "report measured wall thickness instead of a binary contains() -- which "
+    "is the real fix and is why this is allow-listed rather than called "
+    "clean. See #301 for the measurements and #321 for the CI wiring.",
+    # z is "-0.0", NOT the "-0.1" the FAIL line prints -- this is the GOTCHA
+    # documented above, hit live. trunk.scad's EPS is 0.05, and the csk is
+    # translated to z=-EPS, so base z = -0.05: round(np.float64(-0.05), 1) is
+    # -0.0 (round-half-to-even) while f"{-0.05:.1f}" is "-0.1". Copying the
+    # printed coordinate silently no-ops, which is exactly what it did on the
+    # first attempt at this entry.
+    ("-59.5", "42.0", "-0.0"),
 ))
 
 # ---- leg_v6/cable_clip.scad ------------------------------------------------------

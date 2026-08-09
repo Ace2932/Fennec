@@ -91,8 +91,29 @@ BATT_BORE_H   = 8;        // ends well above the floor top (z3.9) -- clean cut
 // -----------------------------------------------------------------------
 FOOT_XY       = [[59.5, 42], [59.5, -42], [-59.5, 42], [-59.5, -42]];
 FOOT_CLEAR_D  = 3.4;
-FOOT_CSK_D    = 6.4;                             // M3 CSK head seat dia
-FOOT_CSK_H    = (FOOT_CSK_D - FOOT_CLEAR_D) / 2;  // 1.5mm at 90 deg
+// 6.4 -> 6.0 (#301/#321). At 6.4 the csk mouth is r=3.20 and the stock shell
+// leaves only 3.30 outboard at (-59.5,+42) -- 0.10mm of wall, and 0.20mm at
+// (-59.5,-42). check_hole_breakout.py reported those two plus (59.5,+42) as
+// 6%/9%/3% open. 6.0 puts the mouth at r=3.00, worst wall 0.10 -> 0.30mm.
+//
+// Still a valid M3 CSK seat: DIN 965 head is 5.5-6.0 nominal, so 6.0 seats the
+// head on its full cone -- this trims the mouth, not the bearing surface.
+//
+// MEASURED, not inferred, and the measurement corrected #301's diagnosis:
+// radial ray-cast on the STOCK mesh (1440 dirs) at z = 0.05/0.20/0.50/1.00/
+// 1.60/2.00 returns the SAME distance at every height, so the limit is a
+// constant-section internal cavity (wall at y=+/-45.3, part runs to +/-55),
+// NOT the bottom outer chamfer #301 blamed -- a chamfer would open up with z.
+// Because the section is constant, the 0.20mm gained applies down the whole
+// cone rather than only at the mouth. #301 also had the worst corner wrong:
+// it listed (-59.5,+42) as the THICKEST at 4.00; it is the THINNEST at 3.30.
+//
+// Probe the DERIVED trunk.stl radially and you measure the csk cone itself
+// (3.14 at z0.05, 2.44 at z0.75, 1.75 at z1.45 -- that is the cone profile).
+// The stock mesh is the one that answers this; it has no foot bore, so a ray
+// from the bolt axis starts inside solid.
+FOOT_CSK_D    = 6.0;                             // M3 CSK head seat dia
+FOOT_CSK_H    = (FOOT_CSK_D - FOOT_CLEAR_D) / 2;  // 1.3mm at 90 deg
 FOOT_BORE_H   = 8;                                // through + margin above
 
 // -----------------------------------------------------------------------

@@ -178,6 +178,16 @@ jobs:
         working-directory: hardware/cad/chassis
         run: python check_fit.py
 
+      # #321. This gate had refs=0 — not in any workflow, not in any
+      # build_all.sh, not in a doc. #281 populated its 116-entry ALLOW list and
+      # was closed, but the WIRING was never done, so everything it has caught
+      # (#35's pod-foot breakout, #301's trunk countersinks) came from someone
+      # running it by hand. Tree-wide, not per-part: the defect it finds is a
+      # hole too close to an edge, and which part that happens in is exactly
+      # what you cannot predict.
+      - name: Fastener holes are fully enclosed (tree-wide)
+        run: python -u hardware/cad/check_hole_breakout.py
+
       - name: Mesh health (printable chassis parts)
         # Same guard as the leg job; also previously reachable only through
         # build_all.sh, which CI never runs.

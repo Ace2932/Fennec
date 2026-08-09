@@ -18,6 +18,7 @@ manifold input), which is confirmed installed in .venv. Run:
   ../../../.venv/bin/python trunk_build.py
 """
 import pathlib
+import re
 import sys
 
 import numpy as np
@@ -50,13 +51,72 @@ BATT_BORE_H = 8
 # trunk (x=+/-59.5, y=+/-42).
 FOOT_XY = [(59.5, 42), (59.5, -42), (-59.5, 42), (-59.5, -42)]
 FOOT_CLEAR_D = 3.4
-FOOT_CSK_D = 6.4
-FOOT_CSK_H = (FOOT_CSK_D - FOOT_CLEAR_D) / 2  # 1.5mm at 90deg
+FOOT_CSK_D = 6.0   # 6.4 -> 6.0 (#301/#321); MUST match trunk.scad, asserted below
+FOOT_CSK_H = (FOOT_CSK_D - FOOT_CLEAR_D) / 2  # 1.3mm at 90deg
 FOOT_BORE_H = 8
 
 # SET 3 (shoulder-flange end-wall clearance) is ALREADY STOCK -- see
 # trunk.scad's header comment + measure_trunk.py + check_fit.py's new
 # alignment gate. Nothing to cut here.
+
+
+def assert_mirrors_scad():
+    """Fail loudly if the constants above have drifted from trunk.scad's.
+
+    WHY THIS EXISTS (#321). The docstring says this script "mirrors" trunk.scad,
+    and that mirroring was a HAND COPY that nothing checked:
+
+      * trunk.stl -- the part that gets printed -- is built HERE, in Python.
+      * check_hole_breakout.py parses trunk.SCAD to find the holes it tests.
+      * check_stl_fresh.py has SKIP = {"trunk.stl"} (trunk.scad renders only a
+        preview), so it never compared the two either.
+
+    So the gate could pass on one geometry while the printed part had another.
+    That is not hypothetical: taking FOOT_CSK_D 6.4 -> 6.0 in trunk.scad alone
+    left trunk.stl BYTE-IDENTICAL while the breakout gate started reporting the
+    new r=3.00 hole and went green. A false pass, caught only because the STL
+    hash did not move. Two copies of a dimension with no check between them is
+    the whole bug; this is the check.
+
+    Regex-matched rather than reading the .scad symbolically: it only has to
+    catch a NUMBER changing on one side, and a parser that can be wrong in its
+    own right would just move the problem.
+    """
+    scad = (pathlib.Path(__file__).parent / 'trunk.scad').read_text()
+    mirrored = {
+        'FOOT_CLEAR_D': FOOT_CLEAR_D,
+        'FOOT_CSK_D': FOOT_CSK_D,
+        'FOOT_BORE_H': FOOT_BORE_H,
+        'BATT_CLEAR_D': BATT_CLEAR_D,
+        'BATT_BORE_Z0': BATT_BORE_Z0,
+        'BATT_BORE_H': BATT_BORE_H,
+        'BATT_BOSS_Y': BATT_BOSS_Y,
+    }
+    bad = []
+    for name, here in mirrored.items():
+        hit = re.search(rf'^\s*{name}\s*=\s*(-?[\d.]+)\s*;', scad, re.M)
+        if hit is None:
+            bad.append(f'{name}: not found in trunk.scad (renamed or removed?)')
+        elif abs(float(hit.group(1)) - float(here)) > 1e-9:
+            bad.append(f'{name}: trunk.scad has {hit.group(1)}, this file has {here}')
+    # FOOT_XY is a list, so compare it as text rather than as one number.
+    hit = re.search(r'^\s*FOOT_XY\s*=\s*\[(.+?)\]\s*;', scad, re.M | re.S)
+    if hit is None:
+        bad.append('FOOT_XY: not found in trunk.scad')
+    else:
+        nums = [float(v) for v in re.findall(r'-?[\d.]+', hit.group(1))]
+        mine = [float(v) for xy in FOOT_XY for v in xy]
+        if nums != mine:
+            bad.append(f'FOOT_XY: trunk.scad has {nums}, this file has {mine}')
+    if bad:
+        raise SystemExit(
+            'trunk_build.py has DRIFTED from trunk.scad (#321):\n  '
+            + '\n  '.join(bad)
+            + '\n\ntrunk.stl is built from THIS file, but check_hole_breakout.py'
+              ' tests the holes it parses out of trunk.scad. While these two'
+              ' disagree, a green gate says nothing about the printed part.'
+              ' Fix both, then re-run.')
+    print(f'constants mirror trunk.scad: {len(mirrored) + 1} checked, all agree')
 
 
 def straight_bore(d, z0, h, sections=48):
@@ -77,6 +137,7 @@ def csk_bore(r_big, r_small, csk_h, bore_h, sections=48):
 
 
 def main():
+    assert_mirrors_scad()
     trunk = trimesh.load(TRUNK_STL)
     assert trunk.is_watertight, 'stock trunk mesh is not watertight -- abort'
 
