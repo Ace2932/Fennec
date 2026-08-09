@@ -37,8 +37,9 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | KF301 kit block (SW2) | SW2 | ✅ |
 | MRBF-30 fuse ×2 + Blue Sea 5191 block | inline | ✅ ordered 2026-06-12 (verify 5191 = single-MRBF terminal variant) |
 | SMBJ8.5A ×10 (leg) + SMBJ13A ×10 (hip/L2) TVS | off-board | 🛒 |
-| Balance buzzer ×5 | — | ✅ |
-| UBEC 5V/5A ×2 | — | ✅ |
+| Balance buzzer ×5 (FLY RC, pre-set 3.3 V/cell) | balance plug | ✅ purchased 2026-05-16 |
+| UBEC 5V/5A ×2 (SoloGood) | `J2` | ✅ purchased 2026-05-03. **Unit A measured 4.98 V @ 16.8 V in, 2026-08-08** (pre-power-on §2). Spare untested. ⚠️ **4 wires into a 3-pin header** — the two blacks common at `J2`.2, see order-list |
+| **Panel voltmeter ×8 (diymore, 0.28" 2-wire, DC 2.5–30 V)** | **`M1`** | ✅ **owned, purchased 2026-05-03 — was MISSING from this BOM until 2026-08-08.** Only the header strip was listed; the module that plugs into it was never recorded. 2.5–30 V covers 4S `VBAT_PROTECTED` (12.0–16.8 V). **2-wire = self-powered from the measured rail.** `M1`.1 (square pad) = **+/red**, `M1`.2 = **−/black**. ⚠️ No reverse-polarity protection stated by the vendor — the listing's own Q&A asks and is unanswered. Draws ~10–20 mA continuously whenever SW1 is on |
 | E-stop (Mxuteuk) + Blue Sea Contura switch | SW1/SW2 wiring | ✅ |
 
 ## Logic board — `nova_pcb_v6_logic` (✅ ORDERED ×5 — JLCPCB 2026-07-01, 4L/1oz/HASL)
