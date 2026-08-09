@@ -105,6 +105,23 @@ MAX_R = 8.0         # ignore big architectural bores (wheel window, cable tunnel
 # silently no-ops for every such entry (30 of 121 in the #281 sweep). Every
 # coordinate below was verified against the real by_pos key, not read off
 # printed output.
+# SECOND GOTCHA, same family (#325): the by_pos key is a DICT key, and in
+# IEEE-754 -0.0 == 0.0, so (x, y, -0.0) and (x, y, 0.0) are the SAME BUCKET --
+# while their f-string renderings differ ("-0.0" vs "0.0"). Two cuts whose
+# rounded z differs only by signed zero therefore merge, the larger radius wins,
+# and the ALLOW string you need is whichever one WON.
+#
+# That is exactly how grommet_insert hid a real hole before #325: the parser
+# wrongly counted the part's own flange disc (r=7.30, z=0.000 -> "0.0") as a
+# cut, it landed in the same bucket as the genuine r=5.70 counterbore
+# (z=-0.050 -> "-0.0"), the disc won on radius, and the ALLOW entry written for
+# "0.0,0.0,0.0" silenced the bucket -- taking an untested real cut with it.
+#
+# Fixing the parser removes the body-shadows-cut case. Shank-under-counterbore
+# shadowing REMAINS and is intended (see check()'s own note: sampling outside a
+# shank lands inside its countersink void, so the larger radius is the binding
+# test) -- 36 such buckets exist tree-wide and every one is a shank paired with
+# its own csk/counterbore. Do not "fix" those.
 def _allow(label, reason, *coords):
     return {f"{label}:{x},{y},{z}": reason for (x, y, z) in coords}
 
@@ -208,15 +225,6 @@ ALLOW.update(_allow(
 ))
 
 # ---- spacer.scad ----------------------------------------------------------------
-ALLOW.update(_allow(
-    "spacer",
-    "PARSER BUG, not a hole: this is the spacer's own outer cylinder body "
-    "(d=8, the minuend of the top-level difference()), not the bore. The "
-    "real bore (r=1.70) is a genuine cut and correctly passes. Confirmed "
-    "via a tree-based re-parse that separates a difference()'s additive "
-    "(child0) side from its subtrahend (child1+) side.",
-    ("0.0", "0.0", "0.0"),
-))
 
 # ---- trunk.scad -----------------------------------------------------------------
 ALLOW.update(_allow(
@@ -286,6 +294,23 @@ ALLOW.update(_allow(
     # printed coordinate silently no-ops, which is exactly what it did on the
     # first attempt at this entry.
     ("-59.5", "42.0", "-0.0"),
+))
+
+ALLOW.update(_allow(
+    "grommet_insert",
+    "flange counterbore (r=5.70, h=1.40) read 3% open at the AXIAL SLIT -- "
+    "genuinely open by design, not a breakout. grommet_insert.scad:9,33: the "
+    "liner has SLIT=2.0mm of arc removed so it can wrap an already-routed "
+    "bundle. At the sample radius (5.70+MARGIN=6.00) a 2.0mm gap is "
+    "2.0/(2*pi*6.00) = 5.3% of the circumference, and the gate measures 3% -- "
+    "same feature, and no other direction is open.\n"
+    "        THIS HOLE WAS INVISIBLE UNTIL #325. The old parser read the "
+    "grommet's own body cylinders as cuts, and check() keeps only the LARGEST "
+    "radius per position -- so the body disc (r=7.30) shadowed this real "
+    "counterbore at the same (0,0) axis and it was never tested at all. "
+    "Fixing the parser did not create a defect here; it revealed a feature "
+    "the gate had never looked at.",
+    ("0.0", "0.0", "-0.0"),
 ))
 
 # ---- leg_v6/cable_clip.scad ------------------------------------------------------
@@ -405,16 +430,6 @@ ALLOW.update(_allow(
 ))
 
 # ---- leg_v6/grommet_insert.scad --------------------------------------------------
-ALLOW.update(_allow(
-    "grommet_insert",
-    "PARSER BUG, not a hole: flange disc (r=7.30, d=FLG_OD-0.4) + barrel "
-    "(r=6.35, d=BARREL_OD) + entry-chamfer nose (r=6.35) are all additive "
-    "union() geometry (the grommet's own body), not subtracted cuts. The "
-    "real bore (r=4.50) and its rounded exit (r=5.70) are genuine cuts and "
-    "both correctly pass -- confirmed via the tree-based re-parse -- "
-    "L88-111.",
-    ("0.0", "0.0", "0.0"), ("0.0", "0.0", "1.2"), ("0.0", "0.0", "5.4"),
-))
 
 # ---- leg_v6/knee_arm.scad --------------------------------------------------------
 ALLOW.update(_allow(
@@ -456,13 +471,6 @@ ALLOW.update(_allow(
 # ---- leg_v6/strap.scad -------------------------------------------------------------
 ALLOW.update(_allow(
     "strap",
-    "PARSER BUG, not a hole: this is the strap's own body outline, "
-    "hull() of 2 Ø8 circles (the plate's additive minuend), not a "
-    "fastener hole -- L26-28. Confirmed via the tree-based re-parse.",
-    ("0.0", "-13.0", "0.0"), ("0.0", "13.0", "0.0"),
-))
-ALLOW.update(_allow(
-    "strap",
     "zip-tie bore (Ø3.2), explicitly documented as 1.44mm clear of the "
     "plate's own outer edge (TRIMESH-PROBED, >=1.0mm) -- L4-17, 29-30.",
     ("0.0", "-15.6", "-0.1"), ("0.0", "15.6", "-0.1"),
@@ -489,13 +497,6 @@ ALLOW.update(_allow(
     "nothing breaks through') -- leg_v6_common.scad L428-472, called "
     "tibia.scad L152.",
     ("31.0", "-15.6", "-25.2"), ("31.0", "15.6", "-25.2"),
-))
-ALLOW.update(_allow(
-    "tibia_L",
-    "PARSER BUG, not a hole: strap boss (Ø7 raised material the strap "
-    "seats on), additive union() geometry -- tibia.scad L81-84. Confirmed "
-    "via the tree-based re-parse.",
-    ("31.0", "-14.2", "14.6"), ("31.0", "14.2", "14.6"),
 ))
 ALLOW.update(_allow(
     "tibia_L",
@@ -572,18 +573,38 @@ def parse_cuts(csg):
             continue
         name = tok.split('(')[0].strip()
         if name == 'multmatrix':
+            if child_idx:
+                child_idx[-1] += 1          # a transform IS one child of its parent
             nums = [float(v) for v in re.findall(r'-?\d+\.?\d*(?:e-?\d+)?', tok)]
             mat_stack.append(mat_stack[-1] @ np.array(nums[:16]).reshape(4, 4))
             pending = name
             continue
         if name == 'difference':
+            if child_idx:
+                child_idx[-1] += 1
             pending = name
             continue
         if name == 'cylinder':
+            if child_idx:
+                child_idx[-1] += 1          # the cylinder is itself a child
             kv = dict(re.findall(r'(\w+)\s*=\s*(-?[\d.]+)', tok))
             r = max(float(kv.get('r1', 0)), float(kv.get('r2', 0)))
             h = float(kv.get('h', 0))
-            if diff_depth:
+            # SUBTRAHEND ONLY (#325). A difference()'s FIRST child is the part's
+            # own body; children 2..n are what gets cut away. `diff_depth` alone
+            # accepted both, so a part whose body IS a cylinder read as a giant
+            # hole -- spacer's own 4.00 shaft, grommet_insert's flange disc and
+            # barrel, strap's hull circles, tibia's strap bosses. Eight of those
+            # were silenced in ALLOW as "sub-class (c) parser bug" rather than
+            # fixed; this is the fix, and those entries go with it.
+            #
+            # child_idx[dd - 1] is the difference's OWN brace counter (one entry
+            # per open brace, so depth == len(child_idx)). It reads >= 2 once we
+            # are past that difference's first child -- whether the cylinder sits
+            # directly there or nested under a multmatrix, because the multmatrix
+            # already incremented it on the way in.
+            is_cut = bool(diff_depth) and child_idx[diff_depth[-1] - 1] >= 2
+            if is_cut:
                 m = mat_stack[-1]
                 base = (m @ np.array([0, 0, 0, 1.0]))[:3]
                 # THE AXIS IS NOT ALWAYS Z. Taking only the translation and
