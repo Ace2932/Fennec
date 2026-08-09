@@ -17,6 +17,15 @@
 //   UNRESOLVED["oled_mount"]; do not resolve either one here by guessing.
 //
 // -----------------------------------------------------------------------------
+// 2026-08-08 (#35 defect a / #281): pod-foot M2 holes were breaking out of
+//   the -y edge (1.0mm to the edge against an r=1.15 bore -- 0.15mm open,
+//   28% of the wall per check_hole_breakout.py). Fixed with two local tabs
+//   under the holes (FOOT_TAB_* below) rather than moving the holes -- their
+//   position is fixed by control_pod's heat-sets -- or widening the whole
+//   foot, which would have eaten the mushroom dodge. See the FOOT_TAB_Y0
+//   comment for the numbers. Defect (b) below (display-window holes) is
+//   UNCHANGED -- still genuinely blocked on the caliper session.
+// -----------------------------------------------------------------------------
 // 2026-07-28 (#35): panel RESIZED to the real board; mount holes REMOVED.
 // -----------------------------------------------------------------------------
 // The panel was 27 x 26 mm and the SSD1331 module is 27.3 x 30.7 — the board
@@ -43,6 +52,25 @@
 
 $fn = 32; EPS = 0.05; M2_CLEAR = 2.3;
 
+// ---- pod-foot M2 holes (#281/#35b): breakout fix ----
+// Foot was a flat 30x5x3 pad (x-99..-69, y22..27) with 2x M2 holes at y23 --
+// 1.0mm from the y22 edge against an r=1.15 clearance bore, so each bore
+// opened ~0.15mm past the face (28% of its wall, check_hole_breakout.py).
+// fastener-schedule.md:7 -- M2 wants >=1.0mm real wall around a hole, so the
+// wall needs to reach y <= 23 - 1.15 - 1.0 = 20.85. Hole positions are FIXED
+// (mate into control_pod's heat-sets at x-96/-71, y23 -- fastener-schedule.md
+// row "OLED bracket -> pod deck"), so the fix is more pad, not moved holes.
+// Extending the WHOLE foot's -y edge would bring it within ~0.5mm of
+// control_pod's Ø40 E-stop mushroom (center x-87, y0, r20) at x=-87 --
+// the part was deliberately drawn with a 2mm dodge there (foot was y22 =
+// mushroom r20 + 2mm). Instead: two LOCAL tabs, one per hole. The holes
+// sit 9mm/16mm off the mushroom's x-87 center line, so even reaching
+// FOOT_TAB_Y0 the nearest tab corner clears the mushroom circle by
+// 1.4mm/4.3mm (measured by hand, see PR body) -- the original dodge at
+// x=-87 is untouched.
+FOOT_TAB_Y0 = 20.5;    // wall = 23 - 1.15 - 20.5 = 1.35mm (>= the 1.0mm rule)
+FOOT_TAB_HW = 3;       // tab half-width in x, hole +-3mm
+
 // ---- SSD1331 module, vendor drawing 2026-07-28 ----
 BOARD_Y = 27.3;      // board width  -> panel +y axis
 BOARD_Z = 30.7;      // board height -> panel +z axis (header up, cable drops)
@@ -64,6 +92,10 @@ module oled_mount() {
         union() {
             // foot on the pod deck +y edge (z95..98)
             translate([-99, 22, 95]) cube([30, 5, 3]);
+            // local tabs under each M2 hole (breakout fix, see FOOT_TAB_* above)
+            for (mx = [-96, -71])
+                translate([mx - FOOT_TAB_HW, FOOT_TAB_Y0, 95])
+                    cube([2 * FOOT_TAB_HW, 22 - FOOT_TAB_Y0, 3]);
             // panel: vertical, faces -X (rear), on the +y side behind the mushroom
             translate([PANEL_X0, PANEL_Y0, PANEL_Z0])
                 cube([PANEL_T, PANEL_Y1 - PANEL_Y0, PANEL_Z1 - PANEL_Z0]);
