@@ -41,7 +41,7 @@ depth-testing fidelity back, not just a renumbering.
 
 from __future__ import annotations
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Dict, Iterator, List, Optional, Tuple
 
 from nova_locomotion.kinematics.leg_ik import (
@@ -51,6 +51,9 @@ from nova_locomotion.kinematics.leg_ik import (
     solve_side,
     within_limits,
 )
+from nova_ops.safety_envelope.derived_signs import HAA_IDS
+from nova_ops.safety_envelope.limits import load_default_limits
+from nova_ops.safety_envelope.limp_pose import LIMP_JOINTS_CANONICAL
 
 LEGS = ("FL", "FR", "RL", "RR")
 Pose = Dict[str, Tuple[float, float, float]]
@@ -128,7 +131,12 @@ def KEYFRAMES(p: ChoreoParams):
 # with 1°. Verified settled under gravity through the real position servos
 # (sim/nova_mjx/render_sit_poses.py) and recoverable — stand-up succeeds from
 # both poses, 6/6 (sim/nova_mjx/probe_standup.py).
-SIT_JOINTS: Tuple[float, float, float] = (0.6981, 0.6981, -1.5708)  # +40, +40, -90
+#
+# #145: the firmware's soft-fault controlled limp commands this SAME pose
+# (converted to raw counts by nova_ops.safety_envelope.limp_pose, published
+# on the `limp_pose` topic) — imported rather than re-declared so the two
+# copies cannot silently drift apart the way #163/#154 already have.
+SIT_JOINTS: Tuple[float, float, float] = LIMP_JOINTS_CANONICAL  # +40, +40, -90
 
 
 def joint_keyframes(p: ChoreoParams) -> Dict[str, Pose]:
@@ -156,11 +164,28 @@ def joint_keyframes(p: ChoreoParams) -> Dict[str, Pose]:
 JOINT_POSES = ("sit", "down")  # defined in joint space, not by a foot target
 
 
-def _check_rom(name: str, leg: str, theta, p: ChoreoParams) -> None:
+def _check_rom(name: str, leg: str, theta, leg_params: LegParams) -> None:
     # canonical-frame check (undo the side mirror on haa)
     t_canon = (-theta[0], theta[1], theta[2]) if LEG_SIDE[leg] == "right" else theta
-    if not within_limits(t_canon, p.leg, KNEE_FORWARD[leg], leg=leg):
+    if not within_limits(t_canon, leg_params, KNEE_FORWARD[leg], leg=leg):
         raise ValueError(f"keyframe {name!r} out of ROM for {leg}: {theta}")
+
+
+def _haa_gate(leg: str) -> Tuple[float, float]:
+    """Legal PHYSICAL (per-leg-mirrored) haa window for one leg, straight from
+    the SAME per-bus-ID table nova_ops.safety_envelope.wrapper's
+    SafeJointCommandPublisher already clamps every published /joint_commands
+    goal against (wrapper.py's per-joint soft-limit clamp) — reused rather
+    than re-derived, so this cannot disagree with the runtime clamp about
+    what "legal" means.
+
+    Conservative symmetric ±15° (limits.JointLimit from _hip_abduction) until
+    nova_ops.safety_envelope.limits.record_haa_confirmation() has an OBSERVED
+    sign on record for this leg's haa bus ID (HAA_IDS, #194) — the asymmetric
+    15-inboard/40-outboard window unlocks from there.
+    """
+    lim = load_default_limits().get(HAA_IDS[leg])
+    return lim.lower, lim.upper
 
 
 def pose_for(name: str, p: ChoreoParams) -> Pose:
@@ -174,9 +199,9 @@ def pose_for(name: str, p: ChoreoParams) -> Pose:
         pose = joint_keyframes(p)[name]
         for leg in LEGS:
             # SPLAY POSES ARE GATED ON HOMING CALIBRATION, BY DESIGN.
-            # They need ~40° OUTBOARD haa; LegParams.haa_range is a deliberate
+            # They need ~40° OUTBOARD haa; the gate window is a deliberate
             # conservative SYMMETRIC ±15° (the chassis gate's INBOARD cap —
-            # belly-pack contact from ~18°) that stays symmetric until
+            # belly-pack contact from ~18°) until
             # nova_ops.safety_envelope.limits.HAA_INBOARD_SIGN is filled. That
             # sign is the INBOARD direction in the SERVO COMMAND frame and is
             # genuinely unknowable until homing watches a real servo move —
@@ -184,24 +209,32 @@ def pose_for(name: str, p: ChoreoParams) -> Pose:
             # Fail LOUD and specific rather than emit a pose the runtime would
             # silently clamp (the exact failure mode that put choreo's lie/crouch
             # 27 mm off target under the translated knee config).
-            if abs(pose[leg][0]) > p.leg.haa_range + 1e-9:
+            lo, hi = _haa_gate(leg)
+            haa = pose[leg][0]
+            if not (lo - 1e-9 <= haa <= hi + 1e-9):
                 raise ValueError(
-                    f"keyframe {name!r} needs {abs(math.degrees(pose[leg][0])):.0f}° "
-                    f"outboard haa on {leg}, but the gate ROM is a conservative "
-                    f"symmetric ±{math.degrees(p.leg.haa_range):.0f}° until "
+                    f"keyframe {name!r} needs haa={math.degrees(haa):+.0f}° on "
+                    f"{leg}, outside the gate window "
+                    f"[{math.degrees(lo):+.0f}°, {math.degrees(hi):+.0f}°] until "
                     f"nova_ops.safety_envelope.limits.record_haa_confirmation() "
                     f"records an OBSERVED inboard sign for {leg} at homing "
                     f"calibration. Splay poses unlock there. Writing "
                     f"HAA_INBOARD_SIGN by hand will not do it (#161) — the "
                     f"confirmation is what unlocks the window, not the number."
                 )
-            _check_rom(name, leg, pose[leg], p)
+            # within_limits()'s own haa check is p.leg.haa_range, a SYMMETRIC
+            # scalar — widen it to match the (possibly asymmetric) gate window
+            # just proven above, or every JOINT_POSES leg would fail THAT
+            # check instead (canonical haa is always the same +40° splay
+            # magnitude here — see joint_keyframes/LIMP_JOINTS_CANONICAL).
+            leg_params = replace(p.leg, haa_range=max(abs(lo), abs(hi)))
+            _check_rom(name, leg, pose[leg], leg_params)
         return pose
     feet = KEYFRAMES(p)[name]
     pose = {}
     for leg in LEGS:
         theta = solve_side(LEG_SIDE[leg], feet[leg], p.leg, KNEE_FORWARD[leg], leg=leg)
-        _check_rom(name, leg, theta, p)
+        _check_rom(name, leg, theta, p.leg)
         pose[leg] = theta
     return pose
 

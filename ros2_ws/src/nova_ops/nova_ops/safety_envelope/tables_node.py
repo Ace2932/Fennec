@@ -1,11 +1,13 @@
-"""Publish the firmware protection tables to the Teensy (#185).
+"""Publish the firmware protection tables to the Teensy (#185, #145).
 
-The Teensy holds two tables it cannot compute itself: the per-joint raw ROM
-window (`joint_limits`) and the posture-aware hfe backstop (`hfe_envelope`).
-Both boot WIDE OPEN and stay that way until the host sends them. Nothing sent
-them — `build_joint_limits_data` and `build_hfe_envelope_data` had no callers
-outside tests — so every firmware-side protection this project has built was
-inert on the robot, leaving the Jetson-side wrapper as the only layer.
+The Teensy holds three tables it cannot compute itself: the per-joint raw ROM
+window (`joint_limits`), the posture-aware hfe backstop (`hfe_envelope`), and
+the soft-fault controlled-limp pose (`limp_pose`, #145). All three boot
+"nothing installed" and stay that way until the host sends them. Nothing sent
+the first two — `build_joint_limits_data` and `build_hfe_envelope_data` had no
+callers outside tests — so every firmware-side protection this project has
+built was inert on the robot, leaving the Jetson-side wrapper as the only
+layer.
 
 THREE THINGS HERE ARE DELIBERATE AND NOT OBVIOUS.
 
@@ -78,6 +80,9 @@ class FirmwareTablesNode(Node):
         self._env_pub = self.create_publisher(
             Float32MultiArray, "hfe_envelope", to_teensy
         )
+        self._limp_pose_pub = self.create_publisher(
+            Float32MultiArray, "limp_pose", to_teensy
+        )
         self._state_pub = self.create_publisher(
             String, "firmware_tables_state", latched
         )
@@ -115,7 +120,9 @@ class FirmwareTablesNode(Node):
                 f"stays on the conservative symmetric clamp until fixed."
             )
 
-        self._limits, self._env, self._state = build_firmware_tables(calib)
+        self._limits, self._env, self._limp_pose, self._state = build_firmware_tables(
+            calib
+        )
         _, missing = calibration_state(calib)
         self._missing = missing
         self._announce(path)
@@ -150,6 +157,8 @@ class FirmwareTablesNode(Node):
             self._limits_pub.publish(Float32MultiArray(data=self._limits))
         if self._env is not None:
             self._env_pub.publish(Float32MultiArray(data=self._env))
+        if self._limp_pose is not None:
+            self._limp_pose_pub.publish(Float32MultiArray(data=self._limp_pose))
         self._state_pub.publish(
             String(data=f"{self._state};missing={sorted(self._missing)}")
         )

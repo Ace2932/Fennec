@@ -123,3 +123,88 @@ def test_sequence_duration_mismatch_raises():
 
     with pytest.raises(ValueError):
         list(sequence([pose_for("lie", P)], [1.0], P))
+
+
+# ---- #145 / #297: sit/down unblock on a recorded haa confirmation --------
+#
+# pose_for('sit')/pose_for('down') are joint-space (JOINT_POSES) and need a
+# ~40 deg OUTBOARD haa splay — outside the conservative symmetric +-15 deg
+# gate window until nova_ops.safety_envelope.limits.HAA_INBOARD_SIGN is
+# filled. #297 makes that fillable (record_haa_confirmation); these tests
+# verify the unblock actually reaches pose_for(), not just that the storage
+# plumbing round-trips.
+
+
+def _isolate_haa_confirmations(monkeypatch):
+    """Module-global HAA_INBOARD_SIGN/HAA_SIGN_CONFIRMATION are shared
+    process-wide state (nova_ops.safety_envelope.limits) — copy them so a
+    confirmation recorded here cannot leak into another test file run in the
+    same pytest session."""
+    from nova_ops.safety_envelope import limits as limits_mod
+
+    monkeypatch.setattr(
+        limits_mod, "HAA_INBOARD_SIGN", dict(limits_mod.HAA_INBOARD_SIGN)
+    )
+    monkeypatch.setattr(
+        limits_mod, "HAA_SIGN_CONFIRMATION", dict(limits_mod.HAA_SIGN_CONFIRMATION)
+    )
+
+
+def test_sit_and_down_RAISE_without_a_haa_confirmation():
+    """NEGATIVE CONTROL — the guard must still be up pre-homing."""
+    import pytest
+
+    for name in ("sit", "down"):
+        with pytest.raises(ValueError, match="gate window"):
+            pose_for(name, P)
+
+
+def test_sit_and_down_UNLOCK_with_a_recorded_haa_confirmation(monkeypatch):
+    """The actual #145/#297 unblock: GIVEN a recorded confirmation for every
+    leg's haa, pose_for('sit')/pose_for('down') stop raising and return
+    poses whose haa sits at the asymmetric window's 40 deg outboard edge
+    (never the 15 deg inboard side — SIT_JOINTS only ever splays outboard)."""
+    from nova_ops.safety_envelope.derived_signs import HAA_IDS
+    from nova_ops.safety_envelope.limits import record_haa_confirmation
+
+    _isolate_haa_confirmations(monkeypatch)
+    # sign chosen per leg so the ALREADY-COMPUTED physical splay target
+    # (+40 deg on left legs, -40 deg mirrored on right legs) lands inside
+    # the confirmed asymmetric window -- see limits._hip_abduction.
+    for leg, sign in (("FL", -1), ("FR", +1), ("RL", -1), ("RR", +1)):
+        record_haa_confirmation(
+            HAA_IDS[leg],
+            sign=sign,
+            observed_utc="2026-08-08T00:00:00",
+            method="test",
+            assembly=leg,
+        )
+
+    # 'sit' only splays the REAR pair (front legs hold 'stand', haa=0 —
+    # see joint_keyframes' docstring); 'down' splays all four.
+    splayed_legs = {"sit": ("RL", "RR"), "down": LEGS}
+    for name in ("sit", "down"):
+        pose = pose_for(name, P)  # must not raise
+        for leg in splayed_legs[name]:
+            haa_deg = math.degrees(pose[leg][0])
+            # inside [15, 40] magnitude -- the asymmetric outboard window,
+            # not the pre-confirmation +-15 conservative cap
+            assert 15.0 - 1e-6 <= abs(haa_deg) <= 40.0 + 1e-6, (name, leg, haa_deg)
+            assert abs(abs(haa_deg) - 40.0) < 1e-6, (name, leg, haa_deg)
+
+
+def test_sit_and_down_still_raise_if_only_SOME_legs_are_confirmed(monkeypatch):
+    """NEGATIVE CONTROL — a partial confirmation must not unlock every leg;
+    each bus ID's window comes from ITS OWN confirmation."""
+    import pytest
+
+    from nova_ops.safety_envelope.derived_signs import HAA_IDS
+    from nova_ops.safety_envelope.limits import record_haa_confirmation
+
+    _isolate_haa_confirmations(monkeypatch)
+    record_haa_confirmation(
+        HAA_IDS["FL"], sign=-1, observed_utc="t", method="m", assembly="FL"
+    )
+    # RL, FR, RR left unconfirmed
+    with pytest.raises(ValueError, match="gate window"):
+        pose_for("down", P)
