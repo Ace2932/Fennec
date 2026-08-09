@@ -281,6 +281,40 @@ def main():
         for (a, T, leg, s, pk) in top5:
             print(f"  {pk*100:6.2f} cm  leg={leg}  a={a:.1f} T={T:.1f}s  cycle_start_step={s}")
 
+        # PER-LEG aggregate (#311). Every cycle is already recorded with its
+        # leg; nothing here re-runs anything. Added because the top-5 above
+        # came back all-FRONT and there was no way to tell whether that was a
+        # real front/rear gap or five lucky cycles — a tail of 5 cannot answer
+        # it, and #311 turns on the size of that gap.
+        #
+        # WHY BOTH mean AND max. `cmd_c` is a per-episode COMMAND the swing
+        # reward tracks every step, so what a leg can SUSTAIN is what decides
+        # whether a commanded target is reachable; the max is the tail that
+        # made the top-5 look decisive. When they disagree, the mean is the
+        # one that bears on a command range.
+        print("\n-- per-leg peak foot clearance, ALL combos pooled (#311) --")
+        per_leg = {}
+        for (_a, _T, leg, _s, pk) in all_records:
+            per_leg.setdefault(leg, []).append(pk)
+        stats = {}
+        for leg in LEG_NAMES:
+            pks = per_leg.get(leg)
+            if not pks:
+                print(f"  {leg}: no cycles measured")
+                continue
+            stats[leg] = float(np.mean(pks))
+            print(f"  {leg}: mean {np.mean(pks)*100:5.2f} cm   "
+                  f"max {np.max(pks)*100:5.2f} cm   n={len(pks)}")
+        # Front vs rear is the specific comparison #311 makes, so state it
+        # outright rather than leaving it to be eyeballed off four rows.
+        front = [stats[l] for l in ("FL", "FR") if l in stats]
+        rear = [stats[l] for l in ("RL", "RR") if l in stats]
+        if front and rear:
+            f_cm, r_cm = np.mean(front) * 100, np.mean(rear) * 100
+            ratio = (f_cm / r_cm) if r_cm > 1e-9 else float("inf")
+            print(f"  FRONT mean {f_cm:.2f} cm vs REAR mean {r_cm:.2f} cm "
+                  f"-> front/rear = {ratio:.2f}x")
+
     if all_peaks:
         best_cm = max(all_peaks) * 100
         print(f"\n== BEST ACHIEVABLE PEAK FOOT CLEARANCE (single cycle): {best_cm:.2f} cm "
