@@ -1125,7 +1125,7 @@ def main():
               f'explicitly because a dead check is indistinguishable from a '
               f'passing one otherwise (#47).')
 
-    # ---- 5b. oled_tray vs the rear legs (#35) ------------------------------------
+    # ---- 5b. oled_tray vs the legs (#35) ------------------------------------
     # oled_tray sits on the REAR shoulder's deck top, which is the highest point
     # on the shoulder (79.55) -- so the only thing that can reach it is a moving
     # leg. That is exactly the claim the part is justified by, and nothing else
@@ -1154,20 +1154,31 @@ def main():
         d = np.maximum(np.maximum(t_lo - p, p - t_hi), 0.0)
         return np.linalg.norm(d, axis=1)
 
-    print(f'-- oled_tray (#35) vs rear-leg sweep: tray z {t_lo[2]:.2f}..{t_hi[2]:.2f} --')
+    print(f'-- oled_tray (#35) vs ALL-FOUR-LEG sweep: tray z {t_lo[2]:.2f}..{t_hi[2]:.2f} --')
+    # COVERAGE, fixed after review. The first version swept hfe -86..+50, kfe in
+    # steps of 10 (which never sampled the +109 endpoint), and REAR hips only,
+    # while its comment claimed "swept to their mech stops". All three were
+    # wrong: the mechanical hfe window is symmetric +/-86 (limits.py
+    # _thigh_flexion -- the +50 fold cap moved OUT of the scalar into the
+    # posture-aware rom_envelope on 2026-07-25), so 36 deg of the fold side went
+    # unswept, and the front legs were never checked at all on a hand-waved
+    # "they can't reach" that is exactly the reasoning that already failed once
+    # here. Measured with full coverage the front legs come within 31.78mm --
+    # clear, but a third of the margin I assumed.
+    HFE_SWEEP = range(-86, 87, 4)
+    KFE_SWEEP = [round(v) for v in np.linspace(-109, 109, 23)]   # endpoints included
     worst_gap, worst_pose = 1e9, None
     stop_gap = 1e9
-    for hfe in range(-86, 51, 4):
-        for kfe in range(-109, 110, 10):
+    for hfe in HFE_SWEEP:
+        for kfe in KFE_SWEEP:
             cloud = leg_cloud(hfe, kfe)
             for haa in (-40, -25, -15, -7, 0, 7, 15, 25, 40):
                 for label, base in coax_to_trunk_bases():
-                    if label[0] != 'R':          # rear hips only -- the tray is rear
-                        continue
                     inboard = -haa if label[1] == 'R' else haa
                     inside_rom = inboard <= 15   # hfe/kfe swept to their mech stops
                     Sx = rot(haa, [1, 0, 0],
-                             [-HIP_FA, HIP_LAT if label[1] == 'R' else -HIP_LAT, HIP_Z])
+                             [HIP_FA if label[0] == 'F' else -HIP_FA,
+                              HIP_LAT if label[1] == 'R' else -HIP_LAT, HIP_Z])
                     p = tf(tf(cloud, base), Sx)
                     gap = float(_d_box(p).min())
                     if inside_rom:

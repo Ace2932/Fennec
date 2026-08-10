@@ -15,6 +15,11 @@
 // ⬜ CALIPER NEEDED; it interferes above Ø42.7) -- and its near bolt has only
 // Ø5 of driver access because the panel wall stands 3 mm away.
 //
+// This tray RETIRES that caliper dependency rather than inheriting it. The cap
+// is centred at x=-87 (control_pod.scad ES) and this plate starts at x=-113, so
+// the rim would have to reach Ø52 to touch it: Ø40 -> 6.00mm gap, Ø42.7 -> 4.65,
+// Ø45 -> 3.50. oled_mount fails above Ø42.7; this part does not care.
+//
 // WHY THE TOP DECK AND NOT THE WEB BETWEEN THE LEGS. There IS a wall between
 // the rear hips (X≈-112.5, Y ±40, Z 14..70) and it is the obvious place. The
 // rear legs sweep it, low down: worst usable width over the gated haa range
@@ -26,7 +31,12 @@
 // to this part, over the FULL mechanical range (hfe -86..+50 in 4 deg steps,
 // kfe -109..+109 in 10, haa -40..+40, both rear hips):
 //
-//     24.45 mm   at RR haa-15 hfe-86 kfe-109
+//     REAR   24.45 mm   at RR haa-15 hfe-86 kfe-109
+//     FRONT  31.78 mm   at FL haa-40 hfe+86 kfe-30
+//
+// The FRONT number is there because the first version of this gate skipped the
+// front hips on a "they can't reach" argument. They do reach -- 31.78mm, a
+// third of the margin that argument assumed. Measured now, not reasoned.
 //
 // Gated permanently by check_fit.py's oled_tray case, which is negative-
 // controlled: widening this plate to y +-75 drives it to 0.00 mm and red.
@@ -45,6 +55,31 @@
 // same measurement lied twice on the way here): bore 4.3 deep, 2.1 mm floor,
 // full 6.3 mm deck 4 mm away. So this part costs four heat-sets and no reprint
 // of a load-bearing member.
+
+// FASTENERS — derived, not guessed. This project has already paid for a
+// "MEASURED" fastener spec that bottomed out (HFE retention M3x22 into a 16.8mm
+// span), so the arithmetic is written down:
+//
+//   deck screw: through LEG_H 10.0 + PLATE_T 3.0 = 13.0mm of tray, then into
+//   shoulder.scad's NECK_HS (M3x3.8 insert in a 4.2-deep bore).
+//     M3x14  -> 1.0mm engagement (0.33xD)   too short
+//     M3x16  -> 3.0mm engagement (1.00xD)   *** USE THIS ***
+//     M3x18+ -> 5.0mm into a 4.2 bore       BOTTOMS OUT, do not fit
+//   Full 3.8mm engagement would want 16.8mm, which is not a stock length; 1.00xD
+//   is above several joints this project already ACCEPTS (leg_v6 takes 0.52xD
+//   and 0.80xD where a disc caps the thread). Not worth 1mm of board cavity.
+//
+//   board screw: M2 from BELOW through the PCB into the M2x4 inserts. Length
+//   depends on the module's PCB thickness -- caliper before ordering.
+//
+// ⬜ OPEN, NEEDS A CALIPER (the one unverified dimension in this part):
+//   the cavity under the bezel is LEG_H 10.0, of which the board's own
+//   glass-to-PCB-back eats BOSS_H 3.4, leaving *** 6.6mm *** for the 7-pin
+//   header shell, the back-side components and the M2 screw heads. The
+//   SSD1331's back-side height is recorded NOWHERE and was never measured.
+//   If it exceeds 6.6mm, raise LEG_H (and re-check the deck screw above -- at
+//   LEG_H 11.0 the window becomes 17.8..18.2 and M3x18 becomes the right screw).
+//   Everything else here is measured; this is not.
 
 $fn = 48; EPS = 0.05;
 
