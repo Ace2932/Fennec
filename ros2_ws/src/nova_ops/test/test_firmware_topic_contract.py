@@ -46,6 +46,14 @@ FW_README = REPO / "firmware/teensy/firmware/README.md"
 #: gate quietly stops gating. Each entry must say why, not just what.
 UNDOCUMENTED_OK: dict[str, str] = {}
 
+_SUB_RE = re.compile(
+    r"rclc_subscription_init_(?:default|best_effort)\s*\(\s*"
+    r"&\w+\s*,\s*&\w+\s*,\s*"
+    r"ROSIDL_GET_MSG_TYPE_SUPPORT\([^)]*\)\s*,\s*"
+    r'"([A-Za-z0-9_/]+)"',
+    re.S,
+)
+
 _PUB_RE = re.compile(
     r"rclc_publisher_init_(?:default|best_effort)\s*\(\s*"
     r"&\w+\s*,\s*&\w+\s*,\s*"
@@ -59,13 +67,23 @@ def _published_topics() -> set[str]:
     return set(_PUB_RE.findall(MAIN_CPP.read_text()))
 
 
+def _subscribed_topics() -> set[str]:
+    return set(_SUB_RE.findall(MAIN_CPP.read_text()))
+
+
 def _documented_topics() -> set[str]:
-    """Topic names appearing in a `| Pub | \\`/name\\` |` row of the README."""
+    """Topic names in a `| Pub |` or `| Sub |` row of the README."""
+    return _documented(("Pub", "Sub"))
+
+
+def _documented(directions: tuple) -> set[str]:
     out = set()
+    alt = "|".join(directions)
+    pat = re.compile(rf"\|\s*(?:{alt})\s*\|\s*`/?([A-Za-z0-9_/]+)`")
     for line in FW_README.read_text().splitlines():
         if not line.lstrip().startswith("|"):
             continue
-        m = re.search(r"\|\s*Pub\s*\|\s*`/?([A-Za-z0-9_/]+)`", line)
+        m = pat.search(line)
         if m:
             out.add(m.group(1))
     return out
@@ -137,4 +155,50 @@ def test_the_two_that_caused_this(topic):
     assert topic in _documented_topics(), (
         f"{topic} dropped out of the firmware contract README -- this is the "
         "exact state that produced the dashcam name mismatch on 2026-08-10"
+    )
+
+
+# --- the other half of the seam ------------------------------------------------
+# Publishers were the half that had already caused a bug, so they came first.
+# Subscriptions are the higher-stakes direction: a host node publishing a name
+# the firmware does not subscribe to means commands or SAFETY TABLES silently
+# never arrive, and the firmware runs on its built-in defaults instead. Checked
+# 2026-08-10 and the names DO match (tables_node.py publishes joint_limits /
+# hfe_envelope / limp_pose exactly) -- this keeps it that way.
+
+
+def test_parser_actually_finds_subscriptions():
+    """Guard on the guard, same reasoning as the publisher floor."""
+    subs = _subscribed_topics()
+    assert len(subs) >= 4, (
+        f"only {len(subs)} subscriptions parsed from main.cpp -- the regex has "
+        f"probably drifted. Found: {sorted(subs)}"
+    )
+    assert "joint_commands" in subs, (
+        "the parser did not find /joint_commands, which main.cpp certainly "
+        "subscribes to -- the regex is broken, not the firmware"
+    )
+
+
+def test_every_subscribed_topic_is_in_the_contract():
+    missing = sorted(_subscribed_topics() - _documented(("Sub",)))
+    assert not missing, (
+        "main.cpp SUBSCRIBES to topics the firmware README does not document: "
+        f"{missing}.\n\n"
+        "This direction is the more dangerous one. A publisher nobody reads "
+        "loses telemetry; a subscription nobody publishes to loses COMMANDS or "
+        "PROTECTION TABLES, and the firmware falls back to built-in defaults "
+        "without saying so. Add a `| Sub |` row to the contract table."
+    )
+
+
+@pytest.mark.parametrize(
+    "topic", ["joint_limits", "hfe_envelope", "limp_pose", "safety_clear"]
+)
+def test_protection_table_subscriptions_stay_documented(topic):
+    """These three tables are how the host imposes limits on the firmware."""
+    assert topic in _subscribed_topics(), f"{topic} is no longer subscribed"
+    assert topic in _documented(("Sub",)), (
+        f"{topic} dropped out of the contract table -- an undocumented safety "
+        "table is how a host node comes to publish a name nothing receives"
     )
