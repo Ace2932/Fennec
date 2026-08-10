@@ -1,9 +1,14 @@
 // =============================================================================
 // OLED TRAY — SSD1331 flat on the REAR SHOULDER's top deck (#35)
 // =============================================================================
-// PRINT: PETG-CF, PLATE-FACE-DOWN (the flat bezel on the bed) — zero supports.
-//   Bezel down means the four legs and the four board bosses all print UPWARD
-//   off a flat face: every overhang is a boss top, nothing bridges.
+// PRINT: PETG-CF, BEZEL-FACE-DOWN (+Z on the bed) — zero supports.
+//   Every feature on this part hangs off ONE face: the four legs stand off the
+//   bezel underside and nothing protrudes from the top. Bezel-top-down therefore
+//   puts all of it pointing UP, and the measured unsupported area is 0.0 mm^2.
+//   *** Do not add anything to the top face. *** A revision that put the insert
+//   bosses up there was measured and REJECTED for exactly this: features on two
+//   faces means one set becomes a large elevated plane on four point contacts,
+//   whichever way it goes on the bed.
 //
 // WHY THIS EXISTS. `oled_mount` bolts the display to control_pod's deck +y
 // EDGE, and measured, that is a cantilever on a cantilever:
@@ -27,19 +32,11 @@
 // Z 42 -- leaving a 28 mm clear band for a 34.7 mm panel. Short by ~7 mm, and
 // landscape does not help (it then needs 34.7 of WIDTH where 31 exists).
 //
-// The top deck has no such problem. MEASURED min clearance from the rear legs
-// to this part, over the FULL mechanical range (hfe -86..+50 in 4 deg steps,
-// kfe -109..+109 in 10, haa -40..+40, both rear hips):
-//
-//     REAR   24.45 mm   at RR haa-15 hfe-86 kfe-109
-//     FRONT  31.78 mm   at FL haa-40 hfe+86 kfe-30
-//
-// The FRONT number is there because the first version of this gate skipped the
-// front hips on a "they can't reach" argument. They do reach -- 31.78mm, a
-// third of the margin that argument assumed. Measured now, not reasoned.
-//
-// Gated permanently by check_fit.py's oled_tray case, which is negative-
-// controlled: widening this plate to y +-75 drives it to 0.00 mm and red.
+// The top deck has no such problem. MEASURED min clearance from the legs to
+// this part, over the FULL mechanical range (hfe -86..+86 in 4 deg steps, kfe
+// -109..+109 in 23 steps INCLUDING the endpoints, haa -40..+40, all four hips):
+// see check_fit.py's printed number, which is the authority and is
+// negative-controlled (widen this plate to y +-75 and it goes to 0.00 and red).
 //
 // CAUTION for anyone revisiting this. "The legs stay below the deck" is FALSE
 // and I asserted it first: past about |hfe| 35 the rear leg swings up through
@@ -55,31 +52,50 @@
 // same measurement lied twice on the way here): bore 4.3 deep, 2.1 mm floor,
 // full 6.3 mm deck 4 mm away. So this part costs four heat-sets and no reprint
 // of a load-bearing member.
+//
+// -----------------------------------------------------------------------------
+// NO BOSSES — and that is the whole point of this revision.
+// -----------------------------------------------------------------------------
+// The first version hung four Ø5.0 x 3.4 bosses under the bezel to host the M2
+// inserts, copying oled_mount's
+//     BOSS_H = 3.4;  // calipered glass-front -> PCB-back. Sets the standoff.
+// That one line conflates the board's THICKNESS with its STANDOFF, and both
+// files then claimed the screws "pull the board flat against the window". They
+// cannot. A Ø5.0 boss does not enter a ~Ø2.2 M2 clearance hole, so the board
+// seats ON THE BOSS TIPS and stands off by BOSS_H. Measured: a board placed
+// flush put 10150 of 200000 sampled surface points INSIDE the tray solid, ~2500
+// at each boss. Consequences were a 6.40 mm well over the display and only
+// 3.20 mm of cavity under the PCB -- half what the header claimed.
+//
+// The boss only ever existed because a 4.0 insert plus a 1.5 blind floor needs
+// 5.5 mm and the plate was 3.0. So: make the plate 5.5 and delete the boss. The
+// bore now lives in the plate, the underside is FLAT, and the board bears on
+// the window rim (2.0 mm of border on each long edge -- a picture-frame contact
+// on the glass surround, which is how every panel bezel does it).
+// oled_mount still carries the original bug; it is NOT fixed by this file.
 
 // FASTENERS — derived, not guessed. This project has already paid for a
 // "MEASURED" fastener spec that bottomed out (HFE retention M3x22 into a 16.8mm
 // span), so the arithmetic is written down:
 //
-//   deck screw: through LEG_H 10.0 + PLATE_T 3.0 = 13.0mm of tray, then into
+//   deck screw: through LEG_H 10.5 + PLATE_T 5.5 = 16.0mm of tray, then into
 //   shoulder.scad's NECK_HS (M3x3.8 insert in a 4.2-deep bore).
-//     M3x14  -> 1.0mm engagement (0.33xD)   too short
-//     M3x16  -> 3.0mm engagement (1.00xD)   *** USE THIS ***
-//     M3x18+ -> 5.0mm into a 4.2 bore       BOTTOMS OUT, do not fit
-//   Full 3.8mm engagement would want 16.8mm, which is not a stock length; 1.00xD
-//   is above several joints this project already ACCEPTS (leg_v6 takes 0.52xD
-//   and 0.80xD where a disc caps the thread). Not worth 1mm of board cavity.
+//     M3x16  -> 0.0mm  never reaches the insert
+//     M3x18  -> 2.0mm engagement (0.67xD)
+//     M3x20  -> 4.0mm engagement (1.33xD), still 0.2 clear of the bore floor
+//               *** USE THIS ***
+//     M3x22  -> 6.0mm into a 4.2 bore   BOTTOMS OUT, do not fit
 //
 //   board screw: M2 from BELOW through the PCB into the M2x4 inserts. Length
 //   depends on the module's PCB thickness -- caliper before ordering.
 //
-// ⬜ OPEN, NEEDS A CALIPER (the one unverified dimension in this part):
-//   the cavity under the bezel is LEG_H 10.0, of which the board's own
-//   glass-to-PCB-back eats BOSS_H 3.4, leaving *** 6.6mm *** for the 7-pin
-//   header shell, the back-side components and the M2 screw heads. The
-//   SSD1331's back-side height is recorded NOWHERE and was never measured.
-//   If it exceeds 6.6mm, raise LEG_H (and re-check the deck screw above -- at
-//   LEG_H 11.0 the window becomes 17.8..18.2 and M3x18 becomes the right screw).
-//   Everything else here is measured; this is not.
+// CAVITY: 7.10 mm from the PCB back face down to the deck. The 7-pin header is
+// at the board's -X edge (x=-146.85) and the deck's own opening is OPEN THROUGH
+// its full 6.5 mm thickness at that edge (probed at Y -13..+13, all clear), so
+// a downward header hangs THROUGH the deck rather than bottoming in the cavity.
+// Back-side components elsewhere on the board are the 7.10 mm case, and those
+// are millimetre-scale. This is why the module's back-side height, still
+// uncalipered, is no longer a blocker for this geometry.
 
 $fn = 48; EPS = 0.05;
 
@@ -93,13 +109,14 @@ BOLT = [[-146.0,  19.5], [-146.0, -19.5],
 DECK_Z = 79.55;                  // shoulder deck top in trunk frame
 M3_CLEAR = 3.4;
 
-// ---- stack heights --------------------------------------------------------
-// Legs lift the bezel so the board hangs UNDER it, glass up against the
-// bezel's underside. 10 mm of cavity: 3.4 for the board (calipered glass-front
-// -> PCB-back) + 1.4 of back components + room for the header shell.
-LEG_H   = 10.0;
-PLATE_T = 3.0;
-PLATE_Z = DECK_Z + LEG_H;        // bezel underside 89.55, top 92.55
+// ---- stack ----------------------------------------------------------------
+// LEG_H is the standoff between the deck and the bezel UNDERSIDE -- i.e. the
+// cavity the board hangs in. (Nothing to do with the robot's legs; it is the
+// four printed posts.) 10.5 is chosen with PLATE_T so the deck screw lands on a
+// stock M3x20 at 1.33xD -- see FASTENERS above.
+LEG_H   = 10.5;
+PLATE_T = 5.5;                   // 4.0 insert + 1.5 blind floor. NOT arbitrary.
+PLATE_Z = DECK_Z + LEG_H;        // bezel underside 90.05, top 95.55
 LEG_W   = 7.0;                   // square leg; 3.4 clear needs >=1.8 wall
 
 // ---- SSD1331, CALIPERED 2026-08-08 ----------------------------------------
@@ -109,8 +126,6 @@ CX = -131.5;       // board centre = bolt-rectangle centre ((-146 + -117)/2)
 CY = 0;
 HOLE_PITCH_X = 26.1;   // along the 30.6 axis
 HOLE_PITCH_Y = 22.8;   // across the 27.3 axis
-BOSS_D = 5.0;      // 1.0 wall on the Ø3.0 insert -- the M2 minimum
-BOSS_H = 3.4;      // calipered glass-front -> PCB-back. Sets the standoff.
 M2_INS_D = 3.0; M2_INS_L = 4.0;   // Ruthex M2, same as jetson_case_mount
 
 // Window from the MEASURED borders, not centred: the display sits 1.9 off
@@ -139,14 +154,6 @@ module oled_tray() {
             for (b = BOLT)
                 translate([b[0]-LEG_W/2, b[1]-LEG_W/2, DECK_Z])
                     cube([LEG_W, LEG_W, LEG_H + EPS]);
-            // four board standoffs hanging BELOW the bezel. The board mounts
-            // from behind: an M2 pan head reaches 4.15 in from a hole centre
-            // while the glass starts 2.0 from each long edge, so a screw
-            // entering from the display side fouls the glass however it is
-            // centred. Screws come up from underneath into these.
-            for (hx = HOLE_X, hy = HOLE_Y)
-                translate([hx, hy, PLATE_Z - BOSS_H])
-                    cylinder(d = BOSS_D, h = BOSS_H + EPS);
         }
         // M3 clearance straight through leg AND bezel: the screw drops in from
         // above, head lands on the bezel top, and threads into the deck's
@@ -158,12 +165,15 @@ module oled_tray() {
         // display window through the bezel
         translate([WIN_X0, WIN_Y0, PLATE_Z - EPS])
             cube([WIN_X, WIN_Y, PLATE_T + 2*EPS]);
-        // M2 heat-set bores, entering each boss from BELOW and running up into
-        // the bezel. Blind: 3.4 boss + 3.0 bezel = 6.4 available, bore 4.0, so
-        // 2.4 of bezel is left above the insert -- past the >=1.5 blind-floor
-        // convention (#70). NOT through: that would open onto the display face.
+        // M2 heat-set bores, entering the plate from BELOW (the board side) and
+        // running UP into it. Blind: 4.0 of bore in 5.5 of plate leaves a 1.5mm
+        // floor, the minimum the blind-pocket convention allows (#70). NOT
+        // through: that would open onto the display face. The board mounts from
+        // behind because an M2 pan head reaches 4.15 from a hole centre while
+        // the glass starts 2.0 in from each long edge -- a screw entering from
+        // the display side fouls the glass however it is centred.
         for (hx = HOLE_X, hy = HOLE_Y)
-            translate([hx, hy, PLATE_Z - BOSS_H - EPS])
+            translate([hx, hy, PLATE_Z - EPS])
                 cylinder(d = M2_INS_D, h = M2_INS_L + EPS);
     }
 }

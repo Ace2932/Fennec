@@ -471,12 +471,14 @@ PARTS = {
     ),
     # Sits FLAT on the rear shoulder's deck, on the four M3x3.8 heat-set bores
     # shoulder.scad cuts for the FRONT shoulder's neck bracket and the REAR one
-    # never uses. Bezel-face-down puts every leg and boss on an upward face.
+    # never uses. EVERY feature hangs off one face (the legs), so bezel-top-down
+    # points all of them up and the unsupported area measures 0.0 mm^2. The
+    # insert bosses were DELETED to keep it that way -- see the .scad header.
     "oled_tray": Part(
         _chassis("oled_tray.stl"), "PETG-CF", down="+Z",
         scad=_chassis("oled_tray.scad"),
-        doc="PRINT: PETG-CF, BEZEL-FACE-DOWN (+Z on the bed) — legs and board bosses "
-            "print upward, no supports.",
+        doc="PRINT: PETG-CF, BEZEL-FACE-DOWN (+Z on the bed) — the four legs are the "
+            "only raised feature and they print upward, no supports.",
     ),
     "control_pod": Part(
         _chassis("control_pod.stl"), "PETG-CF",
@@ -517,6 +519,16 @@ UNRESOLVED = {
         "missing is what its own PRINT line says — 'OPEN ITEM (#184)': "
         "material ('PETG/PA6-CF' is two materials) and orientation "
         "('foot-down' names a feature, not an axis). "
+        "AND A NEW ONE, found 2026-08-10 while deriving oled_tray from this "
+        "file's numbers: BOSS_H = 3.4 is commented 'calipered glass-front -> "
+        "PCB-back. Sets the standoff.' -- conflating the board's THICKNESS with "
+        "its STANDOFF. A O5.0 boss cannot enter a ~O2.2 M2 clearance hole, so "
+        "the board seats ON THE BOSS TIPS; this file's claim that the screws "
+        "'pull the board flat against the window' is false, and the display sits "
+        "BOSS_H + PANEL_T = 6.4mm behind the aperture. Measured on the derived "
+        "part: 10150 of 200000 board surface points land inside the solid when "
+        "placed flush. oled_tray fixed it by DELETING the bosses and thickening "
+        "the plate to 5.5 (4.0 insert + 1.5 floor); THIS file is unfixed. "
         "ALSO NOW OPTIONAL: `oled_tray` mounts the same display flat on the "
         "rear shoulder deck instead, which removes this part's cantilever-on-"
         "a-cantilever load path, its 1.36 mm gap to an UNCALIPERED E-stop cap, "
