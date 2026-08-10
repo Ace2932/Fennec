@@ -32,6 +32,16 @@ V1_TOPICS = [
     # Power telemetry
     '/power_rails',
 
+    # Per-joint servo health (12 floats each, 5 Hz).
+    # NAMES CORRECTED 2026-08-10. These sat in PENDING_TOPICS as
+    # '/joint_voltages' and '/joint_temperatures' marked "firmware stub" — but
+    # the firmware landed them long ago under DIFFERENT names (main.cpp:1493-94),
+    # and the guessed names match nothing, so the dashcam recorded neither. The
+    # firmware README did not list them either, which is WHY they were guessed.
+    # Both are now in that contract table, and a gate keeps them there.
+    '/servo_voltage',
+    '/servo_temperature',
+
     # Safety
     '/estop',
     '/battery_low',
@@ -63,8 +73,9 @@ PERCEPTION_TOPICS = [
 # notes-qol-features.md "Per-joint voltage + temperature are not yet
 # on a topic; add them to this list when the stub lands.")
 PENDING_TOPICS = [
-    '/joint_voltages',    # firmware stub
-    '/joint_temperatures',  # firmware stub
+    # '/joint_voltages' / '/joint_temperatures' REMOVED 2026-08-10 — they were
+    # never firmware stubs. They are live as '/servo_voltage' and
+    # '/servo_temperature', and have moved up into V1_TOPICS.
     '/imu/d456/data',     # once realsense2_camera launches with imu enabled
     '/imu/mpu6050/data',  # once Nano-side IMU node lands
 ]

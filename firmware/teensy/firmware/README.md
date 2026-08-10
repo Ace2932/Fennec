@@ -102,8 +102,27 @@ Group by purpose. All `std_msgs/Int32` counters are monotonic from boot unless n
 | Direction | Topic | Type | Rate | Notes |
 |-----------|-------|------|------|-------|
 | Pub | `/power_rails` | `Float32MultiArray` | 10 Hz | 9 floats: `[leg_v, leg_a, leg_w, hip_v, hip_a, hip_w, jetson_v, jetson_a, jetson_w]` — read by index, no MultiArrayLayout dims populated |
+| Pub | `/servo_voltage` | `Float32MultiArray` | 5 Hz | 12 floats, per joint, volts (`PRESENT_VOLTAGE` raw × 0.1). **Added to this table 2026-08-10 — published since the servo-health work landed (`main.cpp:1493`) but never in the contract, so downstream guessed the name.** |
+| Pub | `/servo_temperature` | `Float32MultiArray` | 5 Hz | 12 floats, per joint, °C (`REG_PRESENT_TEMPERATURE` 0x3F, u8). Feeds the firmware-local overtemp guard at `NOVA_OVERTEMP_C` 70 °C, which trips limp ahead of the servo's own ~80 °C cutoff (`main.cpp:333`). **Same omission.** |
 
 JointState `name[]` and `frame_id` are intentionally empty — URDF joint-name binding lands when the gait controller is on the Jetson.
+
+### Safety-table acks + envelope + IMU (added to this contract 2026-08-10)
+
+These were **published but undocumented**. Not a paperwork problem:
+`nova_ops/dashcam/topics.py` says in its own docstring that it takes topic names from
+this README, so a missing row makes downstream GUESS — which is how `/servo_voltage`
+and `/servo_temperature` came to be recorded by nothing while the dashcam waited on
+invented names. `test_firmware_topic_contract.py` now fails if a publisher is missing here.
+
+| Direction | Topic | Type | Rate | Notes |
+|-----------|-------|------|------|-------|
+| Pub | `/command_stale` | `Bool` | on-change + 1 Hz refresh | command-watchdog state. Edge-only would blind any subscriber that (re)starts after the edge, hence the re-publish |
+| Pub | `/joint_limits_rx` | `Int32` | 1 Hz | count of accepted joint-limit tables — host-side ack that a pushed table landed |
+| Pub | `/hfe_envelope_rx` | `Int32` | 1 Hz | same ack for the posture-aware hfe envelope |
+| Pub | `/limp_pose_rx` | `Int32` | 1 Hz | same ack for the limp-pose table |
+| Pub | `/hfe_envelope_clamps` | `Int32` | 1 Hz | running count of commands the hfe envelope actually clamped — the "is this guard firing" signal |
+| Pub | `/imu` | `sensor_msgs/Imu` | 1 Hz, gated on `imu_ok` | ICM-42688-P. `orientation` carries the `TiltFilter` quaternion (yaw deliberately 0 — proj_grav is yaw-invariant); `angular_velocity` rad/s; `linear_acceleration` m/s². ⚠️ **1 Hz is the heartbeat block's rate** (`main.cpp:1443` sits inside the `HEARTBEAT_PERIOD_MS` block). `policy_node` consumes gyro + projected gravity as obs dims 0..5 at control rate, so this must be raised before the learned path runs on hardware. Untested against a real part — the IMU is not owned yet |
 
 ## Stubs to fill in (status 2026-05-20)
 
