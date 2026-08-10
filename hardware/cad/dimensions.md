@@ -236,6 +236,7 @@ Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 | Dim | Value | Status |
 |---|---|---|
 | Mount hole | 22.0 mm dia | ✅ |
+| **Mushroom CAP diameter** | **Ø40 (assumed)** | ⬜ **CALIPER NEEDED — and this one has a consumer.** The number appears NOWHERE in this table; it lives only in `chassis/control_pod.scad` comments, from this same vendor page. `oled_mount`'s whole position is a dodge around it, and #313's foot tabs clear that Ø40 circle by only **1.36 mm** on the x−96 side. A real cap of Ø42 is a −0.64 mm interference. Two other rows from this same source are already ⚠️ REVIEW, and the SSD1331 outline from a vendor page was wrong by 4.9 × 5.1 mm — so treat Ø40 as unproven, not as a spec. 30 seconds with calipers settles it. |
 | Body height above panel | ~30 (mushroom button) | ⚠️ REVIEW |
 | Below-panel depth | ~50 (contact block) | ⚠️ REVIEW |
 | Contacts | 2× NC | ✅ |
