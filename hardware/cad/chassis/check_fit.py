@@ -162,6 +162,11 @@ POD_BOSS_X = -66.5                 # riser rear-wall pad <-> pod column interfac
 POD_HY, POD_Z0, POD_Z1 = 14.0, 58.0, 69.0
 L2A_SEAT_Z = 128.0                  # crown top = l2_adapter bottom seat
 OLED_SEAT_Z = 95.0                  # control_pod deck top = oled_mount foot seat
+#: minimum leg-to-oled_tray clearance (#35). 5mm, not a hair over whatever the
+#: sweep happens to measure: the sweep is a GRID, so the true worst pose falls
+#: between samples, and the servo horn backlash the trot work characterises is
+#: itself worth a couple of mm at the foot.
+TRAY_LEG_MIN_MM = 5.0
 
 # ---- REAL power board vs floor (case 11) -----------------------------------
 # HISTORY: an early modeling pass assumed generic 20mm caps on a 16mm
@@ -1119,6 +1124,67 @@ def main():
               f'this ROM, so their "no contact" result asserts nothing. Stated '
               f'explicitly because a dead check is indistinguishable from a '
               f'passing one otherwise (#47).')
+
+    # ---- 5b. oled_tray vs the rear legs (#35) ------------------------------------
+    # oled_tray sits on the REAR shoulder's deck top, which is the highest point
+    # on the shoulder (79.55) -- so the only thing that can reach it is a moving
+    # leg. That is exactly the claim the part is justified by, and nothing else
+    # in this file gates it.
+    #
+    # NOT done as an eighth crouch-sweep target on purpose. near_bbox() admits
+    # points NEAR a target's bounds; if the legs never get close the tray admits
+    # zero and lands in the `dead` list above -- a check that asserts nothing,
+    # which is the #47 failure this file already carries a NOTE about. A
+    # CLEARANCE number cannot go vacuous: it is either a distance or a failure.
+    #
+    # Measured as distance to the tray's AXIS-ALIGNED BOX. That is exact for the
+    # box and therefore a valid LOWER BOUND on distance to the solid inside it,
+    # so a pass here is a real pass.
+    #
+    # Do NOT "simplify" this to a Z-only gap (tray_z0 minus the cloud's max z).
+    # The first version of this check did exactly that and reported a 96mm
+    # INTERSECTION, because at high protraction the leg swings up past z=170 --
+    # but it does so at |y| ~ 39, outboard of this tray's |y| <= 26, and never
+    # comes near it. A Z-only test is a sound lower bound only while the cloud
+    # stays below the tray; above it, it is not a distance at all.
+    tray = trimesh.load('oled_tray.stl')
+    t_lo, t_hi = tray.bounds
+
+    def _d_box(p):
+        d = np.maximum(np.maximum(t_lo - p, p - t_hi), 0.0)
+        return np.linalg.norm(d, axis=1)
+
+    print(f'-- oled_tray (#35) vs rear-leg sweep: tray z {t_lo[2]:.2f}..{t_hi[2]:.2f} --')
+    worst_gap, worst_pose = 1e9, None
+    stop_gap = 1e9
+    for hfe in range(-86, 51, 4):
+        for kfe in range(-109, 110, 10):
+            cloud = leg_cloud(hfe, kfe)
+            for haa in (-40, -25, -15, -7, 0, 7, 15, 25, 40):
+                for label, base in coax_to_trunk_bases():
+                    if label[0] != 'R':          # rear hips only -- the tray is rear
+                        continue
+                    inboard = -haa if label[1] == 'R' else haa
+                    inside_rom = inboard <= 15   # hfe/kfe swept to their mech stops
+                    Sx = rot(haa, [1, 0, 0],
+                             [-HIP_FA, HIP_LAT if label[1] == 'R' else -HIP_LAT, HIP_Z])
+                    p = tf(tf(cloud, base), Sx)
+                    gap = float(_d_box(p).min())
+                    if inside_rom:
+                        if gap < worst_gap:
+                            worst_gap, worst_pose = gap, (label, haa, hfe, kfe)
+                    else:
+                        stop_gap = min(stop_gap, gap)
+    lab, ha, hf, kf = worst_pose
+    if worst_gap < TRAY_LEG_MIN_MM:
+        bad = True
+        print(f'   FAIL rear leg reaches within {worst_gap:.2f}mm of the tray '
+              f'({lab} haa{ha:+d} hfe{hf:+d} kfe{kf:+d}) -- need '
+              f'{TRAY_LEG_MIN_MM}mm')
+    else:
+        print(f'   OK   worst clearance {worst_gap:.2f}mm over the FULL hfe/kfe '
+              f'mechanical range (at {lab} haa{ha:+d} hfe{hf:+d} kfe{kf:+d}), '
+              f'{stop_gap:.2f}mm even at outboard-haa stops')
 
     # ---- 6. battery pocket + pack ------------------------------------------------
     pp = sample(pocket, 8000, 2000)

@@ -25,13 +25,14 @@ $OS -o floor_plate.stl floor_plate.scad
 $OS -o jetson_case_mount.stl jetson_case_mount.scad
 $OS -o jetson_clamp_bar.stl jetson_clamp_bar.scad  # case hold-down bar (x2, #44)
 $OS -o oled_mount.stl oled_mount.scad          # OLED bracket (split off pod, #40)
+$OS -o oled_tray.stl oled_tray.scad            # OLED tray, flat on the rear shoulder deck (#35)
 $OS -o case_slot_grommet.stl case_slot_grommet.scad  # -Y CASE_SLOT TPU edge liner (#41 follow-up)
 $OS -o lead_notch_grommet.stl lead_notch_grommet.scad  # battery-lead notch TPU edge liner (AUD-12b)
 $OS -o skid_rail.stl skid_rail.scad          # TPU belly skid rail x2 (#15, AUD-10: was un-rendered)
 $OS -o ../leg_v6/shoulder.stl ../leg_v6/shoulder.scad
 $OS -o /tmp/trunk_preview.stl trunk.scad     # parametric spec sanity render only —
                                               # NOT the shipped trunk.stl (see below)
-$PY ../mesh_health.py head.stl head_ear.stl head_ear_L.stl l2_adapter.stl control_pod.stl jetson_case_mount.stl jetson_clamp_bar.stl oled_mount.stl neck_bracket.stl case_slot_grommet.stl lead_notch_grommet.stl skid_rail.stl riser_bay.stl spacer.stl battery_pocket.stl floor_plate.stl
+$PY ../mesh_health.py head.stl head_ear.stl head_ear_L.stl l2_adapter.stl control_pod.stl jetson_case_mount.stl jetson_clamp_bar.stl oled_mount.stl oled_tray.stl neck_bracket.stl case_slot_grommet.stl lead_notch_grommet.stl skid_rail.stl riser_bay.stl spacer.stl battery_pocket.stl floor_plate.stl
 ls -la riser_bay.stl spacer.stl battery_pocket.stl head.stl neck_bracket.stl floor_plate.stl jetson_case_mount.stl
 
 # DERIVED TRUNK (trunk.stl): stock Nova-SM3 trunk geometry + 10 modeled

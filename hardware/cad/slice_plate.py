@@ -469,6 +469,15 @@ PARTS = {
         scad=_chassis("jetson_case_mount.scad"),
         doc="PRINT: PA6-CF, base-down (deck face on the bed); uprights rise (no overhangs now).",
     ),
+    # Sits FLAT on the rear shoulder's deck, on the four M3x3.8 heat-set bores
+    # shoulder.scad cuts for the FRONT shoulder's neck bracket and the REAR one
+    # never uses. Bezel-face-down puts every leg and boss on an upward face.
+    "oled_tray": Part(
+        _chassis("oled_tray.stl"), "PETG-CF", down="+Z",
+        scad=_chassis("oled_tray.scad"),
+        doc="PRINT: PETG-CF, BEZEL-FACE-DOWN (+Z on the bed) — legs and board bosses "
+            "print upward, no supports.",
+    ),
     "control_pod": Part(
         _chassis("control_pod.stl"), "PETG-CF",
         manual="COLUMN-FACE-DOWN — names the feature. Measured: +Z 1648 mm^2 (s0.91) "
@@ -501,17 +510,18 @@ NOT_PRINTED = {
 UNRESOLVED = {
     "oled_mount": (
         "chassis/oled_mount.stl",
-        "the bracket has NO BOARD MOUNT HOLES — removed 2026-07-28 (#35, still "
-        "open) because the vendor drawing gives the outline (27.3 x 30.7) but "
-        "not the hole PITCH on either axis, and the guessed pitch put 2 of 4 "
-        "holes inside the display window. Deliberately unprintable until the "
-        "OWNED module is calipered: pitch on both axes, plus the active display "
-        "area size and its offset from the board datum (the 20 x 16 window is "
-        "carried over, not derived). Everything else in the chain exists — the "
-        "pod bolts to the riser bosses, the bracket bolts to the pod's 2x M2 "
-        "heat-sets. It is the board-to-bracket joint that is missing. Also "
-        "still unrecorded once that lands: material ('PETG/PA6-CF' is two "
-        "materials) and orientation ('foot-down' names a feature, not an axis)."),
+        "NARROWED 2026-08-10. The board-to-bracket joint is no longer the "
+        "blocker: #337 cut the 4 mount holes from the CALIPERED module (pitch "
+        "22.8 x 26.1, window 23.3 x 15.8 placed off the measured borders), so "
+        "the reason this entry carried since 2026-07-28 is dead. What is still "
+        "missing is what its own PRINT line says — 'OPEN ITEM (#184)': "
+        "material ('PETG/PA6-CF' is two materials) and orientation "
+        "('foot-down' names a feature, not an axis). "
+        "ALSO NOW OPTIONAL: `oled_tray` mounts the same display flat on the "
+        "rear shoulder deck instead, which removes this part's cantilever-on-"
+        "a-cantilever load path, its 1.36 mm gap to an UNCALIPERED E-stop cap, "
+        "and its Ø5 driver access. Decide which one ships before resolving "
+        "#184 — resolving it for a part that gets deleted is wasted work."),
     "spacer": (
         "chassis/spacer.stl",
         "no material recorded anywhere — the .scad header specifies M3x14, "
