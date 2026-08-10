@@ -114,7 +114,7 @@ seat is a cone.
 | M3×8 button ×100 | `B08H2HTTRT` | wheel → HFE/KFE (32) — flush in #263's Ø6.0 c'bore |
 | M3×14 button ×100 | `B08H2HQ3VZ` | wheel → HAA (16) — owned kit has no 14 |
 | M3×16 socket cap ×100 | `B089MDDJMZ` | HFE block retention (8) — ⚠️ M3×20 bottoms |
-| M3×20 socket cap | `oled_tray` → rear shoulder deck (4) | ⬜ **ORDER** — new 2026-08-10 (#35). Tray is 16.0 mm thick at the bolt (LEG_H 10.5 + PLATE_T 5.5) into an M3×3.8 insert in a 4.2 bore: M3×20 engages 4.0 mm (1.33×D) and stays 0.2 clear of the floor. M3×16 does not reach; M3×22 bottoms. ⚠️ The "M3×20 bottoms" warning on the line above is about the **HFE block**, a different joint — it does not apply here. A Ø6.0×4.0 counterbore would let the M3×16 above serve instead, but it puts ~113 mm² of bridged ceiling into a part that currently measures 0.0 mm² unsupported |
+| M3×20 socket cap | `oled_tray` → rear shoulder deck (4) | ⬜ **ORDER** — new 2026-08-10 (#35). Tray is 16.0 mm thick at the bolt (LEG_H 10.5 + PLATE_T 5.5) into the M3×3.8 short insert on line 259 — which is really **4.0 long** (ruthex RX-M3Sx4.0) in a 4.2 pocket. M3×20 protrudes exactly 20−16.0 = **4.0**, i.e. the FULL insert length, tip landing 0.2 above the pocket floor. M3×16 does not reach; M3×22 bottoms. ⚠️ The "M3×20 bottoms" warning on the line above is about the **HFE block**, a different joint — it does not apply here. A Ø6.0×4.0 counterbore would let the M3×16 above serve instead, but it puts ~113 mm² of bridged ceiling into a part that currently measures 0.0 mm² unsupported |
 | M3×10 CSK ×100 | `B0CQ4Z3DTX` | L2→adapter (4) + battery pocket (6) |
 | M3×14 CSK ×100 | `B0CQ4YH87R` | shoulder flange feet → trunk floor (4) |
 | Nylon M3 kit 330 pc | `B0DKND2824` | breakaway fuses — ×12 (10) and ×10 (10) |
@@ -256,7 +256,7 @@ actually consumes.
 | **M3×8 SHCS** | **25** | knee_arm → femur shelf (16 needed). ⚠️ NOT M3×10 — that bottoms in the 6.2 mm bore | ✅ **COVERED** — owned kit has 35× M3×8 socket head; the 32 *wheel* screws come from the ordered M3×8 **button** pack `B08H2HTTRT` |
 | **M3×6 SHCS** | **25** | shoulder_plate → deck (16 needed). ⚠️ NOT M3×8 — bottoms by 0.42 mm | ✅ **COVERED** — owned kit has 35× M3×6 socket head (deck job needs 16); horn positions have no counterbore so socket head serves |
 | **M3×16 SHCS** | **20** | HFE block retention (8 needed). Engages **5.2 mm of the 6.0 insert = 1.73×D**; M3×20 **bottoms out** in the blind pocket | ✅ **ORDERED 2026-08-03** — iexcell `B089MDDJMZ` ×100, socket cap. ⚠️ NOT the flat-head M3×16 (`B0CR6FZBYB`) — the block's seat is a cylindrical Ø6.0 c'bore and needs a flat-bottomed head |
-| M3×3.8 short insert | 10 | neck bracket → shoulder deck (front only) | ✅ **ORDERED 2026-08-02** — ruthex `B09ZHSGHXD` (RX-M3Sx4.0; ruthex's short is **4.0**, docs say 3.8, pockets are 4.2 deep so it fits) |
+| M3×3.8 short insert | 10 | neck bracket → shoulder deck front (4) · **`oled_tray` → shoulder deck REAR (4), added 2026-08-10 #35** = 8 of 10 | ✅ **ORDERED 2026-08-02** — ruthex `B09ZHSGHXD` (RX-M3Sx4.0; ruthex's short is **4.0**, docs say 3.8, pockets are 4.2 deep so it fits) |
 | M2×4 insert | 20 | pod, deck-tie, clamp bar, `oled_tray` (4) | ✅ **ORDERED 2026-08-02** — ruthex `B088QJG676`, 70 pc |
 
 ⚠️ **The owned HANGLIFE 345-pc assortment is M3 in D5 ONLY** — confirmed off the box
