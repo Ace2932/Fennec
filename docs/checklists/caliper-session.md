@@ -61,10 +61,14 @@ bracket is deliberately unprintable until these come off the **owned** module:
       display now mounts on **`oled_tray`**, flat on the rear shoulder deck,
       looking up. Same calipered numbers carried over verbatim.
 
-⬜ **One number still open, and it is the only one:** the module's BACK-SIDE
-height (header shell + components). It is not blocking — `oled_tray` puts the
-header over the deck's own through-opening so it hangs through — but it decides
-the M2 screw length.
+✅ **Back-side depths were taken in the same session** and are already on record
+(dimensions.md:559/561): glass-front → tallest back component (excl. pins)
+**4.8**, glass-front → PCB back **3.4**. Together those give the M2 screw
+(**M2×6**, engaging 2.6 mm) and the 1.4 mm back-component stand-off, against
+`oled_tray`'s 7.10 mm cavity — 5.70 mm clear.
+
+⬜ Only the header **PIN** protrusion is unmeasured, and it cannot bottom: the
+header sits over the deck's own through-opening, so the pins hang through.
 
 Everything else in the chain is already built: `control_pod` bolts to the
 `riser_bay` pocket-bosses (4× M3, y±10, z61/66, x−66.5), the bracket bolts to

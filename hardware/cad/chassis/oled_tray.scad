@@ -90,16 +90,26 @@
 //               *** USE THIS ***
 //     M3x22  -> 6.0mm into a 4.2 bore   BOTTOMS OUT, do not fit
 //
-//   board screw: M2 from BELOW through the PCB into the M2x4 inserts. Length
-//   depends on the module's PCB thickness -- caliper before ordering.
+//   board screw: M2x6 from BELOW through the PCB into the M2x4 inserts. The
+//   screw crosses the CALIPERED glass-front -> PCB-back depth of 3.4
+//   (dimensions.md:561) before it reaches the insert, so engagement is
+//   6 - 3.4 = 2.6mm (1.30xD). M2x8 engages 4.6 into a 4.0 bore and BOTTOMS OUT.
+//   PCB thickness is NOT needed for this and was never the blocker.
 //
-// CAVITY: 7.10 mm from the PCB back face down to the deck. The 7-pin header is
-// at the board's -X edge (x=-146.85) and the deck's own opening is OPEN THROUGH
-// its full 6.5 mm thickness at that edge (probed at Y -13..+13, all clear), so
-// a downward header hangs THROUGH the deck rather than bottoming in the cavity.
-// Back-side components elsewhere on the board are the 7.10 mm case, and those
-// are millimetre-scale. This is why the module's back-side height, still
-// uncalipered, is no longer a blocker for this geometry.
+// CAVITY: 7.10 mm from the PCB back face down to the deck, and it CLEARS on
+// measured numbers, not assumed ones. The back-side depths were calipered in
+// the same 2026-08-08 session as the outline: dimensions.md:559 glass-front ->
+// TALLEST BACK COMPONENT (excl. pins) = 4.8, :561 glass-front -> PCB-back = 3.4.
+// So the back components stand 4.8 - 3.4 = 1.4 proud of the PCB, and against
+// 7.10 that leaves *** 5.70 mm clear ***.
+//
+// The only unmeasured part is the header PIN protrusion, and it cannot bottom:
+// the 7-pin header is at the board's -X edge (x=-146.85) and the deck's own
+// opening is OPEN THROUGH its full 6.5 mm thickness there (probed Y -13..+13,
+// all clear), so the pins hang through the deck rather than into the cavity.
+//
+// An earlier revision of this header called the back-side height "uncalipered".
+// That was wrong -- it was on record the whole time.
 
 $fn = 48; EPS = 0.05;
 
