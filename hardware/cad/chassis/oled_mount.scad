@@ -34,21 +34,29 @@
 // mount holes opened into the display window, the other 2 breached its edge by
 // 0.15 mm).
 //
-// The 4 board mount holes are now ABSENT, deliberately. The vendor drawing
-// gives the outline (27.3 x 30.7), a bottom-centre notch (14 wide, 6.65 in from
-// each edge) and Ø2 holes — but NOT the hole PITCH on either axis, and the
-// pattern was already flagged as unsourced (dimensions.md: "not standardized;
-// many modules have none"). Cutting holes to a guessed pitch is how this part
-// got here. They go back in when the owned board is calipered; until then the
-// bracket is deliberately not printable, which is the honest state.
+// -----------------------------------------------------------------------------
+// 2026-08-09 (#35b): UNBLOCKED — the owned board was calipered 2026-08-08.
+// -----------------------------------------------------------------------------
+// The three things this file was waiting on are all measured (dimensions.md
+// "SSD1331 OLED 0.95in", CALIPERED off the owned board):
+//   * hole pitch  26.1 (long axis) x 22.8 (short axis), 2.25 inset all round
+//   * aperture    23.3 x 15.8, 2.0 in from each long edge, 5.5 from the TOP
+//                 and 9.3 from the BOTTOM -> the display is 1.9 OFF CENTRE,
+//                 toward the top. The old 20x16 CENTRED window was wrong twice:
+//                 3.3 too narrow (it clipped even the ~20.4 lit region) and
+//                 1.95 too low (1.75 of display hidden behind the plate).
+//   * depth       glass front -> PCB back 3.4 == BOSS_H below.
 //
-// STILL NEEDED, from the board in hand:
-//   * hole pitch along the 27.3 axis   (mm, centre-to-centre)
-//   * hole pitch along the 30.7 axis   (mm, centre-to-centre)
-//   * active display area: size AND its offset from the board datum
-// The window below is CARRIED OVER at 20 x 16 and re-centred on the new board
-// footprint — it is NOT re-derived, because the drawing does not locate the
-// glass. Treat it as provisional and fix it in the same caliper session.
+// MOUNTED FROM BEHIND, and that is forced, not stylistic. An M2 pan head
+// (DIN 7985, O3.8) reaches 4.15 in from a hole centre, but the glass starts
+// only 2.0 from each long edge -- a front-side screw head fouls the display no
+// matter how it is centred. So: panel in front carrying the window, board
+// behind it, four bosses on the panel's REAR face, screws entering from behind
+// the board into heat-sets in those bosses. Heads bear on the PCB back and
+// never touch the front face, and it pulls the board flat against the window.
+//
+// Header pins protrude perpendicular from the BACK (calipered), i.e. into the
+// cable space behind the board -- so the panel needs no relief notch.
 
 $fn = 32; EPS = 0.05; M2_CLEAR = 2.3;
 
@@ -71,10 +79,26 @@ $fn = 32; EPS = 0.05; M2_CLEAR = 2.3;
 FOOT_TAB_Y0 = 20.5;    // wall = 23 - 1.15 - 20.5 = 1.35mm (>= the 1.0mm rule)
 FOOT_TAB_HW = 3;       // tab half-width in x, hole +-3mm
 
-// ---- SSD1331 module, vendor drawing 2026-07-28 ----
-BOARD_Y = 27.3;      // board width  -> panel +y axis
+// ---- SSD1331 module, CALIPERED 2026-08-08 (supersedes the vendor drawing) ----
+BOARD_Y = 27.3;      // board width  -> panel +y axis  (calipered 27.3)
 BOARD_Z = 30.7;      // board height -> panel +z axis (header up, cable drops)
+                     // calipered 30.6; the 0.1 is kept so the plate/RIM maths
+                     // below is unchanged. Hole PITCH is used directly rather
+                     // than derived from this, so the 0.1 cannot reach a hole.
 RIM     = 2.0;       // plate margin around the board, all four sides
+
+// Board mount pattern, CENTRED on the board and driven by the measured PITCH
+// (not by inset-from-edge), so the 30.6-vs-30.7 discrepancy above cannot move
+// a hole. Both pitches independently imply the same 2.25 inset, which is what
+// made the axis assignment provable rather than a guess (dimensions.md).
+HOLE_PITCH_Y = 22.8;   // across the 27.3 axis
+HOLE_PITCH_Z = 26.1;   // along  the 30.6 axis
+BOSS_D  = 5.0;         // 1.0mm wall around the O3.0 insert bore -- the minimum
+                       // fastener-schedule.md:5 allows for M2. Not larger: at
+                       // the TOP row the boss OD is only 0.8mm clear of the
+                       // window edge, and O5.5 would cut that to 0.55.
+BOSS_H  = 3.4;         // calipered glass-front -> PCB-back. Sets the standoff.
+M2_INS_D = 3.0; M2_INS_L = 4.0;   // Ruthex M2 (same as jetson_case_mount)
 
 // ---- panel geometry (derived, so the board size drives the plate) ----
 PANEL_X0 = -99; PANEL_T = 3;                 // 3 mm plate, faces -X
@@ -82,10 +106,18 @@ PANEL_Y0 = 26;  PANEL_Y1 = PANEL_Y0 + BOARD_Y + 2 * RIM;   // 26 .. 57.30
 PANEL_Z0 = 98;  PANEL_Z1 = PANEL_Z0 + BOARD_Z + 2 * RIM;   // 98 .. 132.70
 BOARD_Y0 = PANEL_Y0 + RIM;  BOARD_Z0 = PANEL_Z0 + RIM;
 
-// window: PROVISIONAL (see header) — carried over 20 x 16, centred on the board
-WIN_Y = 20; WIN_Z = 16;
-WIN_Y0 = BOARD_Y0 + (BOARD_Y - WIN_Y) / 2;
-WIN_Z0 = BOARD_Z0 + (BOARD_Z - WIN_Z) / 2;
+// Window: the MEASURED aperture, positioned by its measured BORDERS. Not
+// centred -- the display sits 1.9 high on the board, so centring it is the bug
+// that hid 1.75mm of screen behind the plate.
+WIN_Y = 23.3; WIN_Z = 15.8;
+WIN_Y0 = BOARD_Y0 + 2.0;    // 2.0 in from each long edge (2.0+23.3+2.0 = 27.3)
+WIN_Z0 = BOARD_Z0 + 9.3;    // 9.3 from the BOTTOM edge (9.3+15.8+5.5 = 30.6)
+
+// Hole centres, derived once and reused by both the bosses and their bores.
+HOLE_Y = [BOARD_Y0 + BOARD_Y/2 - HOLE_PITCH_Y/2,
+          BOARD_Y0 + BOARD_Y/2 + HOLE_PITCH_Y/2];
+HOLE_Z = [BOARD_Z0 + BOARD_Z/2 - HOLE_PITCH_Z/2,
+          BOARD_Z0 + BOARD_Z/2 + HOLE_PITCH_Z/2];
 
 module oled_mount() {
     difference() {
@@ -99,13 +131,31 @@ module oled_mount() {
             // panel: vertical, faces -X (rear), on the +y side behind the mushroom
             translate([PANEL_X0, PANEL_Y0, PANEL_Z0])
                 cube([PANEL_T, PANEL_Y1 - PANEL_Y0, PANEL_Z1 - PANEL_Z0]);
+            // 4 board-standoff bosses on the panel's REAR face (+x side), so
+            // the board hangs behind the window and the screws come in from
+            // behind it. Axis is +x, i.e. normal to the panel.
+            for (hy = HOLE_Y, hz = HOLE_Z)
+                translate([PANEL_X0 + PANEL_T, hy, hz])
+                    rotate([0, 90, 0]) cylinder(d = BOSS_D, h = BOSS_H);
         }
         // 2x M2 down into the pod deck heat-sets
         for (mx = [-96, -71])
             translate([mx, 23, 95 - EPS]) cylinder(d = M2_CLEAR, h = 3 + 2 * EPS);
-        // OLED window (on the -X face). NO board mount holes — see header.
+        // OLED window (on the -X face), measured aperture.
         translate([PANEL_X0 - EPS, WIN_Y0, WIN_Z0])
             cube([PANEL_T + 2 * EPS, WIN_Y, WIN_Z]);
+        // M2 heat-set bores, entering each boss from its REAR face and running
+        // toward the panel. Blind: 3.4 boss + 3.0 panel = 6.4 available, bore
+        // 4.0 deep, so 2.4mm of panel is left in front of the insert -- above
+        // the >=1.5mm blind-floor convention #70 was filed about. NOT through:
+        // a through-bore here would open onto the display face.
+        // rotate([0,-90,0]) -> the bore runs in -X, INTO the boss and toward the
+        // panel. [0,+90,0] (which the bosses correctly use, since they stand
+        // OFF the rear face) points +X and put these bores entirely in free
+        // air behind the part -- rendered fine and left the mesh solid.
+        for (hy = HOLE_Y, hz = HOLE_Z)
+            translate([PANEL_X0 + PANEL_T + BOSS_H + EPS, hy, hz])
+                rotate([0, -90, 0]) cylinder(d = M2_INS_D, h = M2_INS_L + EPS);
     }
 }
 

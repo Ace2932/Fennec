@@ -1,0 +1,130 @@
+name: sim-tests
+
+# The sim/nova_mjx suite, in its OWN workflow (#326).
+#
+# It lived as a job inside ros-pytest.yml, and GitHub path filters are
+# per-WORKFLOW, not per-job — so every CAD, ROS, scripts and pcb-tools edit
+# started a ~1 hour sim run that could not possibly be affected by the change.
+# #325 (one file: hardware/cad/check_hole_breakout.py) had seven green checks
+# in six minutes and sat an hour behind this one.
+#
+# The cost that matters is not Actions minutes. A check that is always pending
+# and never relevant is one people learn to merge past — and that is #315's
+# failure arriving from the other side: there the job never ran, here it always
+# ran and never meant anything.
+#
+# ros-pytest.yml KEEPS `sim/nova_mjx/**` in its filters, deliberately: its
+# test_urdf_sync reads the generated MJCF and is exactly the guard that should
+# fire on a regenerated nova.xml. That was always the right reason for that
+# trigger; reusing it for the sim SUITE is what conflated two different things.
+
+on:
+  pull_request:
+    paths:
+      - 'sim/nova_mjx/**'
+      - '.github/workflows/sim-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sim/nova_mjx/**'
+      - '.github/workflows/sim-tests.yml'
+
+jobs:
+  # sim/nova_mjx/test_*.py (#315).
+  #
+  # These 9 files ran in NO job. Both this workflow and cad-gates.yml list
+  # `sim/nova_mjx/**` in their path triggers — added for test_urdf_sync, which
+  # is a ros2_ws test that reads the generated MJCF — so a sim edit FIRED both
+  # workflows and neither executed a single sim test. Green, having checked
+  # none of it. That is what let test_gait_clock's BLIND_REWARD_PIN sit red
+  # since the commit that claimed to capture it; see #315 for the bisect.
+  #
+  # Separate job, not another step in `pytest`, for two reasons: the dependency
+  # set is different and heavy (jax/brax/mujoco vs pyyaml/numpy), and this one
+  # is SLOW. Keeping them apart preserves the fast pre-merge filter `pytest`
+  # exists to be.
+  #
+  # RUNTIME. Mac (M-series, CPU jax) vs GitHub ubuntu-latest, all measured:
+  #
+  #     file                     Mac    runner A   runner B
+  #     terrain_relative         425s      1080s      1238s
+  #     gait_clock               344s       892s      1117s
+  #     climb_reward             320s       847s       954s
+  #     lift_clearance           226s       536s       657s
+  #     distill_obs_map           72s        99s       229s
+  #     heightmap                 16s        41s        52s
+  #     curriculum_resume/
+  #       resume_budget/
+  #       script_imports          ~3s        10s         3s
+  #     TOTAL                  ~23min    59m10s     71m29s
+  #
+  # TWO runs of the SAME commits differ by 21%, and every file moved together,
+  # so that is runner speed, not test flakiness. That variance is why this is
+  # 120 and not 90: at 90 the slower run had 26% headroom, and one more 21%
+  # step lands at ~86 min -- close enough that the job would eventually start
+  # timing out, which is precisely the state #315 closed (a job that fires and
+  # reports nothing about the tests it exists to run). A timeout that never
+  # trips costs zero; one that trips costs the whole point of the job.
+  #
+  # An earlier version of this comment claimed 90 was "roughly 1.5x the real
+  # cost". That was written off run A alone and run B falsified it (1.26x).
+  # Set this from the SLOWEST observed run, not the first.
+  #
+  # This is a real cost in Actions minutes on every PR touching sim/. Worth
+  # revisiting as a measured fast-subset-on-PR / full-set-on-main split -- but
+  # by measurement, not by dropping files quietly, which is the failure #315
+  # closed.
+  sim-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # 3.12 to match the local venv these pins were validated on.
+          python-version: '3.12'
+
+      - name: Install sim deps
+        # ONE source with the training stack (#200's rule): the same
+        # requirements.txt train.py and the Colab runner install, not a
+        # hand-written list here that can drift out from under the tests.
+        run: pip install -r sim/nova_mjx/requirements.txt
+
+      - name: Record the resolved dependency set
+        # BLIND_REWARD_PIN is an absolute numeric pin on a physics rollout, and
+        # requirements.txt FLOORS mujoco/mujoco-mjx (>=3.10) rather than pinning
+        # them. So a legal upgrade can move the number. When it does, this
+        # printout is the difference between "re-measure and re-pin against
+        # these versions" and an afternoon bisecting the wrong thing.
+        run: pip list | grep -iE '^(jax|jaxlib|brax|mujoco|mujoco-mjx|flax|optax) ' || true
+
+      - name: Run sim tests
+        # Each file in its OWN process, deliberately. They are authored as
+        # standalone scripts with __main__ runners, and test_curriculum_resume
+        # stubs jax/brax into sys.modules — collecting them together under one
+        # pytest process would let that stubbing leak into whatever ran next.
+        # Run them the way they are written.
+        #
+        # No `set -e` and no early break: every file runs even after one fails,
+        # so a red run reports EVERY broken file, not just the first.
+        run: |
+          cd sim/nova_mjx
+          fail=0
+          # `test_*.py deploy/test_*.py` -- BOTH, and the second half is here
+          # because #316 missed it. That job globbed the top level only, so the
+          # four files under deploy/ stayed in exactly the state #315 was about:
+          # no job ran them. One of them, test_policy_runner.py, is the
+          # cross-check that "the obs the robot builds must equal the obs the
+          # policy trained on, or transfer silently fails" -- the deploy seam.
+          # They self-insert their own sys.path, so no PYTHONPATH is needed;
+          # they only require the cwd to be sim/nova_mjx.
+          for t in test_*.py deploy/test_*.py; do
+            echo "::group::$t"
+            start=$SECONDS
+            python "$t" || { fail=1; echo "FAILED: $t"; }
+            echo "-- $t took $(( SECONDS - start ))s"
+            echo "::endgroup::"
+          done
+          exit $fail

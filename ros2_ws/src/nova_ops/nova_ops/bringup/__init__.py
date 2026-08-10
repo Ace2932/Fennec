@@ -14,6 +14,50 @@ Each profile is a sequence of "actions":
 # Most external packages (gait_controller, nova_perception, etc.) don't
 # exist yet — stubs that print a TODO log and exit cleanly are noted
 # below. Each profile is documented even if not fully composable today.
+# Everything a MOTION profile needs before its controller. Shared by
+# `walk` (gait_node) and `policy` (policy_node) so the two cannot drift:
+# the learned path must carry the SAME protection as the scripted one,
+# and a copy-paste of this list is exactly how it would quietly stop.
+_MOTION_STACK = [
+            # FIRST, and before preflight: the Teensy boots with BOTH
+            # protection tables wide open (per-joint 0..4095, posture backstop
+            # off) and only the host can narrow them (#185). Listed ahead of
+            # preflight deliberately — ros2 launch does not guarantee start
+            # ORDER, so this is intent, not a guarantee, and #187's arming
+            # check has to tolerate the race with a wait window.
+            ("node", "nova_ops", "firmware_tables", {"_respawn": True}),
+            ("launch", "nova_ops", "preflight.launch.py", {}),
+            ("launch", "nova_ops", "dashcam.launch.py", {}),
+            # robot_state_publisher — /robot_description + /tf for the 3D robot
+            # in Foxglove (and any TF consumer) during gait bring-up.
+            ("launch", "nova_description", "robot_state.launch.py", {}),
+            # §10 battery_low -> clean poweroff. Safety-critical: the ONLY
+            # nova_ops node not allowed to crash silently.
+            ("node", "nova_ops", "battery_shutdown_node", {"_respawn": True}),
+            # Teensy /heartbeat watchdog -> /system_ok (audit gap closure)
+            ("node", "nova_ops", "liveness_node", {"_respawn": True}),
+            # systemd WATCHDOG=1 feeder — hang recovery when run under
+            # deploy/nova-bringup.service (WatchdogSec=15, NotifyAccess=all);
+            # idles harmlessly outside systemd. See nova_ops/watchdog/.
+            ("node", "nova_ops", "watchdog_node", {"_respawn": True}),
+            # Foxglove bridge — live gait/IMU/telemetry viz during bring-up
+            # (ws://<jetson>:8765). Most useful profile for it: watch the
+            # policy obs/actions + joint tracking while the robot walks.
+            (
+                "node",
+                "foxglove_bridge",
+                "foxglove_bridge",
+                {"port": 8765, "address": "0.0.0.0"},
+            ),
+            # Gait controller (#285 — this used to say package 'nova_gait',
+            # executable 'gait_controller', neither of which ever existed;
+            # verified against nova_locomotion/setup.py entry_points:
+            # "gait_node = nova_locomotion.node:main"). Refuses to leave
+            # idle until it observes a preflight PASS on /preflight/status
+            # (see nova_locomotion/node.py PreflightGate; bypass with the
+            # require_preflight:=false node param for bench debugging).
+]
+
 PROFILES = {
     "bench": {
         "description": "Teensy uROS bridge + preflight only — desk firmware iteration",
@@ -70,47 +114,40 @@ PROFILES = {
         "description": "Teensy bridge + gait + safety envelope + dashcam + IMU",
         "preflight": True,
         "actions": [
-            # FIRST, and before preflight: the Teensy boots with BOTH
-            # protection tables wide open (per-joint 0..4095, posture backstop
-            # off) and only the host can narrow them (#185). Listed ahead of
-            # preflight deliberately — ros2 launch does not guarantee start
-            # ORDER, so this is intent, not a guarantee, and #187's arming
-            # check has to tolerate the race with a wait window.
-            ("node", "nova_ops", "firmware_tables", {"_respawn": True}),
-            ("launch", "nova_ops", "preflight.launch.py", {}),
-            ("launch", "nova_ops", "dashcam.launch.py", {}),
-            # robot_state_publisher — /robot_description + /tf for the 3D robot
-            # in Foxglove (and any TF consumer) during gait bring-up.
-            ("launch", "nova_description", "robot_state.launch.py", {}),
-            # §10 battery_low -> clean poweroff. Safety-critical: the ONLY
-            # nova_ops node not allowed to crash silently.
-            ("node", "nova_ops", "battery_shutdown_node", {"_respawn": True}),
-            # Teensy /heartbeat watchdog -> /system_ok (audit gap closure)
-            ("node", "nova_ops", "liveness_node", {"_respawn": True}),
-            # systemd WATCHDOG=1 feeder — hang recovery when run under
-            # deploy/nova-bringup.service (WatchdogSec=15, NotifyAccess=all);
-            # idles harmlessly outside systemd. See nova_ops/watchdog/.
-            ("node", "nova_ops", "watchdog_node", {"_respawn": True}),
-            # Foxglove bridge — live gait/IMU/telemetry viz during bring-up
-            # (ws://<jetson>:8765). Most useful profile for it: watch the
-            # policy obs/actions + joint tracking while the robot walks.
-            (
-                "node",
-                "foxglove_bridge",
-                "foxglove_bridge",
-                {"port": 8765, "address": "0.0.0.0"},
-            ),
-            # Gait controller (#285 — this used to say package 'nova_gait',
-            # executable 'gait_controller', neither of which ever existed;
-            # verified against nova_locomotion/setup.py entry_points:
-            # "gait_node = nova_locomotion.node:main"). Refuses to leave
-            # idle until it observes a preflight PASS on /preflight/status
-            # (see nova_locomotion/node.py PreflightGate; bypass with the
-            # require_preflight:=false node param for bench debugging).
+            *_MOTION_STACK,
             ("node", "nova_locomotion", "gait_node", {}),
             # Safety envelope is a library wrapped INSIDE gait_node's
             # publisher path — no separate node. The counters topic is
             # published by gait_node via the wrapper.
+        ],
+    },
+    "policy": {
+        "description": "Teensy bridge + RL policy + safety envelope (walk, but learned)",
+        "preflight": True,
+        # MUTUALLY EXCLUSIVE WITH `walk`. Both end in a controller publishing
+        # /joint_commands; running them together puts two publishers on the
+        # joint path and the servos get whichever message landed last.
+        #
+        # WHY THIS EXISTS (#289). policy_node was in NO profile, so the only
+        # documented way to run the learned policy was `ros2 launch
+        # nova_locomotion policy.launch.py` -- which starts the node ALONE, with
+        # no firmware_tables. That leaves the Teensy's per-joint table wide open
+        # at 0..4095, the #142/#280 posture backstop inert, and no limp_pose, so
+        # #145's controlled limp degrades to instant release.
+        #
+        # policy_node's HOST-side gating is strong (SafeJointCommandPublisher,
+        # preflight, 12/12 calibration, live /imu, explicit /nova/policy_enable).
+        # What was missing is the SECOND layer -- and main.cpp says why it
+        # exists: "the Jetson-side safety envelope ... is a single point of
+        # failure -- a bypassed wrapper or rogue publisher could command any raw
+        # 0..4095." Defense-in-depth was present on the scripted path and absent
+        # on the one with the least predictable output.
+        "actions": [
+            *_MOTION_STACK,
+            # Via the launch file, not a bare node, so the refusal chain in
+            # policy.launch.py (policy_npz required, require_preflight) is
+            # reused rather than re-implemented here.
+            ("launch", "nova_locomotion", "policy.launch.py", {}),
         ],
     },
     "full": {
