@@ -1482,6 +1482,7 @@ void loop() {
   // documented behaviour with no driver (policy_node.py:152).
   if (imu_ms >= IMU_PERIOD_MS) {
     imu_ms = 0;
+#ifdef NOVA_USE_MICRO_ROS
     if (imu_ok) {
       float q[4];
       imu_filter.quaternion(q);
@@ -1498,6 +1499,7 @@ void loop() {
       imu_msg.linear_acceleration.z = imu_sample.accel[2] * 9.80665;
       RCSOFTCHECK(rcl_publish(&imu_pub, &imu_msg, NULL));
     }
+#endif
   }
 
   if (servo_health_ms >= SERVO_HEALTH_PERIOD_MS) {
