@@ -116,6 +116,7 @@ seat is a cone.
 | M3×8 button ×100 | `B08H2HTTRT` | wheel → HFE/KFE (32) — flush in #263's Ø6.0 c'bore |
 | M3×14 button ×100 | `B08H2HQ3VZ` | wheel → HAA (16) — owned kit has no 14 |
 | M3×16 socket cap ×100 | `B089MDDJMZ` | HFE block retention (8) — ⚠️ M3×20 bottoms |
+| M3×20 socket cap | `oled_tray` → rear shoulder deck (4) | ⬜ **ORDER** — new 2026-08-10 (#35). Tray is 16.0 mm thick at the bolt (LEG_H 10.5 + PLATE_T 5.5) into the M3×3.8 short insert on line 259 — which is really **4.0 long** (ruthex RX-M3Sx4.0) in a 4.2 pocket. M3×20 protrudes exactly 20−16.0 = **4.0**, i.e. the FULL insert length, tip landing 0.2 above the pocket floor. M3×16 does not reach; M3×22 bottoms. ⚠️ The "M3×20 bottoms" warning on the line above is about the **HFE block**, a different joint — it does not apply here. A Ø6.0×4.0 counterbore would let the M3×16 above serve instead, but it puts ~113 mm² of bridged ceiling into a part that currently measures 0.0 mm² unsupported |
 | M3×10 CSK ×100 | `B0CQ4Z3DTX` | L2→adapter (4) + battery pocket (6) |
 | M3×14 CSK ×100 | `B0CQ4YH87R` | shoulder flange feet → trunk floor (4) |
 | Nylon M3 kit 330 pc | `B0DKND2824` | breakaway fuses — ×12 (10) and ×10 (10) |
@@ -206,8 +207,8 @@ iexcell `B0DLKC64NP` · iexcell `B0DLKBDMSB`. ✅ **RETURNED 2026-08-03 — the 
 |---|---|---|---|
 | **M2×9 self-tap, COUNTERSUNK** | 40 | servo BODY-mount — these do NOT hold the case shut; loaded in SHEAR (~30 N/screw at stall), so engagement depth is not critical. HAA + KFE + HFE-near pair. 🔴 **WAS M2×22 — that drives 13 mm into the servo.** Column measured **7.0 mm blind** 2026-08-02 (19.9 was back-solved). Stock is a 7 mm PAN-head PA2.0 self-tapper; buy CSK, the printed floor has a Ø4.6→2.3 cone | ⬜ ORDER |
 | **M2×13 self-tap, COUNTERSUNK** | 8 | HFE-far pair only (femur LA-6 ramp, floor 6.525). Body-mount, shear-loaded. 🔴 **WAS M2×25.** Max is floor + 7.0 column = **13.5 mm**; M2×14 bottoms by 0.5 | ⬜ ORDER |
-| M2×8 SHCS | 14 | control_pod 4 · deck-tie 4 · clamp bar 4 · OLED foot 2 | ⬜ ORDER |
-| M2×6 SHCS + M2 nut | 4 + 4 | SSD1331 → bracket | ⬜ ORDER |
+| M2×8 SHCS | 12 | control_pod 4 · deck-tie 4 · clamp bar 4 | ⬜ ORDER — was 14; the 2 "OLED foot" screws went with `oled_mount`, DELETED 2026-08-10 (#35) |
+| M2×6 SHCS | 4 | SSD1331 → `oled_tray` | ⬜ ORDER. **×6 is correct and DERIVED, not a guess:** the screw enters at the PCB back and crosses the calipered glass-front→PCB-back depth of **3.4** (dimensions.md:561) before reaching the M2×4 insert, so it engages 6−3.4 = **2.6 mm (1.30×D)**. M2×8 would engage 4.6 into a 4.0 bore and **bottoms out**. ⚠️ The **"+ M2 nut"** this line used to carry was wrong — the mount uses M2×4 heat-set INSERTS (line below), not nuts. |
 
 ### ⚠️ Two errors found in `fastener-schedule.md`'s purchase summary (2026-08-02)
 Both would have produced a wrong order, and both contradict that document's own detail table.
@@ -257,8 +258,8 @@ actually consumes.
 | **M3×8 SHCS** | **25** | knee_arm → femur shelf (16 needed). ⚠️ NOT M3×10 — that bottoms in the 6.2 mm bore | ✅ **COVERED** — owned kit has 35× M3×8 socket head; the 32 *wheel* screws come from the ordered M3×8 **button** pack `B08H2HTTRT` |
 | **M3×6 SHCS** | **25** | shoulder_plate → deck (16 needed). ⚠️ NOT M3×8 — bottoms by 0.42 mm | ✅ **COVERED** — owned kit has 35× M3×6 socket head (deck job needs 16); horn positions have no counterbore so socket head serves |
 | **M3×16 SHCS** | **20** | HFE block retention (8 needed). Engages **5.2 mm of the 6.0 insert = 1.73×D**; M3×20 **bottoms out** in the blind pocket | ✅ **ORDERED 2026-08-03** — iexcell `B089MDDJMZ` ×100, socket cap. ⚠️ NOT the flat-head M3×16 (`B0CR6FZBYB`) — the block's seat is a cylindrical Ø6.0 c'bore and needs a flat-bottomed head |
-| M3×3.8 short insert | 10 | neck bracket → shoulder deck (front only) | ✅ **ORDERED 2026-08-02** — ruthex `B09ZHSGHXD` (RX-M3Sx4.0; ruthex's short is **4.0**, docs say 3.8, pockets are 4.2 deep so it fits) |
-| M2×4 insert | 20 | pod, deck-tie, clamp bar, OLED bracket | ✅ **ORDERED 2026-08-02** — ruthex `B088QJG676`, 70 pc |
+| M3×3.8 short insert | 10 | neck bracket → shoulder deck front (4) · **`oled_tray` → shoulder deck REAR (4), added 2026-08-10 #35** = 8 of 10 | ✅ **ORDERED 2026-08-02** — ruthex `B09ZHSGHXD` (RX-M3Sx4.0; ruthex's short is **4.0**, docs say 3.8, pockets are 4.2 deep so it fits) |
+| M2×4 insert | 20 | pod, deck-tie, clamp bar, `oled_tray` (4) | ✅ **ORDERED 2026-08-02** — ruthex `B088QJG676`, 70 pc |
 
 ⚠️ **The owned HANGLIFE 345-pc assortment is M3 in D5 ONLY** — confirmed off the box
 2026-08-02. This paragraph previously said it carried **D4×L3 and D4×L4**; it does not,

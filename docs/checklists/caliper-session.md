@@ -44,21 +44,31 @@ measurement needed.
   the head crown via l2_adapter). RJ45 head size only matters for head/neck
   cable routing now — low priority.
 
-## 6. SSD1331 OLED module — ⏳ OPEN, and it is what blocks the bracket (#35)
+## 6. SSD1331 OLED module — ✅ DONE 2026-08-08 (#35)
 
-Added 2026-08-02. The display **is wanted**; it has nowhere to bolt. The 4 board
+Added 2026-08-02, CLOSED 2026-08-10. Historical context follows: the 4 board
 mount holes in `oled_mount.scad` were **removed 2026-07-28** because the vendor
 drawing gives the outline (27.3 × 30.7) but **not the hole pitch on either
 axis** — the guessed pitch put 2 of 4 holes inside the display window. The
 bracket is deliberately unprintable until these come off the **owned** module:
 
-- [ ] ⏳ hole pitch along the **27.3 mm** axis (centre-to-centre)
-- [ ] ⏳ hole pitch along the **30.7 mm** axis (centre-to-centre)
-- [ ] ⏳ active display area: **size AND its offset from the board datum** — the
-      20 × 16 window currently in the file is carried over, **not** derived, so
-      it is provisional even once the holes land
-- [ ] → `oled_mount.scad` (holes + window), then `slice_plate.py`'s UNRESOLVED
-      entry can move to the registry with a material and an axis
+- [x] ✅ hole pitch along the **27.3 mm** axis = **22.8 mm**
+- [x] ✅ hole pitch along the **30.7 mm** axis = **26.1 mm**
+- [x] ✅ active display area **23.3 × 15.8**, positioned off the MEASURED borders
+      (2.0 in from each long edge; 9.3 from the bottom) — the display sits 1.9
+      off centre, so centring it would hide ~1.75 mm of screen
+- [x] → landed in #337. `oled_mount` was then **DELETED** (2026-08-10, #35): the
+      display now mounts on **`oled_tray`**, flat on the rear shoulder deck,
+      looking up. Same calipered numbers carried over verbatim.
+
+✅ **Back-side depths were taken in the same session** and are already on record
+(dimensions.md:559/561): glass-front → tallest back component (excl. pins)
+**4.8**, glass-front → PCB back **3.4**. Together those give the M2 screw
+(**M2×6**, engaging 2.6 mm) and the 1.4 mm back-component stand-off, against
+`oled_tray`'s 7.10 mm cavity — 5.70 mm clear.
+
+⬜ Only the header **PIN** protrusion is unmeasured, and it cannot bottom: the
+header sits over the deck's own through-opening, so the pins hang through.
 
 Everything else in the chain is already built: `control_pod` bolts to the
 `riser_bay` pocket-bosses (4× M3, y±10, z61/66, x−66.5), the bracket bolts to

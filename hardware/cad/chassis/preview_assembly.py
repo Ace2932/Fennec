@@ -142,7 +142,6 @@ def main():
     # 2 case hold-down BARS (#44, replaced the 4 clamps) + OLED bracket (#40)
     bar=trimesh.load('jetson_clamp_bar.stl'); parts.append(bar)
     MYb=np.eye(4); MYb[1,1]=-1; b2=bar.copy(); b2.apply_transform(MYb); parts.append(b2)
-    parts.append(trimesh.load('oled_mount.stl'))
     # jetson_cowl RETIRED 2026-07-10 (#41) — right-angle plug adapters replace
     # it; the -Y cables now drop straight through the CASE_SLOT, no cowl.
     # official Jetson case (ref mesh) at its chosen placement: bbox-centre

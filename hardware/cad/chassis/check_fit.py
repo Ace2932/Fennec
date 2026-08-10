@@ -63,7 +63,7 @@ point inside the designed part = the part cuts its counterpart. Cases:
      is OPEN, not solid, all along it — the actual proof the modeled bores
      land where the bolts go, not just that a hole exists somewhere.
  12. CR-7 (was #39): the newest chassis parts, never gated before now —
-     jetson_clamp_bar (+y/-y mirror), l2_adapter, control_pod, oled_mount.
+     jetson_clamp_bar (+y/-y mirror), l2_adapter, control_pod.
      (jetson_cowl was gated here too until #41 retired it 2026-07-10 —
      superseded by right-angle plug adapters; see jetson_cowl.scad banner.)
      jetson_clamp_bar vs jetson_case_ref.stl is checked via a
@@ -161,7 +161,11 @@ CASE_FRONT_HX, CASE_REAR_HX = 42.8, -56.5          # case corner-column x centre
 POD_BOSS_X = -66.5                 # riser rear-wall pad <-> pod column interface
 POD_HY, POD_Z0, POD_Z1 = 14.0, 58.0, 69.0
 L2A_SEAT_Z = 128.0                  # crown top = l2_adapter bottom seat
-OLED_SEAT_Z = 95.0                  # control_pod deck top = oled_mount foot seat
+#: minimum leg-to-oled_tray clearance (#35). 5mm, not a hair over whatever the
+#: sweep happens to measure: the sweep is a GRID, so the true worst pose falls
+#: between samples, and the servo horn backlash the trot work characterises is
+#: itself worth a couple of mm at the foot.
+TRAY_LEG_MIN_MM = 5.0
 
 # ---- REAL power board vs floor (case 11) -----------------------------------
 # HISTORY: an early modeling pass assumed generic 20mm caps on a 16mm
@@ -341,19 +345,6 @@ def l2a_seat_mask(p):
     near_xy = (p[:, 0] > 103.4) & (p[:, 0] < 146.6) & (np.abs(p[:, 1]) < 24.6)
     return near_z & near_xy
 
-
-def oled_seat_mask(p):
-    """Designed oled_mount foot <-> control_pod deck-top seat (z=OLED_SEAT_Z):
-    the foot's flat bottom face only, x-99..-69 y22..27 (oled_mount.scad's
-    foot `translate([-99, 22, 95]) cube([30, 5, 3])`) -- the vertical
-    display panel (x-99..-96, y26..53, z98..124) sits well above this
-    z-band and shares no seat contact, so it needs no exclusion. AUD-6
-    (2026-07-10): tightened from a z-band-only mask (no x/y bound) to the
-    real foot footprint."""
-    near_z = np.abs(p[:, 2] - OLED_SEAT_Z) < 0.6
-    near_xy = (p[:, 0] > -99.6) & (p[:, 0] < -68.4) & \
-              (p[:, 1] > 21.4) & (p[:, 1] < 27.6)
-    return near_z & near_xy
 
 
 # ---- leg assembly point cloud (leg_v6 gate composition, coax frame) --------
@@ -665,8 +656,6 @@ FLOOR_BORES = [
     ('head.stl',          (83, -10, 131),   (0, 0, -1), 4.2, 4.0, 'ear-pad'),
     ('l2_adapter.stl',    (114,  9, 128),   (0, 0,  1), 4.2, 4.0, 'crown-mount'),
     ('l2_adapter.stl',    (114, -9, 128),   (0, 0,  1), 4.2, 4.0, 'crown-mount'),
-    ('control_pod.stl',   (-96, 23,  95),   (0, 0, -1), 4.0, 3.0, 'oled M2'),
-    ('control_pod.stl',   (-71, 23,  95),   (0, 0, -1), 4.0, 3.0, 'oled M2'),
     ('battery_pocket.stl',(-35, 27.5, -0.2),(0, 0, -1), 4.2, 4.0, 'pad'),
     ('battery_pocket.stl',(40,  27.5, -0.2),(0, 0, -1), 4.2, 4.0, 'pad'),
     # --- leg parts (first-article, printing) ---
@@ -982,7 +971,6 @@ def main():
     clamp_bar_L = clamp_bar_R.copy(); clamp_bar_L.apply_transform(MYb)
     l2_adapter = trimesh.load('l2_adapter.stl')
     pod = trimesh.load('control_pod.stl')
-    oled = trimesh.load('oled_mount.stl')
     # jetson_case_ref.stl: same placement transform as place_case.py /
     # preview_assembly.py (world x-6.85 ctr, y0 ctr, bottom on the deck 71.9).
     # NOT watertight (see case_surface_clash docstring) -- keep separate from
@@ -1119,6 +1107,78 @@ def main():
               f'this ROM, so their "no contact" result asserts nothing. Stated '
               f'explicitly because a dead check is indistinguishable from a '
               f'passing one otherwise (#47).')
+
+    # ---- 5b. oled_tray vs the legs (#35) ------------------------------------
+    # oled_tray sits on the REAR shoulder's deck top, which is the highest point
+    # on the shoulder (79.55) -- so the only thing that can reach it is a moving
+    # leg. That is exactly the claim the part is justified by, and nothing else
+    # in this file gates it.
+    #
+    # NOT done as an eighth crouch-sweep target on purpose. near_bbox() admits
+    # points NEAR a target's bounds; if the legs never get close the tray admits
+    # zero and lands in the `dead` list above -- a check that asserts nothing,
+    # which is the #47 failure this file already carries a NOTE about. A
+    # CLEARANCE number cannot go vacuous: it is either a distance or a failure.
+    #
+    # Measured as distance to the tray's AXIS-ALIGNED BOX. That is exact for the
+    # box and therefore a valid LOWER BOUND on distance to the solid inside it,
+    # so a pass here is a real pass.
+    #
+    # Do NOT "simplify" this to a Z-only gap (tray_z0 minus the cloud's max z).
+    # The first version of this check did exactly that and reported a 96mm
+    # INTERSECTION, because at high protraction the leg swings up past z=170 --
+    # but it does so at |y| ~ 39, outboard of this tray's |y| <= 26, and never
+    # comes near it. A Z-only test is a sound lower bound only while the cloud
+    # stays below the tray; above it, it is not a distance at all.
+    tray = trimesh.load('oled_tray.stl')
+    t_lo, t_hi = tray.bounds
+
+    def _d_box(p):
+        d = np.maximum(np.maximum(t_lo - p, p - t_hi), 0.0)
+        return np.linalg.norm(d, axis=1)
+
+    print(f'-- oled_tray (#35) vs ALL-FOUR-LEG sweep: tray z {t_lo[2]:.2f}..{t_hi[2]:.2f} --')
+    # COVERAGE, fixed after review. The first version swept hfe -86..+50, kfe in
+    # steps of 10 (which never sampled the +109 endpoint), and REAR hips only,
+    # while its comment claimed "swept to their mech stops". All three were
+    # wrong: the mechanical hfe window is symmetric +/-86 (limits.py
+    # _thigh_flexion -- the +50 fold cap moved OUT of the scalar into the
+    # posture-aware rom_envelope on 2026-07-25), so 36 deg of the fold side went
+    # unswept, and the front legs were never checked at all on a hand-waved
+    # "they can't reach" that is exactly the reasoning that already failed once
+    # here. Measured with full coverage the front legs come within 31.78mm --
+    # clear, but a third of the margin I assumed.
+    HFE_SWEEP = range(-86, 87, 4)
+    KFE_SWEEP = [round(v) for v in np.linspace(-109, 109, 23)]   # endpoints included
+    worst_gap, worst_pose = 1e9, None
+    stop_gap = 1e9
+    for hfe in HFE_SWEEP:
+        for kfe in KFE_SWEEP:
+            cloud = leg_cloud(hfe, kfe)
+            for haa in (-40, -25, -15, -7, 0, 7, 15, 25, 40):
+                for label, base in coax_to_trunk_bases():
+                    inboard = -haa if label[1] == 'R' else haa
+                    inside_rom = inboard <= 15   # hfe/kfe swept to their mech stops
+                    Sx = rot(haa, [1, 0, 0],
+                             [HIP_FA if label[0] == 'F' else -HIP_FA,
+                              HIP_LAT if label[1] == 'R' else -HIP_LAT, HIP_Z])
+                    p = tf(tf(cloud, base), Sx)
+                    gap = float(_d_box(p).min())
+                    if inside_rom:
+                        if gap < worst_gap:
+                            worst_gap, worst_pose = gap, (label, haa, hfe, kfe)
+                    else:
+                        stop_gap = min(stop_gap, gap)
+    lab, ha, hf, kf = worst_pose
+    if worst_gap < TRAY_LEG_MIN_MM:
+        bad = True
+        print(f'   FAIL rear leg reaches within {worst_gap:.2f}mm of the tray '
+              f'({lab} haa{ha:+d} hfe{hf:+d} kfe{kf:+d}) -- need '
+              f'{TRAY_LEG_MIN_MM}mm')
+    else:
+        print(f'   OK   worst clearance {worst_gap:.2f}mm over the FULL hfe/kfe '
+              f'mechanical range (at {lab} haa{ha:+d} hfe{hf:+d} kfe{kf:+d}), '
+              f'{stop_gap:.2f}mm even at outboard-haa stops')
 
     # ---- 6. battery pocket + pack ------------------------------------------------
     pp = sample(pocket, 8000, 2000)
@@ -1511,7 +1571,7 @@ def main():
                         hits, pb_mesh, noise_mm=0.05)
 
     # ---- 12. NEW chassis parts (CR-7, was #39): jetson_clamp_bar (+y/-y),
-    # l2_adapter, control_pod, oled_mount. These have had real
+    # l2_adapter, control_pod. These have had real
     # STLs since build_all.sh grew them (2026-07-08) but were never added to
     # this gate -- the +y clamp-bar vs jetson_case_ref graze (~0.2mm probe,
     # 4/13000 pts) went uncaught as a result. Settled below.
@@ -1569,15 +1629,6 @@ def main():
     bad |= report('control pod vs rear shoulders', hits)
     hits = podp[box.contains(podp)]
     bad |= report('control pod vs mezzanine stack envelope', hits)
-
-    # -- oled_mount vs control_pod (deck seat excluded) + riser --
-    olp = sample(oled, 5000, 1200, seed=7)
-    olp_f = olp[~oled_seat_mask(olp)]
-    hits = olp_f[pod.contains(olp_f)]
-    bad |= report_depth('oled mount vs control pod (deck seat excluded)', hits,
-                        pod, noise_mm=NOISE_PART_MM)
-    hits = olp[riser.contains(olp)]
-    bad |= report_depth('oled mount vs riser', hits, riser, noise_mm=NOISE_PART_MM)
 
     # -- case_slot_grommet (TPU -Y CASE_SLOT edge liner, #41 follow-up) vs the
     # REAL neighboring hardware it has to clear: the cradle uprights + -y tie

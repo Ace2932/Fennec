@@ -90,10 +90,14 @@ MAX_R = 8.0         # ignore big architectural bores (wheel window, cable tunnel
 #       #281); flagged in the PR body as a follow-up worth a real fix.
 #
 # NOT included below (left to fail, on purpose): trunk's 3 FOOT countersinks
-# (-59.5,-42/-59.5,42/59.5,42, r=3.20) and oled_mount's 2 pod-foot M2 holes
-# (-96/-71, y=23) -- both are SUSPECT, not deliberate: measured directly
-# against the mesh, both leave <=0.2mm of real wall on one side. See the PR
-# body for the measurements. Silencing those would defeat the gate.
+# (-59.5,-42/-59.5,42/59.5,42, r=3.20) -- SUSPECT, not deliberate: measured
+# directly against the mesh it leaves <=0.2mm of real wall on one side. See the
+# PR body for the measurements. Silencing it would defeat the gate.
+# RESOLVED 2026-08-10 (#35): control_pod's 2 pod-foot M2 holes (-96/-71, y=23)
+# used to be listed here for the same reason. They existed only to bolt
+# oled_mount, which is now deleted (the OLED moved to oled_tray, flat on the
+# rear shoulder deck), so the bores were removed from control_pod.scad and the
+# thin wall went with them.
 
 
 # GOTCHA (found populating this list, #281): the ALLOW key's rounding

@@ -24,7 +24,8 @@
 //   Ø40 mushroom, 77 total length, panel max 6mm): UP on the deck (z90, 5mm <
 //   6mm max OK). The ~30×30 × ~48-deep contact block hangs into the pocket
 //   (gussets flank it at y±17); Ø22 barrel through the Ø22.6 hole + supplied nut.
-// OLED: SPLIT OFF (#40) — it's now a SEPARATE part (oled_mount.scad) that bolts
+// OLED: SPLIT OFF (#40), then MOVED OFF this part entirely (#35, 2026-08-10).
+// It was a separate bracket (oled_mount.scad) bolting
 //   to the pod deck's +y edge (2x M2). The pod deck is back to SYMMETRIC (y±26,
 //   E-stop only) — no more +y extension, no fused panel, no OLED-beside-mushroom
 //   dodge. The OLED bracket holds the SSD1331 clear of the Ø40 mushroom cap.
@@ -74,10 +75,13 @@ module control_pod() {
                 cylinder(d = M2_CLEAR, h = BOSS_X - COL_X0 + 2*EPS);  // M2 (pinched pad)
         // ---- E-stop panel hole ----
         translate([ES[0], ES[1], DECK_Z - EPS]) cylinder(d = ES_HOLE, h = DECK_T + 2*EPS);
-        // ---- 2x M2 heat-sets in the deck +y edge -> the OLED bracket bolts here
-        //      (oled_mount.scad, #40). Pressed from the deck TOP. ----
-        for (mx = [-96, -71])
-            translate([mx, 23, DECK_Z + DECK_T - 4]) cylinder(d = 3.0, h = 4 + EPS);
+        // 2026-08-10 (#35): the 2x M2 heat-sets that used to sit here, at
+        // x-96/-71 y23, are GONE. They existed only so oled_mount could bolt
+        // to this deck edge, and oled_mount is deleted -- the OLED now mounts
+        // FLAT on the rear shoulder deck (oled_tray.scad), looking up. Removing
+        // them also retires a known defect: check_hole_breakout recorded both
+        // bores as SUSPECT, leaving <=0.2mm of real wall on one side. This part
+        // is not printed yet, so nothing drifts from a physical part.
         // ---- cable grommet: E-stop NC + OLED SPI drop into the bay (y0 z63) ----
         translate([COL_X0 - EPS, 0, 63]) rotate([0, 90, 0])
             cylinder(d = 12, h = BOSS_X - COL_X0 + 2*EPS);

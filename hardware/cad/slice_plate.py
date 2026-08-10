@@ -469,6 +469,17 @@ PARTS = {
         scad=_chassis("jetson_case_mount.scad"),
         doc="PRINT: PA6-CF, base-down (deck face on the bed); uprights rise (no overhangs now).",
     ),
+    # Sits FLAT on the rear shoulder's deck, on the four M3x3.8 heat-set bores
+    # shoulder.scad cuts for the FRONT shoulder's neck bracket and the REAR one
+    # never uses. EVERY feature hangs off one face (the legs), so bezel-top-down
+    # points all of them up and the unsupported area measures 0.0 mm^2. The
+    # insert bosses were DELETED to keep it that way -- see the .scad header.
+    "oled_tray": Part(
+        _chassis("oled_tray.stl"), "PETG-CF", down="+Z",
+        scad=_chassis("oled_tray.scad"),
+        doc="PRINT: PETG-CF, BEZEL-FACE-DOWN (+Z on the bed) — the four legs are the "
+            "only raised feature and they print upward, no supports.",
+    ),
     "control_pod": Part(
         _chassis("control_pod.stl"), "PETG-CF",
         manual="COLUMN-FACE-DOWN — names the feature. Measured: +Z 1648 mm^2 (s0.91) "
@@ -482,7 +493,9 @@ PARTS = {
 #: checks and never sent to a bed.
 #:
 #: CORRECTED 2026-08-02 after review. The first version of this set also held
-#: `oled_mount`, `spacer`, `trunk`, `head_ear` and `head_ear_L` — five parts
+#: `oled_mount` (DELETED 2026-08-10, #35 — the OLED moved to `oled_tray`,
+#: flat on the rear shoulder deck), `spacer`, `trunk`, `head_ear` and
+#: `head_ear_L` — five parts
 #: that ARE printed (oled_mount.scad: "PRINT: PETG/PA6-CF, foot-down, ~5 g";
 #: spacer.scad: "4 needed + spares (print 8)"). They were in the exclusion list
 #: for one reason: it made `--list`'s coverage line read "covers every STL".
@@ -499,19 +512,6 @@ NOT_PRINTED = {
 #: reported by `--list`, so the set stays a visible to-do rather than a silent
 #: omission. Each value says exactly what is missing and where it would go.
 UNRESOLVED = {
-    "oled_mount": (
-        "chassis/oled_mount.stl",
-        "the bracket has NO BOARD MOUNT HOLES — removed 2026-07-28 (#35, still "
-        "open) because the vendor drawing gives the outline (27.3 x 30.7) but "
-        "not the hole PITCH on either axis, and the guessed pitch put 2 of 4 "
-        "holes inside the display window. Deliberately unprintable until the "
-        "OWNED module is calipered: pitch on both axes, plus the active display "
-        "area size and its offset from the board datum (the 20 x 16 window is "
-        "carried over, not derived). Everything else in the chain exists — the "
-        "pod bolts to the riser bosses, the bracket bolts to the pod's 2x M2 "
-        "heat-sets. It is the board-to-bracket joint that is missing. Also "
-        "still unrecorded once that lands: material ('PETG/PA6-CF' is two "
-        "materials) and orientation ('foot-down' names a feature, not an axis)."),
     "spacer": (
         "chassis/spacer.stl",
         "no material recorded anywhere — the .scad header specifies M3x14, "

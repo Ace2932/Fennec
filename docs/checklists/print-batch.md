@@ -239,7 +239,13 @@ plate, and the tool says so rather than picking one.
 and prints every face's measurements so the choice takes a minute. Resolve one
 by adding the axis here **and** to the `.scad` header.
 
-**`oled_mount` is WANTED and BLOCKED on three caliper numbers** (2026-08-02).
+**`oled_mount` is DELETED (2026-08-10, #35) — print `oled_tray` instead.**
+It mounts the same SSD1331 FLAT on the rear shoulder deck, looking up, on four
+M3×3.8 heat-set bores `shoulder.scad` already cuts for the FRONT shoulder's neck
+bracket and the rear copy never uses. PETG-CF, BEZEL-FACE-DOWN, zero supports,
+4× M3×20 + 4× M2×4 inserts. Superseded note follows.
+
+~~**`oled_mount` is WANTED and BLOCKED on three caliper numbers** (2026-08-02).~~
 The OLED is not deferred — what it lacks is a way to *hold the board*. The
 bracket's 4 board mount holes were **removed 2026-07-28 (#35, still open)**: the
 vendor drawing gives the outline (27.3 × 30.7 mm) but **not the hole pitch on
@@ -252,16 +258,17 @@ measured:
 - [ ] active display area — size **and** its offset from the board datum (the
       20 × 16 window in the .scad is carried over, **not** derived)
 
-Everything else in the chain already exists: `control_pod` bolts to the
-`riser_bay` pocket-bosses (4× M3 at y±10, z61/66, x−66.5) and the bracket bolts
-to the pod deck's 2× M2 heat-sets at x−96/−71, y23. It is only the
-board-to-bracket joint that is missing. **`control_pod` prints as-is** — it is
-the E-stop mount, its OLED shelf and heat-sets are held deliberately, and
-nothing about them should be "cleaned up".
+`control_pod` bolts to the `riser_bay` pocket-bosses (4× M3 at y±10, z61/66,
+x−66.5) and still prints — it is the E-stop mount. **UPDATED 2026-08-10 (#35):
+its 2× M2 heat-sets at x−96/−71 y23 have been REMOVED.** They existed only so
+`oled_mount` could bolt there, and that part is deleted; removing them also
+retired a defect, since `check_hole_breakout` had both bores recorded as leaving
+≤0.2 mm of real wall. The earlier "nothing about them should be cleaned up" no
+longer applies. `control_pod` is not printed yet, so nothing drifts.
 
 **Parts marked UNRESOLVED** — `spacer`, `trunk`, `head_ear(_L)` —
-are printable but cannot be sliced yet, each for a recorded reason: `oled_mount`
-says "PETG/PA6-CF" (two materials); `spacer` names no material anywhere though 8
+are printable but cannot be sliced yet, each for a recorded reason:
+`spacer` names no material anywhere though 8
 are needed; `trunk` is built by `trunk_build.py` so the freshness gate skips it;
 the ears are deliberately non-CF (#32 — the CF detunes the antenna) and no
 non-CF material is modelled yet. `--list` prints this set as a to-do.
