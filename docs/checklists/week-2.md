@@ -28,7 +28,7 @@
 - [ ] Sketch hip pocket in OnShape against STS3215 30kg STEP
 - [ ] Export hip pocket STL
 - [ ] Slice in Bambu Studio: PA6-CF, 100% infill on load-bearing zones, fiber-aware orientation
-- [ ] Pre-dry PA6-CF 24h before printing
+- [ ] Pre-dry PA6-CF — **80 °C / 10 h+**, per `print-batch.md` §3 (the single source; this line said 24 h and was reconciled 2026-08-10)
 - [ ] **Magigoo PA** on textured PEI plate (Bambu liquid glue NOT rated for PA — see BOM §8). 100 °C bed soak 15 min before first layer.
 - [ ] Print one hip pocket
 - [ ] Fit-check on real STS3215 30kg with calipers — clearance, M3 hole alignment, horn-spline depth
@@ -114,7 +114,7 @@
 
 - [ ] Download + install Bambu Studio (latest)
 - [ ] **AMS HF bypassed for PA6-CF.** Configure Bambu Studio for **external single-spool feed**: SpacePi X4 → 4 mm PTFE Bowden tube → P1S top-side input. PA stays in heated dryer chamber the entire print; AMS holds nothing.
-- [ ] Run PA6-CF in Creality SpacePi X4 dryer **24 h @ 70 °C** before first print. Keep dryer running at 60-70 °C during print (chamber stays sealed).
+- [ ] Run PA6-CF in Creality SpacePi X4 dryer — **80 °C / 10 h+** before first print (X4 range is 45–85 °C, so 80 is in spec). Keep dryer running at 60-70 °C during print (chamber stays sealed). ⚠️ **RECONCILED 2026-08-10:** this said 24 h @ 70 °C. `print-batch.md` §3 is the single source, and it wins because it is TRACEABLE: the **151 MPa** flexural figure that every leg safety factor is computed from was measured on specimens dried at **80 °C**. Drying to a different schedule than the number you are claiming is the gap.
 - [ ] Confirm hardened steel hotend installed in P1S (PA6-CF mandatory — brass dies in <1 spool)
       — 🔴 **RE-OPENED 2026-08-04. The Obsidian High Flow was REMOVED** after it partially
       clogged (see `project-hotend-clog` / support ticket). A 0.4 mm nozzle has been fitted in

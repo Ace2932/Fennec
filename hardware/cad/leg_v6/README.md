@@ -185,6 +185,33 @@ trip backdrive protection) · stand-up keeps feet under knees (knee ≤80%
 rating with splayed push-up).
 
 ## Verify (first-article print, before batching)
+
+> **FIRST-ARTICLE RESULTS — 2026-08-10 (right leg, parts printed 08-02/08-06).**
+> Recorded here because this list was written for exactly this run and read as
+> untested until now.
+>
+> | # | check | result |
+> |---|---|---|
+> | 5 | **Yoke gap** 0.2-0.6 mm — *the one that can send the CAD back* | ✅ **PASS** — fits well |
+> | 1 | **Servo pocket** drop-in, no rock about Z | ✅ **PASS** — seats, ribs visible |
+>
+> ⚠️ **"Slides in easily, extra room at the sides" is the DESIGNED feel, not a
+> defect** — and it reads like one, which is why it is written down. The ribs are
+> ramped at the mouth (`ANTIROT_MOUTH_PROUD` 0.02) and only reach full
+> `ANTIROT_PROUD` 0.35 below z 10.5. Free drop ~1.7 mm → easy for 2.5 mm → light
+> thumb press. Ribs present + seats + no rock = pass.
+>
+> 🔑 The rib check was the one that mattered and could not have been caught by
+> feel: they are a RETENTION feature. Without them the joint torque reacts
+> through 4 M2 **self-tap screws in the servo's own plastic columns** →
+> back-out/wallow at ~1e5 cyc/hr (`servo_pocket_analysis.py`; no static SF
+> captures it). With them the walls take it, SF 573, screws axial-only.
+>
+> ⬜ **Still to record:** does the RIB crush or the servo CASE score after a few
+> insertions? The wall-bearing analysis assumes the rib profile survives.
+> ⛔ **Items 2/3 (M3 through the horn BCD) are BLOCKED** until `knee_arm` ×1 and
+> `shoulder_plate` ×2 (printed 08-02, pre-#263) are drilled Ø2.9 → 3.4.
+
 1. Pocket fit (CLR_POCKET 0.45/side) — **this is NOT a free drop all the way
    down, and a print that needs a thumb press is not a failed print** (#167).
    The anti-rotation ribs stand `ANTIROT_PROUD 0.35` into a 0.45 pocket, so
