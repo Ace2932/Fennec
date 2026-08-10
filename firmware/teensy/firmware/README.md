@@ -98,6 +98,27 @@ Group by purpose. All `std_msgs/Int32` counters are monotonic from boot unless n
 | Pub | `/safety_state` | `Int32` | edge-change | latched FSM: 0=NORMAL, 1=ESTOP_LATCHED, 2=BATTERY_LOW_LATCHED, 3=FAULT_OTHER |
 | Sub | `/safety_clear` | `Bool` | event | `data=true` requests latch clear; FSM refuses while underlying signals still asserted |
 
+### Protection tables pushed from the host (added to this contract 2026-08-10)
+
+The host owns the numbers; the Teensy enforces them. Each table has a matching
+`*_rx` counter above so you can prove a pushed table actually landed rather than
+assuming it.
+
+⚠️ **QoS is load-bearing here, and it is deliberately NOT latched.** The intuitive
+design is a TRANSIENT_LOCAL publisher so a rebooting Teensy picks up the tables on
+connect — but micro-ROS TRANSIENT_LOCAL support is patchy, so
+`nova_ops/safety_envelope/tables_node.py` instead uses **RELIABLE + VOLATILE**
+(matching `rclc_subscription_init_default` exactly) and **re-publishes every 5 s**
+(`republish_period_s`). Do not "improve" this to a latched publisher without
+testing a Teensy reboot: the failure mode is silent, and the firmware would run on
+its built-in defaults instead of the calibrated tables.
+
+| Direction | Topic | Type | Rate | Notes |
+|-----------|-------|------|------|-------|
+| Sub | `/joint_limits` | `Float32MultiArray` | re-published every 5 s | per-joint min/max position table. Ack: `/joint_limits_rx` |
+| Sub | `/hfe_envelope` | `Float32MultiArray` | re-published every 5 s | posture-aware hfe envelope (a scalar per-joint clamp cannot express a limit that depends on the other two joints). Ack: `/hfe_envelope_rx`; clamps counted on `/hfe_envelope_clamps` |
+| Sub | `/limp_pose` | `Float32MultiArray` | re-published every 5 s | the pose the firmware drives to when it limps. Ack: `/limp_pose_rx` |
+
 ### Power telemetry
 | Direction | Topic | Type | Rate | Notes |
 |-----------|-------|------|------|-------|
