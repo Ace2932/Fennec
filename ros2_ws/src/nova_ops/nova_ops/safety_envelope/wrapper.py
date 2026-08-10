@@ -24,8 +24,17 @@ Checks (per spec):
               INCREASE load; allow ones that reduce it.
               -> reject (don't publish that joint's new value), count
 
-  temperature ⏳ gated on firmware REG_PRESENT_TEMPERATURE work landing;
-              not implemented yet.
+  temperature ⏳ NOT implemented here — but the GATING CLAIM was stale, and
+              the difference matters. This used to read "gated on firmware
+              REG_PRESENT_TEMPERATURE work landing". That work HAS landed:
+              feetech_protocol.h:52 defines REG_PRESENT_TEMPERATURE (0x3F),
+              and main.cpp reads it per joint and PUBLISHES /servo_temperature
+              (12 floats, 5 Hz, main.cpp:1494). The data is on a topic; what is
+              missing is only this wrapper's use of it.
+              NOTE the firmware already guards itself locally — overtemp at
+              NOVA_OVERTEMP_C 70 °C trips limp (main.cpp:333), ahead of the
+              servo's own ~80 °C cutoff. So this would be a SECOND layer, not
+              the only one, which is why nothing is on fire without it.
 
 Usage in gait controller:
 
