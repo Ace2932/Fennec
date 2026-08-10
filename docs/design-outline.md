@@ -126,7 +126,7 @@ head.scad + the case cradle.)
 | 2 | tibia R+L, 4× knee_arm, 8× strap | supports under tibia blades |
 | 3 | shoulder ×2 + 4× outer horn plates | plates seat-face-down |
 | 4 | riser bay | largest part 126.7×110×42.9 (8× Jetson spacer RETIRED — Jetson now rides the official-case cradle) |
-| 5 | battery pocket, head + neck_bracket + l2_adapter + ears, control_pod + oled_mount, jetson_case_mount + clamp_bars | (L2 mast + D456 head + tray hood RETIRED 2026-07-07 → geometry folded into head.scad + the case cradle; jetson_cowl RETIRED 2026-07-10 → right-angle plug adapters, backlog #41) |
+| 5 | battery pocket, head + neck_bracket + l2_adapter + ears, control_pod + oled_tray (oled_mount deleted 2026-08-10, #35), jetson_case_mount + clamp_bars | (L2 mast + D456 head + tray hood RETIRED 2026-07-07 → geometry folded into head.scad + the case cradle; jetson_cowl RETIRED 2026-07-10 → right-angle plug adapters, backlog #41) |
 PA6-CF dried + annealed, 0.2mm, ≥4 walls, ≥40% infill (doctrine).
 
 ## Service paths (design requirement: reach anything without teardown)

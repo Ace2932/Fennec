@@ -63,7 +63,7 @@ point inside the designed part = the part cuts its counterpart. Cases:
      is OPEN, not solid, all along it — the actual proof the modeled bores
      land where the bolts go, not just that a hole exists somewhere.
  12. CR-7 (was #39): the newest chassis parts, never gated before now —
-     jetson_clamp_bar (+y/-y mirror), l2_adapter, control_pod, oled_mount.
+     jetson_clamp_bar (+y/-y mirror), l2_adapter, control_pod.
      (jetson_cowl was gated here too until #41 retired it 2026-07-10 —
      superseded by right-angle plug adapters; see jetson_cowl.scad banner.)
      jetson_clamp_bar vs jetson_case_ref.stl is checked via a
@@ -161,7 +161,6 @@ CASE_FRONT_HX, CASE_REAR_HX = 42.8, -56.5          # case corner-column x centre
 POD_BOSS_X = -66.5                 # riser rear-wall pad <-> pod column interface
 POD_HY, POD_Z0, POD_Z1 = 14.0, 58.0, 69.0
 L2A_SEAT_Z = 128.0                  # crown top = l2_adapter bottom seat
-OLED_SEAT_Z = 95.0                  # control_pod deck top = oled_mount foot seat
 #: minimum leg-to-oled_tray clearance (#35). 5mm, not a hair over whatever the
 #: sweep happens to measure: the sweep is a GRID, so the true worst pose falls
 #: between samples, and the servo horn backlash the trot work characterises is
@@ -346,19 +345,6 @@ def l2a_seat_mask(p):
     near_xy = (p[:, 0] > 103.4) & (p[:, 0] < 146.6) & (np.abs(p[:, 1]) < 24.6)
     return near_z & near_xy
 
-
-def oled_seat_mask(p):
-    """Designed oled_mount foot <-> control_pod deck-top seat (z=OLED_SEAT_Z):
-    the foot's flat bottom face only, x-99..-69 y22..27 (oled_mount.scad's
-    foot `translate([-99, 22, 95]) cube([30, 5, 3])`) -- the vertical
-    display panel (x-99..-96, y26..53, z98..124) sits well above this
-    z-band and shares no seat contact, so it needs no exclusion. AUD-6
-    (2026-07-10): tightened from a z-band-only mask (no x/y bound) to the
-    real foot footprint."""
-    near_z = np.abs(p[:, 2] - OLED_SEAT_Z) < 0.6
-    near_xy = (p[:, 0] > -99.6) & (p[:, 0] < -68.4) & \
-              (p[:, 1] > 21.4) & (p[:, 1] < 27.6)
-    return near_z & near_xy
 
 
 # ---- leg assembly point cloud (leg_v6 gate composition, coax frame) --------
@@ -670,8 +656,6 @@ FLOOR_BORES = [
     ('head.stl',          (83, -10, 131),   (0, 0, -1), 4.2, 4.0, 'ear-pad'),
     ('l2_adapter.stl',    (114,  9, 128),   (0, 0,  1), 4.2, 4.0, 'crown-mount'),
     ('l2_adapter.stl',    (114, -9, 128),   (0, 0,  1), 4.2, 4.0, 'crown-mount'),
-    ('control_pod.stl',   (-96, 23,  95),   (0, 0, -1), 4.0, 3.0, 'oled M2'),
-    ('control_pod.stl',   (-71, 23,  95),   (0, 0, -1), 4.0, 3.0, 'oled M2'),
     ('battery_pocket.stl',(-35, 27.5, -0.2),(0, 0, -1), 4.2, 4.0, 'pad'),
     ('battery_pocket.stl',(40,  27.5, -0.2),(0, 0, -1), 4.2, 4.0, 'pad'),
     # --- leg parts (first-article, printing) ---
@@ -987,7 +971,6 @@ def main():
     clamp_bar_L = clamp_bar_R.copy(); clamp_bar_L.apply_transform(MYb)
     l2_adapter = trimesh.load('l2_adapter.stl')
     pod = trimesh.load('control_pod.stl')
-    oled = trimesh.load('oled_mount.stl')
     # jetson_case_ref.stl: same placement transform as place_case.py /
     # preview_assembly.py (world x-6.85 ctr, y0 ctr, bottom on the deck 71.9).
     # NOT watertight (see case_surface_clash docstring) -- keep separate from
@@ -1588,7 +1571,7 @@ def main():
                         hits, pb_mesh, noise_mm=0.05)
 
     # ---- 12. NEW chassis parts (CR-7, was #39): jetson_clamp_bar (+y/-y),
-    # l2_adapter, control_pod, oled_mount. These have had real
+    # l2_adapter, control_pod. These have had real
     # STLs since build_all.sh grew them (2026-07-08) but were never added to
     # this gate -- the +y clamp-bar vs jetson_case_ref graze (~0.2mm probe,
     # 4/13000 pts) went uncaught as a result. Settled below.
@@ -1646,15 +1629,6 @@ def main():
     bad |= report('control pod vs rear shoulders', hits)
     hits = podp[box.contains(podp)]
     bad |= report('control pod vs mezzanine stack envelope', hits)
-
-    # -- oled_mount vs control_pod (deck seat excluded) + riser --
-    olp = sample(oled, 5000, 1200, seed=7)
-    olp_f = olp[~oled_seat_mask(olp)]
-    hits = olp_f[pod.contains(olp_f)]
-    bad |= report_depth('oled mount vs control pod (deck seat excluded)', hits,
-                        pod, noise_mm=NOISE_PART_MM)
-    hits = olp[riser.contains(olp)]
-    bad |= report_depth('oled mount vs riser', hits, riser, noise_mm=NOISE_PART_MM)
 
     # -- case_slot_grommet (TPU -Y CASE_SLOT edge liner, #41 follow-up) vs the
     # REAL neighboring hardware it has to clear: the cradle uprights + -y tie

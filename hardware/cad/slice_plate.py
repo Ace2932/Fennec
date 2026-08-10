@@ -493,7 +493,9 @@ PARTS = {
 #: checks and never sent to a bed.
 #:
 #: CORRECTED 2026-08-02 after review. The first version of this set also held
-#: `oled_mount`, `spacer`, `trunk`, `head_ear` and `head_ear_L` — five parts
+#: `oled_mount` (DELETED 2026-08-10, #35 — the OLED moved to `oled_tray`,
+#: flat on the rear shoulder deck), `spacer`, `trunk`, `head_ear` and
+#: `head_ear_L` — five parts
 #: that ARE printed (oled_mount.scad: "PRINT: PETG/PA6-CF, foot-down, ~5 g";
 #: spacer.scad: "4 needed + spares (print 8)"). They were in the exclusion list
 #: for one reason: it made `--list`'s coverage line read "covers every STL".
@@ -510,30 +512,6 @@ NOT_PRINTED = {
 #: reported by `--list`, so the set stays a visible to-do rather than a silent
 #: omission. Each value says exactly what is missing and where it would go.
 UNRESOLVED = {
-    "oled_mount": (
-        "chassis/oled_mount.stl",
-        "NARROWED 2026-08-10. The board-to-bracket joint is no longer the "
-        "blocker: #337 cut the 4 mount holes from the CALIPERED module (pitch "
-        "22.8 x 26.1, window 23.3 x 15.8 placed off the measured borders), so "
-        "the reason this entry carried since 2026-07-28 is dead. What is still "
-        "missing is what its own PRINT line says — 'OPEN ITEM (#184)': "
-        "material ('PETG/PA6-CF' is two materials) and orientation "
-        "('foot-down' names a feature, not an axis). "
-        "AND A NEW ONE, found 2026-08-10 while deriving oled_tray from this "
-        "file's numbers: BOSS_H = 3.4 is commented 'calipered glass-front -> "
-        "PCB-back. Sets the standoff.' -- conflating the board's THICKNESS with "
-        "its STANDOFF. A O5.0 boss cannot enter a ~O2.2 M2 clearance hole, so "
-        "the board seats ON THE BOSS TIPS; this file's claim that the screws "
-        "'pull the board flat against the window' is false, and the display sits "
-        "BOSS_H + PANEL_T = 6.4mm behind the aperture. Measured on the derived "
-        "part: 10150 of 200000 board surface points land inside the solid when "
-        "placed flush. oled_tray fixed it by DELETING the bosses and thickening "
-        "the plate to 5.5 (4.0 insert + 1.5 floor); THIS file is unfixed. "
-        "ALSO NOW OPTIONAL: `oled_tray` mounts the same display flat on the "
-        "rear shoulder deck instead, which removes this part's cantilever-on-"
-        "a-cantilever load path, its 1.36 mm gap to an UNCALIPERED E-stop cap, "
-        "and its Ø5 driver access. Decide which one ships before resolving "
-        "#184 — resolving it for a part that gets deleted is wasted work."),
     "spacer": (
         "chassis/spacer.stl",
         "no material recorded anywhere — the .scad header specifies M3x14, "

@@ -5,7 +5,7 @@
 sketch it writes to does not exist (firmware/arduino-nano/ contains a
 README and no source). Running it writes bytes at /dev/ttyUSB0 that
 nothing reads. The display itself is wanted but has no bracket yet —
-oled_mount's board mount holes are absent pending three caliper numbers
+oled_mount is DELETED (#35, 2026-08-10); the display now mounts on oled_tray
 (#35, open).
 
 Bridges Jetson ROS 2 topics to the Arduino Nano (USB-serial) which

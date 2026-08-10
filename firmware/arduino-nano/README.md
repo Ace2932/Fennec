@@ -64,7 +64,9 @@ can detect a dead Nano.
 
 ## Sketch (TODO)
 
-- ⚠️ **The OLED is wanted; it currently has nowhere to bolt.** `oled_mount.scad`
+- **The OLED has a mount: `oled_tray.scad`** (#35, 2026-08-10) — flat on the rear
+  shoulder deck, looking up. It REPLACED `oled_mount.scad`, which is deleted.
+  Superseded note follows: `oled_mount.scad`
   exists and bolts to the `control_pod` deck, but its 4 board mount holes were
   removed 2026-07-28 (**#35, open**) — the vendor drawing never gave the hole
   pitch, and the guessed pitch put 2 of 4 holes inside the display window. Three

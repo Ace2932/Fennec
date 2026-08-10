@@ -29,7 +29,7 @@ Both checks reuse `slice_plate.scad_material()` and `check_material_agreement()`
 directly — the parsing rules (including the `use <...>` mirror fallback) live
 in exactly one place, not copied here to drift out of sync with it.
 
-WHAT IT DOES NOT CHECK. `UNRESOLVED` parts (trunk, spacer, oled_mount,
+WHAT IT DOES NOT CHECK. `UNRESOLVED` parts (trunk, spacer,
 head_ear, head_ear_L) are deliberately out of scope: they are refused by
 slice_plate.py itself, for reasons recorded there, and are not guessed at here
 either — see each file's own "OPEN ITEM (#184)" header note instead.

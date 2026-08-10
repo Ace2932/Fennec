@@ -10,8 +10,9 @@
 //   faces means one set becomes a large elevated plane on four point contacts,
 //   whichever way it goes on the bed.
 //
-// WHY THIS EXISTS. `oled_mount` bolts the display to control_pod's deck +y
-// EDGE, and measured, that is a cantilever on a cantilever:
+// WHY THIS EXISTS. `oled_mount` (DELETED 2026-08-10, this part replaced it)
+// bolted the display to control_pod's deck +y EDGE, and measured, that was a
+// cantilever on a cantilever:
 //   * the panel occupies y26..57.3 while the pod deck ends at y=26 -> 100% of
 //     the plate hangs past the edge;
 //   * control_pod (x-103..-63.4) itself overhangs riser_bay (ends x-66.5).
@@ -23,7 +24,7 @@
 // This tray RETIRES that caliper dependency rather than inheriting it. The cap
 // is centred at x=-87 (control_pod.scad ES) and this plate starts at x=-113, so
 // the rim would have to reach Ø52 to touch it: Ø40 -> 6.00mm gap, Ø42.7 -> 4.65,
-// Ø45 -> 3.50. oled_mount fails above Ø42.7; this part does not care.
+// Ø45 -> 3.50. oled_mount failed above Ø42.7; this part does not care.
 //
 // WHY THE TOP DECK AND NOT THE WEB BETWEEN THE LEGS. There IS a wall between
 // the rear hips (X≈-112.5, Y ±40, Z 14..70) and it is the obvious place. The
@@ -72,7 +73,10 @@
 // bore now lives in the plate, the underside is FLAT, and the board bears on
 // the window rim (2.0 mm of border on each long edge -- a picture-frame contact
 // on the glass surround, which is how every panel bezel does it).
-// oled_mount still carries the original bug; it is NOT fixed by this file.
+// oled_mount carried the same bug and was DELETED rather than fixed (#35):
+// there is one display, and this part is the better mount on every measured
+// criterion. control_pod's 2x M2 heat-sets that served it went with it --
+// which also retired a <=0.2mm wall that check_hole_breakout had flagged.
 
 // FASTENERS — derived, not guessed. This project has already paid for a
 // "MEASURED" fastener spec that bottomed out (HFE retention M3x22 into a 16.8mm
@@ -158,7 +162,7 @@ module oled_tray() {
         // M3 clearance straight through leg AND bezel: the screw drops in from
         // above, head lands on the bezel top, and threads into the deck's
         // existing insert. Keeps all four fasteners reachable from outside --
-        // the failure oled_mount has, where the panel wall leaves Ø5.
+        // the failure oled_mount had, where the panel wall left Ø5.
         for (b = BOLT)
             translate([b[0], b[1], DECK_Z - EPS])
                 cylinder(d = M3_CLEAR, h = LEG_H + PLATE_T + 2*EPS);

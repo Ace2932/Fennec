@@ -99,7 +99,6 @@ MESHES = {
     "jmount": f"{CH}/jetson_case_mount.stl",
     "jcase": f"{CH}/jetson_case_ref.stl",
     "jbar": f"{CH}/jetson_clamp_bar.stl",
-    "oled": f"{CH}/oled_mount.stl",
     "oledtray": f"{CH}/oled_tray.stl",   # authored directly in trunk coords (#35)
 }
 geo = {}
@@ -206,10 +205,9 @@ STATIC = [
     {"mesh": "pod", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [-70, 0, 55]},
     {"mesh": "jmount", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [0, 0, -15]},
     {"mesh": "jcase", "M": mat_list(CASE_M), "grp": "elec", "expl": [0, 0, 35]},
-    {"mesh": "oled", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [-70, 30, 60]},
     # oled_tray: identity — the .scad is written in trunk coords so the four M3
-    # legs land straight on the rear shoulder's NECK_HS bores. The ALTERNATIVE
-    # to `oled`, not an addition; both are shown so the choice is visible.
+    # legs land straight on the rear shoulder's NECK_HS bores. It REPLACED
+    # oled_mount (#35, 2026-08-10); that part no longer exists.
     {"mesh": "oledtray", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [0, 0, 70]},
     {"mesh": "jbar", "M": mat_list(np.eye(4)), "grp": "elec", "expl": [0, 0, 55]},
     {"mesh": "jbar", "M": mat_list(MY_BAR), "grp": "elec", "expl": [0, 0, 55]},
