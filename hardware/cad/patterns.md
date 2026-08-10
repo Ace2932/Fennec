@@ -103,7 +103,7 @@ MATERIALS = {
 
 **PA6-CF specifics (default for structural parts):**
 
-- Pre-print drier: 24 h minimum at 70 °C in SpacePi X4. Keep dryer running
+- Pre-print drier: **80 °C / 10 h+** in SpacePi X4 — see `docs/checklists/print-batch.md` §3, the SINGLE SOURCE for this number (reconciled 2026-08-10; this line said 24 h @ 70 °C). It is traceable: the 151 MPa the leg SFs use was measured on specimens dried at 80 °C. Keep dryer running
   at 60-70 °C **during** the print with Bowden feed routed straight to the
   P1S input. Do NOT load PA6-CF into the AMS — chamber is unheated, spool
   rewets in hours.
