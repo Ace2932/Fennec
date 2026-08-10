@@ -116,13 +116,13 @@ seat is a cone.
 | M3×8 button ×100 | `B08H2HTTRT` | wheel → HFE/KFE (32) — flush in #263's Ø6.0 c'bore |
 | M3×14 button ×100 | `B08H2HQ3VZ` | wheel → HAA (16) — owned kit has no 14 |
 | M3×16 socket cap ×100 | `B089MDDJMZ` | HFE block retention (8) — ⚠️ M3×20 bottoms |
-| M3×20 socket cap | `oled_tray` → rear shoulder deck (4) | ⬜ **ORDER** — new 2026-08-10 (#35). Tray is 16.0 mm thick at the bolt (LEG_H 10.5 + PLATE_T 5.5) into the M3×3.8 short insert on line 259 — which is really **4.0 long** (ruthex RX-M3Sx4.0) in a 4.2 pocket. M3×20 protrudes exactly 20−16.0 = **4.0**, i.e. the FULL insert length, tip landing 0.2 above the pocket floor. M3×16 does not reach; M3×22 bottoms. ⚠️ The "M3×20 bottoms" warning on the line above is about the **HFE block**, a different joint — it does not apply here. A Ø6.0×4.0 counterbore would let the M3×16 above serve instead, but it puts ~113 mm² of bridged ceiling into a part that currently measures 0.0 mm² unsupported |
+| M3×20 socket cap ×25 | ⬜ *source it* | `oled_tray` → rear shoulder deck (4) — new 2026-08-10 (#35). Tray is 16.0 mm thick at the bolt (LEG_H 10.5 + PLATE_T 5.5) into the M3×3.8 short insert on line 259 — which is really **4.0 long** (ruthex RX-M3Sx4.0) in a 4.2 pocket. M3×20 protrudes exactly 20−16.0 = **4.0**, i.e. the FULL insert length, tip landing 0.2 above the pocket floor. M3×16 does not reach; M3×22 bottoms. ⚠️ The "M3×20 bottoms" warning on the line above is about the **HFE block**, a different joint — it does not apply here. A Ø6.0×4.0 counterbore would let the M3×16 above serve instead, but it puts ~113 mm² of bridged ceiling into a part that currently measures 0.0 mm² unsupported
 | M3×10 CSK ×100 | `B0CQ4Z3DTX` | L2→adapter (4) + battery pocket (6) |
 | M3×14 CSK ×100 | `B0CQ4YH87R` | shoulder flange feet → trunk floor (4) |
 | Nylon M3 kit 330 pc | `B0DKND2824` | breakaway fuses — ×12 (10) and ×10 (10) |
 | M2 CSK self-tap kit ×2 | `B09DB5SMCZ` | 60× M2×8 + 60× M2×12 body-mount |
-| uxcell M3 OD 4.0 × **L 6.0** ×50 | **`B07R9SP532`** | slim insert, HFE block (8) — ✅ **ORDERED 2026-08-03, ARRIVES FRI 2026-08-07.** The right part, full 75.4 mm² / SF 2.4–3.4. ⚠️ **Check the thread on arrival** — OD 4.0 is the standard *M2.5* OD, so a substitution at this OD will not take an M3×16 |
-| ~~uxcell M3 OD 4.0 × L 4.0 ×50~~ | `B07LBQS9W3` | ⚠️ 2 mm short → 50.3 mm², SF 1.6–2.3. Fallback only — but **the right one to burn on the pull test**: it is in hand now, and if the SHORT insert holds 13.5 kg the 6.0 (1.5× the area) is comfortable |
+| uxcell M3 OD 4.0 × **L 6.0** ×50 | **`B07R9SP532`** | slim insert, HFE block (8) — ✅ **RECEIVED 2026-08-08** (ordered 08-03; the table said "arrives Fri 08-07", it landed Sat 08-08). The right part, full 75.4 mm² / SF 2.4–3.4. ⚠️ **Check the thread on arrival** — OD 4.0 is the standard *M2.5* OD, so a substitution at this OD will not take an M3×16 |
+| uxcell M3 OD 4.0 × L 4.0 ×50 | `B07LBQS9W3` | ✅ **RECEIVED 2026-08-04.** No longer struck through — it has a real job. 2 mm short → 50.3 mm², SF 1.6–2.3, so **not** the install part, but it IS **the one to burn on the pull test**: if the SHORT insert holds 13.5 kg the L6.0 (1.5× the area) is comfortable. Sacrificial article = the one you don't need |
 
 ⚠️ **Two gates before any of it enters a servo.**
 
@@ -254,7 +254,7 @@ actually consumes.
 | Part | Qty | For | Status |
 |---|---|---|---|
 | **M3 heat-set, 4.6 mm OD × 5.7** (Ruthex or equivalent) | **100** | femur→knee_arm 16 · shoulder→plate 16 · shoulder→trunk 16 · chassis 12 = ~60 + spares. **`femur_?.stl` is already printed with the Ø4.0 bore this insert wants** | ✅ **ORDERED 2026-08-02** — ruthex `B08BCRZZS3`, 100 pc |
-| **M3 heat-set, 4.0 mm OD × 6.0** (slim) | **25** | **HFE block retention only** (8 needed). A 4.6 insert cannot travel the 4.4 mm mortise slot to reach its bore — see `fastener-schedule.md`. ✅ **THE L6.0 PART EXISTS — found 2026-08-03: uxcell `B07R9SP532`, "M3 x 6mm(L) x 4mm(OD)", M3×0.5, 50 pcs.** The earlier "no L6.0 exists to buy" was a search failure, not a fact. Full 6.0 gives **75.4 mm², SF 2.4–3.4** — the number the design always assumed. | ⬜ **ORDER `B07R9SP532`.** The already-ordered `B07LBQS9W3` is the same OD but only **L 4.0** → 50.3 mm², SF 1.6–2.3: a usable fallback, not the right part. ⚠️ 4.0 OD is NON-STANDARD for M3 and IS the standard M2.5 OD — **check the thread on arrival.** |
+| **M3 heat-set, 4.0 mm OD × 6.0** (slim) | **25** | **HFE block retention only** (8 needed). A 4.6 insert cannot travel the 4.4 mm mortise slot to reach its bore — see `fastener-schedule.md`. ✅ **THE L6.0 PART EXISTS — found 2026-08-03: uxcell `B07R9SP532`, "M3 x 6mm(L) x 4mm(OD)", M3×0.5, 50 pcs.** The earlier "no L6.0 exists to buy" was a search failure, not a fact. Full 6.0 gives **75.4 mm², SF 2.4–3.4** — the number the design always assumed. | ✅ **RECEIVED 2026-08-08 (`B07R9SP532`).** ⬜ **THREAD-CHECK BEFORE USE — see below.** `B07LBQS9W3` (received 08-04) is the same OD but only **L 4.0** → 50.3 mm², SF 1.6–2.3: a usable fallback, not the right part. ⚠️ 4.0 OD is NON-STANDARD for M3 and IS the standard M2.5 OD — **check the thread on arrival.** |
 | **M3×8 SHCS** | **25** | knee_arm → femur shelf (16 needed). ⚠️ NOT M3×10 — that bottoms in the 6.2 mm bore | ✅ **COVERED** — owned kit has 35× M3×8 socket head; the 32 *wheel* screws come from the ordered M3×8 **button** pack `B08H2HTTRT` |
 | **M3×6 SHCS** | **25** | shoulder_plate → deck (16 needed). ⚠️ NOT M3×8 — bottoms by 0.42 mm | ✅ **COVERED** — owned kit has 35× M3×6 socket head (deck job needs 16); horn positions have no counterbore so socket head serves |
 | **M3×16 SHCS** | **20** | HFE block retention (8 needed). Engages **5.2 mm of the 6.0 insert = 1.73×D**; M3×20 **bottoms out** in the blind pocket | ✅ **ORDERED 2026-08-03** — iexcell `B089MDDJMZ` ×100, socket cap. ⚠️ NOT the flat-head M3×16 (`B0CR6FZBYB`) — the block's seat is a cylindrical Ø6.0 c'bore and needs a flat-bottomed head |
@@ -273,6 +273,33 @@ roof** and will split it. Do not try.
 short in *length*; ruthex's own comparison table gives the recommended hole for **every M3
 in their range as 4.0 mm**, i.e. OD 4.6. Same OD as the standard, so it has the identical
 delivery problem — a 4.6 cannot travel the 4.4 mm mortise slot.
+
+🔴 **BOTH SLIM INSERTS ARE IN HAND (2026-08-04 L4.0, 2026-08-08 L6.0) — AND NEITHER IS CLEARED FOR USE UNTIL THE THREAD IS CHECKED.**
+
+**Why this specific part and not the others.** `check_fit.py:1155` carries the standard
+insert ODs: `{"M2": 3.5, "M2.5": 4.0, "M3": 4.6, "M4": 6.0}`. **OD 4.0 IS the standard M2.5
+OD** — M3's is 4.6. These are deliberately non-standard slim inserts, chosen because a 4.6
+cannot travel the block's 4.4 mm mortise slot. The consequence is that a mislabelled or
+substituted part at this OD is *most likely M2.5-threaded*, and it looks completely correct
+in the bag. This project has already paid for exactly this confusion once (the Ø2.5 =
+M3-tap-drill misread, $37 of M2.5 screws).
+
+- [ ] **Run an M3 screw into one of EACH by hand before pressing any.** Two minutes; it is
+      the only check that distinguishes them.
+
+🔴 **DO NOT MIX THESE WITH THE Ø4.0 BORES ELSEWHERE.** `leg_v6/README.md` §4: *"the slim one
+is NOT a substitute in a Ø4.0 bore, where it would have zero interference."* Every other
+insert site — femur→knee_arm, shoulder→plate, shoulder→trunk, neck bracket, and `oled_tray` —
+takes the **4.6 OD × 5.7** ruthex (`B08BCRZZS3`). A 4.0 OD insert dropped into a Ø4.0 bore
+has nothing to melt into and pulls straight back out. With ~100 slim inserts now on the
+bench and Ø4.0 bores all over the leg, this is a live mixing risk, not a theoretical one.
+
+⚠️ **THE INSERTS ARRIVING DOES NOT UNBLOCK THE HFE BLOCK — the screws are still missing.**
+Retention is **M3×16 SHCS ×2 per block** (`fastener-schedule.md`:61). The measured
+head-seat-to-pocket-bottom span is **16.8 mm** (`check_fit.py fastener_span_checks()`, the
+gate that caught the M3×22-bottoms-out error) — so M3×16 fits, **M3×20 bottoms**. Owned M3 is
+**6 · 8 · 10 · 12 only** (§Owned M3 inventory), and M3×16 is listed there as one of the four
+real gaps. `B089MDDJMZ` is identified but **not yet ordered**.
 
 ✅ **SLIM INSERT SOURCED 2026-08-02 — uxcell `B07LBQS9W3`, $6.69/50.** Its spec line is
 unambiguous, which matters here: *"Thread Size: M3; Pitch: 0.5mm; **Length: 4mm**; **Outer
