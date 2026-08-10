@@ -143,7 +143,7 @@ invented names. `test_firmware_topic_contract.py` now fails if a publisher is mi
 | Pub | `/hfe_envelope_rx` | `Int32` | 1 Hz | same ack for the posture-aware hfe envelope |
 | Pub | `/limp_pose_rx` | `Int32` | 1 Hz | same ack for the limp-pose table |
 | Pub | `/hfe_envelope_clamps` | `Int32` | 1 Hz | running count of commands the hfe envelope actually clamped — the "is this guard firing" signal |
-| Pub | `/imu` | `sensor_msgs/Imu` | 1 Hz, gated on `imu_ok` | ICM-42688-P. `orientation` carries the `TiltFilter` quaternion (yaw deliberately 0 — proj_grav is yaw-invariant); `angular_velocity` rad/s; `linear_acceleration` m/s². ⚠️ **1 Hz is the heartbeat block's rate** (`main.cpp:1443` sits inside the `HEARTBEAT_PERIOD_MS` block). `policy_node` consumes gyro + projected gravity as obs dims 0..5 at control rate, so this must be raised before the learned path runs on hardware. Untested against a real part — the IMU is not owned yet |
+| Pub | `/imu` | `sensor_msgs/Imu` | **100 Hz**, gated on `imu_ok` | ICM-42688-P. `orientation` carries the `TiltFilter` quaternion (yaw deliberately 0 — proj_grav is yaw-invariant); `angular_velocity` rad/s; `linear_acceleration` m/s². **Rate FIXED 2026-08-10.** It published at 1 Hz because the block sat inside `HEARTBEAT_PERIOD_MS`, while `policy_node` consumes gyro + projected gravity as obs dims 0..5 at `control_hz` 50 — the policy would have seen the same attitude for 50 consecutive ticks. Now its own `IMU_PERIOD_MS` block at 100 Hz (2× control rate). The chip is read at 200 Hz regardless (`poll_imu`, every tick), so every published sample is fresh. Still untested against a real part — the IMU is not owned yet |
 
 ## Stubs to fill in (status 2026-05-20)
 

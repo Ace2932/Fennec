@@ -565,11 +565,19 @@ elapsedMillis heartbeat_ms;
 elapsedMillis stats_ms;
 elapsedMillis power_rails_ms;
 elapsedMillis servo_health_ms;
+elapsedMillis imu_ms;
 const uint32_t TICK_PERIOD_US = 1000000UL / NOVA_LOOP_HZ;
 const uint32_t HEARTBEAT_PERIOD_MS = 1000;
 const uint32_t STATS_PERIOD_MS = 1000;
+const uint32_t IMU_PERIOD_MS = 10;             // 100 Hz — see note below
 const uint32_t POWER_RAILS_PERIOD_MS = 100;    // 10 Hz — matches Phase 1 spec
 const uint32_t SERVO_HEALTH_PERIOD_MS = 200;   // 5 Hz — voltage + temperature
+// 100 Hz. NOT a free choice: policy_node runs control_hz = 50 (policy_node.py:185)
+// and consumes gyro + projected gravity as observation dims 0..5, so the IMU must
+// publish at least at control rate; 2x gives margin for scheduling jitter without
+// the policy ever reusing a sample. poll_imu() already reads the chip and updates
+// the tilt filter every tick at NOVA_LOOP_HZ = 200, so every published sample here
+// is fresh -- this rate only controls how often that fresh state leaves the board.
 
 // IntervalTimer ISR drives the tick. Handler in loop() measures
 // ISR-fire → handler-entry latency = pure scheduling jitter (target: a
@@ -1435,27 +1443,6 @@ void loop() {
     RCSOFTCHECK(rcl_publish(&hfe_envelope_rx_pub, &hfe_envelope_rx_msg, NULL));
     limp_pose_rx_msg.data = (int32_t)limp_pose_rx_count;
     RCSOFTCHECK(rcl_publish(&limp_pose_rx_pub, &limp_pose_rx_msg, NULL));
-    // Only once the chip has actually answered. Publishing a default-constructed
-    // Imu would hand policy_node a PERFECTLY LEVEL attitude it cannot tell from
-    // a real one -- its /imu liveness gate would go green on a sensor that is
-    // not there. Silence is the honest signal; the gate then refuses, which is
-    // the documented behaviour with no driver (policy_node.py:152).
-    if (imu_ok) {
-      float q[4];
-      imu_filter.quaternion(q);
-      imu_msg.orientation.w = q[0];
-      imu_msg.orientation.x = q[1];
-      imu_msg.orientation.y = q[2];
-      imu_msg.orientation.z = q[3];
-      imu_msg.angular_velocity.x = imu_sample.gyro[0];
-      imu_msg.angular_velocity.y = imu_sample.gyro[1];
-      imu_msg.angular_velocity.z = imu_sample.gyro[2];
-      // m/s^2, as sensor_msgs/Imu specifies -- the driver works in g.
-      imu_msg.linear_acceleration.x = imu_sample.accel[0] * 9.80665;
-      imu_msg.linear_acceleration.y = imu_sample.accel[1] * 9.80665;
-      imu_msg.linear_acceleration.z = imu_sample.accel[2] * 9.80665;
-      RCSOFTCHECK(rcl_publish(&imu_pub, &imu_msg, NULL));
-    }
     hfe_envelope_clamps_msg.data = (int32_t)hfe_envelope.clamp_count();
     RCSOFTCHECK(rcl_publish(&hfe_envelope_clamps_pub, &hfe_envelope_clamps_msg, NULL));
     servo_present_msg.data = (int32_t)servo_present_mask;
@@ -1478,6 +1465,39 @@ void loop() {
     Serial.print("[nova-teensy] alive t=");
     Serial.println(millis());
 #endif
+  }
+
+  // IMU at IMU_PERIOD_MS. MOVED OUT OF THE 1 Hz HEARTBEAT BLOCK 2026-08-10: it
+  // had been sitting there since the driver landed, so /imu published at 1 Hz
+  // while policy_node consumes it at control_hz = 50 -- the policy would have
+  // seen the SAME attitude for 50 consecutive ticks and then a jump. The chip is
+  // read at 200 Hz regardless (poll_imu, every tick); only the publish was slow.
+  // Never caught because the part is not owned: imu_ok is false, so the publish
+  // never fires and no test or bench run could show the staleness.
+  //
+  // The imu_ok guard is deliberate and stays. Publishing a default-constructed
+  // Imu would hand policy_node a PERFECTLY LEVEL attitude it cannot tell from a
+  // real one -- its /imu liveness gate would go green on a sensor that is not
+  // there. Silence is the honest signal; the gate then refuses, which is the
+  // documented behaviour with no driver (policy_node.py:152).
+  if (imu_ms >= IMU_PERIOD_MS) {
+    imu_ms = 0;
+    if (imu_ok) {
+      float q[4];
+      imu_filter.quaternion(q);
+      imu_msg.orientation.w = q[0];
+      imu_msg.orientation.x = q[1];
+      imu_msg.orientation.y = q[2];
+      imu_msg.orientation.z = q[3];
+      imu_msg.angular_velocity.x = imu_sample.gyro[0];
+      imu_msg.angular_velocity.y = imu_sample.gyro[1];
+      imu_msg.angular_velocity.z = imu_sample.gyro[2];
+      // m/s^2, as sensor_msgs/Imu specifies -- the driver works in g.
+      imu_msg.linear_acceleration.x = imu_sample.accel[0] * 9.80665;
+      imu_msg.linear_acceleration.y = imu_sample.accel[1] * 9.80665;
+      imu_msg.linear_acceleration.z = imu_sample.accel[2] * 9.80665;
+      RCSOFTCHECK(rcl_publish(&imu_pub, &imu_msg, NULL));
+    }
   }
 
   if (servo_health_ms >= SERVO_HEALTH_PERIOD_MS) {
