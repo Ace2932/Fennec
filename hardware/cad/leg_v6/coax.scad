@@ -521,8 +521,22 @@ module coax_v6() {
         // the BCD circle). Restore horn_couple_neg on the parent -- same
         // transform as the cap; the cap cuts its own material, this cuts the
         // stub's, so the union clears all 4 bolt channels.
-        translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0])
+        translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0, -90, 0]) {
             horn_couple_neg();
+            // HEAD RELIEF (2026-08-11) -- horn_couple_neg() cuts only the SHANK
+            // channel (h = ARM_THK). The head sits on the far side, in the HAA
+            // pocket, and #67's fix never cut room for it. Three BCD positions
+            // happen to have open space behind; a=45 backs onto 2.2mm of body
+            // wall, so that screw physically will not seat -- BENCH-CONFIRMED
+            // 2026-08-11: three horn bolts go in, the top-left one does not.
+            // Cut at all four so the intent is explicit and a future geometry
+            // move cannot silently recreate it; three of them are no-ops today.
+            // ISO 7380 M3 button is O5.7 x 1.65 (fastener-schedule.md:102).
+            for (a = [45 : 90 : 315])
+                rotate([0, 0, a]) translate([HORN_BCD/2, 0,
+                                             YOKE_TOP_IN + ARM_THK - EPS])
+                    cylinder(d = 6.3, h = 2.2 + EPS);
+        }
         //
         // #226 option C: coax_hfe_bore() / coax_hfe_ear_channel() /
         // coax_hfe_fastener_neg() are GONE -- they existed only to make room
