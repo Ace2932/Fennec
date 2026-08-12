@@ -28,6 +28,42 @@ load analysis). Ranked within group. Status legend: **NOW** (this batch),
 | # | Item | Why | Status |
 |---|---|---|---|
 | 8 | via annular loosen · per-leg INA226 · U8 bypass | leg-level current = contact detection + stall protection for free | **GATED**: v7 respin |
+| 9 | **Per-cell LiPo monitoring — the pack-level LVC cannot see a single dying cell** | The v6 chain is entirely PACK-level: LM393 comparators trip `BATT_LOW` at 13.0 V (graceful, → Teensy pin 4 → `battery_shutdown` node) and `HARDCUT` at 12.4 V (opens Q1 IRLB3034PBF in the main path). **Three cells at 3.6 V and one at 2.6 V reads 13.4 V and trips neither.** The only per-cell coverage today is the FLY-RC balance buzzers (3.3 V/cell) — audible only, no cutoff, and useless when the robot is across the room or outdoors. Over-discharging one cell below ~2.5 V is the damage/fire case, and this pack lives in the belly pocket under the trunk (the reason `battery_pocket` is PA6-CF at all, #24/#15). | **NEXT** — see the design note below; cheap and does not need a v7 respin |
+
+### Backlog #9 design note — do NOT just bolt on a 4S BMS
+
+**A generic 4S protection board would make things worse, not better.** They cut
+hard at ~3.0 V/cell with no warning and no staging. Dropping one into the
+discharge path would yank the Jetson's rail instantly — corrupting the
+filesystem mid-write — which is precisely what the existing two-stage design
+exists to prevent (13.0 V graceful shutdown, THEN 12.4 V hardware cut ~30–60 s
+later). It would also add Rds(on) and a new failure point in the main path,
+where Q1 is currently 1.4 mΩ.
+
+**Fit it to the architecture that already works: sense per-cell, act through
+the EXISTING graceful path.**
+
+- The balance lead is already there and unused in flight — Ovonic ships
+  XT60 ↔ **JST-XH 5-pin** (`BOM.md:81`).
+- Four dividers off the balance taps to 4 Teensy ADC channels, measuring
+  CUMULATIVE nodes (C1, C1+C2, C1+C2+C3, pack) against pack ground, then
+  differencing in firmware for per-cell volts. ~8 resistors and 4 pins.
+- Publish `/cell_voltages` (Float32MultiArray ×4, alongside `/servo_voltage`
+  and `/servo_temperature` at 5 Hz) and add a min-cell trigger to
+  `ShutdownDecider` — so a sagging cell uses the SAME graceful path, with the
+  same dashcam flush and clean poweroff, rather than a new hard cut.
+- ⚠️ **Differencing amplifies divider error.** Two cumulative readings each
+  ±0.5 % on a ~16.8 V span give roughly ±60 mV on the differenced cell — about
+  1.5 %. Fine for a graceful warning threshold; NOT good enough to move the
+  hard cutoff onto. Use 0.1 % resistors, and leave `HARDCUT` pack-level.
+- If real precision is ever wanted, that is the point to spend a cell-monitor
+  IC (BQ76920 / LTC6803) — but only after the cheap version proves the trigger
+  is useful.
+
+**Ordering:** this is worth having before long unattended runs, but it is NOT
+ahead of bench-verifying the LVC that already exists —
+`power-budget.md:207-208` still has both trips as unchecked boxes. An untested
+13.0/12.4 chain is the bigger hole; per-cell is the next one after it.
 
 ## Software / system (system-audit opens)
 
