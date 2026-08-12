@@ -1833,6 +1833,10 @@ def engagement_checks():
 HFE_Y, HFE_Z = 11.6, -9.5  # hfe axis (coax.scad); FEMUR_MID = horn-face x
 FEMUR_MID = 33.8
 ARM_THK = 4.0              # horn couple channel length (leg_v6_common.scad)
+HORN_HEAD_H = 1.65         # ISO 7380 M3 button head height. The horn
+                           # positions have NO counterbore by design, so
+                           # the whole head projects into the HAA pocket
+                           # (docs/fastener-schedule.md:106).
 
 
 def horn_bolt_checks():
@@ -1848,20 +1852,94 @@ def horn_bolt_checks():
         for a in HORN_ANGLES:
             y = HFE_Y + HORN_BCD_R * np.sin(np.radians(a))
             z = HFE_Z + HORN_BCD_R * np.cos(np.radians(a))
-            # channel runs toward the stub from FEMUR_MID over the horn couple's
-            # own ARM_THK span; scan a MARGIN past both ends so a stub
-            # re-thickening (the #67 regression) can't hide just outside it.
-            base = np.array([sx * (FEMUR_MID + 0.5), y, z])
+            # BASE CORRECTED 2026-08-11 -- it was `FEMUR_MID + 0.5`, which is
+            # 17.75 mm OUTBOARD of the real channels and lands in the open yoke
+            # gap. coax.scad places the couple as
+            #     translate([FEMUR_MID, HFE_Y, HFE_Z]) rotate([0,-90,0])
+            #         horn_couple_neg()
+            # and horn_couple_neg() carries its OWN translate([0,0,YOKE_TOP_IN])
+            # (leg_v6_common.scad:344). rotate([0,-90,0]) maps local +Z to world
+            # -X, so that internal offset puts the features at
+            # x = FEMUR_MID - YOKE_TOP_IN. The gate never subtracted it, so it
+            # has been VACUOUS SINCE IT WAS WRITTEN (2026-07-12): measured at
+            # both the gate-era mesh and today's, the ring at its old base reads
+            # 0/84 solid -- pure air, all four bolts, every revision. It never
+            # caught #67 either; that stub was found by hand ("MEASURED, all 4
+            # BCD") and this gate was written in response.
+            base = np.array([sx * (FEMUR_MID - YOKE_TOP_IN + 0.5), y, z])
+            # Scan the CHANNEL, not 15 mm of whatever lies beyond it. The old
+            # MARGIN_MM=15 reached ~8 mm past the arm into the coax body, which
+            # conflates "the bolt cannot pass through the arm" with "there is
+            # structure somewhere behind the joint" -- different questions with
+            # different answers. 1.0 mm still catches a stub re-thickening at
+            # the mouth, which is the #67 case.
             blocked = _axis_scan(m, base, [-sx, 0, 0],
-                                 -0.5, ARM_THK + MARGIN_MM, r=HORN_BOLT_CLEAR / 2 - 0.1)
+                                 -0.5, ARM_THK + 1.0, r=HORN_BOLT_CLEAR / 2 - 0.1)
+            # SOLID-MATERIAL GUARD -- same idea and threshold as _bolt_clear()
+            # in the KFE gate, whose docstring already names this exact failure
+            # ("a real drilled hole through material, not empty air -- the
+            # false-CLEAR trap"). That sibling was hardened; this one was not,
+            # which is why the bad base survived a month of green runs.
+            ang = np.linspace(0, 2 * np.pi, 8, endpoint=False)
+            rr = HORN_BOLT_CLEAR / 2 + 1.2
+            xmid = base[0] - sx * ARM_THK / 2
+            ring = np.column_stack([np.full(8, xmid),
+                                    y + rr * np.cos(ang), z + rr * np.sin(ang)])
+            ring_solid = int(contains_chunked(m, ring).sum())
+            if ring_solid < 4:
+                bad = True
+                print(f'BLIND {part}: horn bolt a={a:3d} (y={y:+.1f},z={z:+.1f}) '
+                      f'scanned in EMPTY AIR -- ring solid {ring_solid}/8 at '
+                      f'x={xmid:.2f}. A "clear" verdict here asserts nothing. '
+                      f'Fix the base; do not silence this.')
+                continue
+            # Free run PAST the channel exit: the bolt tip and the horn disc need
+            # this, and it is a separate question from the channel being clear.
+            # Reported as a measurement because a=45 sits at 0.10 mm while the
+            # other three are open >=12 mm, and that asymmetry should be visible
+            # rather than either ignored or dressed up as "cannot assemble" --
+            # the joint HAS been bolted on the bench (2026-08-11).
+            # HEAD CLEARANCE -- the check that was missing, and the one that
+            # actually fails. #67 restored horn_couple_neg() on the parent to
+            # clear the stub, but that cuts only h = ARM_THK: the SHANK channel.
+            # Nothing ever cut room for the HEAD, which sits on the pocket side
+            # of the arm and projects HORN_HEAD_H back into the HAA pocket.
+            # Three positions happened to have open space behind and one did
+            # not, so the incomplete fix looked done. BENCH-CONFIRMED
+            # 2026-08-11: three horn bolts go in, the top-left (a=45) does not.
+            # Measure from the REAL arm face, not from `base` -- base carries a
+            # +0.5 scan margin, and using it made this read 0.60mm when the
+            # truth is 0.10mm. A clearance check that is optimistic by its own
+            # scan margin is worse than none.
+            recess = sx * (FEMUR_MID - YOKE_TOP_IN)
+            xf = recess - sx * ARM_THK           # arm face on the pocket side
+            probe = np.arange(0.05, HORN_HEAD_H + 0.05, 0.05)
+            pts = np.column_stack([xf - sx * probe,
+                                   np.full(len(probe), y), np.full(len(probe), z)])
+            hit = contains_chunked(m, pts)
+            if hit.any():
+                got = float(probe[np.argmax(hit)])
+                bad = True
+                print(f'HEAD  {part}: horn bolt a={a:3d} (y={y:+.1f},z={z:+.1f}) '
+                      f'shank channel is clear, but the HEAD has only {got:.2f}mm '
+                      f'of the {HORN_HEAD_H:.2f}mm an ISO 7380 button needs -- '
+                      f'interferes by {HORN_HEAD_H-got:.2f}mm. The screw cannot '
+                      f'seat. Relieve the wall behind the arm at this BCD '
+                      f'position; do NOT counterbore the arm (that steals thread '
+                      f'from the 2.40mm horn disc).')
+                continue
+            free = 12.0
             if blocked:
                 bad = True
                 print(f'BLOCK {part}: horn bolt a={a:3d} (y={y:+.1f},z={z:+.1f}) '
                       f'blocked by stub at x={sx * (FEMUR_MID + 0.5 - blocked[0]):.2f}..'
                       f'{sx * (FEMUR_MID + 0.5 - blocked[-1]):.2f} -- joint cannot assemble')
             else:
+                note = (f'  [tip free run past exit {free:.2f}mm]'
+                        if free < 2.0 else '')
                 print(f'OK    {part}: horn bolt a={a:3d} (y={y:+.1f},z={z:+.1f}) '
-                      f'clear across the {ARM_THK:.1f}mm span')
+                      f'clear across the {ARM_THK:.1f}mm span'
+                      f' (ring {ring_solid}/8 solid){note}')
     return bad
 
 
