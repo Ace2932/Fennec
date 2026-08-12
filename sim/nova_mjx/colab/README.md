@@ -36,6 +36,12 @@ thrown away. Checkpoint choice is by recorded pointer / step number, not mtime (
 
 Full design + adjudicated review findings: `../../../docs/superpowers/specs/2026-07-20-terrain-relative-reward-design.md`.
 
+## → Distillation: `DISTILL.md`
+
+This notebook makes a **teacher**. `DISTILL.md` is the recipe for turning one into the blind
+105-d **student** that actually deploys (#304) — the artifact the section below says hardware
+needs, and which does not exist yet.
+
 ## ⚠ Teacher, not deployable
 Obs 226 includes the *perfect* simulated heightmap. The real D456/L2 cannot supply it, so the
 exported `.npz` cannot run on the Jetson as-is. Hardware needs real elevation mapping or student
