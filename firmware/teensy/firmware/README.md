@@ -122,7 +122,7 @@ its built-in defaults instead of the calibrated tables.
 ### Power telemetry
 | Direction | Topic | Type | Rate | Notes |
 |-----------|-------|------|------|-------|
-| Pub | `/power_rails` | `Float32MultiArray` | 10 Hz | 9 floats: `[leg_v, leg_a, leg_w, hip_v, hip_a, hip_w, jetson_v, jetson_a, jetson_w]` — read by index, no MultiArrayLayout dims populated |
+| Pub | `/power_rails` | `Float32MultiArray` | 10 Hz | **12 floats** with `NOVA_INA226_L2` (which IS set — `platformio.ini:61`, in `teensy_base.build_flags`): `[leg_v, leg_a, leg_w, hip_v, hip_a, hip_w, jetson_v, jetson_a, jetson_w, l2_v, l2_a, l2_w]`. **9 floats only if that flag is removed** — `POWER_RAILS_FIELDS` switches on it (`main.cpp:838-841`). Read by index, no MultiArrayLayout dims populated. ⚠️ **This row said 9 until 2026-08-12.** The 4th INA226 (L2 rail @0x45) was decided 2026-06-30 and the contract was never updated, so anything sized from this table would have silently dropped the L2 rail. |
 | Pub | `/servo_voltage` | `Float32MultiArray` | 5 Hz | 12 floats, per joint, volts (`PRESENT_VOLTAGE` raw × 0.1). **Added to this table 2026-08-10 — published since the servo-health work landed (`main.cpp:1493`) but never in the contract, so downstream guessed the name.** |
 | Pub | `/servo_temperature` | `Float32MultiArray` | 5 Hz | 12 floats, per joint, °C (`REG_PRESENT_TEMPERATURE` 0x3F, u8). Feeds the firmware-local overtemp guard at `NOVA_OVERTEMP_C` 70 °C, which trips limp ahead of the servo's own ~80 °C cutoff (`main.cpp:333`). **Same omission.** |
 

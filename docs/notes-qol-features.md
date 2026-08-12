@@ -312,7 +312,7 @@ Use `jtop` (the `jetson-stats` Python package) rather than parsing `tegrastats` 
 
 **Goal:** "12 minutes remaining" beats "14.1 V" when you're deciding whether to start a 10-minute walk test.
 
-**Hardware reality check:** there is **no INA226 on the battery feed** today. The three INA226 chips sit on the output side of the leg / hip / Jetson bucks (`README.md` "Power System" + `firmware/teensy/firmware/src/ina226_telemetry.h`). Battery state surfaces only as the LM393 comparator's binary `/battery_low` GPIO @ 13.0 V. That constrains every implementation option below.
+**Hardware reality check:** there is **no INA226 on the battery feed** today. The **four** INA226 chips (U9–U12; the 4th = L2 rail @0x45, decided 2026-06-30) sit on the output side of the leg / hip / Jetson bucks (`README.md` "Power System" + `firmware/teensy/firmware/src/ina226_telemetry.h`). Battery state surfaces only as the LM393 comparator's binary `/battery_low` GPIO @ 13.0 V. That constrains every implementation option below.
 
 **Option A — sum-of-rails proxy (cheapest, ships with current hardware):**
 

@@ -202,3 +202,60 @@ def test_protection_table_subscriptions_stay_documented(topic):
         f"{topic} dropped out of the contract table -- an undocumented safety "
         "table is how a host node comes to publish a name nothing receives"
     )
+
+
+# --- payload SHAPE, not just presence -------------------------------------------
+# The gate above proves a topic is documented. It does NOT prove the contract
+# describes what the topic actually carries -- and on 2026-08-12 that gap had a
+# live instance: /power_rails was documented as 9 floats while the firmware
+# publishes 12. POWER_RAILS_FIELDS switches on NOVA_INA226_L2, that flag IS set in
+# teensy_base.build_flags, and the 4th INA226 (L2 rail @0x45) was decided
+# 2026-06-30 without the contract being updated. Nothing broke only because the
+# single ROS consumer is length-defensive and reads index 0.
+#
+# This checks the ONE topic whose width is conditional. A general payload gate
+# would need to model every message type; this models the thing that actually went
+# wrong, which is a compile-time constant nobody re-read.
+
+PIO_INI = REPO / "firmware/teensy/firmware/platformio.ini"
+
+
+def _l2_flag_enabled() -> bool:
+    return "-D NOVA_INA226_L2" in PIO_INI.read_text()
+
+
+def _power_rails_fields() -> int:
+    """POWER_RAILS_FIELDS as the ACTIVE build would see it."""
+    src = MAIN_CPP.read_text()
+    m = re.search(
+        r"#ifdef\s+NOVA_INA226_L2\s*\n\s*constexpr\s+size_t\s+POWER_RAILS_FIELDS\s*=\s*(\d+)"
+        r"\s*;\s*\n\s*#else\s*\n\s*constexpr\s+size_t\s+POWER_RAILS_FIELDS\s*=\s*(\d+)",
+        src,
+    )
+    assert m, "POWER_RAILS_FIELDS #ifdef block not found -- main.cpp changed shape"
+    return int(m.group(1) if _l2_flag_enabled() else m.group(2))
+
+
+def test_power_rails_width_matches_the_contract():
+    n = _power_rails_fields()
+    row = [l for l in FW_README.read_text().splitlines() if "`/power_rails`" in l and "| Pub |" in l]
+    assert row, "no /power_rails Pub row in the firmware contract"
+    text = row[0]
+    assert f"{n} floats" in text or f"**{n} floats**" in text, (
+        f"the firmware publishes {n} floats on /power_rails (NOVA_INA226_L2 "
+        f"{'set' if _l2_flag_enabled() else 'unset'}), but the contract row does not say "
+        f"'{n} floats'.\n\nRow: {text[:200]}\n\n"
+        "This is the failure that shipped on 2026-08-12: the row said 9 while the "
+        "firmware sent 12, because the 4th INA226 (L2 @0x45) landed without the "
+        "contract being updated. Anything sized from this table drops the L2 rail."
+    )
+
+
+def test_l2_rail_flag_and_field_count_agree():
+    """The flag and the constant must not drift apart."""
+    n = _power_rails_fields()
+    assert n == (12 if _l2_flag_enabled() else 9), (
+        f"POWER_RAILS_FIELDS resolved to {n} with the L2 flag "
+        f"{'set' if _l2_flag_enabled() else 'unset'} -- expected 12/9. Either the rail "
+        "count changed or the #ifdef was edited; re-read main.cpp before trusting either."
+    )

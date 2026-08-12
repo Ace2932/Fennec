@@ -204,10 +204,24 @@ Mapped into BOM §12 step 2:
 - [ ] D42V110F7 ramp load: 1× → 4× → 8× STS3215 19kg walking-stand-in; thermal IR after 10 min sustained
 - [ ] D42V110F12 ramp load: 1× → 4× 30kg hip walking-stand-in (hips only, no L2 on this rail); thermal IR after 10 min
 - [ ] D24V22F12 load test with L2 LiDAR active; scope output ripple before/after LC filter
-- [ ] 13.0V graceful-shutdown comparator trips → Teensy `/battery_low` topic → Jetson clean shutdown (bench-sweep Vin down to 13.0V)
-- [ ] 12.4V MOSFET hard-cutoff trip via bench-supply sweep (should fire ~30-60 s after the 13.0V graceful trigger at typical discharge rate)
+- [ ] Graceful-shutdown comparator trips → Teensy `/battery_low` → Jetson clean shutdown.
+      **AS-BUILT trip is 13.03 V, not the 13.0 target** — computed from measured parts
+      (4.98 V UBEC, divider 0.1794 from R2 99.7k / R3 21.8k). Procedure + traps:
+      `pre-power-on-validation.md` §2.
+- [ ] MOSFET hard-cutoff trip via bench-supply sweep. **AS-BUILT is 12.56 V, not 12.4** —
+      i.e. the board cuts 0.16 V EARLIER than the 3.1 V/cell target. Safer in isolation,
+      but it is what narrows the window below:
+      🔴 **THE WINDOW IS 0.47 V, NOT 0.6 — so the "~30–60 s" this line used to claim is
+      really ~23–47 s.** Into that has to fit 2 s of dashcam grace **plus** a real Jetson
+      `systemctl poweroff` (10–30 s is normal). That is not a comfortable margin, and it
+      went unnoticed because the trip voltages and the shutdown timing live in different
+      documents. **Time it end-to-end**, do not just confirm the two trips fire. If
+      poweroff is still running when HARDCUT lands, RAISE `BATT_LOW` (R4/R5) — do not
+      lower `HARDCUT`.
 - [ ] E-stop kills leg + hip + L2 rails (LiDAR stops spinning); Jetson rail stays alive for post-mortem debug
-- [ ] INA226 ×3 sanity reads under nominal and loaded
+- [ ] INA226 **×4** sanity reads under nominal and loaded — U9–U12. **This said ×3 until
+      2026-08-12**; the 4th (L2 rail @0x45) was decided 2026-06-30. Checking three would
+      have left the L2 rail unverified and looked complete.
 
 ---
 
