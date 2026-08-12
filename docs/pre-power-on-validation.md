@@ -229,8 +229,59 @@ Verified-on-paper trips: BATT_LOW 13.0V, HARDCUT 12.4V (resistor math confirmed 
       Refines the earlier 13.08 / 12.61 estimate, which assumed a nominal 5.00 V UBEC.
       Because the references are ratiometric to V5_AUX, these scale linearly with it — a
       UBEC sagging to 4.8 V under load would move them to ~12.6 / ~12.1 V.
-- [ ] Bench-sweep supply 13.5→12.0V, confirm BATT_LOW asserts ~13.0V, HARDCUT ~12.4V
+- [ ] Bench-sweep supply 13.5→12.0 V, confirm BATT_LOW and HARDCUT assert.
+      ⚠️ **Expect 13.03 / 12.56 V, NOT 13.0 / 12.4.** Those are the numbers the
+      MEASURED parts give (4.98 V UBEC, divider 0.1794 from R2 99.7k / R3 21.8k) — see
+      the table above. The old "~12.4 V" here is the nominal-parts estimate and would
+      make a CORRECT result look like a failure. Record what you actually read.
 - [ ] Confirm hysteresis (R14 470k / R15 1M) prevents chatter at threshold
+
+### Bench procedure for the two LVC trips (written 2026-08-12, not yet run)
+
+**⚠️ USE A BENCH SUPPLY. NEVER SWEEP THE REAL PACK DOWN TO TEST THIS.** 12.56 V on a
+4S is 3.14 V/cell — that is deep-discharge territory, and doing it repeatedly to
+exercise a comparator will wreck a £-per-pack LiPo for no reason. Kungber on the XT60
+input, current-limited.
+
+**Sequencing — the two halves become testable at different build stages:**
+
+| what | needs | status |
+|---|---|---|
+| both comparator THRESHOLDS (`BATT_LOW`, `HARDCUT` nets) | `U8` LM393, SOIC-8 bottom-side, stages 0–6 | **placed — testable now** |
+| the actual power INTERRUPTION | `Q1` IRLB3034PBF, TO-220, **stage 8 high-current** | not placed yet |
+
+So the thresholds can be swept and recorded before stage 8; only "does the rail
+actually die" waits for Q1.
+
+**Traps, in the order they will bite:**
+
+1. **Start the sweep ABOVE 13.1 V.** `main.cpp:923-930` requires `BATTERY_LOW` to read
+   HIGH on *every* sample of a short window before latching at boot. Power up already
+   below the trip and it latches immediately, and you will be testing the boot guard
+   instead of the comparator.
+2. **`HARDCUT` kills the Jetson rail** — deliberately (`ROUTING_HANDOFF.md:127-134`, so
+   a hung Jetson cannot drain the pack). You therefore **cannot observe the hardcut trip
+   from the Jetson**; it dies with the rail. Instrument externally: meter/scope on the
+   rail and on `HARDCUT`, not `ros2 topic echo`.
+3. **The graceful path really does power the machine off.** `battery_shutdown` ends in
+   `systemctl poweroff`. Run it with **`dry_run:=true`** first to confirm the trigger and
+   the `/shutdown_imminent` publish without losing the box.
+4. **Both trips are RATIOMETRIC to V5_AUX**, and the 4.98 V above is a **no-load**
+   figure. Under the real 1.5 A rail load a sagging UBEC drags both trips down together
+   (4.8 V → ~12.6 / ~12.1 V). Sweep with the aux load connected, or the numbers do not
+   mean anything for flight.
+
+**The thing this test is actually for — measure the WINDOW, not just the trips.**
+13.03 → 12.56 is **0.47 V**, not the 0.6 V `power-budget.md` assumed, so the
+graceful-to-hardcut window is ~78 % of the 30–60 s estimated there — call it **~23–47 s**
+at typical discharge. Into that window has to fit: 2 s dashcam grace + a real Jetson
+`systemctl poweroff` (10–30 s is normal). **That is not a comfortable margin.** Sweep at
+a realistic discharge rate and time it end-to-end: supply crosses 13.03 → Jetson fully
+down → supply crosses 12.56. If poweroff is still running when HARDCUT fires, the
+mitigation is to RAISE `BATT_LOW` (R4/R5), not to lower `HARDCUT`.
+
+Record: actual `BATT_LOW` V, actual `HARDCUT` V, hysteresis band, measured window in
+seconds, and V5_AUX under load at the moment of each trip.
 
 ## 🟡 3. Inrush into bulk capacitance (~5470µF: 5×1000µF + 3×470µF)
 Charged 16.8V pack → XT60 → ~5470µF = hard inrush spike + connector arc. No precharge.
