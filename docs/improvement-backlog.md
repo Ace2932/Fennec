@@ -36,7 +36,7 @@ load analysis). Ranked within group. Status legend: **NOW** (this batch),
 hard at ~3.0 V/cell with no warning and no staging. Dropping one into the
 discharge path would yank the Jetson's rail instantly — corrupting the
 filesystem mid-write — which is precisely what the existing two-stage design
-exists to prevent (13.0 V graceful shutdown, THEN 12.4 V hardware cut ~30–60 s
+exists to prevent (graceful shutdown at an as-built 13.03 V, THEN the 12.56 V hardware cut ~23–47 s
 later). It would also add Rds(on) and a new failure point in the main path,
 where Q1 is currently 1.4 mΩ.
 
@@ -63,7 +63,7 @@ the EXISTING graceful path.**
 **Ordering:** this is worth having before long unattended runs, but it is NOT
 ahead of bench-verifying the LVC that already exists —
 `power-budget.md:207-208` still has both trips as unchecked boxes. An untested
-13.0/12.4 chain is the bigger hole; per-cell is the next one after it.
+13.03/12.56 chain is the bigger hole; per-cell is the next one after it.
 
 ## Software / system (system-audit opens)
 
