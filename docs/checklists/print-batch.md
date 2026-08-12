@@ -170,6 +170,59 @@ at `original_body_files/SM3_Foot.stl`. `leg_v6/check_shoe.py` gates its fit agai
 the tibia toe; last run 2026-07-31 clean on both sides (0/21000 interference points,
 inner-face gap median 0.277 / p90 0.505 against the 0.4 median limit).
 
+### 2a-0. 🔴 SUPPORTS — the whole list, in one place
+
+<!-- GENERATED BLOCK: supports-table.
+     `test_supports_table_matches_registry.py` regenerates and compares this.
+     Regenerate: python hardware/cad/gen_supports_table.py -->
+
+`hardware/cad/slice_plate.py`'s registry is **the authority**. Hand-slicing in Bambu
+Studio never consults it, so it is reproduced here — and a test keeps the two in sync,
+because the first version of this table drifted between being written and being merged.
+
+**12 parts need supports; 17 must have them OFF.** Check before every print.
+
+**SUPPORTS ON:**
+
+| part | supports | material | orientation |
+|---|---|---|---|
+| `battery_pocket` | normal | PA6-CF | as modelled |
+| `coax_L` | normal | PA6-CF | +Y |
+| `coax_R` | normal | PA6-CF | +Y |
+| `coax_hfe_block` | normal | PA6-CF | +X |
+| `coax_hfe_block_L` | normal | PA6-CF | -X |
+| `control_pod` | normal | PETG-CF | COLUMN-FACE-DOWN — names the feature.  |
+| `femur_L` | normal | PA6-CF | +Z |
+| `femur_R` | normal | PA6-CF | as modelled |
+| `head` | tree | PA6-CF | CROWN/PAD-DOWN + tree supports. Measur |
+| `shoulder` | tree | PA6-CF | +Z |
+| `tibia_L` | normal | PA6-CF | +Z |
+| `tibia_R` | normal | PA6-CF | as modelled |
+
+**SUPPORTS OFF** (`none`) — turning them on traps material:
+
+| part | material | orientation |
+|---|---|---|
+| `cable_clip` | TPU 95A | as modelled |
+| `case_slot_grommet` | TPU 95A | +Y |
+| `floor_plate` | PETG-CF | as modelled |
+| `grommet_insert` | TPU 95A | as modelled |
+| `jetson_case_mount` | PA6-CF | as modelled |
+| `jetson_clamp_bar` | PA6-CF | as modelled |
+| `knee_arm` | PA6-CF | as modelled |
+| `knee_bumper` | TPU 95A | U-opening-UP. Measured: no dominant fl |
+| `l2_adapter` | PA6-CF | as modelled |
+| `lead_notch_grommet` | TPU 95A | as modelled |
+| `neck_bracket` | PA6-CF | as modelled |
+| `oled_tray` | PETG-CF | +Z |
+| `riser_bay` | PETG-CF | +Z |
+| `shoulder_plate` | PA6-CF | +Y |
+| `shoulder_plate_L` | PA6-CF | +Y |
+| `skid_rail` | TPU 95A | as modelled |
+| `strap` | PA6-CF | as modelled |
+
+<!-- END GENERATED BLOCK: supports-table -->
+
 ## 2. Slicer spec
 
 | Class | Walls | Layer | Infill | Notes |
