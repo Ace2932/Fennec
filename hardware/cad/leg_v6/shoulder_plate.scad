@@ -46,9 +46,17 @@
 // states a material. Inferred from the leg batch and from knee_arm, whose
 // seating doctrine this part follows and which IS specified PA6-CF.
 // CONFIRM before the first structural print.
-// Print: PA6-CF, back face DOWN (perfect seat on the horn face, knee_arm doctrine)
-// -- the flange dips below the horn-seat plane, so "horn-seat face down"
-// is geometrically impossible; the achievable bed face is the back face.
+// Print: PA6-CF, BACK FACE DOWN -- bed face is y = FACE_Y1 = 21.75.
+// -- the flange dips to y=2.00, 15.75mm below the horn-seat plane at y=17.75,
+// so "horn-seat face down" is geometrically impossible; the achievable bed
+// face is the back face.
+//
+// This line used to read "(perfect seat on the horn face, knee_arm doctrine)".
+// The ORIENTATION was right, but the justification was knee_arm's -- the
+// reasoning for the pose this part physically CANNOT adopt, attached to the one
+// it can. Borrowing knee_arm's doctrine is what put HORN-SEAT-DOWN in the header
+// above in the first place (corrected 2026-08-02); this was the same borrowed
+// sentence left behind one line lower, in the file someone opens before slicing.
 // rev 3 (2026-07-10): seat plane moved 17.2->17.75 (caliper gap fix — see
 // leg_v6_common.scad HORN_Z1); matches shoulder.scad's HORN_Y.
 //
