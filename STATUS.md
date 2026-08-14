@@ -4,7 +4,8 @@ Single-pane blockers / in-progress / next-actions. Hand-maintained; the detail
 lives in `README.md` (Open Decisions + Build Roadmap), `docs/order-list.md`,
 per-board `ROUTING_HANDOFF.md`, and memory. Update when state changes.
 
-_Last updated: 2026-07-31_
+_Last updated: 2026-08-13. **The solder/bench state here is a MIRROR of Notion
+(🔧 Soldering / Assembly Steps) and lags it — read Notion before acting.**_
 
 ## 🔧 2026-07-31 — BOARDS IN HAND, SOLDERING STARTED
 
