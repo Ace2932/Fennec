@@ -29,7 +29,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | BSS138 ×10 | Q2/Q3/Q4 | 📦 |
 | LM393 ×10 | U8 | 📦 |
 | SRR1260-220M ×10 | L1 | 📦 |
-| XT60 (J1), XT30 ×17+ | J1/J3-J7/J12/J13 | ✅ |
+| XT60 (J1), XT30 **×18** | J1 / J3–J7 / J12–**J14** / U1–U5 (2 each) | ✅ |
 | JST B3B-XH-A ×10 | J8 (+logic J11) | 📦 |
 | IDC BHR-12-VUA ×10 | J20 | 📦 |
 | PRPC040 header strip | J2/M1 (+logic J9/J10/JP1) | 📦 |
