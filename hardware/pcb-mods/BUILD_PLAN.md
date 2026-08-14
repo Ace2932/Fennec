@@ -599,16 +599,28 @@ redo is behind a tall part on a board that no longer sits flat.
 Side column is which face the **body** sits on. Grouped to keep flips to a
 minimum: bottom SMD, then top SMD, then THT.
 
+> **BENCH STATE — stages 0–6 complete and verified on BOTH boards (2026-08-09).
+> Next is stage 7.** Every SMD part on both boards is placed *and* measured.
+>
+> ⚠️ **This file is the PLAN. The bench RECORD lives in Notion** — *🔧 Soldering /
+> Assembly Steps*, child of the *Power Board v6 Build Log*. Where the two disagree,
+> **Notion wins**: it is written at the bench as work happens, this is written from
+> the board files. The ticks below are a convenience and they have gone stale before —
+> on 2026-08-13 this table and `STATUS.md` both still read "stage 1 was the last thing
+> done", four stages behind, and `STATUS.md` was steering the next bench action off an
+> expectation Notion had already struck out (see §6). Check Notion before believing a
+> tick here.
+
 | stage | side | what | why here |
 |---|---|---|---|
 | **0** | — | ✅ **DONE 2026-08-01** — bare-board: continuity `VBAT`↔`VBAT_PROTECTED` open (SW1 not fitted), no `VBAT`–`GND` short | Cheapest possible fault-find. A plane short after 33 THT parts is a nightmare. ⚠️ Applies to **the board it was run on** — five of each were ordered, so if the meter went on a spare rather than the build board, this is not carried over. Re-run on the actual build board before stage 1 if in doubt; it costs one minute. |
 | **1** ✅ **DONE 2026-08-02** (15 power 0603 + 3 logic 1k) | **B** | Bottom 0603: R2–R9, R11–R16, C7 (+ logic R3–R5) | Smallest, flattest, most numerous, and all on one face — do them in one sitting with the top still bare. |
-| **2** | **B** | Q2–Q4 (SOT-23) | Same face, still small, still cold. |
-| **3** | **B** | U8 (SOIC-8) — and U7 (SOIC-14) on the logic board | Fine-pitch, wants flux + drag or wick. Before anything tall spoils the iron angle. **The stage most likely to want hot air for a bridge.** **Includes the `U8` 8↔4 bypass tack — see below.** |
-| **4** | **B** | **L1** (12×12 SMD inductor) | Last of the bottom SMD. Plane-tied both sides → fat tip. Last stage where the top face is bare, so the last one a *contact* plate could serve (§2). |
-| **5** | **F** | Top SMD: D1 (SOD-123F), R17, R\_gs1, C\_gs1 (+ logic C1, FB1) | Flip once. Only 4 top-side SMD parts — mind D1 polarity. |
-| **6** | **F** | Low THT: J2, M1, J8, J20 (+ logic JP1, J9, J10, J21, J11, J20) | Headers and JSTs seat flush; do them before the board stops sitting flat. |
-| **7** | **F** | SW1, SW2 terminal blocks | SW1.2 is a 14 A plane pad. Still low profile, so do it before the tall connectors crowd the iron. |
+| **2** ✅ | **B** | Q2–Q4 (SOT-23) | Same face, still small, still cold. |
+| **3** ✅ | **B** | U8 (SOIC-8) — and U7 (SOIC-14) on the logic board | Fine-pitch, wants flux + drag or wick. Before anything tall spoils the iron angle. **The stage most likely to want hot air for a bridge.** **Includes the `U8` 8↔4 bypass tack — see below.** |
+| **4** ✅ | **B** | **L1** (12×12 SMD inductor) | Last of the bottom SMD. Plane-tied both sides → fat tip. Last stage where the top face is bare, so the last one a *contact* plate could serve (§2). |
+| **5** ✅ | **F** | Top SMD: D1 (SOD-123F), R17, R\_gs1, C\_gs1 (+ logic C1, FB1) | Flip once. Only 4 top-side SMD parts — mind D1 polarity. |
+| **6** ✅ | **F** | Low THT: J2, M1, J8, J20 (+ logic JP1, J9, J10, J21, J11, J20) | Headers and JSTs seat flush; do them before the board stops sitting flat. |
+| **7** ⏭ **NEXT** | **F** | SW1, SW2 terminal blocks | SW1.2 is a 14 A plane pad. Still low profile, so do it before the tall connectors crowd the iron. |
 | **8** | **F** | XT30 ×8 + XT60 J1, buck stations U1–U4, **and Q1 (TO-220)** | The bulk of the high-current THT, plus Q1 — pad 3 is a 14 A GND inject. **Last preheat stage; see the note below.** Soldered from the bottom face, which already carries 20 SMD parts — hence C1–C6 must still be off. |
 | **9** | B + F | Electrolytics: C1–C6 (bottom), C8–C9 (top) | Tall, polarised, **~105 °C-rated — below the 100–130 °C board preheat.** After every preheat joint, and after stage 8 because the bottom cans would block access to stage 8's solder side. |
 | **10** | **F** | Modules: **U9–U12** (INA226 ×4 — see §4, U12 is the L2 monitor), U6 (Teensy 4.1), U12-logic (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. Note `U12` names *different* parts on the two boards: INA226 on power, Arduino Nano on logic. |
@@ -814,31 +826,47 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
 - After **stage 0** — no `VBAT`–`GND` short. ✅ **PASSED 2026-08-01** (run in a
   separate session; result reported, not observed here). Per-board, not per-design
   — see the stage 0 row in §3.
-- 🔴 **BEFORE stage 2 — meter the trip network from the EMPTY `U8` land.** This is the
-  only moment it is easy: `U8`, `Q2`–`Q4` and the UBEC are all unpopulated, so the
-  divider is isolated and every node is exposed on a bare SOIC-8 footprint. Stage 3
-  covers all eight probe points permanently.
+- ✅ **BEFORE stage 2 — meter the trip network from the EMPTY `U8` land. PASSED
+  2026-08-02, on the build board.** `U8`, `Q2`–`Q4` and the UBEC were all unpopulated,
+  so the divider was isolated and every node exposed on a bare SOIC-8 footprint. Stage 3
+  has since covered those probe points for good — this gate cannot be re-run and does
+  not need to be.
 
   Pads, read out of `nova_pcb_v6_power_v2.kicad_pcb` (not copied from a note):
   `1=BATT_LOW 2=VSENSE 3=VREF_G 4=GND 5=VREF_H 6=VSENSE 7=HARDCUT 8=V5_AUX`.
-  `R4` 11.3k sits `V5_AUX`↔`VREF_G`; `R6` 12.1k sits `V5_AUX`↔`VREF_H`. So:
 
-  | probe | expect |
-  |---|---|
-  | `8 → 3` | **11.3k** (`R4`) |
-  | `8 → 5` | **12.1k** (`R6`) |
+  ⛔ **This gate's original expectation was WRONG and is struck out here rather than
+  deleted: `8→3` = 11.3k and `8→5` = 12.1k are the PART values, not meter readings.**
+  `R4` does not span `8→3` alone — it parallels the path `R6` → `VREF_H` → `R7` → GND →
+  `R5` → `VREF_G`, and the GND node *floats* during a two-terminal ohms reading. Solving
+  just those four resistors nodally gives **8.36k / 8.73k**; the full fitted network
+  (`R15` 1M, `R8`, the `R2`/`R3` branch) pulls both down to 8.07k / 8.31k. Metering
+  against 11.3k would have read ~8k and **failed a good board** — a false FAIL on the
+  one gate protecting the trip points.
 
-  **The decisive check is that `8→3` reads LOWER than `8→5`** — do not rely on the
-  absolute values alone. Both nets carry a lower leg to GND (`R5` 10k on `VREF_G`,
-  `R7` 10k on `VREF_H`) plus `R15` 1M / `R14` 470k, so each reading can sit a little
-  under its nominal and *both* will still look plausible if the parts are swapped. The
-  ordering will not. If it is ambiguous, meter `R4` and `R6` across their own pads —
-  that is immune to the topology.
+  | probe | expect | measured 2026-08-02 |
+  |---|---|---|
+  | `J20`.1 → `U8`.3 (`VREF_G`) | 8.07k | **8.04k** |
+  | `J20`.1 → `U8`.5 (`VREF_H`) | 8.31k | **8.27k** |
+  | **`VREF_H` − `VREF_G`** | **+0.23k** | **+0.23k — exact** |
+
+  **The decisive check is the SIGN of that difference, not either absolute** — a swap
+  inverts it to −0.46k. Both readings sit under nominal and *both* stay plausible if the
+  parts are swapped; the ordering does not. That is not a stylistic preference: the two
+  ~8k probes were first taken on the **200k range** (4 % of full scale, where the
+  range's own error is the size of the thing measured) and came out 7.80 / 8.10 — a
+  systematic −3 % that sent two hypotheses chasing nothing. **The comparison survived
+  the bad range; the absolutes did not.** Read at 20–50 % of full scale.
 
   **Why it matters:** `R4`/`R6` set the two comparator references. Swapped, the board
   **hard-cuts at 13.0 V *before* the 12.5 V warning ever fires** — it just shuts down
   early, forever, and never announces why. They are the only 1 % parts in the stage-1
-  reel and they are adjacent values.
+  reel and they are adjacent values, 4 mm apart on the same row.
+
+  **Verdict: `R4` and `R6` are in their correct positions.** 10 of 14 stage-1 resistors
+  verified by measurement (R2, R3, R4, R5, R6, R7, R8, R9, R15, R16), every reading
+  inside 1 %. Sense divider from the measured parts is 21.8/(99.7+21.8) = **0.1794**
+  (nominal 0.1803) → trips at **≈13.08 V warn / 12.61 V hardcut**, 0.5 % high.
 - 🔴 **AFTER stage 3 — the SOIC probe tables.** Computed from the two `.kicad_pcb`
   netlists (resistors only; caps open, semiconductors off), 2026-08-06. **Clean before
   probing** — wet flux shunts the 1M-range readings.
@@ -961,7 +989,10 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
       well as 4/7/8 — tin-the-tip-and-place strands the core flux on the tip, so the
       pad gets bare solder — and non-conductive residue closes the R4/R6 divider
       leakage question (a 1 % trip shift needs ~1.1 MΩ across the 11.3k leg).
-- [ ] 🟡 **99 % IPA + brush + lint-free wipes — verify on shelf BEFORE stage 1.**
+- [x] ✅ **Cleaner — CLOSED.** MG Chemicals 4140 aerosol defluxer ordered 2026-08-02 and in
+      use; stage 1 was cleaned and inspected, and every stage through 6 has passed its
+      clean → inspect gate. *Original item, kept for the reasoning:*
+      🟡 **99 % IPA + brush + lint-free wipes — verify on shelf BEFORE stage 1.**
       Found missing 2026-08-01: this plan asserted the shiny criterion three times as
       valid *"after the flux is cleaned off"*, but contained **no cleaning step**, had
       **no inspection step at any stage**, and `master-bom.md` listed **no cleaner**.
