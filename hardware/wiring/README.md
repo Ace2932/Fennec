@@ -196,6 +196,118 @@ Switch can be pulled from its case to save ~60 % volume inside the chassis.
 - **Blue:** UART data
 - **Orange:** safety (E-stop, comparator output)
 
+## Header wiring — insulation and clearance at `M1` / `J2`
+
+Added 2026-08-13, after the flying leads on both headers were soldered. Nothing in
+this repo covered it: the section below is mechanical *routing*, and `BUILD_PLAN.md`
+covers what to solder, not what the wire does after the joint cools.
+
+`M1` (pack-voltage tap) and `J2` (UBEC aux tap) are the only 2.54 mm headers carrying
+**raw pack voltage next to GND**. Pad nets read out of
+`../pcb-mods/nova_pcb_v6_power_v2/nova_pcb_v6_power_v2.kicad_pcb`:
+
+| pair | gap | if they touch |
+|---|---|---|
+| `M1`.1 `VBAT_PROTECTED` ↔ `M1`.2 `GND` | **2.54 mm** | dead short across the pack |
+| `J2`.1 `VBAT_PROTECTED` ↔ `J2`.2 `GND` | **2.54 mm** | dead short across the pack |
+| `J2`.2 `GND` ↔ `J2`.3 `V5_AUX` | **2.54 mm** | shorts the UBEC output |
+| **`J2`.1 `VBAT_PROTECTED` ↔ `J2`.3 `V5_AUX`** | **5.08 mm** | **16.8 V onto the 5 V rail** |
+
+**The last one is the expensive one, and it is not obvious from the board.** `V5_AUX`
+is the *only* supply for every active part on the logic board — traced from
+`nova_pcb_v6_logic.kicad_pcb`:
+
+| pad | part | why 16.8 V kills it |
+|---|---|---|
+| `U6`.1 | **Teensy 4.1 VIN** | 5.5 V absolute max. It is the Teensy's only 5 V input, and its regulated `T3V3` is what sources `+3V3` for `U7` — which is also why `BUILD_PLAN.md` §7 says cut the `VUSB`↔`VIN` pad before seating it |
+| `U12`.27 | **Nano 5V pin** | bypasses the Nano's regulator and lands on the ATmega VCC directly. Confirmed by the netlist: pad 30 is `unconnected-(U12-VIN-Pad30)`, so the board feeds 5V, not VIN |
+| `J10`.2 | SSD1331 OLED | 5 V module |
+| `J11`.1 | WS2812B strip | 5 V module |
+
+One contact kills all four at once, and nothing announces it until power-up.
+
+A short across the pack clears through the off-board MRBF-30, but that is hundreds of
+amps for the milliseconds before it opens, through 22 AWG, with `Q1` carrying the fault.
+
+⚠️ `J2` is also the most crowded joint on the board — **four wires into three holes**,
+because the SoloGood UBEC has separate input and output grounds that common at `J2`.2.
+See `../../docs/order-list.md` §"Wiring to `J2`".
+
+Note `SW1` sits between `VBAT` and `VBAT_PROTECTED`, so all of this is dead with the
+rocker off. That is not a mitigation — the exposure is every minute the robot runs.
+
+### Insulation doctrine
+
+1. **Heatshrink is primary.** Ginsco assortment, `../../docs/master-bom.md:232`, which
+   already specs it for "every XT / TVS / fuse joint" — this is that class of joint.
+   Slide the sleeve on **before** soldering, park it up the wire, solder, trim flush,
+   then bring it down over the joint. Doing it after means you cannot get a sleeve on
+   without desoldering.
+2. **Kapton is for zones a sleeve cannot reach**, not for whole joints. Its silicone
+   adhesive lifts off round surfaces under vibration and thermal cycling, it gives no
+   strain relief, and a lifted edge re-exposes the joint silently. As a patch on an
+   already-soldered joint, or laid flat over the top of a header as a barrier against
+   something landing on it from above, it is the right tool.
+3. **On a 3-way header, wrap the MIDDLE pin.** One wrap on `J2`.2 blocks both `1↔2`
+   and `2↔3`, and leaves only the widest pair (`1↔3`, 5.08 mm) with a wrapped conductor
+   physically between them. Cheapest coverage per wrap. Done on the build board
+   2026-08-13.
+4. **Exposed conductor between the shrink and the joint is an electrical non-issue and
+   a mechanical one.** Air breaks down near 3 kV/mm, so 2.54 mm against 16.8 V has
+   about five orders of margin — nothing jumps that gap. But shrink that stops short
+   leaves the bare zone at the **pin base**, which is exactly where the two conductors
+   are closest; further up the wires diverge. Close it with Kapton if it is more than a
+   millimetre or so.
+5. **Dress both harnesses outward in −y at the joint** — see the clearance note below.
+
+### The logic board overhangs both headers
+
+Both boards share one coordinate frame (`H1`–`H4` at x 103/177, y 63/129 on each), and
+the logic board's outline overhangs its own mounting holes by **6.00 mm** in −y — its
+Edge.Cuts run y 57.00–135.00 against holes at 63/129. So **the logic board's near edge
+lands at y = 57.00**, and that edge crosses between pin 1 and pin 2 of both headers:
+
+| pad | y | vs the logic-board edge |
+|---|---|---|
+| `M1`.1 | 55.00 | 2.00 mm clear |
+| `M1`.2 | 57.54 | **0.54 mm under** |
+| `J2`.1 | 56.00 | 1.00 mm clear |
+| `J2`.2 | 58.54 | **1.54 mm under** |
+| `J2`.3 | 61.08 | **4.08 mm under** |
+
+Consequences:
+
+- **Route the bundles away in −y.** Pin 1 of each is already outside the footprint, so
+  bending outward at the joint is the natural direction and keeps nothing standing up
+  under the overhang.
+- **Height is not the constraint** — M3×20 standoffs give a 20 mm gap, and a soldered
+  joint with shrink lying flat is ~1.4 mm. A 2.54 mm connector housing would sit
+  ~6–8 mm up *plus* bend radius for a 20 AWG lead, and cramped bends side-load a
+  friction-fit housing off its pins. Soldered and dressed flat is the better fit here.
+- **Access closes when the mezzanine does.** Neither joint is reachable with the logic
+  board mounted. Everything that needs to touch them — the check below,
+  `../../docs/pre-power-on-validation.md` — happens at stage 9, before stage 10 fits the
+  modules.
+
+### The short check, and why it gets harder later
+
+Board-only path from `VBAT_PROTECTED` to `GND` before stage 9 is `R2` → `VSENSE` → `R3`.
+From the parts as measured 2026-08-02 (99.7k + 21.8k) that is **≈121.5k**, at both
+`M1`.1↔`M1`.2 and `J2`.1↔`J2`.2. Nothing else bridges those nets yet — `C8`/`C9`, `Q1`,
+the bucks and the XT30s are all stage 8–9.
+
+**Take this reading before stage 9.** Once ~5470 µF lands on the rail, every measurement
+on that net behaves like the one that already misled this build once: `J2`.1↔`J2`.3 read
+as a dead short and was an uncharged cap.
+
+With the UBEC and the voltmeter still attached you will not see a clean 121.5k — both
+modules parallel their own input impedance across it. **Chase the shape, not the number:**
+
+- Near-zero, *instantly*, same value in **both probe polarities**, and it stays there →
+  a real short. A real short is boring.
+- Starts low and climbs, or settles up in the tens or hundreds of k → that is the
+  modules and their input caps, not a fault.
+
 ## Strain relief + routing notes
 
 - Feetech daisy chain follows the opposite chassis edge from the high-current servo power (reduces capacitive coupling)
