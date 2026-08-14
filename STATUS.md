@@ -4,7 +4,8 @@ Single-pane blockers / in-progress / next-actions. Hand-maintained; the detail
 lives in `README.md` (Open Decisions + Build Roadmap), `docs/order-list.md`,
 per-board `ROUTING_HANDOFF.md`, and memory. Update when state changes.
 
-_Last updated: 2026-07-31_
+_Last updated: 2026-08-13. **The solder/bench state here is a MIRROR of Notion
+(🔧 Soldering / Assembly Steps) and lags it — read Notion before acting.**_
 
 ## 🔧 2026-07-31 — BOARDS IN HAND, SOLDERING STARTED
 
@@ -13,14 +14,17 @@ Both boards fabbed, delivered and being populated. **Canonical build sequence:
 temperature per stage in §2a). Everything below dated 2026-07-26 or earlier is history;
 resolutions are marked inline rather than deleted.
 
-**🔴 Two things block or endanger the current step — neither was on any list:**
+**Two things blocked or endangered the current step — neither was on any list. One is now
+closed; ~~#1~~ is kept per this file's mark-inline convention.**
 
-1. **Solder is not confirmed to exist.** `master-bom.md` still reads
-   `Thin solder 0.6-0.8 mm | ⬜ verify`, and **no doc anywhere records the ALLOY.** Every
-   temperature in `BUILD_PLAN.md` §2a depends on it (leaded 183 °C vs SAC305 217–220 °C = a
-   30 °C shift, and the plane-tied pads get materially harder on lead-free). Check the shelf
-   before heating the iron. Leaded Sn63Pb37 is the recommendation — the logic board is
-   HASL-lead, so its pads are already tin-lead.
+1. ~~**Solder is not confirmed to exist.**~~ ✅ **CLOSED 2026-08-01 — Sn63Pb37, 1 mm, 1.8 %
+   flux core, in hand.** Leaded as recommended, so the **leaded** column in `BUILD_PLAN.md`
+   §2a is the live one and nothing shifts +30 °C. *Original text:* `master-bom.md` read
+   `Thin solder 0.6-0.8 mm | ⬜ verify` and no doc recorded the ALLOY, while every
+   temperature in §2a depends on it (leaded 183 °C vs SAC305 217–220 °C, and the plane-tied
+   pads get materially harder on lead-free). The one surprise was **diameter: 1 mm, not
+   0.6–0.8** — helps stages 4/7/8, hinders 1/3, fixed by tin-the-tip-and-place, not a second
+   spool.
 2. **The Q1 SOA check never happened, and cannot be done with owned gear.** The gate-harden
    spec below is explicitly *"SOA-gated … BENCH-VALIDATE transient (scope) before fab"* —
    **fab happened without it.** Soft-start dumps ½CV² ≈ **0.77 J** into Q1 in its linear
@@ -187,17 +191,18 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
 1. ~~Check the solder drawer~~ ✅ **DONE 2026-08-01 — Sn63Pb37, 1 mm, 1.8 % flux core.** Leaded, so
    every *leaded* setpoint in `BUILD_PLAN.md` §2a is the live one and nothing shifts +30 °C.
    Eutectic ⇒ **shiny is the correctness criterion.**
-2. **Solder, per `BUILD_PLAN.md` stages 0–10.** ✅ **Stage 0 PASSED** (per-board, not per-design)
-   · ✅ **Stage 1 DONE 2026-08-02** (15 power 0603 + 3 logic 1k).
-   🔴 **Next: the before-stage-2 gate — meter the trip network from the EMPTY `U8` land**
-   (`BUILD_PLAN.md` §6). `8→3` must read 11.3k and `8→5` 12.1k, and **`8→3` must be the LOWER of
-   the two**. It is the direct test for an `R4`/`R6` swap, which otherwise hard-cuts the robot at
-   13.0 V *before* the 12.5 V warning and never announces itself. Easy only while `U8`/`Q2`–`Q4`
-   are unpopulated.
-   ⚠️ **Stage 1's own clean → inspect gate has not run** — the flux is no-clean and its residue is
-   glossy, so "shiny" is unreadable until the board is cleaned, and the cleaner (MG Chemicals 4140
-   aerosol defluxer) was only ordered 2026-08-02. Clean and inspect stage 1 when it lands, before
-   stage 2 buries those pads under SOT-23s.
+2. **Solder, per `BUILD_PLAN.md` stages 0–10.** ✅ **STAGES 0–6 COMPLETE AND VERIFIED ON BOTH
+   BOARDS (2026-08-09).** Every SMD part on both boards is placed *and* measured.
+   ⏭️ **Next: stage 7 — `SW1` + `SW2` screw terminal blocks.** `SW1` is `TB007-508-02BE` (not
+   the 10 A kit block; drill was widened 1.2 → 1.5 mm for it). Three of the four pads are
+   plane-tied → **TS-C4 at 380–400 °C off the Kungber at 24.0 V**, TS-D24 330 °C for `SW2`.2
+   (`EN_SW`) only. Per-pad plan in `BUILD_PLAN.md` §2a; the Contura III rocker is off-board and
+   wires into `SW1` later. Then 8 high-current · 9 electrolytics · 10 INA modules.
+   ⚠️ **This list has gone stale twice now.** The bench record is Notion (*🔧 Soldering /
+   Assembly Steps*); this file is a mirror and lags it. **Read Notion before acting on
+   anything here.** On 2026-08-13 items 2 and 3 below were four stages behind, and this item
+   was sending the next bench action at a gate that had already passed, against an expectation
+   that would have failed a good board.
 3. ~~Run the preheat bench test~~ ✅ **RUN 2026-08-01, PASSED — do NOT buy a preheater.** `U1.4` wet
    in ~2 s with solder through to the far face; `Q1.3` (14 A GND inject, the worst THT pad on the
    board) easy and **shiny on both faces**. TS-C4, Kungber 24.0 V (~88 W), tip 400 °C. Consequence:
