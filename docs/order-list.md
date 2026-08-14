@@ -306,9 +306,9 @@ only sink is the bulk caps (1 J into 5000 µF from 7.5 V ≈ 21 V rail — over 
 | Board ref | Part | Qty | Vendor / SKU |
 |---|---|---|---|
 | J1 | AMASS **XT60-M** vertical (battery in) | 1 | ✅ **ORDERED** SoloGood Amass **XT60H** 10-pair ($9.99). Verified vs J1 footprint (Ø4.5mm/7.2mm). ⚠️ Snap cover OFF the male before soldering. 30A rated > ~15A draw. |
-| J3–J7, J12, J13 | AMASS **XT30U-M** vertical | 7 | — |
+| J3–J7, J12–**J14** | AMASS **XT30U-M** vertical | **8** | ⚠️ was "J3–J7, J12, J13 / qty 7" until 2026-08-13 — **`J14` was placed on the board 2026-06-27 (`STATUS.md` B1), 19 days AFTER these packs were ordered on 06-08**, and the row was never re-derived |
 | U1–U5 buck offboard terminals | AMASS **XT30** ×2 per buck | 10 | each Pololu buck lands via 2×XT30 |
-| **XT30 TOTAL** | **17 board positions** (7 + 10) + cable mates | ✅ **2× 10-pair pack ordered** | SoloGood "10 Pairs XT30 Amass XT30U" ×2 ordered 2026-06-08 (20M+20F, covers 17 board + mates + spares). Males→board (vertical footprint), females→leads. |
+| **XT30 TOTAL** | **18 board positions** (8 + 10) + cable mates | ✅ **2× 10-pair pack ordered — still sufficient** | SoloGood "10 Pairs XT30 Amass XT30U" ×2 ordered 2026-06-08 (20M+20F, covers **18** board + mates + spares). Males→board (vertical footprint), females→leads. ⚠️ **Read 17 until 2026-08-13** — the `J14` omission above propagated here. **No shortage resulted, and that is exactly why nobody caught it:** 20 M against 18 positions, so the over-order absorbed the miscount. Only **16** of the 18 are populated in v1 (`U5`'s two are DNP) — `BUILD_PLAN.md` §7 counts on that basis, so 16 vs 18 between the two docs is a populated-vs-footprint difference, not a disagreement. |
 | J8 | JST **B3B-XH-A** 1×03 2.5 mm (servo bus TTL) | 1 | DigiKey **455-2247-ND** — [link](https://www.digikey.com/en/products/detail/jst-sales-america-inc/B3B-XH-A/1651046) |
 | J2 + M1 | PinHeader 1×03 + 1×02 2.54 (UBEC aux + voltmeter) | 1 strip | Sullins **`PRPC040SAAN-RC`** 40-pin breakaway, snap to length (covers both) |
 | J20 | IDC box header **2×06 2.54 shrouded vertical THT** (interboard) | 1 | Würth WR-BHD series — [filter](https://www.digikey.com/en/product-highlight/w/wurth-electronics/wr-bhd-series-box-headers-and-idc-connectors), pick 12-pos 2.54 |
