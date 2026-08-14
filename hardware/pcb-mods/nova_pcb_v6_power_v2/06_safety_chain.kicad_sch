@@ -5297,7 +5297,7 @@
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
-		(dnp yes)
+		(dnp no)
 		(uuid "c1cdb69b-3a9d-40b8-a0b7-cca00676f5f9")
 		(property "Reference" "U12"
 			(at 224.79 91.44 0)
