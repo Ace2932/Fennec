@@ -12,6 +12,7 @@
 #include "ina226_telemetry.h"
 #include "icm42688.h"
 #include "hfe_envelope.h"
+#include "slew_limiter.h"
 #include "safety_state.h"
 #include "limp_controller.h"
 
@@ -386,7 +387,8 @@ uint8_t cmd_decimate_count = 0;
 // Per-joint last-commanded raw goal, used to compute the slew-limited
 // next value. Initialized to "no command yet" sentinel; on first broadcast
 // after boot, ramp is bypassed (first write = current latched target).
-constexpr uint16_t SLEW_UNINIT = 0xFFFF;
+// SLEW_UNINIT now lives in slew_limiter.h alongside the logic that reads it.
+using nova::SLEW_UNINIT;
 uint16_t last_cmd_goal[NOVA_JOINT_COUNT];
 
 // ---------------- Per-joint position limit table ----------------
@@ -480,39 +482,12 @@ void broadcast_servo_commands() {
   // outright, before any slewing starts.
   hfe_envelope.apply(targets);
 
-  // PASS 3 — slew limit and write.
-  for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) {
-    const uint16_t target = targets[i];
-    uint16_t out;
-    if (last_cmd_goal[i] == SLEW_UNINIT) {
-      // ANTI-SNAP (clean-movement lane 2026-07-06, closes the boot-settle
-      // ramp intent of PR #17): on the FIRST broadcast after boot or a
-      // fault clear, seed the slew from the servo's PRESENT position
-      // (polled at 50 Hz) instead of accepting the target verbatim —
-      // verbatim meant the servo jumped from wherever it physically was
-      // to the target at its own max speed (goal-acc-limited only): the
-      // boot lurch, and the lurch after every E-stop clear. Seeded, the
-      // same slew rate (176 deg/s) ramps it in. Servos that never
-      // answered a poll (present bit clear) keep verbatim behavior —
-      // nothing real moves on an absent servo.
-      if (servo_present_mask & (uint16_t)(1u << i)) {
-        int32_t seeded = (int32_t)servo_position_raw[i];
-        int32_t delta = (int32_t)target - seeded;
-        if (delta >  (int32_t)NOVA_SLEW_MAX_DELTA) delta =  (int32_t)NOVA_SLEW_MAX_DELTA;
-        if (delta < -(int32_t)NOVA_SLEW_MAX_DELTA) delta = -(int32_t)NOVA_SLEW_MAX_DELTA;
-        out = (uint16_t)(seeded + delta);
-      } else {
-        out = target;               // absent servo — verbatim is harmless
-      }
-    } else {
-      int32_t delta = (int32_t)target - (int32_t)last_cmd_goal[i];
-      if (delta >  (int32_t)NOVA_SLEW_MAX_DELTA) delta =  (int32_t)NOVA_SLEW_MAX_DELTA;
-      if (delta < -(int32_t)NOVA_SLEW_MAX_DELTA) delta = -(int32_t)NOVA_SLEW_MAX_DELTA;
-      out = (uint16_t)((int32_t)last_cmd_goal[i] + delta);
-    }
-    last_cmd_goal[i] = out;
-    goals[i] = out;
-  }
+  // PASS 3 — slew limit and write. Logic lives in slew_limiter.h so it can be
+  // unit-tested natively (#358); the ANTI-SNAP seeding rationale and the
+  // absent-servo case are documented there.
+  nova::slew_apply(targets, last_cmd_goal, goals, NOVA_JOINT_COUNT,
+                   servo_position_raw, servo_present_mask,
+                   (uint16_t)NOVA_SLEW_MAX_DELTA);
 
   // PASS 4 — path-safety re-check (#280). PASS 2 only proves the FAR
   // commanded endpoint is legal; nothing above couples haa and hfe's
