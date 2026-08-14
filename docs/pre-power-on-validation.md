@@ -209,7 +209,7 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
   | leg 7.5V | 0x40 | GND | GND | **default — no move** |
   | hip 12V | 0x41 | GND | VS | A0 → VS |
   | Jetson 12V | 0x44 | VS | GND | A1 → VS |
-  | 4th 12V | 0x45 | VS | VS | A0 + A1 → VS |
+  | L2 12V | 0x45 | VS | VS | A0 + A1 → VS |
 
   Chip-level table — **map to YOUR module's silk legend; don't assume pad order.** Leg stays default; the other three each get a bead moved.
 - [x] **RESOLVED 2026-06-30 — 4th INA = L2 LiDAR (0x45), not arm.** LiDAR is live + nav-critical/brownout-sensitive; the arm rail is DNP (Phase-4) so an INA there would read nothing. Firmware enabled: `-D NOVA_INA226_L2` in `platformio.ini` `[env]` + publish expanded to 12 floats (`/power_rails[9..11]` = l2 v/a/w). **Arm INA deferred to a 5th module when the arm is built.** So bead the 4th module to **0x45 (A0+A1→VS)** and wire its IN± to the **L2 rail**.

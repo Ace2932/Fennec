@@ -221,7 +221,21 @@ PIO_INI = REPO / "firmware/teensy/firmware/platformio.ini"
 
 
 def _l2_flag_enabled() -> bool:
-    return "-D NOVA_INA226_L2" in PIO_INI.read_text()
+    """Is -D NOVA_INA226_L2 actually ACTIVE in the build?
+
+    Was a bare substring test until 2026-08-14, which could not distinguish an
+    enabled flag from a commented-out one (`; -D NOVA_INA226_L2` — platformio.ini
+    comments with `;`) or from a longer name that merely starts the same
+    (`-D NOVA_INA226_L2_OFF`). Both read as ENABLED, so the gate would assert a
+    12-float /power_rails contract against a build publishing 9. Found by
+    sabotage-checking the #359 address gate: renaming the flag left every test
+    green.
+    """
+    for line in PIO_INI.read_text().splitlines():
+        code = line.split(";", 1)[0]                 # drop comments
+        if re.search(r"(?<![\w-])-D\s*NOVA_INA226_L2(?![\w])", code):
+            return True
+    return False
 
 
 def _power_rails_fields() -> int:
@@ -258,4 +272,133 @@ def test_l2_rail_flag_and_field_count_agree():
         f"POWER_RAILS_FIELDS resolved to {n} with the L2 flag "
         f"{'set' if _l2_flag_enabled() else 'unset'} -- expected 12/9. Either the rail "
         "count changed or the #ifdef was edited; re-read main.cpp before trusting either."
+    )
+
+
+# --- INA226 I2C addresses: one bus, four modules, three documents (#359) --------
+# Four INA226 breakouts share one I2C bus, so the addresses are the ONLY thing
+# distinguishing them, and they are set by hand with a solder bead at stage 10.
+# A duplicate is not an error anyone sees -- it is a rail quietly reading another
+# rail's current.
+#
+# The addresses are independently written down in three places, and
+# pre-power-on-validation.md §1e explicitly claims to agree with the first:
+#
+#   firmware/teensy/firmware/src/ina226_telemetry.h   the constants the firmware uses
+#   docs/pre-power-on-validation.md §1e               the A0/A1 bead table you assemble from
+#   hardware/pcb-mods/BUILD_PLAN.md                   the stage-10 fit instruction
+#
+# "Matches X" in a comment makes X an interface. Nothing checked it until now.
+#
+# ⚠ These assert the per-rail MAPPING, not just the set of four values. Swapping
+# leg and hip leaves the set identical while every rail's telemetry reports under
+# the wrong name -- the failure would look like a miswired harness, not a
+# software bug, and would be chased at the bench.
+
+INA_HEADER = REPO / "firmware/teensy/firmware/src/ina226_telemetry.h"
+PREPOWER = REPO / "docs/pre-power-on-validation.md"
+BUILD_PLAN = REPO / "hardware/pcb-mods/BUILD_PLAN.md"
+
+#: rail key -> the label each document uses for it
+_RAILS = ("leg", "hip", "jetson", "l2")
+
+
+def _header_addrs() -> dict[str, int]:
+    """{'leg': 0x40, ...} from the firmware constants."""
+    src = INA_HEADER.read_text()
+    return {
+        m.group(1).lower(): int(m.group(2), 16)
+        for m in re.finditer(r"INA226_ADDR_(\w+)\s*=\s*(0x[0-9A-Fa-f]+)", src)
+    }
+
+
+def _prepower_addrs() -> dict[str, int]:
+    """{'leg': 0x40, ...} from the §1e A0/A1 bead table."""
+    sec = re.search(
+        r"INA226 I2C address per module(.*?)(?=\n- \[|\Z)", PREPOWER.read_text(), re.S
+    )
+    assert sec, "§1e 'INA226 I2C address per module' block not found -- doc changed shape"
+    rows = re.findall(
+        r"^\s*\|\s*([^|]+?)\s*\|\s*(0x[0-9A-Fa-f]{2})\s*\|", sec.group(1), re.M
+    )
+    return {label.split()[0].lower(): int(addr, 16) for label, addr in rows}
+
+
+def _build_plan_addrs() -> dict[str, int]:
+    """{'leg': 0x40, ...} from the stage-10 assembly-config line."""
+    pairs = re.findall(
+        r"\*\*(leg|hip|Jetson|L2)\s+`(0x[0-9A-Fa-f]{2})`\*\*", BUILD_PLAN.read_text()
+    )
+    return {rail.lower(): int(addr, 16) for rail, addr in pairs}
+
+
+@pytest.mark.parametrize(
+    "name,fn",
+    [("firmware header", _header_addrs),
+     ("pre-power-on §1e", _prepower_addrs),
+     ("BUILD_PLAN", _build_plan_addrs)],
+)
+def test_each_source_actually_yields_all_four_rails(name, fn):
+    """Guard on the guard, and it is load-bearing here.
+
+    Every check below compares two dicts. If a document's table is reformatted
+    and a parser silently returns {} , dict equality between two empty results
+    PASSES and the gate evaporates. Assert the parse found four named rails
+    before trusting any comparison built on it.
+    """
+    got = fn()
+    assert set(got) == set(_RAILS), (
+        f"{name} parser yielded {sorted(got)}, expected {sorted(_RAILS)} — the "
+        f"source changed shape, so every INA226 address check below is now "
+        f"comparing something other than what it claims. Fix the parser; do not "
+        f"delete the test."
+    )
+
+
+def test_the_four_ina226_addresses_are_distinct():
+    """Four modules, one bus. A duplicate is silent, not an error."""
+    addrs = _header_addrs()
+    dupes = {a for a in addrs.values() if list(addrs.values()).count(a) > 1}
+    assert not dupes, (
+        f"duplicate INA226 address {sorted(hex(a) for a in dupes)} — two modules "
+        f"answer together on one bus and neither rail reads what it says it does"
+    )
+
+
+def test_prepower_bead_table_matches_the_firmware_header():
+    """§1e:205 says it 'matches ina226_telemetry.h'. Check it, per rail."""
+    hdr, doc = _header_addrs(), _prepower_addrs()
+    assert doc == hdr, (
+        "the A0/A1 bead table you assemble from disagrees with the firmware:\n"
+        + "\n".join(
+            f"  {r}: header {hex(hdr[r])} vs §1e {hex(doc[r])}"
+            for r in _RAILS if hdr.get(r) != doc.get(r)
+        )
+        + "\n\nThe bead is set by hand at stage 10 and cannot be read back "
+          "without an I2C scan — the board would come up with a rail silently "
+          "reporting another rail's current."
+    )
+
+
+def test_build_plan_stage10_matches_the_firmware_header():
+    """BUILD_PLAN §5 is the instruction actually followed at the bench."""
+    hdr, bp = _header_addrs(), _build_plan_addrs()
+    assert bp == hdr, (
+        "BUILD_PLAN's stage-10 addressing disagrees with the firmware:\n"
+        + "\n".join(
+            f"  {r}: header {hex(hdr[r])} vs BUILD_PLAN {hex(bp[r])}"
+            for r in _RAILS if hdr.get(r) != bp.get(r)
+        )
+    )
+
+
+def test_the_L2_rail_is_addressed_at_0x45_specifically():
+    """The one that moved. The 4th INA was reassigned off the DNP arm rail to
+    the L2 LiDAR on 2026-06-30, `-D NOVA_INA226_L2` is set, and /power_rails was
+    widened 9 -> 12 for it (see the width test above). If this address drifts,
+    those three floats publish from a module that is not there."""
+    assert _header_addrs()["l2"] == 0x45
+    assert _l2_flag_enabled(), (
+        "INA226_ADDR_L2 exists but -D NOVA_INA226_L2 is not set — /power_rails "
+        "reverts to 9 floats and the L2 rail publishes nothing"
     )
