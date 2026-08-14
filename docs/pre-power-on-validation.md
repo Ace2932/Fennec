@@ -102,8 +102,18 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
       VIN/GND/VOUT/EN silk to the wiring. **⚠️ Fixed-output variant per slot is a FRY RISK the board
       can't enforce — confirm F7 vs F12 on each physical module (see §1e).** Terminal rect pad = + .
 - [ ] **XT connector GENDER on every harness end — decide by CONTACTS, not by the part name.**
-      Board side is `XT60-M` at `J1` and `XT30U-M` at `J3`–`J7` / `J12`–`J14` (footprints, verified
-      2026-08-13). Every cable end must be the *physical complement*. ⚠️ **The "-M"/"-F" names are
+      Board side per the FOOTPRINTS is `XT60-M` at `J1` and `XT30U-M` at `J3`–`J7` / `J12`–`J14`
+      (verified 2026-08-13). Every cable end must be the *physical complement*.
+      🔴 **AS BUILT, `J1` DOES NOT MATCH ITS FOOTPRINT** (bench-confirmed 2026-08-14). The fitted
+      part is the **receiving housing with PINS** (`XT60-F`) — the opposite of every XT30 on the
+      board, which are plug-in housings with SOCKETS. Accepted, not a defect: the holes are
+      symmetric so it seats either way, and it is arguably the safer arrangement (see below). It
+      changes what to build: **`J1`'s harness end is the plug-in/SOCKET half**, while every XT30
+      harness end is the receiving/PIN half. Do not build all 17 the same way.
+      Why it is safe as built: `J1`'s pins are dead when unmated (nothing feeds them from the board
+      side), while the pack harness — live via the MRBF block — carries the recessed sockets. The
+      rail XT30s are the mirror: the BOARD side is the live one when unmated, and it has the
+      recessed sockets. Both ends up with the energised half recessed. ⚠️ **The "-M"/"-F" names are
       inverted for XT60**: the "male" housing is the smaller one carrying female **sockets**, which
       is why LiPo packs ship as "male" and still have recessed contacts. Reasoning from the suffix
       will get this backwards — hold the two parts together and check pins-vs-sockets.
