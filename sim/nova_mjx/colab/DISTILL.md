@@ -13,9 +13,25 @@ testing on the GPU. **You are testing whether a blind student can reproduce the 
 
 ## Setup
 
-Identical to `fennec_train.ipynb` — same clone, same pinned deps (`../requirements.txt`,
-`brax 0.14.2` + `jax 0.6.0`, CUDA build). If a sanity cell reports `backend cpu`,
-`Runtime → Restart session` and re-run from the install cell; the clone persists.
+**Use [`fennec_distill.ipynb`](fennec_distill.ipynb)** — it implements everything below, with every
+knob in one config cell (`SCALE` is normally the only number you touch; it drives BC episodes,
+DAgger episodes and epochs together).
+
+Setup is otherwise identical to `fennec_train.ipynb` — same clone, same pinned deps
+(`../requirements.txt`, `brax 0.14.2` + `jax 0.6.0`, CUDA build). If a sanity cell reports
+`backend cpu`, `Runtime → Restart session` and re-run from the config cell; the clone persists.
+
+Three operational things this doc used to leave implicit, all of which bite on Colab specifically:
+
+- **The teacher is NOT in the clone.** `sim/nova_mjx/artifacts/policies/*` is gitignored
+  (`.gitignore:154`), so a fresh clone has no checkpoints and the run dies immediately. Copy the
+  `.pkl` from Drive first — it is ~1.4 MB. The notebook does this and asserts it landed.
+- **There is no resume and no intermediate checkpoint.** `distill.py`'s only write is the
+  `pickle.dump` at export, so a Colab dropout loses the entire run. Point `--out` at a Drive path,
+  and calibrate the wall-clock at small scale before committing hours to the full one.
+- **`--eval-only` makes the second command cheap.** It reruns the paired eval against an
+  already-exported student, so evaluating both `vx 0.35` and `vx 0.50` costs one eval, not a second
+  distillation.
 
 The teacher checkpoint must be on the machine. `nova_policy_hm234.pkl` is the one with a measured
 flat baseline (below) — use it unless you have a reason not to, and **record which you used**,
