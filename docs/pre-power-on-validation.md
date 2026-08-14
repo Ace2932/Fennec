@@ -101,6 +101,36 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
       EN=EN_BUCKS/EN_JET, VOUT`. Reverse VIN into a Pololu = dead module. Match each buck's
       VIN/GND/VOUT/EN silk to the wiring. **⚠️ Fixed-output variant per slot is a FRY RISK the board
       can't enforce — confirm F7 vs F12 on each physical module (see §1e).** Terminal rect pad = + .
+- [ ] **XT connector GENDER on every harness end — decide by CONTACTS, not by the part name.**
+      Board side is `XT60-M` at `J1` and `XT30U-M` at `J3`–`J7` / `J12`–`J14` (footprints, verified
+      2026-08-13). Every cable end must be the *physical complement*. ⚠️ **The "-M"/"-F" names are
+      inverted for XT60**: the "male" housing is the smaller one carrying female **sockets**, which
+      is why LiPo packs ship as "male" and still have recessed contacts. Reasoning from the suffix
+      will get this backwards — hold the two parts together and check pins-vs-sockets.
+      **The pack does NOT plug into `J1`** — it routes via the MRBF-30 block on ring lugs
+      (`../hardware/pcb-mods/BUILD_PLAN.md` §5), so the pack-end and board-end genders are
+      *independent*. Whatever `J1` ended up as, the harness's board end just needs its complement,
+      and the XT60H order was a 10-**pair**, so both are on hand. Polarity is separately enforced:
+      **+ (red) → flat side** per §1e, and the keyed housing then makes reversal impossible.
+- [ ] **🔴 Rail cross-plug — 8 identical XT30s, TWO voltages, ZERO keying between them.** Read out
+      of the board file 2026-08-13:
+
+      | connector | net | volts |
+      |---|---|---|
+      | `J3` `J4` `J5` `J6` | `V7V5_LEG` | **7.5 V** |
+      | `J7` | `V12_HIP` | 12 V |
+      | `J12` | `V12_JET` | 12 V |
+      | `J13` | `V12_L2` | 12 V |
+      | `J14` | `V7V5_ARM` | 7.5 V (rail DNP) |
+
+      Same part, same gender, same keying on all eight — the housing key enforces **polarity**, not
+      **rail**. Nothing physical stops a leg harness going into `J7`, which puts **12 V into 7.5 V
+      servos**: the same fry this document already guards against on the servo daisy chain, arriving
+      by a different route. The four buck stations (`U1`–`U4`, 2× XT30 each) add eight more
+      identical connectors to the same pool.
+      **Mitigation is labelling, because there is no mechanical one.** Label **both ends** of every
+      rail harness with rail name *and* voltage before first power, and meter each connector's rail
+      at the board before mating anything to it.
 
 **🟡 Medium — silent failure / safety-logic inversion:**
 - [ ] **U9–U12 INA226 modules** — board connects I2C+power only (`4=SDA, 5=SCL, 6=VCC, 7=GND`).
@@ -148,10 +178,30 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
 
 **Connector polarity (FIXED this date, commit bc6e3af — all 9 keyed XT connectors).** Standard KiCad `Connector_AMASS` footprints number **pad1 = chamfer side = NEGATIVE, pad2 = flat side = POSITIVE** (NOT pad1=+). The board originally had +V on pad1 → every XT reverse-wired → would have fed +V to the − terminal and **fried the Jetson/servos/arm**. Corrected so **+V is on the flat-side pad**. At assembly, build every XT cable **+ (red) → flat side**; the keyed housing then enforces it. Affected: J1 (XT60 battery), J3–J7 (rail injection), J12–J14 (Jetson/L2/arm out). Pololu buck terminals are **non-keyed** (pad1 = rect marker = +V) — you set their polarity by hand to the rect pad.
 
+> 🔴 **THE SQUARE PAD MEANS THE OPPOSITE THING AT THE TWO KINDS OF XT30 ON THIS BOARD.** Both rules
+> above are individually correct and they contradict each other; the seam between them is the hazard,
+> and it was unmarked until 2026-08-13. Read out of the board file:
+>
+> | connector | square/rect pad | round pad | keyed? |
+> |---|---|---|---|
+> | `J1`, `J3`–`J7`, `J12`–`J14` (AMASS) | **pad 1 = NEGATIVE** (`GND` / `BATT_NEG`) | pad 2 = POSITIVE | ✅ housing key |
+> | `U1`–`U5` buck stations | **pad 1 / pad 4 = POSITIVE** (`VBAT_PROTECTED` in, rail out) | pad 2 = `GND` | ❌ **none** |
+>
+> e.g. `J3`.1 roundrect = `GND`, but `U1`.1 rect = `VBAT_PROTECTED`. **Learning "square pad = negative"
+> from the eight rail connectors and carrying it to a buck station reverses VIN into the Pololu, which
+> kills the module** — and the buck stations are exactly the ones with no housing key to stop you.
+> There are 16 XT30 positions on this board: 8 standalone (`J3`–`J7`, `J12`–`J14`) and 8 across the
+> four populated buck stations (`U1`–`U4`, 2× each). Half of them follow each rule.
+>
+> **Do not reason from pad shape at a buck station.** The only safe reference there is the NET: `+V` is
+> `VBAT_PROTECTED` on the input XT30 and the rail (`V7V5_LEG` / `V12_HIP` / `V12_L2_RAW` / `V12_JET`) on
+> the output one. Meter it if there is any doubt — `U1`.2 rings to GND, `U1`.1 does not.
+
 - [ ] **Buck voltage variant per slot (FRY RISK — board can't enforce fixed output).** Read the part number printed ON each physical module:
   - U1 leg → D42V110**F7** (7.5V) · U2 hip → D42V110**F12** (12V) · U3 L2 → D24V22**F12** (12V) · U4 Jetson → D42V55**F12** (12V) · U5 arm → D42V55**F7** (7.5V)
   - **F7 = 7.5V, F12 = 12V.** An F12 on the leg/arm rail → 12V into 7.5V servos = fry. Confirm the suffix on all five before wiring.
-- [ ] **Buck pin map + polarity:** board terminal **rect pad = +** (VBAT_PROTECTED in / Vout out / EN), circle pad = GND. Wire cables 1:1 to the module's VIN/GND/VOUT/EN per its datasheet; + to the rect pad.
+- [ ] **Buck pin map + polarity:** board terminal **rect pad = +** (VBAT_PROTECTED in / Vout out / EN), circle pad = GND. Wire cables 1:1 to the module's VIN/GND/VOUT/EN per its datasheet; + to the rect pad. ⚠️ **This is the OPPOSITE of the AMASS rule for `J1`/`J3`–`J7`/`J12`–`J14` — see the red box above before wiring a station.**
+- [ ] **Buck harness form factor.** The Pololu cards are **100 % THT bare modules** living in the printed finned holder (`../hardware/pcb-mods/README.md` §"Buck modules are OFF-BOARD"), so **no XT30 is soldered to a Pololu**. Solder **18 AWG pigtails** into the module's own through-holes and put the XT30 on the far end, mating with the board station — that keeps the module swappable. Each station is **2× XT30 (5.0 mm pitch, 2.7 mm drill) + a 1×02 2.54 header** ~8 mm to the side carrying `EN_BUCKS` (`EN_JET` on `U4`) and GND. The EN pair is not optional: it is how e-stop and hardcut reach the rail.
 - [ ] **INA226 I2C address per module — set the A0/A1 solder bead** (4 modules, one bus → must be unique; matches `firmware/teensy/firmware/src/ina226_telemetry.h`):
 
   | rail | address | A1 tie | A0 tie | bead action |
