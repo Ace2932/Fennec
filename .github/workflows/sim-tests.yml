@@ -22,11 +22,29 @@ on:
   pull_request:
     paths:
       - 'sim/nova_mjx/**'
+      # ...but "the package" is not "every file under it". A colab/*.md or
+      # *.ipynb edit fired this ~1 hour suite, which is the same defect #326
+      # split this workflow out to fix, one level in — and cad-gates.yml already
+      # had exactly this case fixed (#336, "a colab .md fired all six CAD jobs").
+      # It was fixed there and missed here.
+      #
+      # PROVABLE, not a guess, to the same standard as the cad-gates narrowing:
+      # sim/nova_mjx/colab/ contains ZERO .py files (only DISTILL.md, README.md
+      # and the two notebooks), so nothing in it can be imported by the suite;
+      # and no sim test reads a .md or .ipynb at all. Therefore no file under
+      # colab/ can change this suite's outcome. If a .py ever lands there, or a
+      # test starts reading a notebook, drop this line.
+      #
+      # Negation rather than paths-ignore because GitHub forbids using both
+      # paths and paths-ignore for the same event; later patterns override
+      # earlier ones, so this must stay AFTER the include above.
+      - '!sim/nova_mjx/colab/**'
       - '.github/workflows/sim-tests.yml'
   push:
     branches: [main]
     paths:
       - 'sim/nova_mjx/**'
+      - '!sim/nova_mjx/colab/**'
       - '.github/workflows/sim-tests.yml'
 
 jobs:
