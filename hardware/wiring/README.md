@@ -32,7 +32,7 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
                                 │
                                 ├─ [reserved D42V55F7] → 7.5V → arm rail (Phase 4 unstuffed)
                                 │
-                                └─ UBEC 5V/5A        → 5V       → Ethernet switch + fans + aux 5V
+                                └─ UBEC 5V/5A        → 5V       → fans + aux 5V
 ```
 
 ## Safety chain trip points (highest pack voltage first)
@@ -161,23 +161,21 @@ brightness).
 
 ## Ethernet topology
 
+Point-to-point, no switch on the robot (decision 2026-08-14):
+
 ```
-Unitree L2 LiDAR              ┌─── 5-port unmanaged gigabit switch
-  IP: 192.168.1.62  ──Cat 6───┤    (TP-Link LS105G or NETGEAR GS305)
-  UDP target: 6101            │    Powered from 5V UBEC rail (~3 W draw)
-                              │
-Jetson Orin Nano              │
-  enP8p1s0:                   │
-  192.168.1.2/24 ────Cat 6────┤
-  (static via nmcli           │
-   connection nova-lan)       │
-                              │
-Dev laptop (optional) ───Cat 6┘
-  192.168.1.10 static
+Unitree L2 LiDAR
+  IP: 192.168.1.62  ──Cat 6 (direct)───  Jetson Orin Nano enP8p1s0
+  UDP target: 6101                       192.168.1.2/24 (static via nmcli
+                                          connection nova-lan)
 ```
 
-Cable: Cable Matters 10 Gbps snagless Cat 6 (1 ft) × 2-3.
-Switch can be pulled from its case to save ~60 % volume inside the chassis.
+Cable: Cable Matters 10 Gbps snagless Cat 6 (1 ft) × 1, on-robot.
+
+The 5-port unmanaged gigabit switch (TP-Link LS105G or NETGEAR GS305) is
+**bench-only** — not mounted on the robot. It stays around so a dev laptop can
+join the LAN on the bench when wanted. On-robot dev access is Jetson's
+built-in WiFi.
 
 ## Wire gauge convention
 
@@ -307,6 +305,50 @@ modules parallel their own input impedance across it. **Chase the shape, not the
   a real short. A real short is boring.
 - Starts low and climbs, or settles up in the tens or hundreds of k → that is the
   modules and their input caps, not a fault.
+
+### 🔴 IT HAPPENED — `M1` shorted `VBAT_PROTECTED` to GND, 2026-08-14
+
+Everything above was written as a *predicted* hazard on 2026-08-13. It materialised the
+next day, on `M1`, at exactly the pair and the spacing this section names. Recording the
+signature so the next occurrence is a number to match rather than a hunt.
+
+**The tell was not on the shorted net.** It surfaced while checking `Q1`:
+
+    BATT_NEG ↔ GND    measured 109.6k, symmetric in both probe polarities
+
+`R_gs1` (100k) + `R17` (10k) = 110k, and those are the only resistive path from
+`BATT_NEG` to the `VBAT_PROTECTED` node. Reading 109.6k means the rail on the far side of
+`R17` was sitting at ~0 Ω to GND. It should have read **121.5k + 110k ≈ 232k**. A rail
+short showed up as a *plausible-looking* two-resistor reading somewhere else entirely.
+
+**Confirmed by removal**, which is the only proof that settles it: `M1` snapped off during
+probing, and `VBAT_PROTECTED`↔GND went straight back to a slow climb settling on
+**~121.5k** — `R2` + `R3`, exactly the fixed divider, with no short and the trip divider
+intact.
+
+**Cause: `M1` was the one header that never got insulated.** `J2`'s middle pin had been
+Kapton-wrapped the day before (one wrap covering `1↔2` and `2↔3`, per the doctrine above);
+`M1` had the same 1.4 mm of exposed conductor at the pin base and got nothing. The
+mitigation was applied to one of the two headers this section names and not the other, and
+the uninsulated one is the one that shorted. Same shape as
+[[fixed-the-instance-not-the-convention]], in solder.
+
+**Three false leads, all of which cost time — expect them:**
+
+1. **`0.L` at `M1`.1↔`M1`.2 read as an open circuit.** It was the probe sitting on
+   heatshrink. An insulated joint reads OL every time; probe bare metal or a screw
+   terminal (`SW1`.2 is the easiest on this board).
+2. **Inferring the rail through `R_gs1`+`R17` has ~1 kΩ of resolution.** "≈0 Ω" could not
+   distinguish a solder bridge (<1 Ω) from an active module's front end (hundreds of Ω).
+   Measure the pair *directly* — 0.1 Ω resolution instead of arithmetic on two 100k-class
+   parts.
+3. **Visual inspection found nothing.** It never does at this spacing; the metal that
+   matters is at the pin base under the sleeve. The meter found it, the eye did not.
+
+**And the reason the deadline in this section is real:** this was caught with the rail
+still simple. One stage later, ~5470 µF of electrolytic would have made the same 0.2 Ω
+indistinguishable from a charging cap — and a 4S pack into a shorted `VBAT_PROTECTED`
+dumps through the MRBF-30, `Q1` and the plane.
 
 ## Strain relief + routing notes
 
