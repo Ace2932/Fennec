@@ -32,6 +32,17 @@ closed; ~~#1~~ is kept per this file's mark-inline convention.**
    deferred to Phase 5), and the documented fallback — a 10/22/47 Ω 2–3 W precharge resistor —
    **is not in any ✅ ordered list.** See "Next actions".
 
+**🔴 Mezzanine height — the under-stack constraint (recovered from `9f19770`, 2026-06-17, which
+never reached main):** parts on the power board's TOP face sit in the **~20 mm standoff gap**
+under the logic board, so the usable height is **≤ ~17 mm**.
+
+- **`C8`/`C9` = 470 µF / 25 V (Ø10×16), NOT 35 V.** The 35 V part (UPW1V471MPD) is ~Ø10×**20 mm**
+  and would hit the top board. 25 V still meets 80 % derating on the 16.8 V rail (67 % of rated),
+  so this costs nothing electrically. `order-list.md` carried the superseded "use 35 V" text on
+  main until 2026-08-15 because the commit that fixed it was only ever on a branch.
+- ⬜ **Confirm the INA226 breakout modules on headers clear the 20 mm gap** — they are the
+  **tallest under-stack parts**, and they go in at stage 10. Check before fitting, not after.
+
 **Verified clean this pass** (read from the board file, not assumed):
 
 - **Mounting-hole keepouts are real AND effective — proven against the actual fill.** All four
