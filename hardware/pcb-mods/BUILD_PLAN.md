@@ -761,7 +761,7 @@ Everything that leaves the power board. Gauges per `../wiring/README.md`
 
 | ref | connector | net(s) | goes to | wire |
 |---|---|---|---|---|
-| J1 | XT60-M | `VBAT` / `BATT_NEG` | 4S LiPo **via the MRBF fuse block** (off-board, floor plate) | 18 AWG silicone |
+| J1 | ⚠️ **AS BUILT: the RECEIVING housing (pins), i.e. `XT60-F`** — the footprint and the rows below say `XT60-M`. Confirmed on the bench 2026-08-14: the board part has PINS and the cable shell plugs over it, which is the opposite of every XT30 here. Mechanically fine (symmetric 4.5 mm holes at 7.2 mm pitch). **The pack-side harness end must therefore be the PLUG-IN housing with SOCKETS.** | `VBAT` / `BATT_NEG` | 4S LiPo **via the MRBF fuse block** (off-board, floor plate) | 18 AWG silicone |
 | SW1 | TB132 screw, 5.08 mm | `VBAT` → `VBAT_PROTECTED` | Contura rocker, ~18 A — **off-board panel/pod**. Drill is 1.5 mm (bumped from lib 1.2) for TB007-508-02BE | 18 AWG |
 | SW2 | TB132 screw | `GND` / `EN_SW` | E-stop, signal level only | 22 AWG |
 | U1 | 2× XT30 station | `VBAT_PROTECTED`/`GND` in, `V7V5_LEG` out, EN=`EN_BUCKS` | **Pololu buck, off-board module** | 18 AWG |
@@ -1032,5 +1032,11 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
       2026-07-31: 16 mating halves needed** — 8 board connectors (J3–J7, J12–J14)
       plus 8 across the four populated buck stations (U1–U4, 2× XT30 each). 18 only
       if U5 is ever fitted. Board side is XT30U-**M**, so the cables carry females.
+      ⚠️ **Gender on XT parts names the HOUSING, not the contacts** — the "male" housing is the
+      one that plugs IN and carries female SOCKETS. So an `XT30U-M` on the board has sockets you
+      can see into, and its cable half is the receiving housing with PINS. Reasoning from the
+      suffix gets this backwards; hold the two parts together and look at the contacts.
+      ⚠️ **`J1` is the EXCEPTION as built** — receiving housing with pins, the opposite of the
+      XT30s. See its row in §5. Its harness half is the plug-in/socket one.
 
 _Inventory and nets read from the board files 2026-07-29._
