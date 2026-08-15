@@ -456,6 +456,25 @@ ALLOW.update(_allow(
     ("-51.8", "-77.8", "-14.0"), ("51.8", "-77.8", "-14.0"),
 ))
 
+# ---- leg_v6/shoulder_sw1.scad -----------------------------------------------
+# #377 (2026-08-15): the FRONT shoulder is the same crossmember plus the SW1
+# panel hole, so it inherits the SAME already-adjudicated flange bores. ALLOW is
+# keyed by PART NAME, so splitting the part silently un-adjudicated them and this
+# gate went red on geometry nobody had touched — the split, not the flange, was
+# the change. Same reason, same coordinates.
+#
+# NB the FAIL line for these prints z as "-14.1" while the real by_pos key is
+# "-14.0" (TRUNK_HOLE_Z = -14.05 sits exactly on the .x5 boundary). That is the
+# documented GOTCHA above: coordinates copied off a FAIL message silently no-op.
+# These are the shoulder entry's verified keys, reused verbatim — not retyped.
+ALLOW.update(_allow(
+    "shoulder_sw1",
+    "trunk-flange heat-set bore — identical to `shoulder`'s, see that entry: "
+    "drilled from the flange's own rearward (open trunk-end) face, and "
+    "trunk.scad's header independently confirms the path is already open.",
+    ("-51.8", "-77.8", "-14.0"), ("51.8", "-77.8", "-14.0"),
+))
+
 # ---- leg_v6/shoulder_plate.scad ---------------------------------------------------
 ALLOW.update(_allow(
     "shoulder_plate",

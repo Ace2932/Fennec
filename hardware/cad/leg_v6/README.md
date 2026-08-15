@@ -119,9 +119,13 @@ columns, insert purchase test at Ø4.0 before committing the knee arms.
 **Corner identity:** only TWO leg variants exist (L/R), two of each — but they
 go on **DIAGONAL** corners, not one variant per side (**CORRECTED 2026-07-26**;
 this section previously said "front and rear are the same parts translated").
-`shoulder.scad` is the SAME part at both trunk ends and its flange bolts to the
-trunk **end face**, so the rear crossmember is the front one **yawed 180° about
-the vertical** — which flips which chirality each rear corner needs. Verified
+`shoulder.scad` is the same crossmember GEOMETRY at both trunk ends and its
+flange bolts to the trunk **end face**, so the rear crossmember is the front one
+**yawed 180° about the vertical** — which flips which chirality each rear corner
+needs. (**Since #377, 2026-08-15, the two ends are no longer the same PART**:
+the front adds the SW1 Contura panel hole and prints from `shoulder_sw1.scad`,
+the rear stays plain from `shoulder.scad`. One source, one flag, two STLs. The
+yaw argument below is unaffected — it is about placement, not about the hole.) Verified
 against the meshes (`../chassis/check_fit.py` `coax_to_trunk_bases()`, fixed the
 same day; `docs/cad-review-2026-07-26.md` §1):
 

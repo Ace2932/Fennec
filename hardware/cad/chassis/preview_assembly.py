@@ -156,12 +156,16 @@ def main():
         r = rail.copy()
         r.apply_transform(T([-55, sy * 15 - 6, -39.2]))
         parts.append(r)
-    sh = trimesh.load(f'{LEG}/shoulder.stl')
+    # #377: the two ends are no longer the same part. FRONT carries the SW1
+    # Contura panel hole (shoulder_sw1.stl), REAR is plain (shoulder.stl).
+    sh_front = trimesh.load(f'{LEG}/shoulder_sw1.stl')
+    sh_rear = trimesh.load(f'{LEG}/shoulder.stl')
     pl_R = trimesh.load(f'{LEG}/shoulder_plate.stl')
     pl_L = trimesh.load(f'{LEG}/shoulder_plate_L.stl')
     for end in (1, -1):
         S2T = np.array([[0, end, 0, end * HIP_FA],
                         [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
+        sh = sh_front if end > 0 else sh_rear
         for m in (sh, pl_R, pl_L):    # horn plates: the leg<->shoulder bridge
             s = m.copy()
             s.apply_transform(S2T)

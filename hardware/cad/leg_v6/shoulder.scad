@@ -92,6 +92,60 @@ PLATE_BX  = [27, 51];
 // MUST match shoulder_plate.scad's PLATE_BY (duplicated constant, LA-5).
 PLATE_BY  = [6.2, 14.0];
 
+// ---- SW1 master power switch cutout (#377, 2026-08-15) ---------------------
+// FRONT shoulder only (shoulder_sw1.scad); the rear prints plain, which is why
+// this module takes a flag instead of the cut being unconditional.
+//
+// Blue Sea Contura III = Carling V-Series: snap-in, no screws, sprung
+// "multi-step mounting wings" that grip a panel 0.81-6.35mm thick through an
+// industry-standard 0.830 x 1.450in hole. This wall is 4.0mm -> in band.
+// The switch goes in LONG AXIS VERTICAL: `panel_probe.py` found only 8 of 112
+// valid placements admit it lying horizontal.
+//
+// WHY HERE (chassis/panel_probe.py + the section study, both on #368):
+//   * the ONLY drop-in site on the whole robot at the measured 37mm depth
+//   * the wall's centreline is its QUIETEST station -- section area 570mm2 at
+//     x0 vs 1749mm2 at the wheel boss (x39.05). Each boss feeds its haa idler
+//     load 35mm straight UP into the deck and OUTBOARD to the shear web at
+//     x51..55; neither path comes inboard. 18.0mm of wall survives between the
+//     cutout edge and the nearest boss.
+//   * shear in the remaining strips is 0.12 MPa at a 3x landing, vs ~80-110
+//     MPa for PA6-CF. Strength is not what sizes this wall at the centreline.
+SW1_W = 21.08;                  // 0.830in, LATERAL (x)
+SW1_H = 36.83;                  // 1.450in, VERTICAL (z)
+SW1_X = 1.0;                    // trunk y +1
+SW1_Z = 4.95;                   // trunk z 43.0 -- Aiden confirmed 2026-08-15
+SW1_R = 1.2;                    // corner radius: print quality, not strength
+//: hole-fit allowance per side. The wings want a specific grip, and Carling's
+//: own drawings say "TEST CUT HOLE IN ACTUAL MATERIAL" -- their compliance
+//: assumption is ABS/PC, and PA6-CF is stiffer. 0 = nominal; dial this from a
+//: printed coupon before committing the 165g part. Deliberate knob, not a TODO.
+SW1_FIT = 0.0;
+SW1_DEPTH = 37.0;               // MEASURED flange-underside -> terminal ends
+//: how far the bezel + rocker stand PROUD of the panel's forward face. NOT
+//: measured — 15 is a deliberate over-estimate. It exists because the first
+//: version of the chassis gate modelled only the body BEHIND the wall, and the
+//: bezel sticks out into the one volume where the coax sweeps to within 0.5mm
+//: of this wall's forward face (at the HIP stations; the centreline where the
+//: switch actually sits is clear across the whole ROM, measured 2026-08-15).
+//: A gate that stops at the panel would never have noticed. ⬜ caliper it.
+SW1_PROUD = 15.0;
+
+// These are GATES, not comments. The structurally safe band is narrower than
+// the one panel_probe.py reports, and the probe cannot see the difference: it
+// verifies the wall EXISTS across the cutout, never that the wall can SPARE
+// it. Its window tops out at trunk z61; past trunk z~56 the cutout eats the
+// wall/deck junction outright. Without this assert a later nudge walks it into
+// the deck with every check still green.
+assert(SW1_Z + SW1_H/2 <= DECK_Z0 - 5,
+       "SW1 cutout too HIGH: leaves <5mm of wall under the deck at DECK_Z0.");
+assert(SW1_Z - SW1_H/2 >= WALL_Z0 + 5,
+       "SW1 cutout too LOW: leaves <5mm of wall above the rear-wall bottom.");
+assert(SW1_X + SW1_W/2 <= HIP_X - WHEEL_BOSS_D/2 - 5,
+       "SW1 cutout runs into the wheel-boss load path.");
+assert(REAR_W0 - FLANGE_Y1 >= SW1_DEPTH,
+       "Not enough clear depth behind the rear wall for the switch body.");
+
 // ---- neck_bracket base-bolt heat-set pilots (backlog #36 + NO-DRILL fix,
 // 2026-07-10) --------------------------------------------------------------
 // chassis/neck_bracket.scad has 4 M3x8 BOLT_XY bolts (trunk frame) that land
@@ -207,7 +261,12 @@ module lead_notch() {
     }
 }
 
-module shoulder_v6() {
+//: sw1 = cut the SW1 panel hole (FRONT shoulder). Default FALSE so
+//: `shoulder.stl` stays the plain part every existing consumer already loads
+//: -- the no-hole part is the CONSERVATIVE one for every clearance gate, so a
+//: consumer that has not been taught about the split cannot silently pass
+//: something it should have failed.
+module shoulder_v6(sw1 = false) {
     difference() {
         union() {
             // rear wall
@@ -331,6 +390,19 @@ module shoulder_v6() {
             translate([sx*bx, by, DECK_Z0 - EPS])
                 cylinder(d = HEATSET_D, h = DECK_Z1 - DECK_Z0 + 2*EPS);
         }
+
+        // SW1 Contura panel hole (#377) — FRONT shoulder only. Straight
+        // through the 4mm rear wall, extruded along +y so it opens on both
+        // faces: the switch pushes in from the FORWARD face and its body hangs
+        // rearward into the C-box gap (41.6mm clear, wall rear -32.1 to flange
+        // front -73.7, against a 37mm switch).
+        if (sw1)
+            translate([SW1_X, REAR_W0 - 1, SW1_Z])
+                rotate([-90, 0, 0])
+                    linear_extrude(REAR_W1 - REAR_W0 + 2)
+                        offset(r = SW1_R)
+                            square([SW1_W + 2*SW1_FIT - 2*SW1_R,
+                                    SW1_H + 2*SW1_FIT - 2*SW1_R], center = true);
 
         // trunk-flange heat-sets (screws from inside the trunk, rearward face)
         for (sx = [-1, 1], hz = TRUNK_HOLE_Z)

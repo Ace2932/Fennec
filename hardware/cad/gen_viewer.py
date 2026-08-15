@@ -74,7 +74,8 @@ MESHES = {
     "tibia_R": f"{CAD}/leg_v6/tibia_R.stl",
     "knee_arm": f"{CAD}/leg_v6/knee_arm.stl",
     "knee_bump": f"{CAD}/leg_v6/knee_bumper.stl",   # TPU collapse guard (rides tibia)
-    "shoulder": f"{CAD}/leg_v6/shoulder.stl",
+    "shoulder": f"{CAD}/leg_v6/shoulder.stl",          # REAR — plain
+    "shoulder_sw1": f"{CAD}/leg_v6/shoulder_sw1.stl",  # FRONT — + SW1 hole (#377)
     "splate_R": f"{CAD}/leg_v6/shoulder_plate.stl",
     "splate_L": f"{CAD}/leg_v6/shoulder_plate_L.stl",
     "shoe": f"{ORIG}/SM3_Foot.stl",
@@ -180,7 +181,7 @@ CASE_M = T([-6.85 - _bc[0], -_bc[1], 71.9 - _cb[0][2]])
 MY_BAR = np.eye(4); MY_BAR[1, 1] = -1     # -y clamp bar = +y bar mirrored
 
 STATIC = [
-    {"mesh": "shoulder", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 60]},
+    {"mesh": "shoulder_sw1", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 60]},
     {"mesh": "shoulder", "M": mat_list(s2t(-1)), "grp": "shoulder", "expl": [0, 0, 60]},
     {"mesh": "splate_R", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 90]},
     {"mesh": "splate_L", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 90]},
