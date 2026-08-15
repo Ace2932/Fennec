@@ -1,9 +1,111 @@
 # Caliper Session
 
-**STATUS 2026-07-10: nearly all closed 2026-07-07.** The bulk of this session
-was done — numbers landed in `hardware/cad/dimensions.md` + the part files and
-the geometry re-gated. What remains is the **servo SKU label read (#23)** plus
-two minor D456 sub-items. Kept below as the record; ✅ = done, ⏳ = still open.
+**SESSION 1 (2026-07-07) — closed.** Numbers landed in
+`hardware/cad/dimensions.md` + the part files and the geometry was re-gated.
+Only the **servo SKU label read (#23)** and two minor D456 sub-items remain.
+Kept below as the record; ✅ = done, ⏳ = still open.
+
+**SESSION 2 (opened 2026-08-15) — the panel controls. See below, it is first
+because it is what is currently blocking.**
+
+---
+
+# SESSION 2 — panel controls + bucks (2026-08-15)
+
+Four measurements, one bench trip. Each one blocks a specific CAD rev; nothing
+here is nice-to-have.
+
+## S2-1. SW1 Contura rocker — BODY DEPTH ⬜ **the single most valuable number**
+
+The cutout and panel range are already known from the Carling V-Series
+datasheet and are in `dimensions.md` (**21.08 × 36.83 mm** hole, panel
+**0.81–6.35 mm**, snap-in wings, no screws). Depth is the one thing that is
+not, and it decides which face on the robot can host the switch — `panel_probe.py`
+reports max available depth per site, so this measurement turns straight into
+an answer.
+
+- [ ] Bezel-flange underside → **back of the plastic body**
+- [ ] Bezel-flange underside → **tip of the terminals** — take this separately.
+      Spade terminals often bend, and right-angle receptacles shorten the stack
+      a lot, so the two numbers can imply two different homes.
+- [ ] **Wing step positions** — where it locks off. Tells us which panel
+      thickness to actually target rather than guessing mid-range.
+- [ ] Bezel **proud height + footprint** in front of the panel (rocker
+      clearance, and whether a guard is needed so it can't be knocked on)
+- [ ] → `dimensions.md` "SW1" row, then **re-run** `panel_probe.py --pitch 2.0`
+
+⚠ Every "no" verdict in #368 currently assumes only that the body needs **more
+than 10 mm**. That is the probe's floor, not a measurement.
+
+## S2-2. Panel voltmeter — EVERYTHING ⬜
+
+This part has **no row in `dimensions.md` at all**, and the disposition (#370)
+is panel-mount with a horizontal window and a screw each side — so every
+dimension in that sentence is currently unmeasured.
+
+- [ ] Bezel L × W × **thickness**
+- [ ] **Window** (cutout) L × W
+- [ ] **Screw pitch, and the thread size** — this is the one that will be
+      guessed wrong if skipped
+- [ ] Body depth behind the panel
+- [ ] Wire exit direction + connector type
+- [ ] → new `dimensions.md` section, then the same pod rev as SW1
+
+## S2-3. Pololu buck cards — TRUE HEIGHTS, all four ⬜
+
+`dimensions.md` §4 carries "~13-15 ⚠ REVIEW" for the D42V110 pair and profile
+heights for the others. The under-board pocket argument in #366 rests on these.
+
+- [ ] **D42V110F7** (leg) and **D42V110F12** (hip) — total Z
+- [ ] **D42V55F12** (Jetson), **D24V22F12** (L2) — total Z
+- [ ] Measure **including pin protrusion below the board**, not just the tallest
+      top-side component — the pins are what set the seat height in the pocket
+- [ ] → `dimensions.md` §4, then re-open #366's fit math
+
+Board outlines are already verified from the Pololu dimension drawings
+(31.8 × 43.2 / 25.4 × 25.4 / 17.8 × 17.8) — **do not re-derive those**, they
+were wrong once already and the drawings settled it.
+
+## S2-4. HB2-ES544 E-stop — RESOLVE A CONTRADICTION ⬜
+
+Not a discovery task. Two files disagree and both are in use:
+
+| Source | Says |
+|---|---|
+| `dimensions.md:239` | Ø40 **assumed**, ⬜ CALIPER NEEDED |
+| `chassis/control_pod.scad:24` | "**VERIFIED** specs 2026-07-08: Ø40 mushroom, 77 total length, panel max 6 mm" |
+
+The "verified" set is vendor-page-sourced, not calipered — and a vendor page
+already burned this project once (the SSD1331 outline was wrong by 4.9 × 5.1 mm,
+§6 below). Thirty seconds converts a disagreement into a fact.
+
+- [ ] Mushroom cap **Ø** · [ ] total length · [ ] below-panel body depth
+- [ ] panel-hole Ø · [ ] max panel thickness its lock ring accepts
+- [ ] → reconcile BOTH files to one number
+
+## Same trip, not blocking
+
+- [ ] **5191 installed envelope** — lug swing with a 10 AWG ring actually landed
+      on the M8 stud, plus boot clearance. The block itself is fully measured
+      (§3); this is the assembly envelope the bracket in #369 has to leave air
+      for.
+- [ ] SSD1331 header **pin protrusion + mating shell** (⬜ in §6) — straight
+      Dupont adds ~14 mm, right-angle much less. Sets the tray standoff.
+- [ ] D456 rear M3 thread depth + right-angle USB-C plug head (§2 leftovers)
+
+## Do NOT re-measure — already closed
+
+Blue Sea 5191 body/studs (§3) · battery pack (§4) · Jetson case + heatsink (§1)
+· D456 body + rear pattern (§2) · L2 mount + barrel (§5) · SSD1331 outline,
+hole pitches, back depths (§6) · STS3215 disc-to-disc 35.5.
+
+**Moot, do not measure:** Ethernet switch bare PCB (off the robot 2026-08-14) ·
+UBEC body (free-floating, no seat — #367) · Class-T fuse holder (superseded by
+the MRBF).
+
+---
+
+# SESSION 1 — 2026-07-07 (record)
 
 ## 1. Jetson heatsink — ✅ MOOT (hood retired)
 The hood this blocked was retired 2026-07-07 (Jetson now on the official-case

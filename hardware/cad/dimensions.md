@@ -242,6 +242,30 @@ Off-robot bench unit — no on-robot mount needed. AC mode caps ~55 W.
 | Contacts | 2× NC | ✅ |
 | Twist-to-release | yes | ✅ |
 
+### SW1 — Blue Sea Contura III rocker (= Carling V-Series Contura), master power switch
+**Source:** Carling Technologies V-Series Contura II & III datasheet + Contura mount-dimension
+sheet (Blue Sea rebadges the Carling switch). Added 2026-08-14 — this part had **no row here at
+all** while a chassis cutout was being planned against it.
+
+| Dim | Value | Status |
+|---|---|---|
+| **Panel cutout** | **21.08 × 36.83 mm** (0.830 × 1.450 in) — plain rectangle, no keys/tabs | ✅ industry-standard Contura hole, quoted verbatim in the datasheet |
+| **Panel thickness accepted** | **0.81 – 6.35 mm** (0.032 – 0.250 in) | ✅ datasheet: "multi-step mounting wings provide a secure fit for panel thicknesses of 0.032" thru 0.250"" |
+| **Attachment** | **snap-in, integral sprung wings — NO screws, no nut, no bracket** | ✅ answers "it doesn't look like it has screws": correct, it doesn't |
+| **Below-panel depth, flange underside → TERMINAL ENDS** | **~37** | ✅ **MEASURED 2026-08-15 (Aiden).** Datum is the flat that seats on the panel (the underside of the protruding bezel); far end is the electrical terminals, not the plastic body — so this is the full below-panel stack, terminals included. Approximate ("about 37"), so carry ~2 mm of slop. **37 IS the design depth**: harness DECIDED 2026-08-15 = wires **soldered directly to the spades and exited at 90° (laterally)**, so there is no receptacle stack-up and no rearward wire bend to add. Budget ~1-2 mm past the terminal tips for solder fillet + heatshrink, against 40 mm available at the front-shoulder site |
+| Plastic body depth (excl. terminals) | — | ⬜ not taken separately; only matters if a right-angle receptacle is used, which would let the pocket end nearer the body |
+| Wing step positions | — | ⬜ decides the printable panel thickness to target; 3.2 mm (riser wall) and 5.0 mm (pod deck) are both inside the 0.81–6.35 range regardless |
+| Rating | ~18 A @ 16.8 V DC (20 A @ 12 V / 15 A @ 24 V) | ✅ BOM |
+
+> Riser `WALL = 3.2 mm` sits mid-range, and is within 0.03 mm of Carling's own `.125 [3.17]`
+> standard mounting-panel thickness — **a printed 3.2 mm wall is a valid Contura panel**, so no
+> Blue Sea bracket (8268) or mounting panel (8259) is needed. Carling's drawings note "TEST CUT
+> HOLE IN ACTUAL MATERIAL": the wings want some panel compliance, and PA6-CF/PETG-CF is stiffer
+> than the ABS/PC they assume — **print a coupon before cutting the real part**.
+>
+> ⚠ The cutout does NOT fit the riser FRONT-GAP home in `chassis/README.md` (free column 10.85 mm
+> vs 21.08 needed) — relocated to `control_pod`. See #368.
+
 ### Class T 30 A fuse holder — ⚠️ SUPERSEDED 2026-06-12 (fuse is now MRBF-30)
 > Fuse changed to **MRBF-30 in a Blue Sea 5191 terminal block** (off-board, bolts to chassis at the pack — no printed holder needed). The Class-T-holder dims below are obsolete; kept only if a Class T is ever re-adopted (e.g. paralleled packs). Same applies to the `patterns.md` Class-T-holder generator.
 
@@ -485,7 +509,7 @@ Standard consumable. No mechanical dim. ✅
 
 ## 8. Networking
 
-### TP-Link LS105G 5-port gigabit switch (case-removed for chassis fit)
+### TP-Link LS105G 5-port gigabit switch — NOT ON ROBOT (2026-08-14) — bench only; kept for reference
 **Source:** TP-Link LS105G product page (case removed for ~60% volume savings per BOM §5)
 
 | Dim | Value | Status |
