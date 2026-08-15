@@ -171,7 +171,7 @@ static bodies so dims drive off real geometry:
 | LiPo Ovonic 4S 6000 mAh 120C | ⚠️ approximate box from `dimensions.md` §5 |
 | 688ZZ bearing | ⚠️ trivial — 8 × 16 × 5 mm flat ring |
 | Pololu D42V110 / D24V22F12 / D42V55F12 | ⚠️ approximate boxes from `dimensions.md` §4 |
-| TP-Link LS105G PCB (case-removed) | ❌ caliper-measure after case removal |
+| TP-Link LS105G PCB (case-removed) | not on robot (2026-08-14, bench-only) — skip, no chassis geometry needed |
 | ISDT 608AC | not on robot, skip |
 
 ## Alternatives to Jarvis MCP

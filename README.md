@@ -238,7 +238,7 @@ If (1) misses → debug Teensy firmware (DMA vs ISR, UART config). If (2) misses
    │
    ├── [reserved D42V55F7] ► 7.5V/3-8A ──► 6× STS3215 arm (Phase 4 — footprint unstuffed)
    │
-   └── UBEC 5V/5A ──► 5V rail ──► Ethernet switch, fans, aux 5V peripherals
+   └── UBEC 5V/5A ──► 5V rail ──► fans, aux 5V peripherals
 
    INA226 ×3 (leg 7.5V, hip 12V, Jetson 12V) ──► I²C ──► Teensy 4.1 ──► ROS 2 diagnostics
    13.0V comparator ──► Teensy GPIO ──► /battery_low ──► Jetson clean shutdown
@@ -270,26 +270,20 @@ If (1) misses → debug Teensy firmware (DMA vs ISR, UART config). If (2) misses
 
 ## Network Topology
 
+Point-to-point — no switch on the robot (decision 2026-08-14).
+
 ```
-                          ┌─────────────────┐
-                          │  Dev laptop     │
-                          │  (Mac)          │
-                          │  Static IP:     │
-                          │  192.168.1.10   │
-                          └────────┬────────┘
-                                   │
-                                   │ Cat6
-┌──────────────────────────┐       │       ┌────────────────────────┐
-│ Unitree L2 LiDAR         │       │       │ Jetson Orin Nano       │
-│ Static IP: 192.168.1.62  ├───────┼───────┤ eth0: 192.168.1.2/24   │
-│ UDP target port: 6101    │   Gigabit     │ wlan0: DHCP from home  │
-└──────────────────────────┘   switch      └────────────────────────┘
-                            (5-port unmanaged)
+┌──────────────────────────┐               ┌────────────────────────┐
+│ Unitree L2 LiDAR         │     Cat 6      │ Jetson Orin Nano       │
+│ Static IP: 192.168.1.62  ├────────────────┤ eth0: 192.168.1.2/24   │
+│ UDP target port: 6101    │    (direct)    │ wlan0: DHCP from home  │
+└──────────────────────────┘                └────────────────────────┘
 ```
 
-- L2 → UDP port 6101 on the Jetson
+- L2 → UDP port 6101 on the Jetson, direct on `eth0`
 - Jetson's `eth0` needs a manual static IP because L2 is not a DHCP client/server
 - WiFi (built-in WiFi 5 / 802.11ac module on P3766 kit) handles dev SSH access + internet, leaving Ethernet free for the LiDAR. BT presence not explicitly listed in spec — verify on arrival.
+- The 5-port switch is bench gear only — a dev laptop can join via the switch on the bench when wanted; it is not mounted on the robot.
 
 ---
 

@@ -32,7 +32,9 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
                                 │
                                 ├─ [reserved D42V55F7] → 7.5V → arm rail (Phase 4 unstuffed)
                                 │
-                                └─ UBEC 5V/5A        → 5V       → Ethernet switch + fans + aux 5V
+                                └─ UBEC 5V/5A        → 5V       → fans + aux 5V
+                                                                  (Ethernet switch dropped
+                                                                   2026-08-14 — off the robot)
 ```
 
 ## Safety chain trip points (highest pack voltage first)
@@ -161,23 +163,27 @@ brightness).
 
 ## Ethernet topology
 
+**No switch on the robot (2026-08-14).** The L2 and the Jetson are the only two
+nodes that have to talk in flight, and both already carry static addresses — so
+they go POINT-TO-POINT and the 5-port switch stays on the bench.
+
 ```
-Unitree L2 LiDAR              ┌─── 5-port unmanaged gigabit switch
-  IP: 192.168.1.62  ──Cat 6───┤    (TP-Link LS105G or NETGEAR GS305)
-  UDP target: 6101            │    Powered from 5V UBEC rail (~3 W draw)
-                              │
-Jetson Orin Nano              │
-  enP8p1s0:                   │
-  192.168.1.2/24 ────Cat 6────┤
-  (static via nmcli           │
-   connection nova-lan)       │
-                              │
-Dev laptop (optional) ───Cat 6┘
-  192.168.1.10 static
+Unitree L2 LiDAR                          Jetson Orin Nano
+  IP: 192.168.1.62   ──── Cat 6 ────►       enP8p1s0: 192.168.1.2/24
+  UDP target: 6101      (1 ft, direct)      (static via nmcli, connection nova-lan)
 ```
 
-Cable: Cable Matters 10 Gbps snagless Cat 6 (1 ft) × 2-3.
-Switch can be pulled from its case to save ~60 % volume inside the chassis.
+Dev access ON the robot is the Jetson's built-in WiFi. When a laptop needs to
+be on the same wired segment (bench sessions), put the switch back in the middle
+— it is unchanged gear, just not carried.
+
+Cable: Cable Matters 10 Gbps snagless Cat 6 (1 ft) × 1 on the robot; the rest
+are spares/bench.
+
+> `docs/setup-network.md` recorded this same decision on **2026-07-10** ("switch
+> is BENCH-ONLY, robot goes L2-DIRECT") and every other networking doc kept
+> describing the switch for another month. If you are changing the topology,
+> grep for it — it is written down in more places than you expect.
 
 ## Wire gauge convention
 
@@ -351,5 +357,5 @@ modules parallel their own input impedance across it. **Chase the shape, not the
 ## Outstanding wiring decisions
 
 - Exact USB hub config on Jetson — likely only 4 USB-A ports on P3766, may need a powered hub for D456 + Teensy + FE-URT-1 concurrent. Verify on bench.
-- Whether to integrate the lighted rocker switch into PCB v6 or panel-mount via flying lead (see `hardware/pcb-mods/README.md` open questions). If flying-lead: candidate home = the riser's FRONT-GAP zone (x 52.5..63 interior column is free; rocker through the side skirt at ~(x 57, z 45) or down through the deck front strip) — ⚠ caliper the rocker before committing (chassis README panel-components list).
+- ~~Whether to integrate the lighted rocker switch into PCB v6 or panel-mount via flying lead; candidate home = the riser's FRONT-GAP zone (rocker through the side skirt at ~(x 57, z 45))~~ **RESOLVED 2026-08-15 (#368/#377): panel-mount via flying lead, in the FRONT SHOULDER's rear wall** at trunk (x 108, y +1, z 43), long axis VERTICAL, snapped into the 4 mm wall (Blue Sea Contura = Carling V-Series: sprung wings, no screws, 21.08 × 36.83 mm hole, panel band 0.81–6.35 mm). **The riser FRONT-GAP home was impossible** — that column is 10.85 mm wide against a 21.08 mm cutout, and `hardware/cad/chassis/panel_probe.py` found every other proposed face fails too. Wires solder direct to the spades at 90°; heat-shrink past the solder wick and anchor to the shoulder's Ø12 grommets so flex never lands on the joint (this is the ~14 A master feed on a walking machine).
 - L2 LiDAR cable routing past the rotating sensor head — needs flex strain relief to survive scans
