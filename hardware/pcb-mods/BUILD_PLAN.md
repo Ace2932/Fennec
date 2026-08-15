@@ -599,8 +599,14 @@ redo is behind a tall part on a board that no longer sits flat.
 Side column is which face the **body** sits on. Grouped to keep flips to a
 minimum: bottom SMD, then top SMD, then THT.
 
-> **BENCH STATE — stages 0–6 complete and verified on BOTH boards (2026-08-09).
-> Next is stage 7.** Every SMD part on both boards is placed *and* measured.
+> **BENCH STATE — stages 0–9 COMPLETE on the power board (2026-08-15).
+> Next is the §6 HARD GATE, then stage 10.** Every SMD part on both boards placed and
+> measured (0–6, 08-09); switches (7), all 16 XT30s + `J1` + `Q1` (8), and all 8
+> electrolytics (9) done 08-14/15.
+>
+> ⚠️ **A real short was found and cleared at stage 8/9** — `M1`'s wiring tied
+> `VBAT_PROTECTED` to GND. See `../wiring/README.md` for the signature. It was caught by
+> the pre-stage-9 check *one stage before* ~5470 µF would have hidden it.
 >
 > ⚠️ **This file is the PLAN. The bench RECORD lives in Notion** — *🔧 Soldering /
 > Assembly Steps*, child of the *Power Board v6 Build Log*. Where the two disagree,
@@ -620,10 +626,10 @@ minimum: bottom SMD, then top SMD, then THT.
 | **4** ✅ | **B** | **L1** (12×12 SMD inductor) | Last of the bottom SMD. Plane-tied both sides → fat tip. Last stage where the top face is bare, so the last one a *contact* plate could serve (§2). |
 | **5** ✅ | **F** | Top SMD: D1 (SOD-123F), R17, R\_gs1, C\_gs1 (+ logic C1, FB1) | Flip once. Only 4 top-side SMD parts — mind D1 polarity. |
 | **6** ✅ | **F** | Low THT: J2, M1, J8, J20 (+ logic JP1, J9, J10, J21, J11, J20) | Headers and JSTs seat flush; do them before the board stops sitting flat. |
-| **7** ⏭ **NEXT** | **F** | SW1, SW2 terminal blocks | SW1.2 is a 14 A plane pad. Still low profile, so do it before the tall connectors crowd the iron. |
-| **8** | **F** | XT30 ×8 + XT60 J1, buck stations U1–U4, **and Q1 (TO-220)** | The bulk of the high-current THT, plus Q1 — pad 3 is a 14 A GND inject. **Last preheat stage; see the note below.** Soldered from the bottom face, which already carries 20 SMD parts — hence C1–C6 must still be off. |
-| **9** | B + F | Electrolytics: C1–C6 (bottom), C8–C9 (top) | Tall, polarised, **~105 °C-rated — below the 100–130 °C board preheat.** After every preheat joint, and after stage 8 because the bottom cans would block access to stage 8's solder side. |
-| **10** | **F** | Modules: **U9–U12** (INA226 ×4 — see §4, U12 is the L2 monitor), U6 (Teensy 4.1), U12-logic (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. Note `U12` names *different* parts on the two boards: INA226 on power, Arduino Nano on logic. |
+| **7** ✅ | **F** | SW1, SW2 terminal blocks | SW1.2 is a 14 A plane pad. Still low profile, so do it before the tall connectors crowd the iron. |
+| **8** ✅ | **F** | XT30 ×8 + XT60 J1, buck stations U1–U4, **and Q1 (TO-220)** | The bulk of the high-current THT, plus Q1 — pad 3 is a 14 A GND inject. **Last preheat stage; see the note below.** Soldered from the bottom face, which already carries 20 SMD parts — hence C1–C6 must still be off. |
+| **9** ✅ | B + F | Electrolytics: C1–C6 (bottom), C8–C9 (top) | Tall, polarised, **~105 °C-rated — below the 100–130 °C board preheat.** After every preheat joint, and after stage 8 because the bottom cans would block access to stage 8's solder side. |
+| **10** ⏭ **NEXT — after the §6 gate** | **F** | Modules: **U9–U12** (INA226 ×4 — see §4, U12 is the L2 monitor), U6 (Teensy 4.1), U12-logic (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. Note `U12` names *different* parts on the two boards: INA226 on power, Arduino Nano on logic. |
 
 ### 🔴 Stage 3 also carries a bodge: `U8` has NO supply decoupling on the board
 
