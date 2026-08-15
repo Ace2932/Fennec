@@ -212,6 +212,16 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
   - **F7 = 7.5V, F12 = 12V.** An F12 on the leg/arm rail → 12V into 7.5V servos = fry. Confirm the suffix on all five before wiring.
 - [ ] **Buck pin map + polarity:** board terminal **rect pad = +** (VBAT_PROTECTED in / Vout out / EN), circle pad = GND. Wire cables 1:1 to the module's VIN/GND/VOUT/EN per its datasheet; + to the rect pad. ⚠️ **This is the OPPOSITE of the AMASS rule for `J1`/`J3`–`J7`/`J12`–`J14` — see the red box above before wiring a station.**
 - [ ] **Buck harness form factor.** The Pololu cards are **100 % THT bare modules** living in the printed finned holder (`../hardware/pcb-mods/README.md` §"Buck modules are OFF-BOARD"), so **no XT30 is soldered to a Pololu**. Solder **18 AWG pigtails** into the module's own through-holes and put the XT30 on the far end, mating with the board station — that keeps the module swappable. Each station is **2× XT30 (5.0 mm pitch, 2.7 mm drill) + a 1×02 2.54 header** ~8 mm to the side carrying `EN_BUCKS` (`EN_JET` on `U4`) and GND. The EN pair is not optional: it is how e-stop and hardcut reach the rail.
+- [ ] **I2C rise time at 400 kHz — verify at bring-up, nothing on the board enforces it.**
+      Four INA226 modules plus the mezzanine ribbon and the board traces put roughly
+      **150–250 pF** on `I2C_SDA`/`I2C_SCL`, against pull-ups of **4.7k** (`R11` → `+3V3`
+      on SDA, `R12` on SCL — confirmed from the board file). That is marginal at 400 kHz:
+      too slow an edge and transfers corrupt intermittently rather than failing cleanly,
+      which reads as a flaky module, not a bus problem.
+      Scope the rising edges once all four are fitted. If marginal, either drop the bus to
+      **100 kHz** or stiffen the pull-ups to ~**2.2k**. Both are cheap; the diagnosis is not.
+      *Source: 2026-06-17 logic-board/bus review, recovered from branch `docs/status-b1-done`
+      2026-08-15 — it never reached main.*
 - [ ] **INA226 I2C address per module — set the A0/A1 solder bead** (4 modules, one bus → must be unique; matches `firmware/teensy/firmware/src/ina226_telemetry.h`):
 
   | rail | address | A1 tie | A0 tie | bead action |

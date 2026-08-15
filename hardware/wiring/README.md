@@ -44,6 +44,32 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
 | 3 | 12.4 V | 3.10 V/cell | Second LM393 stage → **BSS138 (Q2) pulls EN_BUCKS low → all bucks off** (leg/hip/L2/arm); Q4 also kills Jetson EN. Autonomous backstop. (Q1 IRLB3034 = reverse-polarity protection, separate — does NOT break the battery feed.) |
 | — | — | — | E-stop (manual, SW2 NC) — pulls EN_BUCKS low via Q3 → kills leg + hip + L2 + **arm** buck EN. Jetson stays alive. |
 
+### 🔴 The whole low-voltage cutoff dies with `V5_AUX` — and that is what the buzzer is for
+
+Every element of the table above is powered from **`V5_AUX`, the 5 V UBEC**. If it fails:
+
+- both LM393 comparators are unpowered,
+- the pull-ups on `BATT_LOW` / `HARDCUT` go with it, and
+- **both references disappear** — `VREF_G` and `VREF_H` are divided down *from `V5_AUX`*
+  (`R4` 11.3k / `R6` 12.1k), so there is nothing left to compare against.
+
+Result: **no 13.0 V warning, no 12.4 V hard cut, and the pack over-discharges with nothing
+in the robot able to stop it.** Single point of failure for the entire electrical
+protection chain, and it fails silently — a dead UBEC looks like "the aux rail is down",
+not like "the battery is now unprotected".
+
+**The mitigation already exists and is already owned:** the FLY-RC balance-plug buzzer
+(3.3 V/cell, `master-bom.md`). It is powered from the balance leads, so it is genuinely
+independent of `V5_AUX`, the board, and the firmware.
+
+⚠️ **Keep it plugged in whenever the pack is in the robot.** `order-list.md:222` calls it
+"an independent last line" without saying what it is independent *of* — this is what.
+Treating it as optional belt-and-braces removes the only remaining protection in exactly
+the failure case it exists for.
+
+*Source: 2026-06-17 safety-chain circuit-logic review. The review lived on branch
+`docs/status-b1-done` and never reached main; recovered 2026-08-15.*
+
 ## Feetech TTL bus (single-ended half-duplex, 1 Mbps default)
 
 ```
