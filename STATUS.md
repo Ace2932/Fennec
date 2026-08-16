@@ -32,6 +32,17 @@ closed; ~~#1~~ is kept per this file's mark-inline convention.**
    deferred to Phase 5), and the documented fallback — a 10/22/47 Ω 2–3 W precharge resistor —
    **is not in any ✅ ordered list.** See "Next actions".
 
+**🔴 Mezzanine height — the under-stack constraint (recovered from `9f19770`, 2026-06-17, which
+never reached main):** parts on the power board's TOP face sit in the **~20 mm standoff gap**
+under the logic board, so the usable height is **≤ ~17 mm**.
+
+- **`C8`/`C9` = 470 µF / 25 V (Ø10×16), NOT 35 V.** The 35 V part (UPW1V471MPD) is ~Ø10×**20 mm**
+  and would hit the top board. 25 V still meets 80 % derating on the 16.8 V rail (67 % of rated),
+  so this costs nothing electrically. `order-list.md` carried the superseded "use 35 V" text on
+  main until 2026-08-15 because the commit that fixed it was only ever on a branch.
+- ⬜ **Confirm the INA226 breakout modules on headers clear the 20 mm gap** — they are the
+  **tallest under-stack parts**, and they go in at stage 10. Check before fitting, not after.
+
 **Verified clean this pass** (read from the board file, not assumed):
 
 - **Mounting-hole keepouts are real AND effective — proven against the actual fill.** All four
@@ -191,18 +202,33 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
 1. ~~Check the solder drawer~~ ✅ **DONE 2026-08-01 — Sn63Pb37, 1 mm, 1.8 % flux core.** Leaded, so
    every *leaded* setpoint in `BUILD_PLAN.md` §2a is the live one and nothing shifts +30 °C.
    Eutectic ⇒ **shiny is the correctness criterion.**
-2. **Solder, per `BUILD_PLAN.md` stages 0–10.** ✅ **STAGES 0–6 COMPLETE AND VERIFIED ON BOTH
-   BOARDS (2026-08-09).** Every SMD part on both boards is placed *and* measured.
-   ⏭️ **Next: stage 7 — `SW1` + `SW2` screw terminal blocks.** `SW1` is `TB007-508-02BE` (not
-   the 10 A kit block; drill was widened 1.2 → 1.5 mm for it). Three of the four pads are
-   plane-tied → **TS-C4 at 380–400 °C off the Kungber at 24.0 V**, TS-D24 330 °C for `SW2`.2
-   (`EN_SW`) only. Per-pad plan in `BUILD_PLAN.md` §2a; the Contura III rocker is off-board and
-   wires into `SW1` later. Then 8 high-current · 9 electrolytics · 10 INA modules.
-   ⚠️ **This list has gone stale twice now.** The bench record is Notion (*🔧 Soldering /
-   Assembly Steps*); this file is a mirror and lags it. **Read Notion before acting on
-   anything here.** On 2026-08-13 items 2 and 3 below were four stages behind, and this item
-   was sending the next bench action at a gate that had already passed, against an expectation
-   that would have failed a good board.
+2. **Solder, per `BUILD_PLAN.md` stages 0–10.** ✅ **STAGES 0–9 COMPLETE (2026-08-15).**
+   0–6 on both boards (08-09); switches (7), `J1` + all 16 XT30s + `Q1` (8), all 8
+   electrolytics (9) on 08-14/15.
+
+   ⏭️ **NEXT — the §6 HARD GATE, before any module goes on.** Last moment the board is a
+   bare PCB; rework behind a fitted Teensy or four INA breakouts is far worse.
+   - **`pre-power-on-validation.md` §1c** connector mating audit — `J11` WS2812B wire order,
+     `J8` servo bus, the **dual-voltage servo harness (#1 fry path)**, `J20` pin1↔pin1, and
+     the XT gender rows (⚠️ `J1` as built is the OPPOSITE gender to its footprint, so its
+     harness half is the plug-in/SOCKET one while every XT30's is receiving/PIN).
+   - **§1e assembly config** — `JP1` **2–3 = Pattern B** · **buck variants: `U1` is the only
+     F7**, an F12 there puts 12 V on the 7.5 V servo rail · **set the INA226 address beads
+     BEFORE fitting** (leg `0x40`, hip `0x41`, Jetson `0x44`, L2 `0x45`) — the four modules
+     are indistinguishable once installed.
+
+   ⬜ **Two measurements to take before soldering module headers:**
+   - **INA226 module height vs the ~20 mm mezzanine gap** — they are the *tallest under-stack
+     parts* (recovered 2026-08-15 from an unmerged branch; it had never reached main).
+   - **I2C rise time at 400 kHz** once all four are on — ~150–250 pF against 4.7k
+     (`R11`/`R12`); 100 kHz or 2.2k if marginal. §1e.
+
+   Then **stage 10**: `U9`–`U12` INA226, `U6` Teensy, `U12` Nano. **Socket the Teensy and
+   Nano** (do not solder them down) and **cut the Teensy's `VUSB`↔`VIN` pad before seating**.
+
+   ⚠️ **This list has gone stale three times now.** The bench record is Notion (*🔧 Soldering /
+   Assembly Steps* + *Status — In Progress & Blocked*); this file mirrors it and lags.
+   **Read Notion before acting on anything here.**
 3. ~~Run the preheat bench test~~ ✅ **RUN 2026-08-01, PASSED — do NOT buy a preheater.** `U1.4` wet
    in ~2 s with solder through to the far face; `Q1.3` (14 A GND inject, the worst THT pad on the
    board) easy and **shiny on both faces**. TS-C4, Kungber 24.0 V (~88 W), tip 400 °C. Consequence:

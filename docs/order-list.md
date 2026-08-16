@@ -29,7 +29,7 @@ Full multi-phase, both-board audit. Both boards are routed + DRC-clean (logic: 0
 
 **Electrolytics** — radial Ø10 5mm-pitch (2026-06-16 board review split by rail voltage):
 - **C6 (V12_L2, 12V): 470µF/25V** (2.1× ✓) — Nichicon UPW1E471MPD
-- **C8 + C9 (VBAT_PROTECTED = raw 16.8V 4S rail): 470µF/35V** — Nichicon **UPW1V471MPD**. ⚠️ 25V here = only **1.49×** + spikes; bumped to 35V (2.1×). **Do not use 25V on C8/C9.**
+- **C8 + C9 (VBAT_PROTECTED = raw 16.8V 4S rail): 470µF/25V** — Nichicon UPW1E471MPD. ⚠️ **REVERTED from 35V (2026-06-17 PCB review):** 35V part (UPW1V471MPD) is ~Ø10×**20mm** tall and C8/C9 sit *under the logic board* in a ~20mm mezzanine gap → it would hit the top board. **25V is correct anyway** — 16.8V/25V = 67% util, within the 80% derating rule (25×0.8=20V > 16.8V); 25V Ø10×16mm fits the stack (4mm clear). Do NOT use the 35V part here (height).
 - buy ~5 (3 board + spares). *1000µF C1–C5 ✅ ordered (V7V5_LEG/V12_HIP). ⚠️ Those 25V leg caps need the **TVS clamps populated** — e-stop regen can drive V7V5_LEG to ~21V (1.19× on 25V) until the SMBJ8.5A clamps it.*
 
 **Inductor**
@@ -305,7 +305,7 @@ only sink is the bulk caps (1 J into 5000 µF from 7.5 V ≈ 21 V rail — over 
 ### Connectors
 | Board ref | Part | Qty | Vendor / SKU |
 |---|---|---|---|
-| J1 | AMASS **XT60-M** vertical (battery in) | 1 | ✅ **ORDERED** SoloGood Amass **XT60H** 10-pair ($9.99). Verified vs J1 footprint (Ø4.5mm/7.2mm). ⚠️ Snap cover OFF the male before soldering. 30A rated > ~15A draw. |
+| J1 | AMASS **XT60-M** vertical (battery in) | 1 | ✅ **ORDERED** SoloGood Amass **XT60H** 10-pair ($9.99). Verified vs J1 footprint (Ø4.5mm/7.2mm). ⚠️ Snap cover OFF the male before soldering. 30A rated > ~15A draw. ⚠️ **AS BUILT 2026-08-14 the fitted part is the RECEIVING housing (pins) — `XT60-F`, not the `-M` this row specifies.** Deliberate/accepted, recorded so nobody orders the wrong mating half: the pack-side harness end needs the **plug-in housing with sockets**. The 10-pair kit covers both. |
 | J3–J7, J12–**J14** | AMASS **XT30U-M** vertical | **8** | ⚠️ was "J3–J7, J12, J13 / qty 7" until 2026-08-13 — **`J14` was placed on the board 2026-06-27 (`STATUS.md` B1), 19 days AFTER these packs were ordered on 06-08**, and the row was never re-derived |
 | U1–U5 buck offboard terminals | AMASS **XT30** ×2 per buck | 10 | each Pololu buck lands via 2×XT30 |
 | **XT30 TOTAL** | **18 board positions** (8 + 10) + cable mates | ✅ **2× 10-pair pack ordered — still sufficient** | SoloGood "10 Pairs XT30 Amass XT30U" ×2 ordered 2026-06-08 (20M+20F, covers **18** board + mates + spares). Males→board (vertical footprint), females→leads. ⚠️ **Read 17 until 2026-08-13** — the `J14` omission above propagated here. **No shortage resulted, and that is exactly why nobody caught it:** 20 M against 18 positions, so the over-order absorbed the miscount. Only **16** of the 18 are populated in v1 (`U5`'s two are DNP) — `BUILD_PLAN.md` §7 counts on that basis, so 16 vs 18 between the two docs is a populated-vs-footprint difference, not a disagreement. |
