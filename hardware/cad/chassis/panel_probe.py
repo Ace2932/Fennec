@@ -49,6 +49,7 @@ import numpy as np
 import trimesh
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+import cad_contains  # noqa: E402  (#195 — installed in main())
 from cad_assets import LEG_V6  # noqa: E402
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -524,6 +525,13 @@ def main():
                          f'(default {SW1_DEPTH_MM} = measured SW1 stack)')
     a = ap.parse_args()
     os.chdir(HERE)
+    # #195: trimesh's contains() redraws from numpy's GLOBAL RNG when its two
+    # ray directions disagree, so it can answer differently on identical input
+    # BETWEEN PROCESSES. Every verdict this file prints is a threshold on a
+    # contains() result. check_seeding.py does not police this file (it only
+    # scans CI gates, and this is an analysis tool) — which is exactly why it
+    # had to be caught by hand.
+    cad_contains.install()
     global DEPTHS
     if a.require and a.require not in DEPTHS:
         DEPTHS = np.sort(np.append(DEPTHS, a.require))
