@@ -43,6 +43,7 @@ Run from anywhere:
 import argparse
 import os
 import pathlib
+import re
 import sys
 
 import numpy as np
@@ -163,6 +164,42 @@ def static_parts():
     dome.apply_translation([ex, 0, dz + 17])
     add('estop_dome', dome)
     return P
+
+
+def _stls_loaded_by(path):
+    """Every .stl basename a module loads, including the ones behind a loop
+    variable (`for n in (...): trimesh.load(f'{n}.stl')`)."""
+    src = pathlib.Path(path).read_text()
+    names = set(re.findall(
+        r"trimesh\.load\(f?['\"](?:\{LEG\}/)?([A-Za-z0-9_]+)\.stl['\"]\)", src))
+    for tup in re.findall(r"for n in \(([^)]*)\):", src, re.S):
+        names |= set(re.findall(r"['\"]([A-Za-z0-9_]+)['\"]", tup))
+    return names
+
+
+def check_mirrors_preview():
+    """static_parts() must cover everything preview_assembly.py places.
+
+    This was a COMMENT until 2026-08-16 ("a part added there must be added
+    here") and a comment cannot fail. The asymmetry is what makes it worth a
+    real check: a part missing here does not make this tool merely incomplete,
+    it makes it INVENT FREE SPACE — the one direction the probe must never be
+    wrong in, and the direction that put an impossible SW1 home in the README
+    for weeks. Leg parts are excluded because the probe covers them through the
+    ROM sweep, not statically.
+    """
+    prev = _stls_loaded_by(HERE / 'preview_assembly.py')
+    mine = _stls_loaded_by(HERE / 'panel_probe.py')
+    leg = {'coax_R', 'coax_L', 'femur_R', 'femur_L', 'tibia_R', 'tibia_L',
+           'knee_arm', 'knee_bumper', 'coax_hfe_block', 'coax_hfe_block_L',
+           'shoulder'}          # shoulder: probe loads shoulder_sw1 + shoulder
+    missing = prev - mine - leg
+    if missing:
+        raise SystemExit(
+            f'panel_probe.static_parts() is missing {sorted(missing)}, which '
+            'preview_assembly.py places. The probe would report the volume '
+            'those parts occupy as FREE. Add them to static_parts().')
+    return sorted(prev & mine)
 
 
 # ---- leg ROM -----------------------------------------------------------------
@@ -547,7 +584,8 @@ def main():
 
     g = Grid(REGION, a.pitch)
     print(f'grid {tuple(g.shape)} = {int(np.prod(g.shape)):,} voxels\n')
-    print('-- static parts --')
+    covered = check_mirrors_preview()
+    print(f'-- static parts -- (mirrors preview_assembly: {len(covered)} shared STLs)')
     open_meshes = build_occupancy(g, static_parts())
     n_surf = int(g.occ.sum())
     g.occ = seal_interiors(g.occ)
