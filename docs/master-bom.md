@@ -32,7 +32,7 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | XT60 (J1), XT30 **×18** | J1 / J3–J7 / J12–**J14** / U1–U5 (2 each) | ✅ |
 | JST B3B-XH-A ×10 | J8 (+logic J11) | 📦 |
 | IDC BHR-12-VUA ×10 | J20 | 📦 |
-| PRPC040 header strip | J2/M1 (+logic J9/J10/JP1) | 📦 |
+| PRPC040 header strip | J2/M1, **`U9`–`U12` (4× 4-pin, INA226 board side)** (+logic J9/J10/JP1) | 📦 own strip covers all of it — but `U9`–`U12` were not named here until 2026-08-16, and they are 16 of the pins the strip has to supply. Also needed on the **module** side: each INA226 breakout takes its own 4-pin male header before it can be dupont'd to the board |
 | TB007-508-02BE ×10 (Same Sky, 16A UL/18A IEC) | SW1 | ✅ ordered 2026-06-22 (MKDS 1,5/2 went OOS 17wk → this sub; needs SW1 drill 1.2→1.5mm — done on board) |
 | KF301 kit block (SW2) | SW2 | ✅ |
 | MRBF-30 fuse ×2 + Blue Sea 5191 block | inline | ✅ ordered 2026-06-12 (verify 5191 = single-MRBF terminal variant) |

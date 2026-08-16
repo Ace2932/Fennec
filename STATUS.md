@@ -4,8 +4,12 @@ Single-pane blockers / in-progress / next-actions. Hand-maintained; the detail
 lives in `README.md` (Open Decisions + Build Roadmap), `docs/order-list.md`,
 per-board `ROUTING_HANDOFF.md`, and memory. Update when state changes.
 
-_Last updated: 2026-08-13. **The solder/bench state here is a MIRROR of Notion
-(🔧 Soldering / Assembly Steps) and lags it — read Notion before acting.**_
+_Last updated: 2026-08-16. **The solder/bench state here is a MIRROR of Notion
+(🔧 Soldering / Assembly Steps) and normally lags it — read Notion before acting.**
+⚠️ **On 2026-08-16 that relationship INVERTED**: Notion sat at its 2026-08-09 edit while
+this file and `BUILD_PLAN.md` already carried stages 7–9. Notion has since been brought
+forward, but "Notion wins" is a convention, not a mechanism — check the edit date on both
+before trusting either._
 
 ## 🔧 2026-07-31 — BOARDS IN HAND, SOLDERING STARTED
 
@@ -206,8 +210,20 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
    0–6 on both boards (08-09); switches (7), `J1` + all 16 XT30s + `Q1` (8), all 8
    electrolytics (9) on 08-14/15.
 
-   ⏭️ **NEXT — the §6 HARD GATE, before any module goes on.** Last moment the board is a
-   bare PCB; rework behind a fitted Teensy or four INA breakouts is far worse.
+   ✅ **The §6 bare-board ELECTRICAL sweep is RUN and PASSED (2026-08-16)** — `J1` polarity,
+   `Q1` (incl. the tab, which is asymmetric by design, not an open), all six rail↔GND
+   settled values, rail↔rail, the ~29-probe identity sweep, electrolytic polarity, and
+   `R11`/`R12`/`R13`. Full table + the doctrine in `hardware/pcb-mods/BUILD_PLAN.md` §6.
+   **`R14` is now the only unverified resistor on the power board and is unverifiable in
+   circuit by design.** ⚠️ `VBAT_PROTECTED`↔GND ramping is the *correct* signature there and
+   doubles as the re-test of the `M1` short cleared at stage 8/9.
+
+   ⏭️ **NEXT — the rest of the §6 HARD GATE, before any module goes on.** Last moment the
+   board is a bare PCB; rework behind a fitted Teensy or four INA breakouts is far worse.
+   - ⏳ **Two bonding sweeps still owed, neither blocking stage 10.** `U8`'s 8-probe
+     lead-to-same-net-pad continuity (use **`Q2`.2** as the GND reference — `J13`.1 now
+     carries an XT30), and the **logic board's 22-probe socket sweep, owed since
+     2026-08-09**. Until that one runs the logic board is *assembled*, not *verified*.
    - **`pre-power-on-validation.md` §1c** connector mating audit — `J11` WS2812B wire order,
      `J8` servo bus, the **dual-voltage servo harness (#1 fry path)**, `J20` pin1↔pin1, and
      the XT gender rows (⚠️ `J1` as built is the OPPOSITE gender to its footprint, so its
