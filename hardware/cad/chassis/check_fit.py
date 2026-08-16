@@ -1695,7 +1695,7 @@ def main():
                         hits, riser, noise_mm=NOISE_PART_MM)
     S2T_rear = np.array([[0, -1, 0, -HIP_FA],
                         [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
-    rear_sh = tf(sh_pts, S2T_rear)
+    rear_sh = tf(sh_pts_by_end[-1], S2T_rear)   # REAR end = the plain part (#377)
     hits = rear_sh[pod.contains(rear_sh)] if len(rear_sh) else rear_sh
     bad |= report('control pod vs rear shoulders', hits)
     hits = podp[box.contains(podp)]
