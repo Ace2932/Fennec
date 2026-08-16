@@ -155,11 +155,12 @@ was 0.6 mm too narrow.**
 
 | Dim | Value | Status |
 |---|---|---|
-| Board L × W | **31.8 × 43.2** | ✅ (reg34c — CORRECTS earlier 25.4×25.4) |
+| Board L × W | **31.8 × 43.2** | ✅ (reg34c — CORRECTS earlier 25.4×25.4). **Independently confirmed 2026-08-16** by the Pololu product page's own Size line, 1.25″ × 1.7″ = 31.75 × 43.18 — two separate Pololu sources, same numbers |
 | Mount holes | **4× ⌀2.18** (#2 / M2) on 25.4 × 38.9 rectangle | ✅ (reg34c) |
 | Power holes | 4× ⌀2.2 THT (14 AWG), top→bottom VIN GND GND VOUT, vertical span 17.94 | ✅ (reg34c) |
 | Signal holes | 14× ⌀1.02 on 2.54 grid (2×7) — carries EN + VRP/PG + duplicate power | ✅ count (reg34c); per-hole pin map ⚠️ VERIFY on board |
-| Height (with components) | ~13-15 | ⚠️ REVIEW — caliper total Z on received board |
+| **Height (with components)** | **9.02** (0.355″) | ✅ **Pololu product page, item #5674, 2026-08-16 — CORRECTS the "~13-15" estimate that had stood here, by ~6 mm.** Trusted because the SAME Size line gives 1.25″ × 1.7″ for L×W, which matches reg34c's independently-derived 31.8 × 43.2 exactly; a source that is right about the two dimensions we can check is worth believing on the third. ⚠️ Pololu does not state whether it includes soldered header pins — the design uses WIRE TERMINALS, not headers, so it should not matter, and `#366`'s pocket search is insensitive to it either way (24 supported placements at 9.02 AND at 12.0) |
+| Weight | 15 g | ✅ Pololu product page (feeds `mass_model.py` if the buck holder is ever massed) |
 
 ### Pololu D24V22F12 (L2 LiDAR dedicated, v3.4 split)
 **Source:** Pololu dimension drawing **reg19a** (12 Nov 2015, items 2855/2857-2861), category 192

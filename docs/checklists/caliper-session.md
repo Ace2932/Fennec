@@ -51,6 +51,22 @@ dimension in that sentence is currently unmeasured.
 - [ ] Wire exit direction + connector type
 - [ ] → new `dimensions.md` section, then the same pod rev as SW1
 
+## S2-3. ~~Pololu buck cards — TRUE HEIGHTS~~ ✅ RESOLVED 2026-08-16, no caliper needed
+
+**Closed from the vendor, not the bench.** Pololu's product page for the D42V110F7
+(item #5674) gives Size **1.25″ × 1.7″ × 0.355″** = **31.75 × 43.18 × 9.02 mm**.
+The `~13-15` estimate was wrong by ~6 mm.
+
+Believed without a caliper for a stated reason: the same Size line's L×W matches
+reg34c's independently-derived 31.8 × 43.2 exactly, so the source is right about
+the two dimensions that could already be checked.
+
+**And it turned out not to be load-bearing anyway** — #366's pocket search returns
+24 supported placements at 9.02 mm and 24 at 12.0 mm. Height was never the binding
+constraint; footprint against available plate is. Off the blocking list.
+
+<details><summary>original entry</summary>
+
 ## S2-3. Pololu buck cards — TRUE HEIGHTS, all four ⬜
 
 `dimensions.md` §4 carries "~13-15 ⚠ REVIEW" for the D42V110 pair and profile
@@ -65,6 +81,8 @@ heights for the others. The under-board pocket argument in #366 rests on these.
 Board outlines are already verified from the Pololu dimension drawings
 (31.8 × 43.2 / 25.4 × 25.4 / 17.8 × 17.8) — **do not re-derive those**, they
 were wrong once already and the drawings settled it.
+
+</details>
 
 ## S2-4. HB2-ES544 E-stop — RESOLVE A CONTRADICTION ⬜
 
