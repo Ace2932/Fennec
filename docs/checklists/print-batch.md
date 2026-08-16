@@ -180,7 +180,7 @@ inner-face gap median 0.277 / p90 0.505 against the 0.4 median limit).
 Studio never consults it, so it is reproduced here — and a test keeps the two in sync,
 because the first version of this table drifted between being written and being merged.
 
-**12 parts need supports; 17 must have them OFF.** Check before every print.
+**13 parts need supports; 18 must have them OFF.** Check before every print.
 
 **SUPPORTS ON:**
 
@@ -196,6 +196,7 @@ because the first version of this table drifted between being written and being 
 | `femur_R` | normal | PA6-CF | as modelled |
 | `head` | tree | PA6-CF | CROWN/PAD-DOWN + tree supports. Measur |
 | `shoulder` | tree | PA6-CF | +Z |
+| `shoulder_sw1` | tree | PA6-CF | +Z |
 | `tibia_L` | normal | PA6-CF | +Z |
 | `tibia_R` | normal | PA6-CF | as modelled |
 
@@ -220,6 +221,7 @@ because the first version of this table drifted between being written and being 
 | `shoulder_plate_L` | PA6-CF | +Y |
 | `skid_rail` | TPU 95A | as modelled |
 | `strap` | PA6-CF | as modelled |
+| `sw1_coupon` | PA6-CF | +Z |
 
 <!-- END GENERATED BLOCK: supports-table -->
 

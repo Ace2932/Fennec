@@ -105,6 +105,7 @@ point inside the designed part = the part cuts its counterpart. Cases:
 Exit 0 = clean, 1 = interference. Run via build_all.sh after every change.
 """
 import pathlib
+import re
 import sys
 
 import numpy as np
@@ -603,6 +604,45 @@ def coax_to_trunk_bases():
     return bases
 
 
+def _scad_num(path, name):
+    """Read a top-level numeric constant out of a .scad file.
+
+    Same idiom, and same reason, as nova_locomotion/test/test_urdf_sync.py: a
+    constant retyped into a second file is a SEAM, and seams are this repo's
+    dominant bug class. The SW1 envelope below is derived from shoulder.scad so
+    that moving the cutout moves the thing that checks the cutout.
+    """
+    m = re.search(rf'\b{re.escape(name)}\s*=\s*(-?[0-9.]+)\s*;',
+                  pathlib.Path(path).read_text())
+    if not m:
+        raise AssertionError(f'{name} not found in {path} -- '
+                             'the SW1 envelope cannot be derived')
+    return float(m.group(1))
+
+
+def _sw1_body_box(clr=2.0):
+    """Trunk-frame envelope of the SW1 switch body on the FRONT shoulder (#377).
+
+    Derived from shoulder.scad, never retyped. The switch seats on the wall's
+    forward face (shoulder-local y = REAR_W1) and hangs SW1_DEPTH rearward;
+    `clr` pads the cutout footprint for the wings and body flare.
+    """
+    sc = f'{LEG}/shoulder.scad'
+    g = lambda n: _scad_num(sc, n)   # noqa: E731
+    y1, depth, proud = g('REAR_W1'), g('SW1_DEPTH'), g('SW1_PROUD')
+    x, w = g('SW1_X'), g('SW1_W')
+    z, h = g('SW1_Z'), g('SW1_H')
+    # FULL envelope: body BEHIND the panel *and* the bezel PROUD of it. The
+    # first version of this box stopped at the panel face, which is exactly
+    # where the interesting volume starts -- the bezel protrudes into the side
+    # of the wall the coax sweeps past (0.5mm at the hip stations). Measured
+    # 2026-08-15: no leg point enters the centreline footprint in any
+    # chassis-safe pose, and no static part does either. This keeps it that way.
+    return make_box(y1 - depth + HIP_FA, y1 + proud + HIP_FA,
+                    x - w / 2 - clr, x + w / 2 + clr,
+                    z - h / 2 - clr + HIP_Z, z + h / 2 + clr + HIP_Z)
+
+
 def make_box(x0, x1, y0, y1, z0, z1):
     return trimesh.creation.box(
         extents=[x1 - x0, y1 - y0, z1 - z0],
@@ -1005,14 +1045,19 @@ def main():
                       hits[~known] if len(hits) else hits)
 
     # ---- 3. shoulders vs riser -------------------------------------------------
-    sh = trimesh.load(f'{LEG}/shoulder.stl')
-    shp = trimesh.sample.sample_surface(sh, 8000, seed=0)[0]
+    # #377: the ends are DIFFERENT PARTS now — front carries the SW1 Contura
+    # panel hole, rear is plain. Sample each end from its own mesh.
+    shp_by_end = {
+        e: trimesh.sample.sample_surface(
+            trimesh.load(f'{LEG}/shoulder_sw1.stl' if e > 0 else
+                         f'{LEG}/shoulder.stl'), 8000, seed=0)[0]
+        for e in (1, -1)}
     for end in (1, -1):
         S2T = np.array([[0, end, 0, end * HIP_FA],
                         [1, 0, 0, 0],
                         [0, 0, 1, HIP_Z],
                         [0, 0, 0, 1.0]])
-        p = tf(shp, S2T)
+        p = tf(shp_by_end[end], S2T)
         near = p[(np.abs(p[:, 0]) < 72) & (p[:, 2] > 25)]
         hits = near[riser.contains(near)] if len(near) else near
         bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs riser', hits)
@@ -1030,6 +1075,23 @@ def main():
             hits = hits[~seat]
         bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs trunk '
                       f'(feet seats excluded)', hits)
+
+    # ---- 3c. SW1 switch BODY clearance (#377, 2026-08-15) ----------------------
+    # The cutout does more than remove material: it puts 37 mm of SWITCH into
+    # the front shoulder's C-box gap, a solid that exists in no other model.
+    # panel_probe.py FOUND that volume; this is what KEEPS it — without a target
+    # here, a later riser or neck_bracket revision could grow into the space the
+    # switch needs and every gate would still be green.
+    #
+    # Envelope: from the panel's own seating face (shoulder-local y REAR_W1
+    # -28.1, = trunk x 113.1) running 37 mm rearward, cutout footprint + 2 mm
+    # per side for the wings and body flare. Trunk frame, FRONT end only.
+    SW1_BODY = _sw1_body_box()
+    sw1_pts = trimesh.sample.sample_surface(SW1_BODY, 4000, seed=0)[0]
+    for nm, target in (('riser', riser), ('trunk', trunk), ('bracket', bracket)):
+        near = near_bbox(sw1_pts, target)
+        hits = near[target.contains(near)] if len(near) else near
+        bad |= report(f'SW1 switch body vs {nm}', hits)
 
     # ---- 4. CROUCH-pose leg sweep vs riser + battery ------------------------------
     # CHASSIS-SAFE ROM (this gate is the authority, like the leg_v6 sweep
@@ -1056,7 +1118,7 @@ def main():
     # contributed nothing to this verdict, and must say so rather than pass
     # quietly. That silence is what let #47's dead head window sit green.
     seen = {k: 0 for k in ('riser', 'pocket', 'pack', 'rails',
-                           'head', 'bracket', 'camera')}
+                           'head', 'bracket', 'camera', 'sw1')}
     for hfe in (-86, -45, 0, 45, 50, 55, 70, 86):
         for kfe in (-109, -55, 0, 55, 109):
             cloud = leg_cloud(hfe, kfe)
@@ -1079,7 +1141,12 @@ def main():
                     for tname, target in (('riser', riser), ('pocket', pocket),
                                           ('pack', pack), ('rails', rails),
                                           ('head', head), ('bracket', bracket),
-                                          ('camera', cam)):
+                                          ('camera', cam),
+                                          # #377: the leg must never reach the
+                                          # SW1 body. The wall separates them,
+                                          # but "separated by a wall" is what
+                                          # this sweep exists to PROVE.
+                                          ('sw1', SW1_BODY)):
                         near = near_bbox(p, target)
                         seen[tname] += len(near)
                         if not len(near):
@@ -1225,12 +1292,16 @@ def main():
     bad |= report('battery pack vs pocket (pack must fit its own tray, '
                   'floor seat excluded) -- AUD-1 RESOLVED 2026-07-10, '
                   'top-flange mount', hits)
-    sh_pts = trimesh.sample.sample_surface(
-        trimesh.load(f'{LEG}/shoulder.stl'), 8000, seed=0)[0]
+    # #377: per-end parts (front carries the SW1 cutout)
+    sh_pts_by_end = {
+        e: trimesh.sample.sample_surface(
+            trimesh.load(f'{LEG}/shoulder_sw1.stl' if e > 0 else
+                         f'{LEG}/shoulder.stl'), 8000, seed=0)[0]
+        for e in (1, -1)}
     for end in (1, -1):
         S2T = np.array([[0, end, 0, end * HIP_FA],
                         [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
-        p = tf(sh_pts, S2T)
+        p = tf(sh_pts_by_end[end], S2T)
         near = p[p[:, 2] < 5]
         for label, target in (('pocket', pocket), ('pack', pack)):
             hits = near[target.contains(near)] if len(near) else near
@@ -1270,7 +1341,7 @@ def main():
     for end in (1, -1):
         S2T = np.array([[0, end, 0, end * HIP_FA],
                         [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
-        p = tf(sh_pts, S2T)
+        p = tf(sh_pts_by_end[end], S2T)
         near = p[(p[:, 0] > 95) & (p[:, 0] < 176) & (p[:, 2] > 80.2)]
         for label, target in (('head', head), ('bracket', bracket),
                               ('camera', cam)):
@@ -1403,7 +1474,7 @@ def main():
     for end in (1, -1):
         S2T = np.array([[0, end, 0, end * HIP_FA],
                         [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
-        p = tf(sh_pts, S2T)
+        p = tf(sh_pts_by_end[end], S2T)
         near = p[np.abs(p[:, 0]) < 66]
         hits = near[cradle.contains(near)] if len(near) else near
         bad |= report(f'{"front" if end > 0 else "rear"} shoulder vs cradle', hits)
@@ -1624,7 +1695,7 @@ def main():
                         hits, riser, noise_mm=NOISE_PART_MM)
     S2T_rear = np.array([[0, -1, 0, -HIP_FA],
                         [1, 0, 0, 0], [0, 0, 1, HIP_Z], [0, 0, 0, 1.0]])
-    rear_sh = tf(sh_pts, S2T_rear)
+    rear_sh = tf(sh_pts_by_end[-1], S2T_rear)   # REAR end = the plain part (#377)
     hits = rear_sh[pod.contains(rear_sh)] if len(rear_sh) else rear_sh
     bad |= report('control pod vs rear shoulders', hits)
     hits = podp[box.contains(podp)]

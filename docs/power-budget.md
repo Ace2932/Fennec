@@ -136,12 +136,13 @@ Even with a dedicated buck, switching ripple at the buck's switching frequency (
 
 ## Rail 5 — Aux 5V (UBEC, off-board)
 
-- Ethernet switch (TP-Link LS105G or NETGEAR GS305): ~3W = 0.6A
+Ethernet switch removed 2026-08-14 — L2 plugs direct into Jetson eth0, switch is bench-only, not mounted on the robot.
+
 - Fans (if any, 2× 40mm): ~0.5A combined
 - Aux peripherals: OLED + WS2812B via Arduino Nano: ~0.3A (BOM v3.5 cut removed PIR/ultrasonic/MPU/DFPlayer)
-- **Total: ~1.5A continuous**
+- **Total: ~0.8A continuous**
 
-UBEC 5V/5A handles this with 3× headroom. Already owned, no change.
+UBEC 5V/5A handles this with ~6× headroom. Already owned, no change.
 
 ---
 

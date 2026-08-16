@@ -379,7 +379,31 @@ PARTS = {
         # This entry stayed MANUAL for three days after the .scad was fixed, which is the
         # give-away shape: the resolution landed in one of the two files that had to agree.
         supports="tree", scad=_leg("shoulder.scad"),
-        doc="Print: PA6-CF, rear face down; tree supports under the flange span.",
+        doc="Print: PA6-CF, rear face down; tree supports under the flange span. "
+            "REAR end only since #377 — the front is `shoulder_sw1`.",
+    ),
+    "shoulder_sw1": Part(
+        _leg("shoulder_sw1.stl"), "PA6-CF", down="+Z",
+        # #377 (2026-08-15): the FRONT shoulder, identical to `shoulder` plus the
+        # SW1 Contura panel hole. Same orientation and supports — the cutout is a
+        # vertical slot in a wall that is already vertical in print space, so it
+        # bridges nothing and needs no support of its own. Two parts, one .scad.
+        supports="tree", scad=_leg("shoulder_sw1.scad"),
+        doc="Print: PA6-CF, rear face down; tree supports under the flange span. "
+            "FRONT end (carries SW1). Coupon-test the snap fit before this 165 g "
+            "print — Carling says TEST CUT HOLE IN ACTUAL MATERIAL, and SW1_FIT "
+            "in shoulder.scad is the knob for it.",
+    ),
+    "sw1_coupon": Part(
+        _leg("sw1_coupon.stl"), "PA6-CF", down="+Z",
+        # #377: the SW1 fit ladder. Registered so it is sliced with the SAME
+        # material, orientation and profile as shoulder_sw1 — a coupon run at
+        # different settings qualifies different settings, which is the one way
+        # this part can be worse than useless.
+        supports="none", scad=_leg("sw1_coupon.scad"),
+        doc="Print: PA6-CF, +Z FACE DOWN (upright on its foot), no supports, "
+            "brim recommended at 140mm of first layer. Orientation is the whole "
+            "point — flat, it has no bridge and every slot passes.",
     ),
     "shoulder_plate": Part(
         _leg("shoulder_plate.stl"), "PA6-CF", down="+Y",

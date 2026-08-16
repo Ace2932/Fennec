@@ -74,7 +74,8 @@ MESHES = {
     "tibia_R": f"{CAD}/leg_v6/tibia_R.stl",
     "knee_arm": f"{CAD}/leg_v6/knee_arm.stl",
     "knee_bump": f"{CAD}/leg_v6/knee_bumper.stl",   # TPU collapse guard (rides tibia)
-    "shoulder": f"{CAD}/leg_v6/shoulder.stl",
+    "shoulder": f"{CAD}/leg_v6/shoulder.stl",          # REAR — plain
+    "shoulder_sw1": f"{CAD}/leg_v6/shoulder_sw1.stl",  # FRONT — + SW1 hole (#377)
     "splate_R": f"{CAD}/leg_v6/shoulder_plate.stl",
     "splate_L": f"{CAD}/leg_v6/shoulder_plate_L.stl",
     "shoe": f"{ORIG}/SM3_Foot.stl",
@@ -180,7 +181,7 @@ CASE_M = T([-6.85 - _bc[0], -_bc[1], 71.9 - _cb[0][2]])
 MY_BAR = np.eye(4); MY_BAR[1, 1] = -1     # -y clamp bar = +y bar mirrored
 
 STATIC = [
-    {"mesh": "shoulder", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 60]},
+    {"mesh": "shoulder_sw1", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 60]},
     {"mesh": "shoulder", "M": mat_list(s2t(-1)), "grp": "shoulder", "expl": [0, 0, 60]},
     {"mesh": "splate_R", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 90]},
     {"mesh": "splate_L", "M": mat_list(s2t(1)), "grp": "shoulder", "expl": [0, 0, 90]},
@@ -236,6 +237,7 @@ VIEWER_EXCLUDED = {
     "strap": "TODO: 2 per leg (coax + tibia tails), needs its own frame placement",
     "cable_clip": "TPU accessory, no fixed pose in the assembly",
     "grommet_insert": "TPU accessory, no fixed pose in the assembly",
+    "sw1_coupon": "test coupon, not a robot part — qualifies SW1_FIT before the shoulder_sw1 print (#377)",
 }
 _leg_stls = {q.stem for q in pathlib.Path(f"{CAD}/leg_v6").glob("*.stl")}
 _shown = {k.rsplit("/", 1)[-1][:-4] for k in MESHES.values() if "/leg_v6/" in k}

@@ -190,11 +190,11 @@ double duty (soft-start + zener clamp current-limit).
 
 ### Gigabit Ethernet switch (5-port) — ~$15 ✅ ORDERED
 - TP-Link LS105G or NETGEAR GS305 (5-port unmanaged gigabit)
-- Plan to remove case for chassis volume (~60% volume savings)
+- **NOT on the robot (2026-08-14)** — L2 plugs direct into Jetson eth0, point-to-point. Switch kept as bench gear only, for a dev laptop to join the LAN on the bench.
 
 ### Cable Matters 10Gbps Snagless Cat 6 — 1ft, ×2 minimum (×3 with spare) — ~$8 ✅ ORDERED
 - 30cm length, snagless boot, Cat 6 (gold-flashed per TIA/EIA-568 spec by default), 10 Gbps rated headroom
-- Wiring: Jetson `enP8p1s0` ↔ switch port 1, L2 ↔ switch port 2 (port 3 spare for dev laptop)
+- Wiring on-robot: L2 ↔ Jetson `enP8p1s0` direct, 1 cable. Remaining cables spare / bench-switch use.
 
 ### LC filter parts for L2 12V tap — ~$3
 - 1× inductor: ~22 µH, ≥2A rated (DigiKey series-resonant choke)

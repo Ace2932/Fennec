@@ -66,7 +66,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
 | **Pololu D24V22F12 — 12V dedicated L2 LiDAR rail (2.6A typ)** | **$19** | 🆕 Order. New in v3.4 (Option A split). 12V / 2.6A max / 36V Vin max. L2 draws ~1A → ~2.6× headroom. Clean power for LiDAR — no servo transient ringing. LC filter retained on the L2-buck output. |
 | **Pololu D42V55F12 — 12V Jetson rail** | **$32** | 🆕 Order — replaces deprecated D24V50F12. Derates to ~3A cont. at 14.8V Vin → ~1.4× headroom over Jetson MAXN 2.1A. Min Vin 12V → **LVC alarm at 13.2V**. Reverse-polarity protected. Find via Pololu D42V55Fx family page → 12V variant. |
 | **Pololu D42V55F7 — 7.5V arm rail (future)** | **$0** | ⚠️ **Footprint reserved on PCB v6; don't populate until Phase 4 arm install.** Output 7.5V (within STS3215 6-8.4V range). Estimated cost when ordered: ~$32. |
-| UBEC 5V/5A | $15 | ✅ Owned — 5V peripherals (Ethernet switch, fans, aux sensors) |
+| UBEC 5V/5A | $15 | ✅ Owned — 5V peripherals (fans, aux sensors) |
 | Bulk caps for rail injection points (1000 µF / 25V × 5, **low-profile Ø12.5×16 mm radial**) | $5 | 🆕 Order with electronics — soaks servo impact transients near point of load. 5 points: 4× leg (J3-J6 V7V5_LEG) + 1× hip (J7 V12_HIP). **Height-reduced** (16 mm tall vs 20-26 mm standard; Ø12.5 unchanged) to fit the 46.9 mm mezzanine stack. E.g. Rubycon `25ZLH1000MEFC12.5X16`. Footprint `CP_Radial_D12.5mm_P5.00mm` (diameter unchanged → footprint unchanged). |
 | PCB terminals + misc boards | $8 | ✅ Ordered |
 | Dip switches + resistors + buttons | $8 | ✅ Ordered |
@@ -95,7 +95,7 @@ XL4016 ×2 dropped from active design after capacity audit: 8A continuous rating
                        ├── [reserved arm rail]           → 7.5V/3-8A → 6× arm STS3215 (Phase 4)
                        │   (D42V55F7 footprint, unstuffed)
                        │
-                       └── UBEC 5V/5A        → 5V       → Ethernet switch, fans, aux 5V peripherals
+                       └── UBEC 5V/5A        → 5V       → fans, aux 5V peripherals
 ```
 
 **Power tree safety chain (ordered by trip point, highest pack voltage first):**
@@ -152,18 +152,16 @@ Note: Feetech bus is single-ended half-duplex TTL UART. 120 Ω differential term
 
 | Item | Price | Status |
 |------|-------|--------|
-| **Gigabit Ethernet switch (5-port)** — TP-Link LS105G or NETGEAR GS305 | **$15** | ✅ Ordered |
-| **Cable Matters 10Gbps Snagless Cat 6 — 1ft × 2-3** | **$8** | ✅ Ordered |
+| Gigabit Ethernet switch (5-port) — TP-Link LS105G or NETGEAR GS305 | $15 | ✅ Owned — BENCH ONLY, not mounted on robot (L2 plugs direct into Jetson eth0; decision 2026-08-14) |
+| **Cable Matters 10Gbps Snagless Cat 6 — 1ft × 1** | **$8** | ✅ Ordered — only 1 needed on-robot (L2 ↔ Jetson eth0 direct) |
 | Small inductor + capacitor (LC filter on D24V22F12 output to L2) | $3 | 🆕 Order with electronics |
 
 **Topology:**
 ```
-L2 (192.168.1.62) ─┐
-                   ├─→ Gigabit switch ─→ Jetson eth0 (static 192.168.1.2/24)
-Dev laptop ────────┘
+L2 (192.168.1.62) ──Cat 6──→ Jetson eth0 direct (static 192.168.1.2/24)
 ```
 
-Switch can be pulled out of its case to save ~60% volume inside the chassis if needed. Powered from the 5V UBEC rail (~3W draw).
+Dev access on the robot is Jetson built-in WiFi. The switch stays bench gear only — a dev laptop can join via the switch on the bench when wanted.
 
 ---
 
@@ -298,7 +296,7 @@ Post-Jetson-flash install list (Phase 1):
    - Bench-test Pololu D42V110F7 (leg 7.5V): load with 1× then 4× then 8× STS3215 19kg in a walking-gait stand-in (alternating PWM positions @ 2 Hz). Watch for thermal rise, voltage sag, and rail oscillation under transient steps.
    - Bench-test Pololu D42V110F12 (hip 12V, hips only): load with 1×, then 4× 30kg hip STS3215 walking-stand-in. Confirm sustained current stays under derated continuous capacity at 14.8V Vin (~7-9A range). Thermal IR after 10 min.
    - Bench-test Pololu D24V22F12 (L2 12V dedicated): load with L2 LiDAR. Scope output for ripple. LC filter on this rail (not on the hip rail anymore).
-   - Bench-test 5V UBEC loaded with Ethernet switch.
+   - Bench-test 5V UBEC loaded with fans + aux peripherals.
    - Verify E-stop physically opens the leg + hip rail enable lines (Jetson rail stays alive).
    - Verify 13.0V graceful-shutdown comparator trips and Teensy publishes `/battery_low` (bench-sweep Vin down to 13.0V, watch the topic and verify Jetson initiates `systemctl poweroff`).
    - Verify MOSFET hard-cutoff trips at 12.4V Vin (bench-supply sweep down; should fire ~30-60 s after the 13.0V graceful trigger at typical discharge rates).
@@ -337,7 +335,7 @@ Post-Jetson-flash install list (Phase 1):
 | **Pololu D42V110F7 (leg 7.5V)** | **$60** | 🆕 |
 | **Pololu D42V110F12 (hip 12V only)** | **$60** | 🆕 |
 | **Pololu D24V22F12 (L2 LiDAR dedicated, v3.4)** | **$19** | 🆕 |
-| Gigabit switch + Cable Matters Cat 6 ×2-3 (1ft) | $23 | ✅ Ordered 2026-05-17 |
+| Gigabit switch (bench-only, 2026-08-14) + Cable Matters Cat 6 ×2-3 (1ft) | $23 | ✅ Ordered 2026-05-17 |
 | LC filter parts (inductor + cap) | $3 | 🆕 To order (DigiKey bundle) |
 | Threadlocker + tape | $18 | ✅ Ordered 2026-05-21 |
 | ~~Magigoo PA~~ → Bambu liquid glue | $0 | ✅ Using existing |
