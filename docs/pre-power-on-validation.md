@@ -101,6 +101,14 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
       EN=EN_BUCKS/EN_JET, VOUT`. Reverse VIN into a Pololu = dead module. Match each buck's
       VIN/GND/VOUT/EN silk to the wiring. **⚠️ Fixed-output variant per slot is a FRY RISK the board
       can't enforce — confirm F7 vs F12 on each physical module (see §1e).** Terminal rect pad = + .
+      ⚠️ **The silk does not tell you the variant** — the module prints `reg34c` (a board-design
+      number), not `D42V110F7`. **Confirm by measurement: VIN ~15 V current-limited, no load, read
+      VOUT — 7.5 V = F7 → `U1`, 12 V = F12.** Label each module as you read it.
+      ⚠️ **The enable pad is `ENA` or `ENB` and we have never recorded which.** `EN_BUCKS` has **no
+      pull-up on the board** and the safety chain pulls it DOWN (`Q2`/`Q3` gate→`EN_BUCKS`,
+      source→GND), so the correct pad is the one that **disables the module when grounded**. Test:
+      VOUT up with EN unattached, then ground each pad in turn. Wrong pad = the e-stop does not cut
+      the bucks, silently. See `../hardware/pcb-mods/BUILD_PLAN.md` §5.
 - [ ] **XT connector GENDER on every harness end — decide by CONTACTS, not by the part name.**
       Board side per the FOOTPRINTS is `XT60-M` at `J1` and `XT30U-M` at `J3`–`J7` / `J12`–`J14`
       (verified 2026-08-13). Every cable end must be the *physical complement*.

@@ -698,7 +698,7 @@ a part marked "470" is 47 pF and gives you no soft-start at all.
 | **`J1` specifically — meter it, do not eyeball it** | All eight XT30s carry `−`/`+` silk text (checked: every mark lands on the correct pad). **`J1` carries none** — its silk is body outline only. The outline *is* asymmetric (two chamfered corners at the pad-1/negative end, square at pad-2/positive, matching the XT60 housing's own chamfer and the "flat = +" rule), but that cue is hidden the moment the connector sits on it, and the part drops in 180° out perfectly happily on symmetric 4.5 mm drills. **This is worse than a reversed pack: `BATT_NEG` is not GND — it runs to `Q1`'s drain — so fitting `J1` rotated swaps the nets UPSTREAM of the reverse-polarity protection and defeats it.** Identify by continuity against parts already fitted: **`J1`.2 `VBAT` → rings to `SW1`.1** (stage 7); **`J1`.1 `BATT_NEG` → rings to `D1`.2 / `R_gs1`.2 / `C_gs1`.2** (stage 5). ⚠️ And the discriminator that catches the intuitive error: **`J1`.1 will NOT ring to GND.** Probing for ground on the negative pad finds nothing and invites you onto the wrong pad. |
 | **C1–C9 electrolytics** | Polarised, and split across both faces (C1–C6 bottom, C8/C9 top), so "the stripe faces the same way" is not a single rule — check each against its own silk. |
 | **D1 BZT52C18** | Zener, SOD-123F. Cathode band. Backwards it clamps nothing and conducts the wrong way. |
-| **Q1 IRLB3034PBF** | TO-220-3. Its pad 3 is the 14 A GND inject; pad 1 is `Net-(D1-K)`, pad 2 is `BATT_NEG`. **⚠️ The TO-220 TAB is bonded to the drain = `BATT_NEG`, not GND** — and `SW1` switches only the positive rail, so the tab is live whenever the pack is plugged in, switch off included. Bolting it to a grounded chassis or a shared heatsink shorts drain→source and **silently, permanently bypasses reverse-polarity protection**. Mount isolated or free-standing; if it is ever heatsinked, mica/silpad + shoulder bush and **meter tab-to-GND for an open** first. |
+| **Q1 IRLB3034PBF** | TO-220-3. Its pad 3 is the 14 A GND inject; pad 1 is `Net-(D1-K)`, pad 2 is `BATT_NEG`. **⚠️ The TO-220 TAB is bonded to the drain = `BATT_NEG`, not GND** — and `SW1` switches only the positive rail, so the tab is live whenever the pack is plugged in, switch off included. Bolting it to a grounded chassis or a shared heatsink shorts drain→source and **silently, permanently bypasses reverse-polarity protection**. Mount isolated or free-standing; if it is ever heatsinked, mica/silpad + shoulder bush and ~~meter tab-to-GND for an open~~ **meter tab-to-CHASSIS for an open** first. ⛔ **The struck-out wording is wrong and would fail a good board:** tab-to-*board*-GND is asymmetric by design — Q1's body diode runs source→drain, so red on `Q1`.3 conducts (~0.5 V in diode mode) and red on the tab reads OL. **The asymmetry is the pass; ~0 Ω both polarities is the failure** (drain-source shorted, protection already gone). ✅ Confirmed asymmetric on the build board 2026-08-16 (§6). Also note the tab is internally the same metal as pin 2, so tab↔pin 2 is 0 Ω by construction and tests no solder joint. |
 | **U8 LM393 / U7 74LVC125** | SOIC pin-1 dot. **U7 is on the logic board TOP face**, U8 on the power board bottom — do not carry one assumption to the other. |
 | **U9–U12 INA226** | Off-board modules on a 4-pin header: `+3V3 / GND / SCL / SDA` at −5.08 / −2.54 / 0 / +2.54 mm. Rail current does NOT pass through the board. |
 | **U6 Teensy / U12 Nano** | Orientation set by the USB end. Socket if undecided — see §7. |
@@ -768,9 +768,78 @@ Everything that leaves the power board. Gauges per `../wiring/README.md`
 | ref | connector | net(s) | goes to | wire |
 |---|---|---|---|---|
 | J1 | ⚠️ **AS BUILT: the RECEIVING housing (pins), i.e. `XT60-F`** — the footprint and the rows below say `XT60-M`. Confirmed on the bench 2026-08-14: the board part has PINS and the cable shell plugs over it, which is the opposite of every XT30 here. Mechanically fine (symmetric 4.5 mm holes at 7.2 mm pitch). **The pack-side harness end must therefore be the PLUG-IN housing with SOCKETS.** | `VBAT` / `BATT_NEG` | 4S LiPo **via the MRBF fuse block** (off-board, floor plate) | 18 AWG silicone |
-| SW1 | TB132 screw, 5.08 mm | `VBAT` → `VBAT_PROTECTED` | Contura rocker, ~18 A — **off-board panel/pod**. Drill is 1.5 mm (bumped from lib 1.2) for TB007-508-02BE | 18 AWG |
+| SW1 | TB132 screw, 5.08 mm | `VBAT` → `VBAT_PROTECTED` | Contura rocker, ~18 A — **off-board panel/pod**. Drill is 1.5 mm (bumped from lib 1.2) for TB007-508-02BE. ⚠️ **THREE wires, not two — the switch is LIT** (see below) | 2× 18 AWG + 1× 22 AWG |
+
+> ### ⚠️ `SW1` IS A LIT ROCKER AND THE BOARD HAS NO LAMP GROUND (confirmed at the bench 2026-08-16)
+>
+> The Blue Sea 8282 (Carling VJB1 body) has **three spades**, not two — it is illuminated.
+> `SW1`'s block has exactly **two** pads, `VBAT` and `VBAT_PROTECTED`, **neither of which is
+> GND**, so the lamp's return has nowhere to land on that connector. Nothing in
+> `master-bom.md`, `order-list.md` or this file recorded that the chosen switch needed a
+> third conductor. **Fourth instance of the standing rule** — *for every connector, ask
+> whether the thing that PLUGS INTO IT is fully specified*, after `M1`'s voltmeter, `JP1`'s
+> shunt and `U9`–`U12`'s headers.
+>
+> **Identify the three spades by measurement, not by the numbers moulded on them:**
+> continuity across all three pairs with the rocker OFF, then ON. **The pair that goes
+> OL → 0 Ω when you flip it is supply + load** → those two go to `SW1`.1 / `SW1`.2 (a plain
+> SPST is symmetric, so which is which does not matter electrically). **The remaining spade
+> is the lamp ground**; it should read a finite resistance or a diode drop to the *load*
+> spade (LED + series resistor), often OL in one polarity.
+>
+> **Take the lamp ground from `SW2`.1.** It is `GND`, it is a 5.08 mm screw terminal 27 mm
+> away, it needs no soldering, and it accepts a second 22 AWG conductor twisted in with the
+> e-stop return. Lamp current is ~20 mA into a solid ground plane — it cannot disturb the
+> e-stop's NC signal.
+> **Do NOT use `J2`.2 or `M1`.2.** Those are the 2.54 mm headers with the documented
+> insulation/clearance hazard (`../wiring/README.md`), `J2` already carries four wires in
+> three pins, and that area is where the `VBAT_PROTECTED`→GND short actually happened at
+> stage 8/9.
+> 🔴 **Do NOT ground the lamp to `J1`.1.** That is `BATT_NEG`, not GND — it reaches ground
+> only through `Q1`'s drain-source. Returning lamp current there puts a small path *around*
+> the reverse-polarity FET. Same trap as always on this board: `BATT_NEG` is not GND.
+>
+> Bundle is therefore **red / red / black** — which conveniently fixes the other problem,
+> that both switched legs are positive so colour alone could not tell them apart. The lamp
+> is fed from the load side, so it draws only when SW1 is ON, alongside `M1`'s 10–20 mA.
 | SW2 | TB132 screw | `GND` / `EN_SW` | E-stop, signal level only | 22 AWG |
 | U1 | 2× XT30 station | `VBAT_PROTECTED`/`GND` in, `V7V5_LEG` out, EN=`EN_BUCKS` | **Pololu buck, off-board module** | 18 AWG |
+
+> ### 🔴 Two things about the buck stations that were never written down (2026-08-16)
+>
+> **Station → module map.** `U#`.1 (**rect**) = `VBAT_PROTECTED` → module **VIN** ·
+> `U#`.4 (**rect**) = rail out → module **VOUT** · `U#`.3 (**rect**) = `EN_BUCKS`
+> (`U4` = `EN_JET`) → module **enable** · the three `U#`.2 pads = `GND`, one at each
+> pair. Use the GND adjacent to each function rather than daisying them.
+> ⚠️ **At `U1`–`U5` the rect pad is POSITIVE — the inverse of every AMASS XT on this
+> board, where roundrect = pad 1 = negative.** The buck stations also have no `+`/`−`
+> silk and no housing key. Meter every cable end against its board pad before mating.
+>
+> **1. `EN_BUCKS` HAS NO PULL-UP ON THE BOARD.** Net traced 2026-08-16: it touches
+> **only** `U1`.3 `U2`.3 `U3`.3 `U5`.3 `Q2`.3 `Q3`.3 — no resistor anywhere. `Q2`
+> (hardcut) and `Q3` (e-stop) are both gate→`EN_BUCKS`, source→GND, so **the safety
+> chain works by pulling `EN_BUCKS` DOWN.** Therefore the module's enable must be
+> **active-high**, and **the Pololu's own internal pull-up is the only thing holding the
+> bucks enabled.** Confirm VOUT comes up with *nothing attached to EN*; if it does not,
+> all four bucks stay off forever and that is a board fix, not a wiring one.
+>
+> **2. `ENA` vs `ENB` is undocumented, and it is the e-stop path.** The module
+> (**`reg34c` © 2025**) exposes **ENA · GND · PFM · PG** plus a separate **ENB**. A grep
+> of `docs/`, `hardware/wiring/` and this file returns **zero** hits for `ENA`, `ENB`,
+> `PFM`, `PG` or `reg34c` — every doc says only "EN". Wrong pad gives either *no buck
+> ever turns on* (loud, harmless) or **the e-stop does not cut the bucks** (silent, and
+> the exact failure `SW2` exists to prevent). `PFM`/`PG` are unused here.
+> **Settle it on the bench, no datasheet needed:** VIN ~15 V current-limited, no load →
+> VOUT should come up. Ground **ENA** — does VOUT collapse? Restore, ground **ENB** —
+> same. **The pad that kills the output when grounded is the one that goes to `U#`.3.**
+>
+> ⚠️ **And the silk does NOT identify the variant.** The rows below and `master-bom.md`
+> both lean on "the silk is the only thing telling them apart" — but the module's silk
+> reads `reg34c`, a *board-design* number, not `D42V110F7`. If all four carry it, the
+> bucks are as indistinguishable as the four INA226 modules and that mitigation is
+> **void**. Check the module underside and the bag; failing that, **VIN ~15 V and read
+> VOUT — 7.5 V = F7 → `U1`, 12 V = F12.** Label each module the moment you read it.
+> Same empirical move that settled the UBEC's input/output direction.
 | U2 | 2× XT30 station | → `V12_HIP` | Pololu buck, off-board | 18 AWG |
 | U3 | 2× XT30 station | → `V12_L2_RAW` (then L1 → `V12_L2`) | Pololu buck, off-board | 18 AWG |
 | U4 | 2× XT30 station | → `V12_JET`, EN=`EN_JET` | Pololu buck, off-board | 18 AWG |
@@ -960,6 +1029,130 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
   which is fine, because it is also harmless.
 - After **stage 4** — reflow-quality check on L1 and both SOICs before tall
   parts block the view. Wick any bridge now.
+- ✅ **AFTER stages 7–9, before stage 10 — the bare-board electrical sweep. RUN AND
+  PASSED 2026-08-16.** This gate did not exist until it was run; stages 7, 8 and 9 went
+  on with no probe list between them and the modules. Results below are **as reported by
+  the operator at the bench, not observed in-session** (same convention as stage 0).
+
+  Probe targets were read out of `nova_pcb_v6_power_v2.kicad_pcb`, not recalled.
+  Ordered by what a miss costs, which is also the order to re-run it in.
+
+  **A1 — `J1` polarity.** The one connector with no `+`/`−` silk, and the one where a
+  rotation swaps nets *upstream* of the reverse-polarity FET and defeats it.
+
+  | probe | expect | ~0 Ω / wrong means |
+  |---|---|---|
+  | `J1`.2 ↔ `SW1`.1 | 0 Ω | `J1` fitted 180° out |
+  | `J1`.1 ↔ `D1`.2 (or `R_gs1`.2 / `Q1`.2) | 0 Ω | `J1` fitted 180° out |
+  | `J1`.1 ↔ GND | **OL, and OL is the PASS** | ~0 Ω = Q1 drain-source short |
+
+  ✅ **`J1` is correctly oriented.**
+
+  **A2 — `Q1`.** ✅ all passed.
+
+  | probe | expect | measured |
+  |---|---|---|
+  | `Q1`.1 ↔ `R17`.2 | 0 Ω | 1 Ω settling to **0.2 Ω** — at the meter's own 0.1–0.4 Ω offset, i.e. a short. Contact settling through no-clean residue, not a defect: `C_gs1` sits *across* that node, not in series, so a cap would read low-then-rise, the opposite. Moot regardless — it is the gate node, fed by `R17` 10k and held by `R_gs1` 100k |
+  | `Q1`.2 ↔ `J1`.1 | 0 Ω | ✅ |
+  | `Q1`.3 ↔ `J13`.1 | 0 Ω | ✅ |
+  | tab ↔ `Q1`.3, **diode mode** | **asymmetric** | ✅ ~0.5 V one way, OL the other |
+
+  ⛔ **"meter the tab to GND for an open" is WRONG as a standalone test and is struck out
+  here rather than deleted.** On a TO-220 the tab *is* pin 2 (drain) — same metal, so
+  tab↔pin 2 is 0 Ω by construction and tests no joint. And Q1's **body diode runs
+  source→drain**, so tab-to-GND is asymmetric by design: red on `Q1`.3 conducts (~0.5 V in
+  diode mode), red on the tab reads OL. **The pass is the asymmetry. ~0 Ω in BOTH
+  polarities is the failure** — drain-source shorted, reverse protection already gone.
+  Testing for a plain "open" fails a healthy FET in one polarity and can pass a dead one.
+  The check has near-zero yield while Q1 is free-standing; it earns its keep only if Q1 is
+  ever heatsinked, and then the subject is tab-to-**chassis**, not tab-to-board-GND.
+
+  **A3 — rail↔GND settled, and rail↔rail.** ✅ all passed. ⚠️ With stage 9 fitted there is
+  **6410 µF** on the board (C1–C4 `V7V5_LEG` 4000 µF · C5 `V12_HIP` 1000 · C6 `V12_L2` 470
+  · C8/C9 `VBAT_PROTECTED` 940). Every reading here starts as an apparent dead short and
+  ramps. **Read the settled value, both polarities. A real short is BORING** — same low
+  number instantly, forever. Anything that ramps, drifts or flips is reactive or active.
+
+  | net | probe at | expect | got |
+  |---|---|---|---|
+  | `V12_JET` | `J12`.2 | **OL immediately — no cap on this net** | ✅ the control: do it first, it is the one rail whose reading is unambiguous from the first second |
+  | `V5_AUX` | `J20`.1 | ~2.9 k | ✅ reproduces the 2026-08-09 value across a week |
+  | `V7V5_LEG` | `J3`.2 | charges → OL | ✅ |
+  | `V12_HIP` | `J7`.2 | charges → OL | ✅ |
+  | `V12_L2` | `J13`.2 | charges → OL | ✅ |
+  | `VBAT_PROTECTED` | `SW1`.2 | **no clean number** — 940 µF plus the UBEC input and the M1 voltmeter, both active | ✅ ramped, as predicted |
+  | all rail↔rail pairs | — | OL | ✅ |
+
+  ⚠️ **`VBAT_PROTECTED`↔GND is not a routine probe on this board — it is the re-test of a
+  fault that actually happened.** `M1`'s wiring shorted that pair at stage 8/9 (see the
+  bench-state box in §3). Ramping is the correct signature *and* the proof the fix holds.
+  If it is ever wanted as a number, it should settle toward **~121.5 k** — R2+R3 in series
+  using the measured 99.7 k + 21.8 k — but at ohmmeter test current into 940 µF that takes
+  minutes, and R2/R3 were each measured individually at stage 1 anyway.
+
+  **A4 — switches.** `SW1`/`SW2` are **bare screw terminals; the switches themselves are
+  not yet wired in**, so only one probe is available and it is the valuable one:
+
+  | probe | expect | got |
+  |---|---|---|
+  | `SW2`.2 ↔ `J20`.1 | 10.0 k (**R13**) | ✅ **10k** |
+  | `SW1`.1 ↔ `SW1`.2 | OL | ✅ correct with no switch wired — this is stage 0 again |
+
+  Once the switches ARE wired, add: SW1 off → OL, on → 0 Ω; SW2 unpressed → `SW2`.1↔.2
+  = 0 Ω (**NC = run**), pressed → OL. ⚠️ NC-vs-NO is the whole safety property — press
+  opens the contact, `R13` pulls `EN_SW` up, Q3 turns on, `EN_BUCKS` goes to GND. A broken
+  wire opens too, so it fails safe. Wired NO it reads never-tripped, silently.
+
+  **A5 — rail identity, ~29 probes, all 0 Ω.** ✅ all passed. A3 already proved there is no
+  rail-to-GND or rail-to-rail bridge anywhere (a bridge shorts the *nets*), so **A5 does
+  not need per-connector pad1↔pad2 checks** — it only has to prove identity and connection.
+  Park one probe and sweep:
+
+  - park `SW1`.2 → `U1`.1 `U2`.1 `U3`.1 `U4`.1
+  - park `SW2`.1 (GND) → `U1`–`U4`.2 · `J3`.1 `J4`.1 `J5`.1 `J6`.1 `J7`.1 `J12`.1 `J13`.1 `J14`.1
+  - park `U1`.4 → `J3`.2 `J4`.2 `J5`.2 `J6`.2 (the leg star)
+  - `U2`.4↔`J7`.2 · `U4`.4↔`J12`.2 · `U5`.4↔`J14`.2
+  - EN: `Q3`.3 ↔ `U1`.3 `U2`.3 `U3`.3, but **`Q4`.3 ↔ `U4`.3** — the Jetson buck is gated
+    separately by Q4, not by Q3
+
+  ⚠️ **`U3`.4 is `V12_L2_RAW`, NOT `V12_L2`.** The L2 rail runs through `L1`, so `U3`.4
+  does **not** ring to `J13`. The two correct probes are **`J13`.2 ↔ `L1`.2** and
+  **`U3`.4 ↔ `L1`.1**. Every other buck VOUT rings straight to its connector, so this is
+  the one that reads like a fault and is not.
+
+  **Probe the XT30/XT60 contacts, not the pads** — the path then crosses that connector's
+  solder joint as well, and the meter cannot resolve joint resistance any other way.
+
+  **A6 — electrolytic polarity. Visual only, and this is the last comfortable look.**
+  ✅ all correct. C1–C6 are on the **bottom** and C8/C9 on the **top**, so "the stripe
+  faces the same way" is not one rule — check each can against its own silk. A reversed
+  1000 µF passes every electrical probe in this gate and then vents at first power.
+
+  **A7 — the last unverified resistors.** ✅ `J20`.5↔`.7` = **4.70k** (`R11`) ·
+  `J20`.5↔`.8` = **4.70k** (`R12`). With `R13` from A4 this closes every measurable
+  resistor on the power board. **`R14` (470k) is now the only unverified one and is
+  unverifiable in circuit by design** — swamped by the ~16k around HARDCUT. It declares
+  itself at bring-up by the hardcut *not* chattering.
+
+  ### Doctrine this gate earned
+
+  - **Bracket an all-zero sweep with non-zero readings.** A5 is ~29 consecutive 0 Ω, and a
+    probe that has stopped biting is indistinguishable from a pass all the way through.
+    Taking R13/R11/R12 (10k, 4.70k, 4.70k) *before* A5 and re-taking one after turns the
+    sweep into something provable. Same rule as the `JP1`.2↔`J20`.5 control on 08-08,
+    now generalised: **the control goes at both ends, not in the middle.**
+  - **Order a gate by consequence, and put the unambiguous reading first.** `V12_JET` is
+    the only rail with no capacitor on it, so it is the only A3 probe that means something
+    in its first second. Establishing that the meter and the plane are behaving *there*
+    makes the five ramping readings that follow interpretable.
+  - ⚠️ **`J20` 1–2 = `V5_AUX`, 3–4 = GND, 2.54 mm apart.** Confirm the pin before believing
+    the number — this exact slip already produced one false alarm on this board.
+
+  **Still open after this gate** (neither blocks stage 10, both are owed):
+  `U8`'s 8-probe lead-to-same-net-pad bonding sweep (§6 above; substitute **`Q2`.2** for
+  `J13`.1 as the GND reference now that `J13` carries an XT30), and the logic board's
+  22-probe socket sweep, owed since 2026-08-09 — until it runs, that board is
+  *assembled*, not *verified*.
 - After **stage 9**, before **stage 10** — this is the last moment the board is
   a bare PCB. Run `pre-power-on-validation.md` §1c **connector mating audit
   (HARD GATE)** and §1e (connector polarity, buck variants, INA addressing)
