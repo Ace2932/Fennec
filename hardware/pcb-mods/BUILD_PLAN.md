@@ -768,9 +768,78 @@ Everything that leaves the power board. Gauges per `../wiring/README.md`
 | ref | connector | net(s) | goes to | wire |
 |---|---|---|---|---|
 | J1 | ⚠️ **AS BUILT: the RECEIVING housing (pins), i.e. `XT60-F`** — the footprint and the rows below say `XT60-M`. Confirmed on the bench 2026-08-14: the board part has PINS and the cable shell plugs over it, which is the opposite of every XT30 here. Mechanically fine (symmetric 4.5 mm holes at 7.2 mm pitch). **The pack-side harness end must therefore be the PLUG-IN housing with SOCKETS.** | `VBAT` / `BATT_NEG` | 4S LiPo **via the MRBF fuse block** (off-board, floor plate) | 18 AWG silicone |
-| SW1 | TB132 screw, 5.08 mm | `VBAT` → `VBAT_PROTECTED` | Contura rocker, ~18 A — **off-board panel/pod**. Drill is 1.5 mm (bumped from lib 1.2) for TB007-508-02BE | 18 AWG |
+| SW1 | TB132 screw, 5.08 mm | `VBAT` → `VBAT_PROTECTED` | Contura rocker, ~18 A — **off-board panel/pod**. Drill is 1.5 mm (bumped from lib 1.2) for TB007-508-02BE. ⚠️ **THREE wires, not two — the switch is LIT** (see below) | 2× 18 AWG + 1× 22 AWG |
+
+> ### ⚠️ `SW1` IS A LIT ROCKER AND THE BOARD HAS NO LAMP GROUND (confirmed at the bench 2026-08-16)
+>
+> The Blue Sea 8282 (Carling VJB1 body) has **three spades**, not two — it is illuminated.
+> `SW1`'s block has exactly **two** pads, `VBAT` and `VBAT_PROTECTED`, **neither of which is
+> GND**, so the lamp's return has nowhere to land on that connector. Nothing in
+> `master-bom.md`, `order-list.md` or this file recorded that the chosen switch needed a
+> third conductor. **Fourth instance of the standing rule** — *for every connector, ask
+> whether the thing that PLUGS INTO IT is fully specified*, after `M1`'s voltmeter, `JP1`'s
+> shunt and `U9`–`U12`'s headers.
+>
+> **Identify the three spades by measurement, not by the numbers moulded on them:**
+> continuity across all three pairs with the rocker OFF, then ON. **The pair that goes
+> OL → 0 Ω when you flip it is supply + load** → those two go to `SW1`.1 / `SW1`.2 (a plain
+> SPST is symmetric, so which is which does not matter electrically). **The remaining spade
+> is the lamp ground**; it should read a finite resistance or a diode drop to the *load*
+> spade (LED + series resistor), often OL in one polarity.
+>
+> **Take the lamp ground from `SW2`.1.** It is `GND`, it is a 5.08 mm screw terminal 27 mm
+> away, it needs no soldering, and it accepts a second 22 AWG conductor twisted in with the
+> e-stop return. Lamp current is ~20 mA into a solid ground plane — it cannot disturb the
+> e-stop's NC signal.
+> **Do NOT use `J2`.2 or `M1`.2.** Those are the 2.54 mm headers with the documented
+> insulation/clearance hazard (`../wiring/README.md`), `J2` already carries four wires in
+> three pins, and that area is where the `VBAT_PROTECTED`→GND short actually happened at
+> stage 8/9.
+> 🔴 **Do NOT ground the lamp to `J1`.1.** That is `BATT_NEG`, not GND — it reaches ground
+> only through `Q1`'s drain-source. Returning lamp current there puts a small path *around*
+> the reverse-polarity FET. Same trap as always on this board: `BATT_NEG` is not GND.
+>
+> Bundle is therefore **red / red / black** — which conveniently fixes the other problem,
+> that both switched legs are positive so colour alone could not tell them apart. The lamp
+> is fed from the load side, so it draws only when SW1 is ON, alongside `M1`'s 10–20 mA.
 | SW2 | TB132 screw | `GND` / `EN_SW` | E-stop, signal level only | 22 AWG |
 | U1 | 2× XT30 station | `VBAT_PROTECTED`/`GND` in, `V7V5_LEG` out, EN=`EN_BUCKS` | **Pololu buck, off-board module** | 18 AWG |
+
+> ### 🔴 Two things about the buck stations that were never written down (2026-08-16)
+>
+> **Station → module map.** `U#`.1 (**rect**) = `VBAT_PROTECTED` → module **VIN** ·
+> `U#`.4 (**rect**) = rail out → module **VOUT** · `U#`.3 (**rect**) = `EN_BUCKS`
+> (`U4` = `EN_JET`) → module **enable** · the three `U#`.2 pads = `GND`, one at each
+> pair. Use the GND adjacent to each function rather than daisying them.
+> ⚠️ **At `U1`–`U5` the rect pad is POSITIVE — the inverse of every AMASS XT on this
+> board, where roundrect = pad 1 = negative.** The buck stations also have no `+`/`−`
+> silk and no housing key. Meter every cable end against its board pad before mating.
+>
+> **1. `EN_BUCKS` HAS NO PULL-UP ON THE BOARD.** Net traced 2026-08-16: it touches
+> **only** `U1`.3 `U2`.3 `U3`.3 `U5`.3 `Q2`.3 `Q3`.3 — no resistor anywhere. `Q2`
+> (hardcut) and `Q3` (e-stop) are both gate→`EN_BUCKS`, source→GND, so **the safety
+> chain works by pulling `EN_BUCKS` DOWN.** Therefore the module's enable must be
+> **active-high**, and **the Pololu's own internal pull-up is the only thing holding the
+> bucks enabled.** Confirm VOUT comes up with *nothing attached to EN*; if it does not,
+> all four bucks stay off forever and that is a board fix, not a wiring one.
+>
+> **2. `ENA` vs `ENB` is undocumented, and it is the e-stop path.** The module
+> (**`reg34c` © 2025**) exposes **ENA · GND · PFM · PG** plus a separate **ENB**. A grep
+> of `docs/`, `hardware/wiring/` and this file returns **zero** hits for `ENA`, `ENB`,
+> `PFM`, `PG` or `reg34c` — every doc says only "EN". Wrong pad gives either *no buck
+> ever turns on* (loud, harmless) or **the e-stop does not cut the bucks** (silent, and
+> the exact failure `SW2` exists to prevent). `PFM`/`PG` are unused here.
+> **Settle it on the bench, no datasheet needed:** VIN ~15 V current-limited, no load →
+> VOUT should come up. Ground **ENA** — does VOUT collapse? Restore, ground **ENB** —
+> same. **The pad that kills the output when grounded is the one that goes to `U#`.3.**
+>
+> ⚠️ **And the silk does NOT identify the variant.** The rows below and `master-bom.md`
+> both lean on "the silk is the only thing telling them apart" — but the module's silk
+> reads `reg34c`, a *board-design* number, not `D42V110F7`. If all four carry it, the
+> bucks are as indistinguishable as the four INA226 modules and that mitigation is
+> **void**. Check the module underside and the bag; failing that, **VIN ~15 V and read
+> VOUT — 7.5 V = F7 → `U1`, 12 V = F12.** Label each module the moment you read it.
+> Same empirical move that settled the UBEC's input/output direction.
 | U2 | 2× XT30 station | → `V12_HIP` | Pololu buck, off-board | 18 AWG |
 | U3 | 2× XT30 station | → `V12_L2_RAW` (then L1 → `V12_L2`) | Pololu buck, off-board | 18 AWG |
 | U4 | 2× XT30 station | → `V12_JET`, EN=`EN_JET` | Pololu buck, off-board | 18 AWG |
