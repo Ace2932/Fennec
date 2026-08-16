@@ -227,6 +227,64 @@ because the first version of this table drifted between being written and being 
 
 ## 2. Slicer spec
 
+### 2a-0. 🔴 SUPPORTS — the whole list, in one place
+
+Generated from `hardware/cad/slice_plate.py`'s registry, which is **the authority**.
+Hand-slicing in Bambu Studio never consults it, so it is reproduced here. **12 parts
+need supports; 16 must have them OFF.** Check this before every print.
+
+**SUPPORTS ON** (`normal` unless noted):
+
+| part | supports | material | orientation |
+|---|---|---|---|
+| `battery_pocket` | normal | PA6-CF | as modelled (floor-down, opening up) |
+| `coax_R` / `coax_L` | normal | PA6-CF | +Y |
+| `coax_hfe_block` / `_L` | normal | PA6-CF | +X / −X |
+| `femur_R` / `femur_L` | normal | PA6-CF | as modelled / +Z |
+| `tibia_R` / `tibia_L` | normal | PA6-CF | as modelled / +Z |
+| `shoulder` | **tree** | PA6-CF | +Z |
+| `head` | **tree** | PA6-CF | MANUAL crown/pad-down |
+| `control_pod` | normal | PETG-CF | MANUAL column-face-down |
+
+⚠️ **`femur` — supports ON is CORRECT, but BLOCK THEM OVER THE CABLE TUNNEL (found 2026-08-05).**
+The femur legitimately needs `normal` supports for 882 mm² of external overhang. But it also has a
+**fully closed internal cable tunnel** whose roof is a **19.00 mm unsupported bridge** — measured on
+the mesh at the throat (x 36–39): floor solid to z−20.0, air z−19.5..−14.0, roof solid from z−13.5,
+free passage **5.90 mm tall × 19.00 mm wide**. Printed −Z down, that roof spans 19 mm in mid-air, so
+the slicer fills the tunnel with support — and a servo connector head (measured **9.8 × 4.6 mm**)
+then will not pass, despite 1.3 mm of nominal clearance. Aiden hit this on the 8/2 femur and had to
+open it with a file and pliers.
+
+**Next femur: paint a support blocker over the tunnel, or set "support on build plate only"** so
+external overhangs still get support and enclosed cavities do not. PA6-CF bridges 19 mm unaided.
+
+Two notes so this is not re-diagnosed from scratch: the tunnel is **identical in every femur
+revision** (77dc74c 7/16, 7955d1b 8/2, 0abd9e1 8/3 — all 5.90 × 19.00), so it is not a staleness
+issue; and `overhang_checks()` cannot see it, because that gate measures unsupported area **reaching
+the bed** and has no concept of support landing inside a passage that must stay clear.
+
+**SUPPORTS OFF — turning them on can TRAP MATERIAL, not merely waste it:**
+`cable_clip`, `case_slot_grommet`, `floor_plate`, `grommet_insert`,
+`jetson_case_mount`, `jetson_clamp_bar`, `knee_arm`, `knee_bumper`, `l2_adapter`,
+`lead_notch_grommet`, `neck_bracket`, `riser_bay`, `shoulder_plate`,
+`shoulder_plate_L`, `skid_rail`, `strap`.
+
+⚠️ **`knee_arm` and `shoulder_plate` are the ones that BITE (found 2026-08-05).**
+Both print their horn-seat face DOWN, so the Ø6.5 `HORN_CTR_D` counterbore starts
+at the bed, runs up `HORN_CTR_DEEP`=2.5, and the printer then **bridges 6.5 mm** to
+form the floor. Supports ON fills that blind pocket to prop the bridge — and it is
+a Ø6.5 × 2.5 blind hole, so it does not come back out. Supports OFF just bridges
+6.5 mm, which is why the 2026-08-02 `knee_arm` came out clean.
+
+**You cannot dig it out to spec and you cannot deepen the pocket.** The hub it
+clears stands **2.00 mm proud** (calipered 2026-08-03) in a 2.5 mm pocket — 0.5 mm
+of slack, working blind. And LA-23 already rejected deepening: the floor is
+**exactly 1.5 mm, the print-margin gate's minimum with zero slack**, and `ARM_THK`
+is a `leg_v6_common.scad` constant shared by the coax and femur yoke arms, so it
+cannot be bumped locally. **Reprint** — `knee_arm` is 6.9 cm³, ~8 g, well under an
+hour. `shoulder_plate.scad` carries the SAME counterbore (its header says so), so
+check both plates too, not just the arm you noticed.
+
 | Class | Walls | Layer | Infill | Notes |
 |---|---|---|---|---|
 | legs PA6-CF | 4 | 0.2 | 40% (**tibia 25%** — stress audit SF 35) | orientations per part headers: femur/tibia flat −Z, coax rear-face-down + supports under the yoke bridge, shoulder rear-face-down + tree supports, tibia tab-down + pillars, **shoulder_plate BACK-FACE-DOWN** (corrected 2026-08-02 — this said "horn-seat-down", which is `knee_arm`'s doctrine copied onto a part whose own header calls it *geometrically impossible*: the flange runs to y=2.00, 15.75 mm below the horn-seat plane at y=17.75, so it cannot rest there. Bed face is y=FACE_Y1=21.75), knee_arm underside-down, strap flat. **⚠ LA-3 (2026-07-11): femur_L / tibia_L do NOT share the R orientation** — the Z-mirror flips which face is flat, so "flat/tab face −Z down" applied to an L part prints it upside-down (tibia_L lands on two ~25.4mm² islands = tip-over risk). Rotate femur_L/tibia_L **180° about X from the R orientation** so they rest on the same flat face R does. ✅ **LA-3 does NOT extend to `shoulder_plate_L`, `coax_L` or `coax_hfe_block_L`** — those are X-mirrors, and only the Z-mirror changes which face is flat. `shoulder_plate_L` in particular is the **same shape** as the R (measured 2026-08-02: symmetric about its own midplane, the sole difference is the LA-2 dot, 7.41 mm³) — print both **back-face-down, same transform**, and nest them. |
