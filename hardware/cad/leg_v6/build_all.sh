@@ -23,6 +23,7 @@ $OS -o grommet_insert.stl grommet_insert.scad  # TPU flange grommet liner (#30, 
 # (toe_profile.scad is a reference profile, empty top-level object -- not rendered)
 $OS -o shoulder.stl shoulder.scad              # REAR end — plain
 $OS -o shoulder_sw1.stl shoulder_sw1.scad      # FRONT end — + SW1 panel hole (#377)
+$OS -o sw1_coupon.stl sw1_coupon.scad          # SW1 fit ladder — print BEFORE shoulder_sw1 (#377)
 $OS -o shoulder_plate.stl shoulder_plate.scad
 $OS -o shoulder_plate_L.stl shoulder_plate_L.scad
 $OS -o coax_hfe_block.stl coax_hfe_block.scad        # #226 option C: bolt-on OUTBOARD HFE arm

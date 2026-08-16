@@ -237,6 +237,7 @@ VIEWER_EXCLUDED = {
     "strap": "TODO: 2 per leg (coax + tibia tails), needs its own frame placement",
     "cable_clip": "TPU accessory, no fixed pose in the assembly",
     "grommet_insert": "TPU accessory, no fixed pose in the assembly",
+    "sw1_coupon": "test coupon, not a robot part — qualifies SW1_FIT before the shoulder_sw1 print (#377)",
 }
 _leg_stls = {q.stem for q in pathlib.Path(f"{CAD}/leg_v6").glob("*.stl")}
 _shown = {k.rsplit("/", 1)[-1][:-4] for k in MESHES.values() if "/leg_v6/" in k}

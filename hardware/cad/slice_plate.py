@@ -394,6 +394,17 @@ PARTS = {
             "print — Carling says TEST CUT HOLE IN ACTUAL MATERIAL, and SW1_FIT "
             "in shoulder.scad is the knob for it.",
     ),
+    "sw1_coupon": Part(
+        _leg("sw1_coupon.stl"), "PA6-CF", down="+Z",
+        # #377: the SW1 fit ladder. Registered so it is sliced with the SAME
+        # material, orientation and profile as shoulder_sw1 — a coupon run at
+        # different settings qualifies different settings, which is the one way
+        # this part can be worse than useless.
+        supports="none", scad=_leg("sw1_coupon.scad"),
+        doc="Print: PA6-CF, +Z FACE DOWN (upright on its foot), no supports, "
+            "brim recommended at 140mm of first layer. Orientation is the whole "
+            "point — flat, it has no bridge and every slot passes.",
+    ),
     "shoulder_plate": Part(
         _leg("shoulder_plate.stl"), "PA6-CF", down="+Y",
         # RESOLVED #253/#258: "back face" IS +Y -- the .scad's own FACE_Y1 = 21.75 is the bed

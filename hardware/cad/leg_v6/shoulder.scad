@@ -261,6 +261,66 @@ module lead_notch() {
     }
 }
 
+// ---- SW1 fit-test coupon (#377) --------------------------------------------
+// Cut FOUR holes at different allowances in one plate, so SW1_FIT is dialled in
+// a single print instead of print-measure-reprint. Labelled in hundredths of a
+// mm per side: "0" is nominal, "30" is +0.30/side.
+//
+// It lives HERE, in the same file as the real cutout, so it cannot drift from
+// it: same SW1_W / SW1_H / SW1_R, same 4.0mm wall taken from the same
+// REAR_W0..REAR_W1 band. A coupon that has its own copy of those numbers is
+// testing a different hole.
+//
+// WHAT MAKES IT A VALID TEST — it must print in the SAME ORIENTATION as
+// shoulder_sw1 (+Z FACE DOWN). With the deck top on the bed the build runs
+// along -z, so the printer meets each slot at z +23.4, opens 36.8mm of nothing,
+// and has to CLOSE it again at z -13.5: a ~21mm unsupported BRIDGE, 4mm deep,
+// and that bridged edge is one of the four rims the wings grip. Printed FLAT
+// the plate has no bridge at all, every hole snaps in perfectly, and the test
+// has proven nothing about the real part. The foot exists to make the upright
+// orientation the natural one.
+COUPON_FITS   = [0.00, 0.10, 0.20, 0.30];   // per side, mm
+COUPON_HRIM   = 7.0;      // material each side of a slot
+COUPON_VRIM   = 11.5;     // = the real wall's own margin above/below the cutout
+COUPON_FOOT_T = 3.0;      // bed foot: prints FIRST, since +Z faces down
+COUPON_FOOT_Y = 18.0;
+COUPON_LBL_H  = 5.0;
+COUPON_LBL_D  = 0.6;
+
+module sw1_coupon() {
+    pitch = SW1_W + 2 * COUPON_HRIM;
+    n     = len(COUPON_FITS);
+    x0    = -n * pitch / 2;
+    ztop  = SW1_Z + SW1_H / 2 + COUPON_VRIM;
+    zbot  = SW1_Z - SW1_H / 2 - COUPON_VRIM;
+    zlbl  = (SW1_Z + SW1_H / 2 + ztop - COUPON_FOOT_T) / 2;
+    ymid  = (REAR_W0 + REAR_W1) / 2;
+    difference() {
+        union() {
+            translate([x0, REAR_W0, zbot])
+                cube([n * pitch, REAR_W1 - REAR_W0, ztop - zbot]);
+            translate([x0, ymid - COUPON_FOOT_Y / 2, ztop - COUPON_FOOT_T])
+                cube([n * pitch, COUPON_FOOT_Y, COUPON_FOOT_T]);
+            for (i = [0 : n - 1])
+                translate([x0 + (i + 0.5) * pitch,
+                           REAR_W1 + COUPON_LBL_D, zlbl])
+                    rotate([90, 0, 0])
+                        linear_extrude(COUPON_LBL_D)
+                            text(str(round(COUPON_FITS[i] * 100)),
+                                 size = COUPON_LBL_H,
+                                 halign = "center", valign = "center");
+        }
+        for (i = [0 : n - 1])
+            translate([x0 + (i + 0.5) * pitch, REAR_W0 - 1, SW1_Z])
+                rotate([-90, 0, 0])
+                    linear_extrude(REAR_W1 - REAR_W0 + 2)
+                        offset(r = SW1_R)
+                            square([SW1_W + 2 * COUPON_FITS[i] - 2 * SW1_R,
+                                    SW1_H + 2 * COUPON_FITS[i] - 2 * SW1_R],
+                                   center = true);
+    }
+}
+
 //: sw1 = cut the SW1 panel hole (FRONT shoulder). Default FALSE so
 //: `shoulder.stl` stays the plain part every existing consumer already loads
 //: -- the no-hole part is the CONSERVATIVE one for every clearance gate, so a
