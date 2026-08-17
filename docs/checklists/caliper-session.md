@@ -15,6 +15,16 @@ because it is what is currently blocking.**
 Four measurements, one bench trip. Each one blocks a specific CAD rev; nothing
 here is nice-to-have.
 
+## S2-1. ~~SW1 Contura rocker — BODY DEPTH~~ ✅ CLOSED 2026-08-16
+
+Depth measured at **37 mm** (flange underside → terminal ends), and the printed-hole
+allowance measured at **+0.10 / side** from `sw1_coupon` — a four-rung ladder printed
+in the real part's orientation, 0.10 fit near-perfectly. `SW1_FIT = 0.10` is set and
+`shoulder_sw1.stl` re-rendered. Wing step positions were never needed: the coupon
+answered the question they were a proxy for.
+
+<details><summary>original entry</summary>
+
 ## S2-1. SW1 Contura rocker — BODY DEPTH ⬜ **the single most valuable number**
 
 The cutout and panel range are already known from the Carling V-Series
@@ -36,6 +46,8 @@ an answer.
 
 ⚠ Every "no" verdict in #368 currently assumes only that the body needs **more
 than 10 mm**. That is the probe's floor, not a measurement.
+
+</details>
 
 ## S2-2. Panel voltmeter — EVERYTHING ⬜
 
