@@ -505,11 +505,21 @@ PARTS = {
             "only raised feature and they print upward, no supports.",
     ),
     "control_pod": Part(
-        _chassis("control_pod.stl"), "PETG-CF",
-        manual="COLUMN-FACE-DOWN — names the feature. Measured: +Z 1648 mm^2 (s0.91) "
-               "dominates; next is -X 356 (s2.10)",
-        supports="normal", scad=_chassis("control_pod.scad"),
-        doc="PRINT: PETG-CF (or PA6-CF), COLUMN-FACE-DOWN; light supports under the deck + OLED overhangs",
+        _chassis("control_pod.stl"), "PETG-CF", down="+Z",
+        # RESOLVED #383 (2026-08-16, Aiden's call): was MANUAL because the .scad
+        # named a FEATURE ("COLUMN-FACE-DOWN") and not an axis. The measurement
+        # this entry already carried was never acted on -- +Z 1662 mm^2 (s0.91)
+        # against 356 for -X, and the riser-facing column face the prose actually
+        # meant is +X at 260. The old pose was the worst-but-one face.
+        # Fixed in BOTH files this time: shoulder's #259 sat MANUAL for three days
+        # after its .scad was corrected, because the resolution landed in only one
+        # of the two that had to agree.
+        # Deck-down puts the O22.6 E-stop bore mouth on the bed -- elephant-foot
+        # compensation, and check the bore before pressing the switch in.
+        supports="none", scad=_chassis("control_pod.scad"),
+        doc="PRINT: PETG-CF (or PA6-CF), +Z FACE DOWN (deck top on the bed); "
+            "the column and gussets rise off it. (The OLED this entry used to "
+            "mention moved to oled_tray on 2026-08-10, #35.)",
     ),
 }
 

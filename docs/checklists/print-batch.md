@@ -180,7 +180,7 @@ inner-face gap median 0.277 / p90 0.505 against the 0.4 median limit).
 Studio never consults it, so it is reproduced here — and a test keeps the two in sync,
 because the first version of this table drifted between being written and being merged.
 
-**13 parts need supports; 18 must have them OFF.** Check before every print.
+**12 parts need supports; 19 must have them OFF.** Check before every print.
 
 **SUPPORTS ON:**
 
@@ -191,7 +191,6 @@ because the first version of this table drifted between being written and being 
 | `coax_R` | normal | PA6-CF | +Y |
 | `coax_hfe_block` | normal | PA6-CF | +X |
 | `coax_hfe_block_L` | normal | PA6-CF | -X |
-| `control_pod` | normal | PETG-CF | COLUMN-FACE-DOWN — names the feature.  |
 | `femur_L` | normal | PA6-CF | +Z |
 | `femur_R` | normal | PA6-CF | as modelled |
 | `head` | tree | PA6-CF | CROWN/PAD-DOWN + tree supports. Measur |
@@ -206,6 +205,7 @@ because the first version of this table drifted between being written and being 
 |---|---|---|
 | `cable_clip` | TPU 95A | as modelled |
 | `case_slot_grommet` | TPU 95A | +Y |
+| `control_pod` | PETG-CF | +Z |
 | `floor_plate` | PETG-CF | as modelled |
 | `grommet_insert` | TPU 95A | as modelled |
 | `jetson_case_mount` | PA6-CF | as modelled |
