@@ -541,16 +541,38 @@ NOT_PRINTED = {
     "chassis/power_board_model.stl",
 }
 
+#: Parts the robot no longer has. Not reference geometry (that is NOT_PRINTED)
+#: and not a to-do (that is UNRESOLVED) — they are dead, and the point of
+#: listing them is that they stay ACCOUNTED FOR rather than quietly dropping
+#: out of the coverage line.
+#:
+#: `spacer` sat in UNRESOLVED until 2026-08-17 asking for a material decision
+#: and "8 are needed (4 + spares)". It needs neither: it is a O8 x 6.3 washer
+#: that lifted the BARE Jetson devkit carrier off the riser deck, and the
+#: Jetson moved into its official case on 2026-07-07 (jetson_case_mount +
+#: jetson_clamp_bar). chassis/README.md has said RETIRED since. It is placed in
+#: ZERO assemblies — preview_assembly, check_fit, gen_viewer and panel_probe
+#: all carry no reference to it — so nothing positions it on the robot.
+#:
+#: Kept rendered by chassis/build_all.sh "for reference", which is NOT how this
+#: repo has handled other superseded parts: jetson_cowl was removed from
+#: build_all.sh and check_fit.py, and oled_mount was deleted outright. Deleting
+#: spacer.scad + its STL would match that precedent and is the obvious follow-up;
+#: it is an owner call, not a tidy-up, so it is recorded here rather than done.
+RETIRED = {
+    "spacer": (
+        "chassis/spacer.stl",
+        "Jetson standoff washer for the BARE devkit carrier. Superseded "
+        "2026-07-07 when the Jetson moved into its official case; placed in no "
+        "assembly. Do not print. Candidate for deletion (cf. jetson_cowl, "
+        "oled_mount)."),
+}
+
 #: Printable parts that CANNOT be sliced yet because something they need is not
 #: recorded anywhere — not because the tool is missing a feature. Refused, and
 #: reported by `--list`, so the set stays a visible to-do rather than a silent
 #: omission. Each value says exactly what is missing and where it would go.
 UNRESOLVED = {
-    "spacer": (
-        "chassis/spacer.stl",
-        "no material recorded anywhere — the .scad header specifies M3x14, "
-        "engagement and height but never says what to print it in, and "
-        "print-batch §2 has no row for it. 8 are needed (4 + spares)."),
     "trunk": (
         "chassis/trunk.stl",
         "built by trunk_build.py (trimesh + manifold3d), NOT by OpenSCAD, so "
@@ -940,7 +962,15 @@ def cmd_list():
         for chunk in (why[i:i + 74] for i in range(0, len(why), 74)):
             print(f"      {chunk}")
 
-    seen = {p.stl for p in PARTS.values()} | {v[0] for v in UNRESOLVED.values()}
+    print("\nRETIRED — the robot no longer has these; do not print:")
+    for name in sorted(RETIRED):
+        why = RETIRED[name][1]
+        print(f"  {name}:")
+        for chunk in (why[i:i + 74] for i in range(0, len(why), 74)):
+            print(f"      {chunk}")
+
+    seen = ({p.stl for p in PARTS.values()} | {v[0] for v in UNRESOLVED.values()}
+            | {v[0] for v in RETIRED.values()})
     everything = {f"{d}/{os.path.basename(f)}"
                   for d in ("leg_v6", "chassis")
                   for f in glob.glob(str(HERE / d / "*.stl"))}
