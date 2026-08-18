@@ -272,6 +272,76 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
    TODO-CAD values are…" which is now stale against its own xacro.
 8. Leg first-article print (PA6-CF).
 
+## 🧪 PARALLEL LANE — bench-only, does NOT wait on the power board (added 2026-08-18)
+
+**Why this lane exists.** The board and the chassis are the two long poles, and both are
+serial. These items need neither, they are the two that produce something *demonstrable*,
+and they are the two that carry the project if the mechanical build slips — which it is.
+
+**Verified decoupling, not assumed:** `nova_ops/bringup/__init__.py`'s `sensors` and `slam`
+profiles launch **no `firmware_tables` and no `preflight`**. They need a Jetson, the two
+sensors, and a bench 12 V supply. They do not need the power board, the Teensy, or a leg.
+
+### P1 — Prove the sensor stack. It is UNVERIFIED.
+
+```
+ros2 launch nova_ops bringup.launch.py profile:=slam
+```
+
+composes RealSense (colour/depth/gyro/accel) + Unitree L2 + `lidar_selffilter` + **POINT-LIO**
++ `robot_state_publisher` + foxglove on :8765.
+
+**The state is better than "not started" and worse than "working", and the repo already
+names the blocker.** `README.md` 2026-05-19: POINT-LIO (dfloreaa fork) **built green on the
+Jetson** in 1:42 colcon, L2 config at `unilidar_l2.yaml` (scan_line 18, imu_time_inte
+0.004 = 250 Hz) — and then, verbatim: *"Runtime tests deferred until L2 IMU ROS bridge bug
+fixed OR `imu_en: false` LiDAR-only mode set."*
+
+So it **compiles and has never been run**, deferred three months ago on a known bug that
+already has a stated workaround nobody has tried. There is no `.bag`, `.mcap` or `.db3`
+anywhere in the repo, so nothing has been captured either.
+
+- [ ] **Take the workaround first: `imu_en: false`, LiDAR-only.** It is written down as the
+      way past the exact thing that stopped this, and it costs one config edit. If POINT-LIO
+      maps without the L2 IMU, the whole lane unblocks today and the IMU bridge bug becomes
+      an optimisation instead of a gate.
+- [ ] `profile:=sensors dry_run:=true` — confirms the four external packages
+      (`realsense2_camera`, `unitree_lidar_ros2`, `point_lio`, `foxglove_bridge`) are
+      actually installed. A missing package is a 20-minute find or a lost day, depending on
+      when you find it.
+- [ ] `profile:=sensors` — confirm BOTH sensors publish. Record a short bag.
+- [ ] `profile:=slam` — drive it round a room, save the map + bag under `docs/bench/`.
+      Foxglove can write `.mcap` client-side (`notes-virtual-view-autocal.md`), so the demo
+      capture and the debug bag are the same artefact.
+- [ ] **Check `lidar_selffilter` actually masks the ears.** `az_offset_deg` defaults to 0
+      and the L2's Ø51 4-hole base allows four mount yaws 90° apart — so the default is
+      right only by luck, and wrong means it deletes the wrong azimuth while looking like
+      it works. Compare `/l2/points_raw` against `/l2/points` at the ear sectors.
+
+**Deliverable:** a live 3D map, self-filtered, with the real URDF in the TF tree, and a bag
+to replay. That is a demo and a five-minute answer, and no part of it needs a chassis.
+
+### P2 — The blind student (#304). One GPU run.
+
+Every checkpoint that exists is a **privileged teacher** — 226/234-dim observations
+including an 11×11 *perfect* heightmap the robot has no sensor to produce. `policy_runner.py`,
+the thing #289's bridge actually runs, is **105-dim blind**. So today the bridge has nothing
+it can execute.
+
+The distillation harness is **built and verified end to end on CPU** (#306: collect → DAgger
+→ fit → export → eval, export self-check 5.25e-06 numpy-vs-Brax). Recipe in
+`sim/nova_mjx/colab/DISTILL.md`.
+
+- [ ] One GPU run to produce a 105-d student.
+- [ ] Re-run the export self-check and the eval on the student.
+- [ ] Then #289's bridge has something to run, on hardware or in sim.
+
+### Explicitly deferred, and why
+
+Chassis assembly. It is caliper → print → fit → repeat, and the 2026-08-16/18 sweep alone
+found two wrong card heights, a wrong standoff count, and a packing bug. It is worth doing
+and it is not what unblocks anything else.
+
 ## 🟡 Not started (deeper backlog)
 - `gait_node` — cmd_vel → trot → IK → `/joint_commands` (Phase-2 glue over the tested core).
 - `nova_calibration` per-joint `config.py` fill (FROM CAD) → servo home auto-detect.
