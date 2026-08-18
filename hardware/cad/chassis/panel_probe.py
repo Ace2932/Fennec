@@ -299,6 +299,19 @@ def seal_interiors(occ):
     inside of a solid reference mesh (d456_ref, l2_ref) becomes solid because
     nothing reaches it. Physically: you cannot put a switch body somewhere no
     air path leads to.
+
+    ⚠ KNOWN LIMITATION, and it produced a real false positive on 2026-08-17.
+    A VENTED ENCLOSURE has an air path, so its interior stays FREE — which is
+    right for the trunk, whose cavity is genuinely usable, and wrong for the
+    Jetson case, whose cavity belongs to the Jetson. Searching for a home for
+    the D42V55 buck returned 1178 "sites on the riser deck"; every one of them
+    was INSIDE the Jetson case. Filling the case bbox dropped it to 0.
+
+    There is no geometric tell — "vented box you may use" and "vented box that
+    is already full of someone else's hardware" look identical to a flood fill.
+    So: when searching near an enclosure that is modelled as a shell, fill its
+    bounding box explicitly first, and check returned coordinates against the
+    bboxes of the reference meshes before believing a count.
     """
     from scipy import ndimage
     return ndimage.binary_fill_holes(occ)
