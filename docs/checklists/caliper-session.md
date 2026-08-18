@@ -73,9 +73,14 @@ Believed without a caliper for a stated reason: the same Size line's L×W matche
 reg34c's independently-derived 31.8 × 43.2 exactly, so the source is right about
 the two dimensions that could already be checked.
 
-**And it turned out not to be load-bearing anyway** — #366's pocket search returns
-24 supported placements at 9.02 mm and 24 at 12.0 mm. Height was never the binding
+**And it turned out not to be load-bearing anyway** — height was never the binding
 constraint; footprint against available plate is. Off the blocking list.
+
+⚠️ UPDATED 2026-08-18: the "24 placements" figure originally quoted here came from a
+run with a defect (the placeholder buck bodies were never cleared). Corrected: 387 at
+zero clearance, and ALL FOUR cards fit simultaneously at up to ~2 mm spacing. Two other
+card heights were also wrong in `dimensions.md` and are now Pololu-sourced — D42V55F12
+6.1 → **9.02**, D24V22F12 6.0 → **7.87**. See #366.
 
 <details><summary>original entry</summary>
 
