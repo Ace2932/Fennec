@@ -120,13 +120,13 @@ already burned this project once (the SSD1331 outline was wrong by 4.9 × 5.1 mm
 
 ## Same trip, not blocking — and one COUNT, not a measurement
 
-- [ ] **Count the M3×20 M-F brass standoffs in the 40-piece set.** The build needs
-      **8** (4 under the power board, 4 above it — same length, same 74×66 pattern,
-      stacked). BOM.md ordered 4 for two decades of one gap; corrected 2026-08-18.
-      The 40-set is the *assorted* kit and the BOM has always said the M3×20 is a
-      specific length separate from it, so having 40 standoffs is not the same as
-      having 8 of these. Thirty seconds with the bag settles it, and it is the
-      difference between a build day and an order lead time.
+- [x] ~~Count the M3×20 standoffs~~ ✅ **CLOSED 2026-08-18, no purchase.** The
+      40-piece M3 set is M-F and the pieces screw into each other, so the build
+      needs **8 STACKS each totalling 20 mm**, not 8 single 20 mm posts.
+      ⚠️ Carry the 20 mm, do not improvise it: each gap has a hard floor at ~18 mm
+      for a different reason — the Ø10×17 bulk caps under the power board, and the
+      18 mm `Q1` TO-220 above it. At 20 mm the measured margins are 3.00 mm and
+      2.00 mm. Loctite 243 on the intermediate joints.
 
 ## Same trip, not blocking
 
