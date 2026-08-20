@@ -282,44 +282,41 @@ and they are the two that carry the project if the mechanical build slips — wh
 profiles launch **no `firmware_tables` and no `preflight`**. They need a Jetson, the two
 sensors, and a bench 12 V supply. They do not need the power board, the Teensy, or a leg.
 
-### P1 — Prove the sensor stack. It is UNVERIFIED.
+### P1 — The sensor stack ALREADY WORKS. Capture it and re-prove the new path.
 
-```
-ros2 launch nova_ops bringup.launch.py profile:=slam
-```
+**Corrected 2026-08-20.** An earlier version of this section said the stack "compiles and
+has never been run", quoting the 2026-05-19 changelog line. That line is real and it is
+stale — the entries four days later say the opposite, and reading the first without the
+second is how this plan briefly recommended unblocking something that was unblocked in May.
 
-composes RealSense (colour/depth/gyro/accel) + Unitree L2 + `lidar_selffilter` + **POINT-LIO**
-+ `robot_state_publisher` + foxglove on :8765.
+What actually happened:
 
-**The state is better than "not started" and worse than "working", and the repo already
-names the blocker.** `README.md` 2026-05-19: POINT-LIO (dfloreaa fork) **built green on the
-Jetson** in 1:42 colcon, L2 config at `unilidar_l2.yaml` (scan_line 18, imu_time_inte
-0.004 = 250 Hz) — and then, verbatim: *"Runtime tests deferred until L2 IMU ROS bridge bug
-fixed OR `imu_en: false` LiDAR-only mode set."*
+| date | |
+|---|---|
+| 2026-05-18 | **L2 streaming end-to-end.** `/unilidar/cloud` at 12 Hz, 5042 points/scan. *"Full v1 perception stack online: RGB + depth + 2 IMUs + 3D LiDAR all in ROS 2."* |
+| 2026-05-19 | POINT-LIO built green on the Jetson (1:42 colcon) |
+| 2026-05-23 | **L2 IMU bridge FIXED** via `Ace2932/unilidar_sdk2` — upstream calls `getImuData()` twice in `timer_callback()`, draining the SDK queue before publish. `/unilidar/imu` now at 250 Hz, **POINT-LIO green end to end**, init 1% → 100% in 250 ms |
 
-So it **compiles and has never been run**, deferred three months ago on a known bug that
-already has a stated workaround nobody has tried. There is no `.bag`, `.mcap` or `.db3`
-anywhere in the repo, so nothing has been captured either.
+`setup-jetson.md` §15 is titled **"done 2026-05-19"** and carries the whole walked-through
+procedure, including §15.5 capture-a-map and §15.6 pull-the-PCD-off-box.
 
-- [ ] **Take the workaround first: `imu_en: false`, LiDAR-only.** It is written down as the
-      way past the exact thing that stopped this, and it costs one config edit. If POINT-LIO
-      maps without the L2 IMU, the whole lane unblocks today and the IMU bridge bug becomes
-      an optimisation instead of a gate.
-- [ ] `profile:=sensors dry_run:=true` — confirms the four external packages
-      (`realsense2_camera`, `unitree_lidar_ros2`, `point_lio`, `foxglove_bridge`) are
-      actually installed. A missing package is a 20-minute find or a lost day, depending on
-      when you find it.
-- [ ] `profile:=sensors` — confirm BOTH sensors publish. Record a short bag.
-- [ ] `profile:=slam` — drive it round a room, save the map + bag under `docs/bench/`.
-      Foxglove can write `.mcap` client-side (`notes-virtual-view-autocal.md`), so the demo
-      capture and the debug bag are the same artefact.
-- [ ] **Check `lidar_selffilter` actually masks the ears.** `az_offset_deg` defaults to 0
-      and the L2's Ø51 4-hole base allows four mount yaws 90° apart — so the default is
-      right only by luck, and wrong means it deletes the wrong azimuth while looking like
-      it works. Compare `/l2/points_raw` against `/l2/points` at the ear sectors.
+**So this is not a bring-up. It is a re-run, and three specific things that are genuinely open:**
 
-**Deliverable:** a live 3D map, self-filtered, with the real URDF in the TF tree, and a bag
-to replay. That is a demo and a five-minute answer, and no part of it needs a chassis.
+- [ ] **Nothing was ever captured.** There is no `.pcd`, `.bag` or `.mcap` anywhere in the
+      repo. §15.6 says pull the PCD off the box and nothing did. A map that existed once on
+      a Jetson and was never committed is not evidence of anything today.
+- [ ] **The composed path is newer than the bring-up and unproven.** May was individual
+      `ros2 launch` calls. `nova_ops/bringup`'s `sensors`/`slam` profiles and
+      `lidar_selffilter` were all written afterwards. Run `profile:=slam` and find out
+      whether the composition works, not just the parts.
+- [ ] **`lidar_selffilter`'s `az_offset_deg` defaults to 0** while the L2's Ø51 4-hole base
+      allows four mount yaws 90° apart. The default is correct only by luck, and wrong means
+      it masks the wrong azimuth while looking like it works. Diff `/l2/points_raw` against
+      `/l2/points` at the ear sectors.
+
+**Already banked, and worth saying out loud:** the IMU bridge bug was found, root-caused to
+a specific double call, forked, fixed, and the fix is what made POINT-LIO converge. That is
+a vendor-driver debugging story with a commit behind it.
 
 ### P2 — The blind student (#304). One GPU run.
 

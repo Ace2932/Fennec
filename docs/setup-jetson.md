@@ -504,7 +504,7 @@ Brings up the full L2 → ROS 2 → POINT-LIO pipeline on the Jetson. Builds `/u
 
 ### 15.1 Wiring + IPs
 
-L2 ↔ Cat 6 ↔ switch ↔ Cat 6 ↔ Jetson `enP8p1s0`. Static IPs via `nmcli connection nova-lan`:
+**L2 ↔ Cat 6 ↔ Jetson `enP8p1s0` — DIRECT, no switch** (decision 2026-07-10, swept through the docs 2026-08-14). ~~L2 ↔ Cat 6 ↔ switch ↔ Cat 6 ↔ Jetson~~ — the 5-port switch is bench gear and is not carried on the robot. Corrected here 2026-08-20: the 2026-08-14 sweep updated nine files and missed this one, which is the one you actually follow at the bench. Static IPs via `nmcli connection nova-lan`:
 - Jetson `enP8p1s0`: `192.168.1.2/24`
 - L2: `192.168.1.62` (factory default for this batch — confirm with `ping 192.168.1.62`)
 - L2 UDP cloud + IMU port: `6101` (lidar→Jetson). Jetson local port: `6201`.
