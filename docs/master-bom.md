@@ -242,6 +242,8 @@ The off-board side is 25+ wired connections; this category was unspeced until 20
 
 ✅ **CLOSED 2026-08-24 — nothing on this line is still to order.** It read *"Still to order, and two of them gate the next print's assembly"* while the rows further down this same file already said the slim insert was RECEIVED 2026-08-08 and the M3×16 ORDERED 2026-08-03, and the M3×8 / M3×6 are covered by the owned kit. One file, two answers, ~140 lines apart — and the pessimistic one is the one a reader hits first. Details in the fastener tables below and in `fastener-schedule.md`.
 
+⚠️ **Kept from the line this replaced, because the order status changed and this hazard did not — buy inserts by PART CODE, not brand.** `B0CDH36ZMX` is "ruthex M3 **VORON** RX-M3x5x4", **OD 5.0**, same price, one row from the right part in the same search.
+
 No insert line existed in this BOM at all until now, and the only count anywhere
 (`docs/fastener-schedule.md` purchase summary) covered the chassis and omitted
 every leg and shoulder insert — 16 documented against **~68** the design
