@@ -272,6 +272,131 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
    TODO-CAD values are…" which is now stale against its own xacro.
 8. Leg first-article print (PA6-CF).
 
+## 🔩 MECHANICAL ASSEMBLY — readiness audit 2026-08-24
+
+Three things gate screwing this robot together. Not a backlog; these are in order, and the
+first one can invalidate the other two.
+
+### B1 — #226 has never been proven on a printed part. Retire it FIRST.
+
+The failure was physical and real: a printed `coax` the HFE servo **would not go into**,
+while `check_fit`'s insertion gate reported CLEAN because its `r<=13` exclusion was larger
+than the Ø19 boss it was hiding. Option C (integral inboard arm + removable
+`coax_hfe_block`) is the fix, it is gated in CAD, and **it has never been assembled in the
+flesh.**
+
+If it still does not insert, the leg does not assemble and the fix needs another round — so
+this is the cheapest thing to try and the most expensive thing to discover late.
+
+- [ ] Print `coax_R` + `coax_hfe_block`
+- [ ] Set the 8 slim inserts (4.0 OD, `B07R9SP532` — **thread-check first**, 4.0 OD is the
+      standard M2.5 OD)
+- [ ] Put the servo in
+
+One test exercises the insert process *and* the joint that already failed once. Do it on one
+part before committing six.
+
+### B2 — Heat-set inserts: none recorded as set, anywhere
+
+~68 M3 sites across the robot, counted off the CAD against a documented 16. Inserts are in
+hand. This gates **every** screwed joint.
+
+⚠️ **This is an absence of record, not an observation.** The repo contains no note of any
+insert being set, and the last explicit statement (2026-08-11) was that none were. Neither
+is evidence that none have been set since — that is a bench fact and the repo has no way to
+know it. Confirm by looking at a part before planning around it.
+
+Process (drying, temperature, the two ODs, coupon-first) is now written down in
+[`docs/checklists/heat-set-inserts.md`](./docs/checklists/heat-set-inserts.md) — it existed
+nowhere in this repo until 2026-08-24, which is a poor state for the one operation that can
+destroy a 165 g part in two seconds.
+
+### B3 — The leg parts on the bench are STALE
+
+`print-batch.md`: *"CHANGED → re-print (old copies are stale): all 6 legs"*. `coax` was
+redesigned by #226 option C, `femur` is behind by the cable groove, `knee_arm` has Ø2.9
+holes that want 3.4. B1 already reprints two of them.
+
+### Not blockers, resolved 2026-08-24
+
+- **Fasteners** — `fastener-schedule.md` said 🔴 NOT ORDERED for the slim insert, M3×16,
+  M3×8 and M3×6, and warned two "gate the next assembly". They were ordered 2026-08-03 and
+  the slim inserts arrived 08-08; the line was corrected in the *safe* direction on 08-02
+  and never un-corrected after the order went out. Fixed.
+
+### Not audited yet
+
+The **wiring** lane. Two hazards are already flagged and neither is built: the dual-voltage
+servo harness (7 boundaries where a stock 3-wire cable would bridge 12 V onto the 7.5 V
+rail — the #1 fry path) and `J1`'s gender inversion. Worth its own pass before harness day.
+
+## 🧪 PARALLEL LANE — bench-only, does NOT wait on the power board (added 2026-08-18)
+
+**Why this lane exists.** The board and the chassis are the two long poles, and both are
+serial. These items need neither, they are the two that produce something *demonstrable*,
+and they are the two that carry the project if the mechanical build slips — which it is.
+
+**Verified decoupling, not assumed:** `nova_ops/bringup/__init__.py`'s `sensors` and `slam`
+profiles launch **no `firmware_tables` and no `preflight`**. They need a Jetson, the two
+sensors, and a bench 12 V supply. They do not need the power board, the Teensy, or a leg.
+
+### P1 — The sensor stack ALREADY WORKS. Capture it and re-prove the new path.
+
+**Corrected 2026-08-20.** An earlier version of this section said the stack "compiles and
+has never been run", quoting the 2026-05-19 changelog line. That line is real and it is
+stale — the entries four days later say the opposite, and reading the first without the
+second is how this plan briefly recommended unblocking something that was unblocked in May.
+
+What actually happened:
+
+| date | |
+|---|---|
+| 2026-05-18 | **L2 streaming end-to-end.** `/unilidar/cloud` at 12 Hz, 5042 points/scan. *"Full v1 perception stack online: RGB + depth + 2 IMUs + 3D LiDAR all in ROS 2."* |
+| 2026-05-19 | POINT-LIO built green on the Jetson (1:42 colcon) |
+| 2026-05-23 | **L2 IMU bridge FIXED** via `Ace2932/unilidar_sdk2` — upstream calls `getImuData()` twice in `timer_callback()`, draining the SDK queue before publish. `/unilidar/imu` now at 250 Hz, **POINT-LIO green end to end**, init 1% → 100% in 250 ms |
+
+`setup-jetson.md` §15 is titled **"done 2026-05-19"** and carries the whole walked-through
+procedure, including §15.5 capture-a-map and §15.6 pull-the-PCD-off-box.
+
+**So this is not a bring-up. It is a re-run, and three specific things that are genuinely open:**
+
+- [ ] **Nothing was ever captured.** There is no `.pcd`, `.bag` or `.mcap` anywhere in the
+      repo. §15.6 says pull the PCD off the box and nothing did. A map that existed once on
+      a Jetson and was never committed is not evidence of anything today.
+- [ ] **The composed path is newer than the bring-up and unproven.** May was individual
+      `ros2 launch` calls. `nova_ops/bringup`'s `sensors`/`slam` profiles and
+      `lidar_selffilter` were all written afterwards. Run `profile:=slam` and find out
+      whether the composition works, not just the parts.
+- [ ] **`lidar_selffilter`'s `az_offset_deg` defaults to 0** while the L2's Ø51 4-hole base
+      allows four mount yaws 90° apart. The default is correct only by luck, and wrong means
+      it masks the wrong azimuth while looking like it works. Diff `/l2/points_raw` against
+      `/l2/points` at the ear sectors.
+
+**Already banked, and worth saying out loud:** the IMU bridge bug was found, root-caused to
+a specific double call, forked, fixed, and the fix is what made POINT-LIO converge. That is
+a vendor-driver debugging story with a commit behind it.
+
+### P2 — The blind student (#304). One GPU run.
+
+Every checkpoint that exists is a **privileged teacher** — 226/234-dim observations
+including an 11×11 *perfect* heightmap the robot has no sensor to produce. `policy_runner.py`,
+the thing #289's bridge actually runs, is **105-dim blind**. So today the bridge has nothing
+it can execute.
+
+The distillation harness is **built and verified end to end on CPU** (#306: collect → DAgger
+→ fit → export → eval, export self-check 5.25e-06 numpy-vs-Brax). Recipe in
+`sim/nova_mjx/colab/DISTILL.md`.
+
+- [ ] One GPU run to produce a 105-d student.
+- [ ] Re-run the export self-check and the eval on the student.
+- [ ] Then #289's bridge has something to run, on hardware or in sim.
+
+### Explicitly deferred, and why
+
+Chassis assembly. It is caliper → print → fit → repeat, and the 2026-08-16/18 sweep alone
+found two wrong card heights, a wrong standoff count, and a packing bug. It is worth doing
+and it is not what unblocks anything else.
+
 ## 🟡 Not started (deeper backlog)
 - `gait_node` — cmd_vel → trot → IK → `/joint_commands` (Phase-2 glue over the tested core).
 - `nova_calibration` per-joint `config.py` fill (FROM CAD) → servo home auto-detect.

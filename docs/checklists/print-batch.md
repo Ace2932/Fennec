@@ -349,6 +349,11 @@ SECOND — anneal moves dims and every fit gate assumed as-modeled.
 
 ## 3b. Heat-set insert notes (audit 2026-07-06)
 
+> **The PROCESS half — drying, temperature, the two insert ODs, coupon-first — is in
+> [`heat-set-inserts.md`](./heat-set-inserts.md).** This section is geometry only: which
+> bore, what floor, vented or blind, which face. Both halves matter and only one of them
+> was ever written down here.
+
 Every insert site depth-probed in the built STLs:
 - shoulder deck plate bores: now Ø3 VENTED through (0.25 floor was
   melt-through) — set with a backing finger below, melt exits the vent
