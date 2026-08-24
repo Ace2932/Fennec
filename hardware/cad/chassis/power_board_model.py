@@ -249,6 +249,35 @@ def _component_mesh(fp):
     return m, info
 
 
+def buck_card_boxes(pcb_path=PCB_FILE):
+    """(ref, x, y, z0, z1, xw, yw) for the five PLACEHOLDER buck-card bodies.
+
+    Exists because reconstructing these from power_board_mesh()'s `components`
+    list is a trap, and it was walked into on 2026-08-17 with a wrong answer as
+    the result. `BUCK_REFS` names U1-U5, and there are TWO different solids per
+    ref: the wire-terminal LANDING on the board top (z 27.6..39.6, which IS in
+    `components`) and this placeholder CARD body hanging below the board
+    (z 12..26, which is NOT). A search that filtered `components` by
+    `ref in BUCK_REFS` and cleared that z-range deleted the landings and left
+    the placeholders — corrupting the answer in both directions at once. It
+    reported the under-board pocket as too full for the four real cards (it is
+    not: all four fit) and the pb->lb gap as wide open (it is not: 4 sites).
+
+    Anything clearing the placeholders for a fit study should call THIS.
+    """
+    fps = _parse_footprints(pcb_path)
+    fps_by_ref = {fp['ref']: fp for fp in fps}
+    bw, bd = BUCK_CARD_XY
+    out = []
+    for ref in BUCK_REFS:
+        fp = fps_by_ref[ref]
+        tx, ty = fp['x'] - TRUNK_DX, fp['y'] - TRUNK_DY
+        xw, yw = (bd, bw) if _swapped(fp['rot']) else (bw, bd)
+        out.append(dict(ref=ref, x=tx, y=ty, z1=BOARD_BOTTOM_Z,
+                        z0=BOARD_BOTTOM_Z - BUCK_CARD_H, xw=xw, yw=yw))
+    return out
+
+
 def _buck_card_meshes(fps_by_ref):
     bw, bd = BUCK_CARD_XY
     out = []

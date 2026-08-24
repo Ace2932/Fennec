@@ -32,10 +32,38 @@
 // CABLE: E-stop NC pair + OLED SPI drop through the column grommet (Ø12, y0 z63,
 //   above the trunk lip) -> the matching riser rear-wall slot -> the bay
 //   (power-board NC lines + the Arduino Nano SPI). Provision; route at wiring.
-// PRINT: PETG-CF (or PA6-CF), COLUMN-FACE-DOWN (the flat riser-facing face on the
-//   bed); deck + OLED panel rise -> light supports under the deck + OLED. 3 walls
-//   / 20% / ~24 g. print 1. NOTE: light central 4x M3 mount — the E-stop is a
-//   PALM slap, not a hammer; a very hard strike may flex the deck (acceptable).
+// PRINT: PETG-CF (or PA6-CF), **+Z FACE DOWN** (the DECK TOP on the bed); the
+//   column and its gussets rise off it. 3 walls / 20% / ~24 g. print 1.
+//
+// AXIS RESOLVED 2026-08-16 (#383, Aiden's call) — this line said
+// "COLUMN-FACE-DOWN (the flat riser-facing face on the bed)", which names a
+// FEATURE and no axis, so slice_plate.py refused the part and it sat MANUAL.
+// Same failure as shoulder.scad's #259; the lesson there was that the fix has
+// to land in BOTH files, because a .scad corrected on its own leaves the
+// registry refusing a part that is actually decided.
+//
+// Measured bed-contact area for each candidate down-face, on the real STL:
+//
+//     +Z   1662 mm^2   37 mm tall   slenderness 0.91   <-- 4.7x the runner-up
+//     -X    356          40                  2.10
+//     +X    260          40                  2.46      <-- the face the old
+//     +Y    198          52                  3.69          prose actually named
+//     -Y    198          52                  3.69
+//     -Z     75          37                  4.27
+//
+// The old prose pointed at the WORST-but-one face: the riser-facing column
+// face is +X at 260 mm^2, against 1662 for the deck. On a warp-prone filament
+// that is the whole ball game, and it is why this was worth resolving rather
+// than leaving to whoever opened the slicer.
+//
+// THE TRADE, taken knowingly: deck-down puts the O22.6 E-stop bore MOUTH on the
+// bed, so elephant-foot pinches it. Enable elephant-foot compensation, and
+// check the bore takes the HB2-ES544 barrel before pressing it. The alternative
+// was a 260 mm^2 footprint on a 52 mm-tall part, which risks losing the whole
+// print rather than one bore mouth.
+//
+// NOTE: light central 4x M3 mount — the E-stop is a PALM slap, not a hammer; a
+// very hard strike may flex the deck (acceptable).
 
 $fn = 48; EPS = 0.05;
 M3_CLEAR = 3.4; M2_CLEAR = 2.3;

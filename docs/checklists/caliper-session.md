@@ -15,6 +15,16 @@ because it is what is currently blocking.**
 Four measurements, one bench trip. Each one blocks a specific CAD rev; nothing
 here is nice-to-have.
 
+## S2-1. ~~SW1 Contura rocker — BODY DEPTH~~ ✅ CLOSED 2026-08-16
+
+Depth measured at **37 mm** (flange underside → terminal ends), and the printed-hole
+allowance measured at **+0.10 / side** from `sw1_coupon` — a four-rung ladder printed
+in the real part's orientation, 0.10 fit near-perfectly. `SW1_FIT = 0.10` is set and
+`shoulder_sw1.stl` re-rendered. Wing step positions were never needed: the coupon
+answered the question they were a proxy for.
+
+<details><summary>original entry</summary>
+
 ## S2-1. SW1 Contura rocker — BODY DEPTH ⬜ **the single most valuable number**
 
 The cutout and panel range are already known from the Carling V-Series
@@ -37,6 +47,8 @@ an answer.
 ⚠ Every "no" verdict in #368 currently assumes only that the body needs **more
 than 10 mm**. That is the probe's floor, not a measurement.
 
+</details>
+
 ## S2-2. Panel voltmeter — EVERYTHING ⬜
 
 This part has **no row in `dimensions.md` at all**, and the disposition (#370)
@@ -50,6 +62,27 @@ dimension in that sentence is currently unmeasured.
 - [ ] Body depth behind the panel
 - [ ] Wire exit direction + connector type
 - [ ] → new `dimensions.md` section, then the same pod rev as SW1
+
+## S2-3. ~~Pololu buck cards — TRUE HEIGHTS~~ ✅ RESOLVED 2026-08-16, no caliper needed
+
+**Closed from the vendor, not the bench.** Pololu's product page for the D42V110F7
+(item #5674) gives Size **1.25″ × 1.7″ × 0.355″** = **31.75 × 43.18 × 9.02 mm**.
+The `~13-15` estimate was wrong by ~6 mm.
+
+Believed without a caliper for a stated reason: the same Size line's L×W matches
+reg34c's independently-derived 31.8 × 43.2 exactly, so the source is right about
+the two dimensions that could already be checked.
+
+**And it turned out not to be load-bearing anyway** — height was never the binding
+constraint; footprint against available plate is. Off the blocking list.
+
+⚠️ UPDATED 2026-08-18: the "24 placements" figure originally quoted here came from a
+run with a defect (the placeholder buck bodies were never cleared). Corrected: 387 at
+zero clearance, and ALL FOUR cards fit simultaneously at up to ~2 mm spacing. Two other
+card heights were also wrong in `dimensions.md` and are now Pololu-sourced — D42V55F12
+6.1 → **9.02**, D24V22F12 6.0 → **7.87**. See #366.
+
+<details><summary>original entry</summary>
 
 ## S2-3. Pololu buck cards — TRUE HEIGHTS, all four ⬜
 
@@ -65,6 +98,8 @@ heights for the others. The under-board pocket argument in #366 rests on these.
 Board outlines are already verified from the Pololu dimension drawings
 (31.8 × 43.2 / 25.4 × 25.4 / 17.8 × 17.8) — **do not re-derive those**, they
 were wrong once already and the drawings settled it.
+
+</details>
 
 ## S2-4. HB2-ES544 E-stop — RESOLVE A CONTRADICTION ⬜
 
@@ -82,6 +117,16 @@ already burned this project once (the SSD1331 outline was wrong by 4.9 × 5.1 mm
 - [ ] Mushroom cap **Ø** · [ ] total length · [ ] below-panel body depth
 - [ ] panel-hole Ø · [ ] max panel thickness its lock ring accepts
 - [ ] → reconcile BOTH files to one number
+
+## Same trip, not blocking — and one COUNT, not a measurement
+
+- [x] ~~Count the M3×20 standoffs~~ ✅ **CLOSED 2026-08-18, no purchase.** The
+      40-piece M3 set is M-F and the pieces screw into each other, so the build
+      needs **8 STACKS each totalling 20 mm**, not 8 single 20 mm posts.
+      ⚠️ Carry the 20 mm, do not improvise it: each gap has a hard floor at ~18 mm
+      for a different reason — the Ø10×17 bulk caps under the power board, and the
+      18 mm `Q1` TO-220 above it. At 20 mm the measured margins are 3.00 mm and
+      2.00 mm. Loctite 243 on the intermediate joints.
 
 ## Same trip, not blocking
 

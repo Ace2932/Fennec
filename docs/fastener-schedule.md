@@ -160,10 +160,19 @@ between "measured" and "assumed" in this whole table.
 - ⚠️ **INSERT COUNT WAS CHASSIS-ONLY — corrected 2026-08-02.** The line below covered head/ears/riser and omitted every leg and shoulder insert. Counted off the CAD: **coax→block 8** (slim 4.0 OD, see the row above) · **femur→knee_arm 16** · **shoulder deck→plate 16** · **shoulder→trunk 16** · chassis 12 = **~68 M3 total**, against a documented 16.
 - ✅ **ORDERED 2026-08-02:** M3 × 4.6 OD × 5.7 (ruthex `B08BCRZZS3`) **×100** · M3 short
   RX-M3Sx4.0 (`B09ZHSGHXD`) ×100 · M2 × 4 (`B088QJG676`) ×70.
-- 🔴 **NOT ORDERED — this line said "ON ORDER" and that was wrong** (corrected 2026-08-02;
-  `master-bom.md` had it right and the two disagreed, in the direction where you read
-  "ordered" and never place it): M3 × **4.0 OD × 6.0** (slim, HFE block only) **×25** ·
-  **M3×16 SHCS ×20** · **M3×8 ×25** (knee_arm) · **M3×6 ×25** (shoulder_plate).
+- ✅ **ALL FOUR RESOLVED — corrected again 2026-08-24, this line was stale in the OTHER
+  direction.** It was fixed on 2026-08-02 from a wrong "ON ORDER" to "NOT ORDERED",
+  explicitly to avoid the failure where *"you read 'ordered' and never place it"*. The order
+  then went out on **2026-08-03**, the parts arrived, and nobody came back to un-correct it.
+  For three weeks the buy list has said you are missing parts you own — which stalls an
+  assembly you could already do, and invites a duplicate order. Per `master-bom.md`, which
+  carries the part codes and dates:
+  - M3 × **4.0 OD × 6.0** slim (HFE block only) — ✅ **RECEIVED 2026-08-08**, uxcell
+    `B07R9SP532` ×50. ⬜ still thread-check on first use: 4.0 OD is the standard *M2.5* OD.
+  - **M3×16 SHCS** — ✅ **ORDERED 2026-08-03**, iexcell `B089MDDJMZ` ×100 socket cap
+    (⚠️ not the flat-head `B0CR6FZBYB`; the block seat is a Ø6.0 flat-bottomed c'bore).
+  - **M3×8 SHCS** (knee_arm, 16 needed) — ✅ **COVERED** by the owned kit.
+  - **M3×6 SHCS** (shoulder_plate, 16 needed) — ✅ **COVERED**, owned kit has 35.
   The slim insert **did not exist** until #255 merged, which was the same day the order
   went out — so it could not have been on it. The three screw lengths were never placed.
   ⚠️ Two of these gate the next assembly: `coax_R` + `coax_hfe_block` are the next parts

@@ -29,10 +29,17 @@ Both checks reuse `slice_plate.scad_material()` and `check_material_agreement()`
 directly — the parsing rules (including the `use <...>` mirror fallback) live
 in exactly one place, not copied here to drift out of sync with it.
 
-WHAT IT DOES NOT CHECK. `UNRESOLVED` parts (trunk, spacer,
-head_ear, head_ear_L) are deliberately out of scope: they are refused by
-slice_plate.py itself, for reasons recorded there, and are not guessed at here
-either — see each file's own "OPEN ITEM (#184)" header note instead.
+WHAT IT DOES NOT CHECK. `UNRESOLVED` parts (trunk, head_ear, head_ear_L) are
+deliberately out of scope: they are refused by slice_plate.py itself, for
+reasons recorded there, and are not guessed at here either — see each file's
+own "OPEN ITEM (#184)" header note instead. Nor are `RETIRED` parts (spacer),
+for a different reason: the robot no longer has them, so there is no material
+decision to be right about.
+
+⚠️ Both of those lists are RETYPED here and nothing enforces the copy. `spacer`
+sat in this sentence under UNRESOLVED after it had moved to RETIRED, in the
+same change that moved it — caught by review, not by a gate. If a third
+category appears, or a part moves between them, this line goes stale silently.
 
 Usage:
     python check_print_directives.py

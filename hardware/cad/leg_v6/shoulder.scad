@@ -116,11 +116,15 @@ SW1_H = 36.83;                  // 1.450in, VERTICAL (z)
 SW1_X = 1.0;                    // trunk y +1
 SW1_Z = 4.95;                   // trunk z 43.0 -- Aiden confirmed 2026-08-15
 SW1_R = 1.2;                    // corner radius: print quality, not strength
-//: hole-fit allowance per side. The wings want a specific grip, and Carling's
-//: own drawings say "TEST CUT HOLE IN ACTUAL MATERIAL" -- their compliance
-//: assumption is ABS/PC, and PA6-CF is stiffer. 0 = nominal; dial this from a
-//: printed coupon before committing the 165g part. Deliberate knob, not a TODO.
-SW1_FIT = 0.0;
+//: hole-fit allowance per side. MEASURED, not guessed: sw1_coupon.scad was
+//: printed in this part's own orientation on 2026-08-16 with a four-rung
+//: ladder (0 / 0.10 / 0.20 / 0.30 per side) and Aiden reported the 0.10 rung
+//: as a near-perfect fit. So nominal IS slightly tight in PA6-CF, by about
+//: 0.1/side -- which is exactly what Carling's "TEST CUT HOLE IN ACTUAL
+//: MATERIAL" warns about: their wing geometry assumes ABS/PC compliance.
+//: Re-run the coupon if the nozzle, material or profile changes; this number
+//: belongs to a printer setup, not to the part.
+SW1_FIT = 0.10;
 SW1_DEPTH = 37.0;               // MEASURED flange-underside -> terminal ends
 //: how far the bezel + rocker stand PROUD of the panel's forward face. NOT
 //: measured — 15 is a deliberate over-estimate. It exists because the first
@@ -137,11 +141,11 @@ SW1_PROUD = 15.0;
 // it. Its window tops out at trunk z61; past trunk z~56 the cutout eats the
 // wall/deck junction outright. Without this assert a later nudge walks it into
 // the deck with every check still green.
-assert(SW1_Z + SW1_H/2 <= DECK_Z0 - 5,
+assert(SW1_Z + (SW1_H + 2*SW1_FIT)/2 <= DECK_Z0 - 5,
        "SW1 cutout too HIGH: leaves <5mm of wall under the deck at DECK_Z0.");
-assert(SW1_Z - SW1_H/2 >= WALL_Z0 + 5,
+assert(SW1_Z - (SW1_H + 2*SW1_FIT)/2 >= WALL_Z0 + 5,
        "SW1 cutout too LOW: leaves <5mm of wall above the rear-wall bottom.");
-assert(SW1_X + SW1_W/2 <= HIP_X - WHEEL_BOSS_D/2 - 5,
+assert(SW1_X + (SW1_W + 2*SW1_FIT)/2 <= HIP_X - WHEEL_BOSS_D/2 - 5,
        "SW1 cutout runs into the wheel-boss load path.");
 assert(REAR_W0 - FLANGE_Y1 >= SW1_DEPTH,
        "Not enough clear depth behind the rear wall for the switch body.");
