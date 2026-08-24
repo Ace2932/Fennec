@@ -155,11 +155,13 @@ was 0.6 mm too narrow.**
 
 | Dim | Value | Status |
 |---|---|---|
-| Board L × W | **31.8 × 43.2** | ✅ (reg34c — CORRECTS earlier 25.4×25.4) |
+| Board L × W | **31.8 × 43.2** | ✅ (reg34c — CORRECTS earlier 25.4×25.4). **Independently confirmed 2026-08-16** by the Pololu product page's own Size line, 1.25″ × 1.7″ = 31.75 × 43.18 — two separate Pololu sources, same numbers |
 | Mount holes | **4× ⌀2.18** (#2 / M2) on 25.4 × 38.9 rectangle | ✅ (reg34c) |
 | Power holes | 4× ⌀2.2 THT (14 AWG), top→bottom VIN GND GND VOUT, vertical span 17.94 | ✅ (reg34c) |
 | Signal holes | 14× ⌀1.02 on 2.54 grid (2×7) — carries EN + VRP/PG + duplicate power | ✅ count (reg34c); per-hole pin map ⚠️ VERIFY on board |
-| Height (with components) | ~13-15 | ⚠️ REVIEW — caliper total Z on received board |
+| **Height (with components)** | **9.02** (0.355″) | ✅ **Pololu product page, item #5674, 2026-08-16 — CORRECTS the "~13-15" estimate that had stood here, by ~6 mm.** Trusted because the SAME Size line gives 1.25″ × 1.7″ for L×W, which matches reg34c's independently-derived 31.8 × 43.2 exactly; a source that is right about the two dimensions we can check is worth believing on the third. ⚠️ Pololu does not state whether it includes soldered header pins — the design uses WIRE TERMINALS, not headers, so it should not matter, and `#366`'s pocket search is insensitive to it either way. ⚠️ The "24 supported placements" figure this row originally cited was from a run with a defect (the placeholder buck bodies were never cleared) — the corrected figure is 387 at zero clearance; see #366 |
+| Weight | 15 g | ✅ Pololu product page (feeds `mass_model.py` if the buck holder is ever massed) |
+| **F12 confirmed identical to F7** | 1.25″ × 1.7″ × 0.355″ | ✅ **Pololu item 5677, 2026-08-18.** This row exists because the packing study had been *assuming* the two D42V110 variants share a body. They do. Typical max output 9 A @ 42 V in |
 
 ### Pololu D24V22F12 (L2 LiDAR dedicated, v3.4 split)
 **Source:** Pololu dimension drawing **reg19a** (12 Nov 2015, items 2855/2857-2861), category 192
@@ -170,7 +172,9 @@ was 0.6 mm too narrow.**
 | Mount holes | **2× ⌀2.18** (#2 / M2) diagonal on 13.2 × 13.2 | ✅ (reg19a — CORRECTS earlier "none") |
 | Connector | 6× ⌀1.02; main row L→R **PG · EN(SHDN) · VIN · GND · VOUT** + 6th GND offset | ✅ order (reg19a + photo 0J6897); verify L→R vs module |
 | Header pitch | 2.54 | ✅ |
-| Height (tall caps above PCB) | 6.0 | ✅ (reg19a profile); +~3 header pins below |
+| **Board L × W** | **17.78 × 17.78** (0.7″ × 0.7″) | ✅ **Pololu product page, item 2855, 2026-08-18** — agrees with reg19a's 17.8 × 17.8 |
+| **Height, OVERALL** | **7.87** (0.31″) | ✅ **Pololu item 2855 — CORRECTS the 6.0 that stood here.** Same trap as the D42V55: 6.0 was reg19a's *profile* (tall caps above PCB), not overall. Weight 2.3 g |
+| ⚠️ Current rating | Pololu: **1.9 A @ 24 V in** | ⚠️ **DISCREPANCY — `BOM.md` says "12V / 2.6A max" and claims "~2.6× headroom" over the L2's ~1 A.** Pololu's own spec page says 1.9 A at 24 V in. Reconcile before the headroom claim is relied on; the L2 still fits either way, but the margin is not what the BOM states |
 
 ### Pololu D42V55F12 (Jetson 12V rail) / D42V55F7 (arm, Phase 4 DNP)
 **Source:** Pololu dimension drawing **reg34a** (18 Jun 2025, items 5570-5579), category 354
@@ -181,7 +185,8 @@ was 0.6 mm too narrow.**
 | Mount holes | **3× ⌀2.18** (#2 / M2) on 21.1 × 21.1, top-left corner omitted | ✅ (reg34a) |
 | Connector | 2×6 ⌀1.02; cols L→R **VOUT · GND · VIN · VRP · PG · EN** (power dup both rows) | ✅ order (reg34a + photo 0J15502); verify L→R vs module |
 | Header pitch | 2.54 | ✅ |
-| Height (standoff) | 6.1 (F7 & F12 are both ≤12V) | ✅ (reg34a profile) |
+| **Board L × W** | **25.40 × 25.40** (1.0″ × 1.0″) | ✅ **Pololu product page, item 5577, 2026-08-18** — agrees with reg34a's 25.4 × 25.4 |
+| **Height, OVERALL** | **9.02** (0.355″) | ✅ **Pololu item 5577 — CORRECTS the 6.1 that stood here.** 6.1 came from reg34a's *profile* and is a different measurement (standoff/board profile), not the max component height. 9.02 is what a fit study needs. Weight 6.5 g; typical max output 4.5 A @ 42 V in |
 
 ### UBEC 5V/5A
 **Source:** generic UBEC (varies by brand)
@@ -254,7 +259,8 @@ all** while a chassis cutout was being planned against it.
 | **Attachment** | **snap-in, integral sprung wings — NO screws, no nut, no bracket** | ✅ answers "it doesn't look like it has screws": correct, it doesn't |
 | **Below-panel depth, flange underside → TERMINAL ENDS** | **~37** | ✅ **MEASURED 2026-08-15 (Aiden).** Datum is the flat that seats on the panel (the underside of the protruding bezel); far end is the electrical terminals, not the plastic body — so this is the full below-panel stack, terminals included. Approximate ("about 37"), so carry ~2 mm of slop. **37 IS the design depth**: harness DECIDED 2026-08-15 = wires **soldered directly to the spades and exited at 90° (laterally)**, so there is no receptacle stack-up and no rearward wire bend to add. Budget ~1-2 mm past the terminal tips for solder fillet + heatshrink, against 40 mm available at the front-shoulder site |
 | Plastic body depth (excl. terminals) | — | ⬜ not taken separately; only matters if a right-angle receptacle is used, which would let the pocket end nearer the body |
-| Wing step positions | — | ⬜ decides the printable panel thickness to target; 3.2 mm (riser wall) and 5.0 mm (pod deck) are both inside the 0.81–6.35 range regardless |
+| Wing step positions | — | ⬜ never needed: the coupon answered the question the steps were a proxy for. 4.0 mm (the shoulder rear wall) grips |
+| **Printed-hole allowance in PA6-CF** | **+0.10 / side** | ✅ **MEASURED 2026-08-16 by `leg_v6/sw1_coupon.scad`** — a four-rung ladder (0 / 0.10 / 0.20 / 0.30) printed in the real part's orientation; the 0.10 rung fit near-perfectly, 0 was tight. So nominal IS undersize in PA6-CF, which is what Carling's "TEST CUT HOLE IN ACTUAL MATERIAL" warns about (their wings assume ABS/PC compliance). Lives in `shoulder.scad` as `SW1_FIT`. ⚠️ This number belongs to a PRINTER SETUP, not to the part — re-run the coupon if nozzle, material or profile changes |
 | Rating | ~18 A @ 16.8 V DC (20 A @ 12 V / 15 A @ 24 V) | ✅ BOM |
 
 > Riser `WALL = 3.2 mm` sits mid-range, and is within 0.03 mm of Carling's own `.125 [3.17]`

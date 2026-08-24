@@ -262,29 +262,54 @@ The "~118 × 100 × 40 interior tub" assumption was WRONG. The stock
 
 ## Thermal + motion review (2026-07-06)
 
-9. **Bucks placement — REOPENED 2026-08-14 (#366), was "RESOLVED-ON-PAPER"**:
-   the outline's "on the floor beside the stack" predates the plate — no
-   floor space exists. Disposition was: bucks (13-15 tall ⚠ unmeasured)
-   UNDERNEATH the power board on the plate, "off the pack shadow (y ±23)
-   **where possible**". **That parenthetical was load-bearing and the
-   geometry does not support it**: the outboard band is 48 − 23 = **25 mm**
-   (17.5 against the battery *tray* at ±30.5), while a D42V110 is
-   **31.8 × 43.2** — it does not clear the pack in EITHER orientation, and
-   it's the leg+hip pair, i.e. the two hottest cards. Only the D24V22
-   (17.8 sq) fits outboard. The band is further chopped by the mezzanine
-   standoffs at x −40.5/33.5, y ±33.
-   **Nothing ever caught this** because `power_board_model.py` models the
-   cards at `BUCK_CARD_XY = (16.0, 20.0)` — a preview placeholder, 4.3× under
-   real area, and its own comment says "not the real buck footprint". So
-   `check_fit.py` case 11 has never tested real bucks. See #366 for options.
-   Corrections to the rest of this note: standoffs are **20 mm**, not ~16
-   (`floor_plate.scad`, 2026-07-09 — the Ø10×17 caps needed it), so the
-   pocket is z 5.9→25.9 = **20 mm**; but C1-C5 bottom at z 8.9, leaving only
-   3.0 mm under the five cap lands. v1 populates **four** cards, not five
-   (D42V55F7 arm is DNP). The riser carries a LOW vent row (z 33..45)
-   because the buck pocket (z 6..22, ~6-10 W) had zero airflow. The Ethernet
-   switch was deleted from the robot 2026-08-14 (L2 plugs direct into Jetson
-   eth0, switch is bench-only), freeing pocket volume it previously shared.
+9. **Bucks placement — CONFIRMED 2026-08-18 (#366). All four fit; §9 as
+   originally written stands.** All the buck cards go UNDERNEATH the power
+   board on the floor plate, in the z 6.0..26.0 pocket.
+   Sizes are now taken from the **Pololu product pages**, not estimates:
+
+   | card | Pololu item | size (mm) |
+   |---|---|---|
+   | D42V110F7 leg | 5674 | 31.75 × 43.18 × **9.02** |
+   | D42V110F12 hip | 5677 | 31.75 × 43.18 × **9.02** |
+   | D42V55F12 Jetson | 5577 | 25.40 × 25.40 × **9.02** |
+   | D24V22F12 L2 | 2855 | 17.78 × 17.78 × **7.87** |
+
+   Two of those heights CORRECT this repo's own numbers: the D42V55 was
+   recorded at 6.1 and the D24V22 at 6.0, both from *profile* drawings, which
+   measure something other than overall height. And v1 populates **four**
+   cards, not five (D42V55F7 arm is DNP).
+
+   **Packing, measured with all four placed simultaneously and each resting on
+   the plate** (search: full static assembly + leg ROM, placeholder card bodies
+   cleared via `power_board_model.buck_card_boxes()`):
+
+   | clearance between cards | all four fit? |
+   |---|---|
+   | 0 mm | YES (387 sites for the big pair) |
+   | **2 mm** | **YES** (296) |
+   | 3 mm | NO — exhaustive over every non-overlapping big pair × every Jetson site |
+   | 5 mm | NO |
+
+   So the four cards fit with **at most ~2 mm between them**. That is too tight
+   to route 14 AWG *between* cards — and it does not need to be: the cards are
+   9.02 tall in a 20 mm pocket, so there is **~11 mm of clear height above them**
+   and the wiring runs OVER, not between. The five Ø10×17 bulk caps (C1-C5)
+   hanging to z 9.0 are the local exception; they leave 3.0 mm at their own
+   footprints and are what makes the packing tight in the first place.
+
+   Constraint that survives all of this, and needs no search: **no card can
+   clear the pack shadow.** The outboard band is 48 − 23 = 25 mm and the
+   D42V110 is 31.75 at its narrowest. So the leg and hip cards sit over the
+   LiPo, with two rules — no fastener may penetrate the 3.9 mm trunk floor
+   (mount to bosses printed up from the plate; AUD-11 is the precedent, a nut
+   trap that breached 0.0 mm into the LiPo bay) and a thermal break under the
+   pair. The riser carries a LOW vent row (z 33..45) because this pocket had
+   zero airflow. The Ethernet switch was deleted from the robot 2026-08-14,
+   freeing volume it used to share.
+
+   ⚠ Still unmodelled: the wires themselves, the card mounting hardware, and
+   the thermal break. The pocket is proven to hold four bare cards.
+
 10. **L2 rear-down blindness (quantified, v1-accepted)**: the hood (~z 107)
    will block the rear sector below ~−19° elevation (cone edge −45°) →
    rear ground inside ~0.4 m is invisible to the L2 and NOTHING else looks
