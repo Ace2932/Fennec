@@ -296,10 +296,15 @@ this is the cheapest thing to try and the most expensive thing to discover late.
 One test exercises the insert process *and* the joint that already failed once. Do it on one
 part before committing six.
 
-### B2 — Zero heat-set inserts are set, anywhere
+### B2 — Heat-set inserts: none recorded as set, anywhere
 
 ~68 M3 sites across the robot, counted off the CAD against a documented 16. Inserts are in
-hand; nothing is pressed. This gates **every** screwed joint.
+hand. This gates **every** screwed joint.
+
+⚠️ **This is an absence of record, not an observation.** The repo contains no note of any
+insert being set, and the last explicit statement (2026-08-11) was that none were. Neither
+is evidence that none have been set since — that is a bench fact and the repo has no way to
+know it. Confirm by looking at a part before planning around it.
 
 Process (drying, temperature, the two ODs, coupon-first) is now written down in
 [`docs/checklists/heat-set-inserts.md`](./docs/checklists/heat-set-inserts.md) — it existed
