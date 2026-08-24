@@ -161,3 +161,6 @@ hardware/cad/leg_v6/coax_hfe_mouth_coupon.stl
 
 # sliced G-code — derived, regenerable from slice_plate.py; the RECORD (docs/print-records) is what we keep
 hardware/cad/slices/
+
+# per-worktree verification evidence (tools/verify) — never shared
+.verify-log
