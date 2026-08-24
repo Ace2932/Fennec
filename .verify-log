@@ -1,0 +1,9 @@
+2026-08-16T15:16:02Z	3dfe5151d3670b957e671bb0dc31260a11968da9	0	chassis-gate	cd hardware/cad/chassis && ../../../.venv/bin/python -u check_fit.py
+2026-08-16T15:16:11Z	3dfe5151d3670b957e671bb0dc31260a11968da9	0	ros-tests	S=ros2_ws/src; PYTHONPATH=$S/nova_ops:$S/nova_locomotion:$S/nova_calibration:$S/nova_description .venv/bin/python -m pytest $S/nova_ops/test $S/nova_locomotion/test $S/nova_calibration/test -q
+2026-08-16T15:16:11Z	3dfe5151d3670b957e671bb0dc31260a11968da9	0	probe-selfcheck	.venv/bin/python hardware/cad/chassis/panel_probe.py --self-check
+2026-08-16T15:31:21Z	302ae9d3c05028a1801d6c37747ac8f2cc802ed7	0	leg-gate	cd hardware/cad/leg_v6 && ../../../.venv/bin/python -u check_fit.py --sweep
+2026-08-16T15:31:37Z	302ae9d3c05028a1801d6c37747ac8f2cc802ed7	0	chassis-gate	cd hardware/cad/chassis && ../../../.venv/bin/python -u check_fit.py
+2026-08-16T15:31:38Z	302ae9d3c05028a1801d6c37747ac8f2cc802ed7	0	ros-tests	S=ros2_ws/src; PYTHONPATH=$S/nova_ops:$S/nova_locomotion:$S/nova_calibration:$S/nova_description .venv/bin/python -m pytest $S/nova_ops/test $S/nova_locomotion/test $S/nova_calibration/test -q
+2026-08-20T19:13:24Z	f6b51c9b6bb017926e837e6456fcc7bc286659e8	0	cad-gates	cd hardware/cad && ../../.venv/bin/python -u slice_plate.py --list && ../../.venv/bin/python -u check_print_directives.py
+2026-08-20T19:13:44Z	e149ff706fe7c8e7c8654df0ced0dc555f091b96	0	cad-gates	cd hardware/cad && ../../.venv/bin/python -u slice_plate.py --list && ../../.venv/bin/python -u check_print_directives.py
+2026-08-20T19:13:45Z	e149ff706fe7c8e7c8654df0ced0dc555f091b96	0	ros-tests	S=ros2_ws/src; PYTHONPATH=$S/nova_ops:$S/nova_locomotion:$S/nova_calibration:$S/nova_description .venv/bin/python -m pytest $S/nova_ops/test $S/nova_locomotion/test $S/nova_calibration/test -q
