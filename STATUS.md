@@ -272,6 +272,59 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
    TODO-CAD values are…" which is now stale against its own xacro.
 8. Leg first-article print (PA6-CF).
 
+## 🔩 MECHANICAL ASSEMBLY — readiness audit 2026-08-24
+
+Three things gate screwing this robot together. Not a backlog; these are in order, and the
+first one can invalidate the other two.
+
+### B1 — #226 has never been proven on a printed part. Retire it FIRST.
+
+The failure was physical and real: a printed `coax` the HFE servo **would not go into**,
+while `check_fit`'s insertion gate reported CLEAN because its `r<=13` exclusion was larger
+than the Ø19 boss it was hiding. Option C (integral inboard arm + removable
+`coax_hfe_block`) is the fix, it is gated in CAD, and **it has never been assembled in the
+flesh.**
+
+If it still does not insert, the leg does not assemble and the fix needs another round — so
+this is the cheapest thing to try and the most expensive thing to discover late.
+
+- [ ] Print `coax_R` + `coax_hfe_block`
+- [ ] Set the 8 slim inserts (4.0 OD, `B07R9SP532` — **thread-check first**, 4.0 OD is the
+      standard M2.5 OD)
+- [ ] Put the servo in
+
+One test exercises the insert process *and* the joint that already failed once. Do it on one
+part before committing six.
+
+### B2 — Zero heat-set inserts are set, anywhere
+
+~68 M3 sites across the robot, counted off the CAD against a documented 16. Inserts are in
+hand; nothing is pressed. This gates **every** screwed joint.
+
+Process (drying, temperature, the two ODs, coupon-first) is now written down in
+[`docs/checklists/heat-set-inserts.md`](./docs/checklists/heat-set-inserts.md) — it existed
+nowhere in this repo until 2026-08-24, which is a poor state for the one operation that can
+destroy a 165 g part in two seconds.
+
+### B3 — The leg parts on the bench are STALE
+
+`print-batch.md`: *"CHANGED → re-print (old copies are stale): all 6 legs"*. `coax` was
+redesigned by #226 option C, `femur` is behind by the cable groove, `knee_arm` has Ø2.9
+holes that want 3.4. B1 already reprints two of them.
+
+### Not blockers, resolved 2026-08-24
+
+- **Fasteners** — `fastener-schedule.md` said 🔴 NOT ORDERED for the slim insert, M3×16,
+  M3×8 and M3×6, and warned two "gate the next assembly". They were ordered 2026-08-03 and
+  the slim inserts arrived 08-08; the line was corrected in the *safe* direction on 08-02
+  and never un-corrected after the order went out. Fixed.
+
+### Not audited yet
+
+The **wiring** lane. Two hazards are already flagged and neither is built: the dual-voltage
+servo harness (7 boundaries where a stock 3-wire cable would bridge 12 V onto the 7.5 V
+rail — the #1 fry path) and `J1`'s gender inversion. Worth its own pass before harness day.
+
 ## 🧪 PARALLEL LANE — bench-only, does NOT wait on the power board (added 2026-08-18)
 
 **Why this lane exists.** The board and the chassis are the two long poles, and both are
