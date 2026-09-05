@@ -1157,6 +1157,47 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
   a bare PCB. Run `pre-power-on-validation.md` §1c **connector mating audit
   (HARD GATE)** and §1e (connector polarity, buck variants, INA addressing)
   here. Fitting Teensy/Nano/INA modules first makes rework much worse.
+- 🔴 **9b — `U6` pad→GPIO continuity (logic board), immediately before stage 10's
+  socket fit.** The footprint's own descr admits the gap
+  (`nova_pcb_v6_logic.kicad_pcb`, `U6`): *"Pin order from PJRC card11a rev4 --
+  VERIFY vs board before fab."* The board was fabbed with that unresolved
+  (#401). Schematic, netlist and firmware all agree with each other on the pad
+  map, but that is three copies of one reconstruction, not a measurement —
+  `pre-power-on-validation.md` §1c already carries "`U6` Teensy 4.1 socket —
+  pad→GPIO unverified" as an open item; this is where it actually gets run,
+  before the socket is populated for real.
+
+  Seat a real Teensy 4.1 in the `U6` socket (unsoldered is fine — both `U6` and
+  `U12` are sockets, not solder-down, per §7's decision). For each pin below,
+  meter continuity from the Teensy module's own pin (top of the seated part,
+  not the board pad underneath it) to the named net, at the given probe point:
+
+  | Teensy pin | firmware role | net | probe point |
+  |---|---|---|---|
+  | 0 | `BUS_RX_PIN` (Serial1 RX) | `TEENSY_RX` | `U7`.6 (RX-gate buffer output) |
+  | 1 | `BUS_TX_PIN` (Serial1 TX) | `TEENSY_TX` | `U7`.2 (TX-gate buffer input) |
+  | 2 | `BUS_OE_TX_PIN` | `OE_TX` | `U7`.1 (TX-gate `~OE`) |
+  | 3 | `BUS_OE_RX_PIN` | `OE_RX` | `U7`.4 (RX-gate `~OE`) |
+  | 4 | `BATTERY_LOW_PIN` | `BATT_LOW` | `J20`.9 |
+  | 5 | `ESTOP_PIN` | (unnamed net — `J21` pin 1's own) | `J21`.1 |
+  | 18 | `I2C_SDA_PIN` | `I2C_SDA` | `J20`.7 |
+  | 19 | `I2C_SCL_PIN` | `I2C_SCL` | `J20`.8 |
+
+  Firmware pin roles from `firmware/teensy/firmware/src/main.cpp:105-116`. `U7`
+  is the 74HC125/74LVC125 bus buffer (SOIC-14): pin numbers read off
+  `nova_pcb_v6_logic.kicad_pcb`'s own pad→net table and cross-checked against
+  `04_bus_master.kicad_sch` — pad 1 = `OE_TX`, pad 2 = `TEENSY_TX` (buffer
+  input), pad 4 = `OE_RX`, pad 6 = `TEENSY_RX` (buffer output); pads 3/5 go to
+  the bus side, not to `U6`. `J20` pins 7/8/9 and `J21` pin 1 read off the same
+  board file (`07_aux_mcu.kicad_sch` + `09_interboard.kicad_sch`).
+
+  **Pass: 8/8 beep to the named net, and 0/8 beep to any neighboring Teensy
+  pin/pad** (the second half is what actually catches a mirrored or off-by-one
+  row — a wrong-but-still-continuous mapping passes the first half alone).
+  **Fail on any miss — do not seat `U6` for real (solder, or leave it
+  populated) until this reruns clean.**
+
+  **Result:** _owed — not yet run on the bench._
 - Before first power — the whole of `pre-power-on-validation.md`, in its own
   order. Inrush into ~5470 µF and trip-point calibration are not build steps.
 
