@@ -447,9 +447,17 @@ def shoulder_checks(servo, pts0):
     """Shoulder vs the swinging leg about the haa axis (Y-line at x=39.05,
     z=0). Right hip; the left is the mirror. Leg assembly = coax (+its
     servo) + femur + tibia + knee_arm, mounted horn-forward (mirror-Y of
-    the coax frame — see the chirality note in the design memory)."""
+    the coax frame — see the chirality note in the design memory).
+
+    #393: swept against BOTH ends' crossmember STL — shoulder.stl (rear,
+    plain) and shoulder_sw1.stl (front, + SW1 panel hole, #377).
+    shoulder_sw1.scad is `shoulder_v6(sw1=true)` — the identical
+    crossmember geometry/origin as shoulder.scad, just with material cut
+    for the panel hole — so the same local right-hip placement transform
+    (mirror-Y, translate to the hip station) below applies unchanged to
+    both; front vs rear is a whole-trunk placement yaw (README 'corner
+    identity') this local-frame check never sees."""
     bad = False
-    sh = trimesh.load('shoulder.stl')
     pl = trimesh.load('shoulder_plate.stl')
     # #226 option C: removable member is the outboard block (see sweep_checks)
     coax = trimesh.util.concatenate([trimesh.load('coax_R.stl'),
@@ -479,17 +487,20 @@ def shoulder_checks(servo, pts0):
     MIR = np.eye(4); MIR[1, 1] = -1
     HIP = trimesh.transformations.translation_matrix([39.05, 0, 0])
     base = HIP @ MIR
-    print('-- haa roll sweep (leg assembly vs shoulder + plate)')
-    for ang in [-45, -40, -25, 0, 25, 40, 45]:
-        S = rot_about(ang, [0, 1, 0], [39.05, 0, 0])
-        p = trimesh.transform_points(trimesh.transform_points(leg, base), S)
-        # exclude the designed disc/boss interface about the haa Y-axis
-        keep = np.sqrt((p[:, 0] - 39.05)**2 + p[:, 2]**2) > 13
-        p = p[keep]
-        n = int(contains_chunked(sh, p).sum()) + int(contains_chunked(pl, p).sum())
-        status = 'OK ' if n == 0 else 'HIT'
-        if n and abs(ang) <= 40: bad = True   # beyond 40 = documenting stops
-        print(f'   {status} haa {ang:+4d}deg: {n} pts')
+    for label, stl_name in (('shoulder', 'shoulder.stl'),
+                             ('shoulder_sw1', 'shoulder_sw1.stl')):
+        sh = trimesh.load(stl_name)
+        print(f'-- haa roll sweep (leg assembly vs {label} + plate)')
+        for ang in [-45, -40, -25, 0, 25, 40, 45]:
+            S = rot_about(ang, [0, 1, 0], [39.05, 0, 0])
+            p = trimesh.transform_points(trimesh.transform_points(leg, base), S)
+            # exclude the designed disc/boss interface about the haa Y-axis
+            keep = np.sqrt((p[:, 0] - 39.05)**2 + p[:, 2]**2) > 13
+            p = p[keep]
+            n = int(contains_chunked(sh, p).sum()) + int(contains_chunked(pl, p).sum())
+            status = 'OK ' if n == 0 else 'HIT'
+            if n and abs(ang) <= 40: bad = True   # beyond 40 = documenting stops
+            print(f'   {status} {label} haa {ang:+4d}deg: {n} pts')
     # HAA horn SEATING (2026-07-11, user catch: "does the plate reach the coax
     # horn or float short?"): the sweep above only checks ABSENCE of
     # interpenetration, never that shoulder_plate positively SEATS on the servo

@@ -33,7 +33,7 @@ for p in femur tibia coax; do
   $OS -o ${p}_L.stl ${p}_L.scad
 done
 ls -la *_R.stl *_L.stl
-$PY ../mesh_health.py *_R.stl *_L.stl knee_arm.stl knee_bumper.stl shoulder.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl strap.stl grommet_insert.stl coax_hfe_block.stl coax_hfe_block_L.stl
+$PY ../mesh_health.py *_R.stl *_L.stl knee_arm.stl knee_bumper.stl shoulder.stl shoulder_sw1.stl sw1_coupon.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl strap.stl grommet_insert.stl coax_hfe_block.stl coax_hfe_block_L.stl
 $PY check_fit.py --sweep
 $PY check_shoe.py
 # Can the servo lead actually LEAVE the part? sts_pocket_neg's cable tunnel is
