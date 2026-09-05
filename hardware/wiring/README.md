@@ -66,6 +66,12 @@ window. Order source: `docs/order-list.md:33,58-59,249-256`.
 | V12_HIP XT30 (hip rail) | SMBJ13A | 1 | 13 V standoff, 21.5 V max clamping voltage |
 | V12_L2 XT30 (optional) | SMBJ13A | 1 (optional) | same as above |
 
+These clamps protect the 25 V bulk caps only — they do not protect the STS3215 servos: the
+leg-rail STS3215s (7.4 V variant, 19 kg) have an absolute max of 8.4 V (`docs/setup-servos.md:92`,
+`BOM.md:64`), and the SMBJ8.5A's 14.4 V max clamping voltage is well above that, so servo
+exposure during an e-stop regen event is unquantified and needs a scope capture (same
+instrument gap as #244).
+
 Numbers above are from the Vishay `SMBJ5.0A thru SMBJ188A` TransZorb datasheet (doc #88392,
 rev 09-Jan-2024), electrical characteristics table: SMBJ8.5A row (V_BR 9.44–10.4 V, V_C
 14.4 V), SMBJ13A row (V_BR 14.4–15.9 V, V_C 21.5 V). Both standoff voltages sit above their
@@ -462,6 +468,10 @@ across the throw is supply+load; the survivor is the lamp.
 | **red** 18 AWG | supply (no LED path) | `SW1`.1 | `VBAT` — **always hot** |
 | **white** 18 AWG | load (LED pole) | `SW1`.2 | `VBAT_PROTECTED` |
 | **black** 22 AWG | lamp | **`SW2`.1** | `GND` (~20 mA) |
+
+⬜ verify: the lamp is fed from `VBAT_PROTECTED` (up to 16.8 V at full charge) — the Blue Sea
+8282's lamp rating vs that must be confirmed from the primary datasheet (secondary listings
+say 12 V/24 V dual-rated, primary site was unreachable).
 
 ⛔ Lamp ground is **NOT** `J2`.2/`M1`.2 (the clearance-hazard headers above — where the
 M1 short actually happened) and **NOT** `J1`.1 (`BATT_NEG`, routes lamp current around Q1).
