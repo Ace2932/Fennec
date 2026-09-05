@@ -449,14 +449,14 @@ def shoulder_checks(servo, pts0):
     servo) + femur + tibia + knee_arm, mounted horn-forward (mirror-Y of
     the coax frame — see the chirality note in the design memory).
 
-    #393: swept against BOTH ends' crossmember STL — shoulder.stl (rear,
-    plain) and shoulder_sw1.stl (front, + SW1 panel hole, #377).
-    shoulder_sw1.scad is `shoulder_v6(sw1=true)` — the identical
-    crossmember geometry/origin as shoulder.scad, just with material cut
-    for the panel hole — so the same local right-hip placement transform
-    (mirror-Y, translate to the hip station) below applies unchanged to
-    both; front vs rear is a whole-trunk placement yaw (README 'corner
-    identity') this local-frame check never sees."""
+    Swept against shoulder.stl only. #393 tried sweeping shoulder_sw1.stl
+    (front, + SW1 panel hole, #377) too, but review on #405 found the SW1
+    cutout sits 27-40mm from the swept hip — 0 points ever differed
+    between the two meshes at any angle, so the second sweep could never
+    fail differently from the first; it just doubled runtime. That gap is
+    covered instead by sw1_cutout_check() below, which proves the cutout
+    exists, sits in its designed box, and stays clear of both hip roll
+    axes."""
     bad = False
     pl = trimesh.load('shoulder_plate.stl')
     # #226 option C: removable member is the outboard block (see sweep_checks)
@@ -487,20 +487,18 @@ def shoulder_checks(servo, pts0):
     MIR = np.eye(4); MIR[1, 1] = -1
     HIP = trimesh.transformations.translation_matrix([39.05, 0, 0])
     base = HIP @ MIR
-    for label, stl_name in (('shoulder', 'shoulder.stl'),
-                             ('shoulder_sw1', 'shoulder_sw1.stl')):
-        sh = trimesh.load(stl_name)
-        print(f'-- haa roll sweep (leg assembly vs {label} + plate)')
-        for ang in [-45, -40, -25, 0, 25, 40, 45]:
-            S = rot_about(ang, [0, 1, 0], [39.05, 0, 0])
-            p = trimesh.transform_points(trimesh.transform_points(leg, base), S)
-            # exclude the designed disc/boss interface about the haa Y-axis
-            keep = np.sqrt((p[:, 0] - 39.05)**2 + p[:, 2]**2) > 13
-            p = p[keep]
-            n = int(contains_chunked(sh, p).sum()) + int(contains_chunked(pl, p).sum())
-            status = 'OK ' if n == 0 else 'HIT'
-            if n and abs(ang) <= 40: bad = True   # beyond 40 = documenting stops
-            print(f'   {status} {label} haa {ang:+4d}deg: {n} pts')
+    sh = trimesh.load('shoulder.stl')
+    print('-- haa roll sweep (leg assembly vs shoulder + plate)')
+    for ang in [-45, -40, -25, 0, 25, 40, 45]:
+        S = rot_about(ang, [0, 1, 0], [39.05, 0, 0])
+        p = trimesh.transform_points(trimesh.transform_points(leg, base), S)
+        # exclude the designed disc/boss interface about the haa Y-axis
+        keep = np.sqrt((p[:, 0] - 39.05)**2 + p[:, 2]**2) > 13
+        p = p[keep]
+        n = int(contains_chunked(sh, p).sum()) + int(contains_chunked(pl, p).sum())
+        status = 'OK ' if n == 0 else 'HIT'
+        if n and abs(ang) <= 40: bad = True   # beyond 40 = documenting stops
+        print(f'   {status} haa {ang:+4d}deg: {n} pts')
     # HAA horn SEATING (2026-07-11, user catch: "does the plate reach the coax
     # horn or float short?"): the sweep above only checks ABSENCE of
     # interpenetration, never that shoulder_plate positively SEATS on the servo
@@ -517,6 +515,64 @@ def shoulder_checks(servo, pts0):
     print(f"   {'OK ' if ok else 'GAP'} haa horn seat: plate<->horn min "
           f"{seat:.2f}mm (want <=0.5 = seated, not floating short)")
     if not ok: bad = True
+    bad = sw1_cutout_check() or bad
+    return bad
+
+
+def sw1_cutout_check():
+    """#405 review fix. Replaces the old shoulder_sw1 haa-roll sweep (see
+    shoulder_checks' docstring) with a check that actually distinguishes
+    shoulder_sw1.stl from shoulder.stl: sample shoulder.stl's surface,
+    nudge each point 0.2mm inward along its face normal (contains() is
+    unstable for points exactly ON a surface — measured: testing the raw
+    surface samples against shoulder_sw1 flips ~96% of them, noise, not
+    signal; nudging inward first is stable across 0.05-0.5mm), keep the
+    points NOT contained by shoulder_sw1.stl (the material SW1 removed),
+    and assert that set (a) exists — negative control against a
+    stale/identical shoulder_sw1.stl, (b) sits inside the designed cutout
+    box, (c) stays >=25mm from both hip roll axes.
+
+    Cutout box, derived from shoulder.scad: SW1_X=1.0, SW1_Z=4.95,
+    SW1_W=21.08, SW1_H=36.83, SW1_FIT=0.10 -> half-width
+    (SW1_W+2*SW1_FIT)/2=10.64, half-height (SW1_H+2*SW1_FIT)/2=18.515 ->
+    local x in [SW1_X-10.64, SW1_X+10.64] = [-9.64, 11.64], z in
+    [SW1_Z-18.515, SW1_Z+18.515] = [-13.565, 23.465]; cut runs through the
+    REAR_W0..REAR_W1 = -32.1..-28.1 rear wall (y), extruded 1mm proud on
+    each face (shoulder.scad's `REAR_W1 - REAR_W0 + 2` extrude length) so
+    the removed material's y-span is [-33.1, -27.1].
+    """
+    bad = False
+    sh = trimesh.load('shoulder.stl')
+    sw1 = trimesh.load('shoulder_sw1.stl')
+    pts, fidx = trimesh.sample.sample_surface(sh, 20000, seed=0)
+    pts = pts - sh.face_normals[fidx] * 0.2   # off the exact surface, still solid
+    removed = pts[~contains_chunked(sw1, pts)]
+    exists = len(removed) > 0
+    print(f"{'OK  ' if exists else 'FAIL'} sw1 cutout exists: "
+          f"{len(removed)} / {len(pts)} shoulder-surface points fall "
+          "outside shoulder_sw1 (the material SW1 removed)")
+    if not exists:
+        return True
+    lo, hi = removed.min(axis=0), removed.max(axis=0)
+    # designed box + 1mm sampling/overcut tolerance
+    box_lo = np.array([-9.64, -33.1, -13.565]) - 1.0
+    box_hi = np.array([11.64, -27.1, 23.465]) + 1.0
+    in_box = bool(np.all(lo >= box_lo) and np.all(hi <= box_hi))
+    print(f"{'OK  ' if in_box else 'FAIL'} sw1 cutout bbox: "
+          f"[{lo[0]:+.2f} {lo[1]:+.2f} {lo[2]:+.2f}] .. "
+          f"[{hi[0]:+.2f} {hi[1]:+.2f} {hi[2]:+.2f}] (want inside "
+          f"[{box_lo[0]:+.2f} {box_lo[1]:+.2f} {box_lo[2]:+.2f}] .. "
+          f"[{box_hi[0]:+.2f} {box_hi[1]:+.2f} {box_hi[2]:+.2f}])")
+    if not in_box: bad = True
+    # distance from the removed material to EITHER hip roll axis (the
+    # haa Y-line at x=+-39.05, z=0 — same centre shoulder_checks sweeps
+    # about)
+    d = min(np.sqrt((removed[:, 0] - 39.05)**2 + removed[:, 2]**2).min(),
+            np.sqrt((removed[:, 0] + 39.05)**2 + removed[:, 2]**2).min())
+    far = d >= 25.0
+    print(f"{'OK  ' if far else 'FAIL'} sw1 cutout clearance to hip roll "
+          f"axes: {d:.1f}mm (want >=25.0)")
+    if not far: bad = True
     return bad
 
 
