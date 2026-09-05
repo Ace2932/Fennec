@@ -337,7 +337,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] Backup: continue Teensy firmware / URDF / ROS 2 scaffolding if PCB stalls or finishes early
 
 **Week 4+ (back to shop):**
-- [ ] Bench-validate prints; submit Gerbers to PCBWay (~$60); continue Phase 1 hardware bring-up
+- [x] ~~Bench-validate prints; submit Gerbers to PCBWay (~$60)~~ — both boards fabbed at JLCPCB 2026-07-01 (~$203 all-in, see STATUS.md); continue Phase 1 hardware bring-up
 - [ ] Order remaining parts (switch, Pololu bucks ×4, charger bundle, safety parts, accessories) — NVMe deferred
 
 ### Phase 1 — Hardware bring-up (weeks 1-4)
