@@ -13,7 +13,11 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
                               │        │ kills leg + hip + L2 + arm EN (EN_BUCKS)
                               │        │ Jetson rail stays live for debug
                               │
-                              ├── MOSFET hard-cutoff @ 12.4V (comparator-driven)
+                              ├── SW1 master rocker (Blue Sea 8282 Contura, ~18 A,
+                              │        front-shoulder panel — VBAT → VBAT_PROTECTED;
+                              │        LIT: lamp on the LOAD side, ground via SW2.1)
+                              │
+                              ├── MOSFET hard-cutoff @ ~12.56V measured (comparator-driven)
                               │
                               └─┬─ Pololu D42V110F7  → 7.5V/10A → leg rail
                                 │                                 (8× STS3215 19kg femur/tibia)
@@ -32,17 +36,32 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
                                 │
                                 ├─ [reserved D42V55F7] → 7.5V → arm rail (Phase 4 unstuffed)
                                 │
-                                └─ UBEC 5V/5A        → 5V       → fans + aux 5V
+                                └─ UBEC 5V/5A        → V5_AUX 5V → the ENTIRE safety chain
+                                                                  (LM393s + trip VREFs), logic
+                                                                  board, OLED/LED, M1 voltmeter,
+                                                                  SW1 lamp — see the 🔴 below
 ```
+
+⚠️ **The tree understates two things.** (1) The E-stop and the hard-cutoff are NOT series
+elements in the battery feed — both act by pulling buck **EN** pins low (`EN_BUCKS`/`EN_JET`);
+the feed itself is only ever broken by the fuse, Q1 and SW1. (2) **The UBEC is deliberately
+NOT killed by either** — it has no EN, so `V5_AUX` stays up through a hardcut, which is what
+keeps the comparators latched. The one thing that kills it is SW1 (or the pack).
 
 ## Safety chain trip points (highest pack voltage first)
 
 | Trip | Pack V | Cell V | Action |
 |------|--------|--------|--------|
 | 1 | 13.2 V | 3.30 V/cell | 608AC charger LVC alarm (user-facing beep) |
-| 2 | 13.0 V | 3.25 V/cell | LM393 comparator → Teensy GPIO **pin 4** → `/battery_low` Bool → Jetson `systemctl poweroff` (clean SD unmount). ~30-60 s window. |
-| 3 | 12.4 V | 3.10 V/cell | Second LM393 stage → **BSS138 (Q2) pulls EN_BUCKS low → all bucks off** (leg/hip/L2/arm); Q4 also kills Jetson EN. Autonomous backstop. (Q1 IRLB3034 = reverse-polarity protection, separate — does NOT break the battery feed.) |
+| 2 | ~~13.0 V~~ **13.03 V measured-parts** | 3.26 V/cell | LM393 comparator → Teensy GPIO **pin 4** → `/battery_low` Bool → Jetson `systemctl poweroff` (clean SD unmount). ~30-60 s window. |
+| 3 | ~~12.4 V~~ **12.56 V measured-parts** | 3.14 V/cell | Second LM393 stage → **BSS138 (Q2) pulls EN_BUCKS low → all bucks off** (leg/hip/L2/arm); Q4 also kills Jetson EN. Autonomous backstop. (Q1 IRLB3034 = reverse-polarity protection, separate — does NOT break the battery feed.) |
 | — | — | — | E-stop (manual, SW2 NC) — pulls EN_BUCKS low via Q3 → kills leg + hip + L2 + **arm** buck EN. Jetson stays alive. |
+
+⚠️ **Rows 2–3 carry the MEASURED-parts predictions (2026-08-08): 13.03 / 12.56 V** — the
+fitted divider is 0.1794 (R2 99.7k / R3 21.8k) against the UBEC's measured 4.98 V.
+`pre-power-on-validation.md` §2 states it outright: *expect 13.03 / 12.56, NOT 13.0 / 12.4* —
+metering against the old nominals at bring-up would flag a correct board. The nominals are
+struck, not deleted, per house style.
 
 ### 🔴 The whole low-voltage cutoff dies with `V5_AUX` — and that is what the buzzer is for
 
@@ -85,9 +104,10 @@ Teensy 4.1                    SN74LVC125A (quad tri-state buffer)         Bus pa
                                                        hfe/kfe=7.5V (see joint_id_map.yaml)
                                                        IDs 13-18 reserved (Phase 4 arm)
 
-JP_BUS_MASTER solder bridge:
-  default = B (Teensy → SN74LVC125A → bus)
-  alt     = A (FE-URT-1 → bus, for ID assignment + bench debug)
+JP_BUS_MASTER — ~~solder bridge~~ a 3-pin header + SPC02SYAN shorting shunt
+(the "solder bridge" wording predates the fitted part):
+  2–3 = B (Teensy → SN74LVC125A → bus) — **FITTED and verified 2026-08-09**
+  1–2 = A (FE-URT-1 → bus, for ID assignment + bench debug)
 ```
 > Source of truth for these pins = `firmware/teensy/firmware/src/main.cpp` (Serial1 0/1, OE̅ 2/3) + the `nova_pcb_v6_logic` netlist.
 
@@ -126,7 +146,7 @@ power a star from the XT30s, and a 12V↔7.5V boundary is physically impossible 
 **JST-XH is the board side only** (J8 pigtail). Don't crimp XH housings for servo ends. Chain entry
 from J8 uses **GND + Signal only** — J8's VCC pin (V7V5_LEG) feeds nothing under this plan.
 
-Cables still needed: **extension daisy cables for long leg runs** (Feetech/AliExpress — the ⬜ master-bom item never received) + the **VCC-isolated boundary jumpers** (make by pulling the VCC pin from a stock cable).
+Cables still needed: **extension daisy cables for long leg runs** (~~the ⬜ master-bom item never received~~ **re-ordered 2026-07-11, 2× waveshare 5264 kits, arr ~Jul 13 — confirm in hand at the bench**, `master-bom.md` #55) + the **VCC-isolated boundary jumpers** (make by pulling the VCC pin from a stock cable).
 
 **Cable length:** ~2 m total harness. Community reports 12 m / 8 axes workable, so 2 m / 12 nodes is well within margin.
 
@@ -142,9 +162,11 @@ Teensy 4.1                          I²C bus (separate from Arduino Nano aux bus
             shunt: 2 mΩ       shunt: 2 mΩ       shunt: 2 mΩ       shunt: 2 mΩ
             GODIY 20A R002 modules (all 4) — firmware setMaxCurrentShunt(20, 0.002)
 
-  → /power_rails Float32MultiArray @ 10 Hz: [leg_v, leg_a, leg_w,
+  → /power_rails Float32MultiArray @ 10 Hz — **12 floats** (9 was stale; #349):
+                                             [leg_v, leg_a, leg_w,
                                               hip_v, hip_a, hip_w,
-                                              jetson_v, jetson_a, jetson_w]
+                                              jetson_v, jetson_a, jetson_w,
+                                              l2_v, l2_a, l2_w]
 ```
 
 **Current-sense wiring (CRITICAL — PCB carries NO shunt; R13/R14 deleted):** the INA226 reads current only if the rail flows through its onboard 2 mΩ shunt (IN+→IN−). The board exposes just I²C+power; IN+/IN− are the module's **screw terminals** → wire **inline in the harness**: rail source → IN+ → shunt → IN− → load.
@@ -208,12 +230,16 @@ built-in WiFi.
 | Wire | Gauge | Use |
 |------|-------|-----|
 | 18 AWG silicone | 18 AWG | Servo power (7.5 V + 12 V rails), battery feed to bucks |
-| 22 AWG hookup | 22 AWG | Signal-level (INA226 I²C, comparator outputs, E-stop GPIO, RGB LED data) |
+| 22 AWG hookup | 22 AWG | Signal-level (INA226 I²C, comparator outputs, E-stop pairs, buck EN, SW1 lamp ground, RGB LED data) |
 | Feetech TTL daisy-chain | 28 AWG (vendor) | Servo bus signal + power passthrough **within one voltage segment only** (see dual-voltage note — no power across 12V↔7.5V boundary) |
 
 ## Color code
 
-- **Red:** +V (positive supply, all voltages)
+- **Red:** +V (positive supply, all voltages) — and where BOTH legs of a switch are
+  positive, red goes to the leg that is **always hot** (see White)
+- **White:** the SWITCHED positive leg when its partner is always-hot — as built on
+  `SW1` (white = load/`VBAT_PROTECTED`, red = supply/`VBAT`). The colour exists so the
+  always-live conductor is unambiguous with the switch off
 - **Black:** GND (common)
 - **Yellow:** signal (logic-level, GPIO)
 - **Green:** I²C SDA / SCL (preserve white-on-green if available)
@@ -376,6 +402,66 @@ still simple. One stage later, ~5470 µF of electrolytic would have made the sam
 indistinguishable from a charging cap — and a 4S pack into a shorted `VBAT_PROTECTED`
 dumps through the MRBF-30, `Q1` and the plane.
 
+## As-built switch wiring (2026-08-16) — SW1 done and proven, e-stop landed, checks OWED
+
+### SW1 — Blue Sea 8282 Contura (LIT — three wires, poles NOT interchangeable)
+
+The rocker has **3 spades**; the third is the lamp (reads **1.9 V** in diode mode). With
+the rocker OFF the LED path runs to the **load** pole → the lamp is internally tied to
+the LOAD terminal. **Swap supply/load and the lamp ties to `VBAT` upstream of the
+switch — lit whenever the pack is in, switch off included** (parasitic drain, lying
+indicator). Identify spades by meter, not moulded numbers: the pair that goes OL → 0 Ω
+across the throw is supply+load; the survivor is the lamp.
+
+| wire | spade | lands at | net |
+|---|---|---|---|
+| **red** 18 AWG | supply (no LED path) | `SW1`.1 | `VBAT` — **always hot** |
+| **white** 18 AWG | load (LED pole) | `SW1`.2 | `VBAT_PROTECTED` |
+| **black** 22 AWG | lamp | **`SW2`.1** | `GND` (~20 mA) |
+
+⛔ Lamp ground is **NOT** `J2`.2/`M1`.2 (the clearance-hazard headers above — where the
+M1 short actually happened) and **NOT** `J1`.1 (`BATT_NEG`, routes lamp current around Q1).
+
+✅ **Supply + load VERIFIED 2026-08-16**: `J1`.2 ↔ a `VBAT_PROTECTED` pad across the
+throw — OFF = OL, ON = ~0 Ω. One probe pair crosses both ferrules, both spade joints
+and the contacts.
+
+**Ferrules on every screw-terminal end** (crimps owned): 18 AWG → 0.75/1.0 mm²,
+22 AWG → 0.34/0.5 mm². Never solder AND ferrule; spade ends still solder. `SW2`.1
+carries **two** conductors (orange e-stop return + black lamp ground) → twin ferrule,
+or twist both under one 0.75 mm². A stray strand at `SW1` bypasses the master switch
+silently; at `SW2` it holds the e-stop in RUN forever — that is why these blocks
+get ferrules.
+
+### E-stop — Mxuteuk HB2-ES544, TWO INDEPENDENT NC paths, 4× 22 AWG × 250 mm
+
+Block A → power `SW2` (`GND`/`EN_SW` — the hardware kill, works with firmware dead).
+Block B → logic `J21` (pin 1 → Teensy pin 5 sense, pin 2 → GND). **Never series or
+parallel the blocks.** NC identified per block (released ~0 Ω / latched OL) — "2NC"
+parts ship with mixed blocks, check both. `SW2` is a dry contact: either orange on
+either pad, **but both must come from the SAME block** — one-from-each looks identical
+and voids the independence. `J21`: soldered direct to the pins, individual heat-shrink
+(same call as `J2`/`M1`); the 250 mm slack is what lets the logic board lift off its
+standoffs without unplugging.
+
+### ⏳ The verify table — SPECIFIED, NOT YET RUN as of 2026-08-28
+
+| probe | released | latched |
+|---|---|---|
+| `SW2`.2 ↔ `J20`.3 (GND) | **~0 Ω** | **~12.9 k** |
+| `J21`.1 ↔ `J21`.2 | **~0 Ω** | **OL** |
+| `SW2` pair ↔ `J21` pair | **OL** | **OL** |
+
+12.9 k is computed with its own cross-check: R13 10k + the 2.9 k `V5_AUX`↔GND leg
+(same probe read 19.83 k at stage 2, pre-UBEC = 10 + 9.83; the UBEC dropped the leg to
+2.9). 19.8 k now = the UBEC has come off; 10 k flat = the ground leg is not landing.
+The 0 Ω ↔ 12.9 k swing IS the e-stop function test. Row 3 is the one that catches
+crossed blocks — the failure rows 1–2 cannot see. Also owed: the lamp-ground run
+itself, the powered lamp check (pack in, SW1 OFF → **dark**; lit = red/white swapped),
+the diode-mode orientation on the lamp spade (cathode-vs-anode — wrong guess = dark
+lamp, harmless), and a TPU `cable_clip` anchor within ~50 mm of the board on each
+bundle.
+
 ## Strain relief + routing notes
 
 - Feetech daisy chain follows the opposite chassis edge from the high-current servo power (reduces capacitive coupling)
@@ -421,3 +507,18 @@ dumps through the MRBF-30, `Q1` and the plane.
 - Exact USB hub config on Jetson — likely only 4 USB-A ports on P3766, may need a powered hub for D456 + Teensy + FE-URT-1 concurrent. Verify on bench.
 - ~~Whether to integrate the lighted rocker switch into PCB v6 or panel-mount via flying lead; candidate home = the riser's FRONT-GAP zone (rocker through the side skirt at ~(x 57, z 45))~~ **RESOLVED 2026-08-15 (#368/#377): panel-mount via flying lead, in the FRONT SHOULDER's rear wall** at trunk (x 108, y +1, z 43), long axis VERTICAL, snapped into the 4 mm wall (Blue Sea Contura = Carling V-Series: sprung wings, no screws, 21.08 × 36.83 mm hole, panel band 0.81–6.35 mm). **The riser FRONT-GAP home was impossible** — that column is 10.85 mm wide against a 21.08 mm cutout, and `hardware/cad/chassis/panel_probe.py` found every other proposed face fails too. Wires solder direct to the spades at 90°; heat-shrink past the solder wick and anchor to the shoulder's Ø12 grommets so flex never lands on the joint (this is the ~14 A master feed on a walking machine).
 - L2 LiDAR cable routing past the rotating sensor head — needs flex strain relief to survive scans
+- **Buck enable pad: `ENA` or `ENB` — UNRESOLVED, and it is the e-stop path.** The reg34c
+  module exposes both; no doc records which one `U#`.3 wires to. `EN_BUCKS` has **no
+  pull-up on the board**, so the module's internal pull-up is the only thing holding the
+  bucks enabled, and the correct pad is the one that **disables when grounded**. Bench
+  test before cutting EN wires: VIN ~15 V current-limited, no load → VOUT up with EN
+  unattached; ground ENA, then ENB — the pad that kills VOUT goes to `U#`.3. Wrong pad =
+  the e-stop does not cut the bucks, silently. See `BUILD_PLAN.md` §5.
+- **Buck cable lengths — now derivable, not yet cut.** #366 closed 2026-08-18 (all four
+  fit the under-board pocket; reg34c = Pololu #5674, 31.75 × 43.18 × 9.02 mm), so the
+  runs can be measured against the chosen placements. Until then do not cut — slack is
+  unroutable in the 20 mm gap, short is scrap.
+- **`SW2`/`J21` e-stop verify table** (§ as-built above) — specified, not run.
+- Servo-bus extension cables (2× waveshare 5264 kits, re-ordered 2026-07-11, arr ~Jul 13):
+  **confirm actually in hand and count the 12 in-box cables** before the harness build
+  (`master-bom.md` #55 still says "verify routed lengths on receipt").
