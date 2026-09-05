@@ -107,6 +107,12 @@ def box(x0, x1, y0, y1, z0, z1):
         transform=T([(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2]))
 
 
+# INA226 breakout-on-header stack height: UNMEASURED (STATUS.md says these
+# are the tallest under-stack parts, checked at stage 10). Refs using this
+# constant are named in UNMEASURED below so the fit gate can flag them.
+INA226_STACK_MM = 11  # UNMEASURED — caliper the GODIYMODULES 20A module on its header, STATUS.md
+UNMEASURED = {'U9', 'U10', 'U11', 'U12'}
+
 # ---- component height table (mm) -------------------------------------------
 # TOP side (F.Cu) extrudes UP from BOARD_TOP_Z; BOTTOM (B.Cu) extrudes DOWN
 # from BOARD_BOTTOM_Z. Values per the verified BOM/mechanical survey.
@@ -115,8 +121,8 @@ HEIGHT_MM = {
     'Q1': 18,      # IRLB3034 TO-220 vertical
     **{r: 12 for r in ('J3', 'J4', 'J5', 'J6', 'J7', 'J12', 'J13', 'J14')},  # XT30 conns
     **{r: 12 for r in ('U1', 'U2', 'U3', 'U4', 'U5')},   # buck wire-terminal landings
-    **{r: 11 for r in ('U9', 'U10', 'U11', 'U12')},      # INA226 modules
-    'C8': 13, 'C9': 13,      # F.Cu D10 radial caps
+    **{r: INA226_STACK_MM for r in UNMEASURED},          # INA226 modules
+    'C8': 16, 'C9': 16,      # F.Cu D10x16 radial caps (STATUS.md: 470uF/25V, not 35V)
     'J8': 8,       # servo-bus JST-XH
     'J20': 9,      # IDC 2x6 header
     'J2': 8, 'M1': 8,        # pin headers
