@@ -1,0 +1,20 @@
+{
+  "part": "jetson_case_mount",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/chassis/jetson_case_mount.stl",
+  "material": "PETG-CF (print-batch.md:234)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "~/claude-memory/nova-proj/reference-printing-setup.md 2026-08-07/08 bench session 'Also printed: ... jetson_case_mount'",
+  "status": "current",
+  "downloads_exports": [
+    {
+      "file": "jetson_case_mount.stl",
+      "stl_sha256_16": "b590f540c227771c",
+      "git_head": "c693a203151cd25d2c225b79de9bbb6ce3383dcc",
+      "git_head_date": "2026-07-11",
+      "matches_head": true
+    }
+  ],
+  "notes": "Export hash equals current HEAD blob hash \u2014 bench part is current."
+}

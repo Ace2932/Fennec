@@ -1,0 +1,28 @@
+{
+  "part": "knee_arm",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/leg_v6/knee_arm.stl",
+  "material": "PA6-CF (print-batch.md:80)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "docs/checklists/print-batch.md:380 'printed: knee_arm x1 ... 2026-08-02'",
+  "status": "ambiguous \u2014 known false-negative, see notes",
+  "downloads_exports": [
+    {
+      "file": "knee_arm.stl",
+      "stl_sha256_16": "610dd6d75f44a5dd",
+      "git_head": "036a746701d4e94ebd43ce197c4ac7dbf812aac7",
+      "git_head_date": "2026-07-11",
+      "matches_head": false,
+      "head_hash": "23c13b0d5984e214"
+    },
+    {
+      "file": "knee_arm (1).stl",
+      "stl_sha256_16": "23c13b0d5984e214",
+      "git_head": "0abd9e177ed3ebd456975b73a27428fb0b71be4f",
+      "git_head_date": "2026-08-03",
+      "matches_head": true
+    }
+  ],
+  "notes": "KNOWN FALSE NEGATIVE, per ~/claude-memory/patterns/physical-parts-drift-from-the-repo.md '2026-08-10: the export hash is the WRONG AXIS' section: the bench knee_arm was printed 2026-08-02, one day BEFORE #263 (commit 0abd9e17, 2026-08-03, the M3 \u00d82.9->3.4 hole fix). Neither Downloads export lands on 2026-08-02 \u2014 the older export (036a7467, 07-11) predates it and the newer (0abd9e17, 08-03) postdates it by re-export, not reprint. Do NOT read the 'current' export match as proof the bench part is current: memory explicitly documents this part as STALE and on the drill list for #263's fix."
+}

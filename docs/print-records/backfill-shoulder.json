@@ -1,0 +1,20 @@
+{
+  "part": "shoulder",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/leg_v6/shoulder.stl",
+  "material": "PA6-CF (print-batch.md:80)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "~/claude-memory/nova-proj/reference-printing-setup.md 2026-08-07/08 bench session 'shoulder (one of the TWO needed \u2014 it is a CROSSMEMBER)'; docs/checklists/print-batch.md:458 'shoulder SLICED 2026-08-03' (printed afterward, per the bench-session memory)",
+  "status": "current",
+  "downloads_exports": [
+    {
+      "file": "shoulder.stl",
+      "stl_sha256_16": "1665805f8d899e8d",
+      "git_head": "0abd9e177ed3ebd456975b73a27428fb0b71be4f",
+      "git_head_date": "2026-08-03",
+      "matches_head": true
+    }
+  ],
+  "notes": "Export hash equals current HEAD blob hash \u2014 bench part is current. Only 1 of the 2 needed crossmembers has been printed (per the bench-session memory); the second is still owed."
+}

@@ -1,0 +1,20 @@
+{
+  "part": "neck_bracket",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/chassis/neck_bracket.stl",
+  "material": "PA6-CF (print-batch.md:80)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "~/claude-memory/nova-proj/reference-printing-setup.md 2026-08-07/08 bench session 'Also printed: ... neck_bracket'",
+  "status": "current",
+  "downloads_exports": [
+    {
+      "file": "neck_bracket.stl",
+      "stl_sha256_16": "a4eb29e4bc64b920",
+      "git_head": "70f837163916d6200a70a8a34dd1f8a156f5d3c9",
+      "git_head_date": "2026-08-05",
+      "matches_head": true
+    }
+  ],
+  "notes": "Export hash equals current HEAD blob hash \u2014 matches the #274 side-web fix commit."
+}

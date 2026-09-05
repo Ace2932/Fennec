@@ -1,0 +1,20 @@
+{
+  "part": "strap",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/leg_v6/strap.stl",
+  "material": "PA6-CF (print-batch.md:80)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "docs/checklists/print-batch.md:380 'printed: strap x1 ... 2026-08-02'",
+  "status": "current",
+  "downloads_exports": [
+    {
+      "file": "strap.stl",
+      "stl_sha256_16": "ed8d3ebcf125c7a4",
+      "git_head": "77dc74c223d46f35bccf52beabbe960f043433f0",
+      "git_head_date": "2026-07-16",
+      "matches_head": true
+    }
+  ],
+  "notes": "Export hash equals current HEAD blob hash \u2014 bench part is current."
+}

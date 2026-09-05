@@ -1,0 +1,21 @@
+{
+  "part": "riser_bay",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/chassis/riser_bay.stl",
+  "material": "PETG-CF (print-batch.md:81,219)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "~/claude-memory/patterns/physical-parts-drift-from-the-repo.md 2026-08-10 addendum: dating-method run over 15 printed parts returned '4 stale (shoulder_plate, knee_arm, tibia_R, riser_bay)'",
+  "status": "behind",
+  "downloads_exports": [
+    {
+      "file": "riser_bay.stl",
+      "stl_sha256_16": "99bd88c936206060",
+      "git_head": "c693a203151cd25d2c225b79de9bbb6ce3383dcc",
+      "git_head_date": "2026-07-11",
+      "matches_head": false,
+      "head_hash": "4aa0064c0a49d98b"
+    }
+  ],
+  "notes": "BEHIND HEAD (4aa0064c0a49d98b) \u2014 confirms the memory's independent date-based staleness finding via a direct hash check."
+}

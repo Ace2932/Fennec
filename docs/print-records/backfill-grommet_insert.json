@@ -1,0 +1,21 @@
+{
+  "part": "grommet_insert",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/leg_v6/grommet_insert.stl",
+  "material": "TPU 95A (print-batch.md:82,95)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "~/claude-memory/patterns/physical-parts-drift-from-the-repo.md 2026-08-06 recovery: 'grommet_insert +0.03 cm3 (+8.19%) <- biggest RELATIVE change, cheap redo'",
+  "status": "behind",
+  "downloads_exports": [
+    {
+      "file": "grommet_insert.stl",
+      "stl_sha256_16": "1f310856c0cff05a",
+      "git_head": "c693a203151cd25d2c225b79de9bbb6ce3383dcc",
+      "git_head_date": "2026-07-11",
+      "matches_head": false,
+      "head_hash": "f32ebebe7c9f64a9"
+    }
+  ],
+  "notes": "BEHIND HEAD (f32ebebe7c9f64a9) \u2014 confirms the memory's +8.19% figure by an independent sha256 check. NOTE the doc conflict this surfaces: docs/checklists/print-batch.md:82 still marks 'grommet_insert x6' with an open box (unprinted, LA-25 OD ladder not yet run) as of its last edit, which contradicts this Downloads export existing at all. Not resolved here \u2014 flagging for a human to reconcile which record is stale."
+}

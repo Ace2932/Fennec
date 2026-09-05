@@ -1,0 +1,21 @@
+{
+  "part": "shoulder_plate",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/leg_v6/shoulder_plate.stl",
+  "material": "PA6-CF (print-batch.md:80; material was inferred not sourced per #184)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "docs/checklists/print-batch.md:380 'printed: shoulder_plate x2 ... 2026-08-02'; ~/claude-memory/patterns/physical-parts-drift-from-the-repo.md 2026-08-06 recovery: 'shoulder_plate -0.04 cm3 (-0.46%)'",
+  "status": "behind",
+  "downloads_exports": [
+    {
+      "file": "shoulder_plate.stl",
+      "stl_sha256_16": "4a7059eca2a45f14",
+      "git_head": "bda541c57eb99bad5698d4ae6a13a05008f48abe",
+      "git_head_date": "2026-07-11",
+      "matches_head": false,
+      "head_hash": "2f74b88a1f70965b"
+    }
+  ],
+  "notes": "BEHIND HEAD (2f74b88a1f70965b) \u2014 confirms the memory's -0.46% figure by an independent sha256 check. Only one shoulder_plate export exists in ~/Downloads (no shoulder_plate_L export) though the print-batch line records 2 printed \u2014 which side(s) is unclear from the export alone; also flagged stale by the independent 2026-08-10 dating method in the same memory file."
+}

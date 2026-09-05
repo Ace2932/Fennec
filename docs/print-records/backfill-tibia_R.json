@@ -1,0 +1,44 @@
+{
+  "part": "tibia_R",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/leg_v6/tibia_R.stl",
+  "material": "PA6-CF (print-batch.md:80)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "docs/checklists/print-batch.md:380 'printed: tibia x1 ... 2026-08-02' (slicer receipt names tibia_R specifically); ~/claude-memory/patterns/physical-parts-drift-from-the-repo.md 2026-08-10 addendum table",
+  "status": "multiple bench revisions in service \u2014 see exports",
+  "downloads_exports": [
+    {
+      "file": "tibia_R.stl",
+      "stl_sha256_16": "d0d6a2f9a925d7d3",
+      "git_head": "c693a203151cd25d2c225b79de9bbb6ce3383dcc",
+      "git_head_date": "2026-07-11",
+      "matches_head": false,
+      "head_hash": "b0fa8eb85c58df9a"
+    },
+    {
+      "file": "tibia_R (1).stl",
+      "stl_sha256_16": "a2cccfcda3b9f3b1",
+      "git_head": "77dc74c223d46f35bccf52beabbe960f043433f0",
+      "git_head_date": "2026-07-16",
+      "matches_head": false,
+      "head_hash": "b0fa8eb85c58df9a"
+    },
+    {
+      "file": "tibia_R (2).stl",
+      "stl_sha256_16": "ff2af80de957ac90",
+      "git_head": "2d05ef68575798ba37c1562fd02cca1c5d5023ff",
+      "git_head_date": "2026-08-05",
+      "matches_head": false,
+      "head_hash": "b0fa8eb85c58df9a"
+    },
+    {
+      "file": "tibia_R (3).stl",
+      "stl_sha256_16": "b0fa8eb85c58df9a",
+      "git_head": "f01b7d30ac95b163f005e008e0da0e9ab634f9a1",
+      "git_head_date": "2026-08-06",
+      "matches_head": true
+    }
+  ],
+  "notes": "4 distinct export revisions found (07-11, 07-16, 08-05, 08-06=current). Per the memory's 2026-08-10 table, at least the pre-#277 (08-05) and current (08-06) revisions were bench-confirmed in service at different times \u2014 do not assume only the newest export is physically on the robot."
+}
