@@ -1,6 +1,7 @@
 {
   "part": "grommet_insert",
-  "printed": true,
+  "printed": null,
+  "printed_evidence": "none — Downloads export only; print-batch.md:82 unchecked as of 2026-09-05",
   "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
   "repo_path": "hardware/cad/leg_v6/grommet_insert.stl",
   "material": "TPU 95A (print-batch.md:82,95)",
@@ -17,5 +18,5 @@
       "head_hash": "f32ebebe7c9f64a9"
     }
   ],
-  "notes": "BEHIND HEAD (f32ebebe7c9f64a9) \u2014 confirms the memory's +8.19% figure by an independent sha256 check. NOTE the doc conflict this surfaces: docs/checklists/print-batch.md:82 still marks 'grommet_insert x6' with an open box (unprinted, LA-25 OD ladder not yet run) as of its last edit, which contradicts this Downloads export existing at all. Not resolved here \u2014 flagging for a human to reconcile which record is stale."
+  "notes": "BEHIND HEAD (f32ebebe7c9f64a9) \u2014 confirms the memory's +8.19% figure by an independent sha256 check. RESOLVED 2026-09-05 (review on #402): the doc conflict is not a stale-record question, it's export \u2260 print \u2014 a ~/Downloads export only proves a slice/export happened, not a print. print-batch.md:82 still marks 'grommet_insert x6' with an open box (unprinted, LA-25 OD ladder not yet run), and that is the authoritative signal: no checklist \u2705, no STATUS.md/BUILD_PLAN/memory line says this part was printed. `printed` corrected to null."
 }
