@@ -125,8 +125,9 @@ jobs:
         working-directory: hardware/cad/leg_v6
         run: |
           python ../mesh_health.py *_R.stl *_L.stl knee_arm.stl knee_bumper.stl \
-            shoulder.stl shoulder_plate.stl shoulder_plate_L.stl cable_clip.stl \
-            strap.stl grommet_insert.stl coax_hfe_block.stl coax_hfe_block_L.stl
+            shoulder.stl shoulder_sw1.stl sw1_coupon.stl shoulder_plate.stl \
+            shoulder_plate_L.stl cable_clip.stl strap.stl grommet_insert.stl \
+            coax_hfe_block.stl coax_hfe_block_L.stl
 
       - name: Servo orientation gate
         # Proves each servo seats only ONE way round — this is the evidence the
