@@ -62,7 +62,7 @@ Full multi-phase, both-board audit. Both boards are routed + DRC-clean (logic: 0
 - **Pololu:** D42V55F7 arm buck (~$32) — Phase-4 install
 - **Amazon:** +1 INA226 20A R002 module — arm U12 consumed the 4th/spare → 0 spares now
 - **Feetech / AliExpress:** 6× servo daisy-chain cables — Phase-4 arm (user handling)
-- **PCBWay:** both boards ×5 + stencils — **after** power-board routing (J14/EN/U12) + gerber regen
+- ~~**PCBWay:** both boards ×5 + stencils — **after** power-board routing (J14/EN/U12) + gerber regen~~ → **done at JLCPCB 2026-07-01**, see STATUS.md (no stencils — hand-soldered by design)
 
 ### Why this is the last DigiKey trip
 Both boards DRC-clean → no design churn pulling new parts; pending power edits add nothing orderable; Phase-4 electronics folded in (TVS arm clamp in the ×5). Only re-order risk = a 1% trip-point value (R4 11.3k / R6 12.1k) failing bench trim → buy a couple neighboring values as insurance.
@@ -433,10 +433,10 @@ re-check grip on a current-design print before final torque (esp. the ×8 wheel)
 
 ## 7. PCB v6 (separate order, after design)
 
-### NovaSM3 PCB v6 — custom redesign (~$60 PCBWay)
+### ~~NovaSM3 PCB v6 — custom redesign (~$60 PCBWay)~~ → **done at JLCPCB 2026-07-01**, see STATUS.md
 - Design spec lives in [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md)
 - Order after schematic + Gerbers reviewed
-- Recommend ordering 5 boards (PCBWay minimum is usually 5 or 10) for spares + revision iteration
+- ~~Recommend ordering 5 boards (PCBWay minimum is usually 5 or 10) for spares + revision iteration~~ → **done at JLCPCB 2026-07-01**, see STATUS.md
 - Stencil: order alongside for SMD population
 
 ---
@@ -485,7 +485,7 @@ Not included: PCB v6 (~$60), arm servo top-up (~$50).
    - **Pololu direct:** D42V55F12 + D42V110F7 + D42V110F12 + D24V22F12 (one shop, free shipping over $100 — $171 bundle qualifies easily)
    - **DigiKey or Mouser:** LC filter parts (inductor + cap), SN74LVC125A, comparator, MOSFETs, bulk caps — single electronics order
    - **Feetech / AliExpress:** servo top-up (separate, slow boat)
-   - **PCBWay:** PCB v6 (after design freeze)
+   - ~~**PCBWay:** PCB v6 (after design freeze)~~ → **done at JLCPCB 2026-07-01**, see STATUS.md
 
 2. **Verify before pulling trigger (remaining items):**
    - DP cable matches your actual monitor input
