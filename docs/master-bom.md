@@ -48,8 +48,8 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 | **SN74LVC125AD** SOIC-14 ×5 | U7 | ✅ **populated stage 3** (BUILD_PLAN.md:625 — "U8 (SOIC-8) — and U7 (SOIC-14) on the logic board"). 5V-tolerant inputs (servo bus is 5V-TTL; HC at 3.3V isn't 5V-tolerant → servo response over-drives input). Same SOIC-14 pinout, VCC 3.3V (max 3.6V). Sch value was stale "74LS125" (5V TTL, wrong for 3.3V). Changed 2026-06-14. |
 | R7 = 10kΩ 0603 | R7 | 🛒 ADD — bus idle pull-up (BUS_SIGNAL→+3V3), keeps half-duplex bus defined in TX/RX turnaround. Added 2026-06-14. |
 | **2.54 shorting jumper — SPC02SYAN (S9001-ND) ×10** | **`JP1`** | ✅ ordered 2026-06-22 in the same batch as U7 / R1 / FB1 (all since fitted, so the bag arrived). **Was missing from this BOM until 2026-08-09.** `JP1` is a bus-master selector and is **inert without a shunt** — the 3-pin header alone connects nothing. **2–3 = Pattern B (v1 default, Teensy through the `U7` buffer). 1–2 = Pattern A (bench/debug from the Jetson via `J9`).** ⚠️ **No shunt fitted = the servo bus has NO master and nothing talks** — a safe default, but an easy "why is the bus dead" at bring-up |
-| Teensy 4.1 socket — PPTC241LFBN-RC ×2 | U6 | ✅ ordered 2026-06-22 (order-list.md:80) — ⬜ confirm in hand before stage 10 |
-| Arduino Nano socket — PPTC151LFBN-RC ×2 | U12 | ✅ ordered 2026-06-22 (order-list.md:80) — ⬜ confirm in hand before stage 10 (Phase 2) |
+| Teensy 4.1 socket — PPTC241LFBN-RC ×2 | U6 | ✅ in hand (confirmed by Aiden 2026-09-05; ordered 2026-06-22, order-list.md:80) |
+| Arduino Nano socket — PPTC151LFBN-RC ×2 | U12 | ✅ in hand (confirmed by Aiden 2026-09-05; ordered 2026-06-22, order-list.md:80) — fit at Phase 2 |
 | R1 = 22Ω 0603 (RC0603FR-0722RL) | R1 | 🛒 ADD to DigiKey — un-DNP'd 2026-06-13 (was open bus) |
 | FB1 = ferrite 0603 600Ω@100MHz | FB1 | 🛒 ADD to DigiKey — un-DNP'd 2026-06-13 |
 | R2–R6 = 1kΩ 0603 ×5 | R2–R6 | 🛒 ADD — OLED SPI series protection (5V Nano logic → SSD1331), added 2026-06-14 |
