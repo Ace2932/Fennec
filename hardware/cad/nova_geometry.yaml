@@ -1,35 +1,32 @@
-# nova_geometry.yaml — SINGLE SOURCE OF TRUTH for NovaSM3 leg kinematics.
+# nova_geometry.yaml — CAD-side reference copy of the leg kinematic constants.
 #
-# Consumed by (keep in sync — test_urdf_sync.py enforces the code copies match):
-#   - nova_description/urdf/nova.urdf.xacro   (link offset properties)
-#   - nova_locomotion/.../kinematics/leg_ik.py  (LegParams defaults)
+# Consumed by: ros2_ws/src/nova_locomotion/test/test_urdf_sync.py, which loads
+# this file and asserts leg.hip_offset/femur/tibia equal both
+# nova_locomotion/.../kinematics/leg_ik.py (LegParams defaults) and
+# nova_description/urdf/nova.urdf.xacro. Edit here AND there; the test fails
+# loudly on drift.
 #
-# WHY this file exists: link lengths were duplicated as un-enforced SpotMicro
-# placeholders in two packages (review flaw). This is the one place to edit;
-# update the two copies from here, and the sync test catches drift.
-#
-# STATUS: values are ESTIMATES cross-checked against measured part bounding
-# boxes (tool: hardware/cad/tools/stl_measure.py). They are NOT yet the exact
-# axis-to-axis distances — bbox includes mounts/overhang, and the true joint
-# axes (servo spline positions) come from how coax/femur/tibia mate in the
-# assembly. **Refine from the OnShape assembly (mate-connector distances) or
-# caliper the physical leg, then update this file + the two copies.** (Blocker B2.)
+# STATUS: measured 2026-07-01 (femur/tibia, STL bores/foot-post) and
+# 2026-07-02 (hip_offset, A360 assembly) — see leg_ik.py's own comments for
+# the per-joint breakdown. Blocker B2 (exact axis-to-axis vs bbox estimate)
+# is CLOSED.
 
 units: metres   # URDF/IK use metres; CAD STLs are mm (÷1000)
 
 # --- measured part bounding boxes (stl_measure.py, leg_v5/*_L.stl, 2026-06-16) ---
-# Reference only — bbox ≥ true axis-to-axis link length.
+# Reference only, predates the v6/B2 measurement — bbox >= true axis-to-axis
+# link length, kept for provenance.
 measured_bbox_mm:
   coax_L:        [37.59, 46.13, 57.50]   # hip-roll (HAA) hub
   femur_shell_L: [138.54, 51.09, 34.66]  # hip-pitch (HFE) link, knee servo inside
   tibia_L:       [129.35, 100.09, 38.48] # knee (KFE) link, L-shaped, passive
 
-# --- leg kinematic parameters (the canonical numbers) ---
+# --- leg kinematic parameters (the canonical numbers, test-enforced) ---
 leg:
-  hip_offset:  0.045   # HAA axis -> HFE axis, lateral (+y)   [ESTIMATE / TODO-CAD]
-  femur:       0.11    # HFE axis -> KFE axis  (bbox X 0.139) [ESTIMATE / TODO-CAD]
-  tibia:       0.13    # KFE axis -> foot      (bbox X 0.129) [ESTIMATE / TODO-CAD]
-  # joint travel limits (rad), conservative placeholders
+  hip_offset:  0.0643  # HAA axis -> HFE axis, lateral (+y). MEASURED 2026-07-02.
+  femur:       0.1069  # HFE axis -> KFE axis.  MEASURED 2026-07-01 (STL bores).
+  tibia:       0.1290  # KFE axis -> foot.      MEASURED 2026-07-01 (STL foot-post ctr).
+  # joint travel limits (rad), conservative placeholders — not test-enforced
   haa_range:   0.7
   hfe_range:   1.5
   kfe_range:   2.2
@@ -39,10 +36,3 @@ servo:
   model: Feetech_STS3215
   body_mm:        [45.40, 24.80, 34.30]
   spline_x_offset_mm: 12.50   # spline axis offset from body center along long axis
-
-# how to refine (closes B2):
-#   1. OnShape assembly: measure the mate-connector distance between consecutive
-#      joint axes (HAA->HFE->KFE->foot). Those are the exact femur/tibia/hip_offset.
-#   2. or caliper the assembled leg axis-to-axis.
-#   3. update leg.* here, then nova.urdf.xacro + leg_ik.LegParams to match;
-#      run nova_locomotion/test/test_urdf_sync.py (must pass).

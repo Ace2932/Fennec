@@ -16,6 +16,7 @@ import math
 import os
 import re
 import pytest
+import yaml
 
 from nova_locomotion.kinematics.leg_ik import LegParams, forward_kinematics
 
@@ -61,6 +62,44 @@ def test_leg_lengths_match_urdf():
     )
     assert abs(_prop(text, "lower_to_foot_z")) == pytest.approx(p.tibia), (
         "tibia diverged from URDF lower_to_foot_z"
+    )
+
+
+# ---- #392: nova_geometry.yaml claimed to be the CAD source of truth and was
+# read by nothing (grep for its own name returned only itself). Load it for
+# real and enforce it against the same two consumers checked above.
+
+_GEOMETRY_YAML = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "hardware",
+                 "cad", "nova_geometry.yaml")
+)
+
+
+@pytest.mark.skipif(
+    not (os.path.exists(_GEOMETRY_YAML) and os.path.exists(_URDF)),
+    reason="nova_geometry.yaml or URDF not present in this checkout",
+)
+def test_nova_geometry_yaml_matches_leg_ik_and_urdf():
+    with open(_GEOMETRY_YAML) as f:
+        leg = yaml.safe_load(f)["leg"]
+    p = LegParams()
+    text = open(_URDF).read()
+
+    assert leg["hip_offset"] == pytest.approx(p.hip_offset), "yaml hip_offset diverged from LegParams"
+    assert leg["femur"] == pytest.approx(p.femur), "yaml femur diverged from LegParams"
+    assert leg["tibia"] == pytest.approx(p.tibia), "yaml tibia diverged from LegParams"
+
+    lateral = (
+        _prop(text, "hip_to_upper_y")
+        + _prop(text, "upper_to_lower_y")
+        + _prop(text, "lower_to_foot_y")
+    )
+    assert leg["hip_offset"] == pytest.approx(lateral), "yaml hip_offset diverged from URDF"
+    assert leg["femur"] == pytest.approx(abs(_prop(text, "upper_to_lower_z"))), (
+        "yaml femur diverged from URDF"
+    )
+    assert leg["tibia"] == pytest.approx(abs(_prop(text, "lower_to_foot_z"))), (
+        "yaml tibia diverged from URDF"
     )
 
 
