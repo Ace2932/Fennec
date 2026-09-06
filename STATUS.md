@@ -4,12 +4,43 @@ Single-pane blockers / in-progress / next-actions. Hand-maintained; the detail
 lives in `README.md` (Open Decisions + Build Roadmap), `docs/order-list.md`,
 per-board `ROUTING_HANDOFF.md`, and memory. Update when state changes.
 
-_Last updated: 2026-08-16. **The solder/bench state here is a MIRROR of Notion
+_Last updated: 2026-09-05 (review pass; solder state unchanged since 2026-08-16). **The solder/bench state here is a MIRROR of Notion
 (🔧 Soldering / Assembly Steps) and normally lags it — read Notion before acting.**
 ⚠️ **On 2026-08-16 that relationship INVERTED**: Notion sat at its 2026-08-09 edit while
 this file and `BUILD_PLAN.md` already carried stages 7–9. Notion has since been brought
 forward, but "Notion wins" is a convention, not a mechanism — check the edit date on both
 before trusting either._
+
+## 🔍 2026-09-05 — FULL REVIEW PASS MERGED (CAD / PCB / wiring / cross-domain)
+
+Five-domain review 2026-09-04, 13 gaps filed (#389–#401), every fix adversarially re-reviewed
+(each review caught a real defect in the fix), all merged 2026-09-05: #388 (8-day-orphaned
+wiring sync, merged first), #402, #404, #405, #406, #408. CI green on main. Detail:
+`~/claude-memory/nova-proj/project-review-2026-09-04.md`.
+
+**Now on main, that a builder must know:**
+- **E-stop needs TWO NC contact blocks** — SW2 (hardware, kills bucks) AND J21 → Teensy pin 5
+  (software, `SafetyFSM`). Wiring doc had only SW2. (#389)
+- **Regen TVS clamps** (SMBJ8.5A ×2 leg, SMBJ13A hip) go in the XT30 pigtails, band to +.
+  They protect the 25 V caps only — leg servos are 8.4 V abs max; servo exposure during an
+  e-stop regen event is UNQUANTIFIED, needs a scope (same gap as #244). (#390)
+- **Pack → MRBF → J1 trunk = 12 AWG + 5/16" lugs** (both owned). 18 AWG row is per-buck. (#394)
+- **BUILD_PLAN gate 9b** (U6 pad→GPIO continuity, 8 pins) must run BEFORE the stage-10 socket
+  fit. Footprint was fabbed with its own "VERIFY before fab" note unresolved. (#401, open)
+- `hardware/pcb-mods/nova_pcb_v6_logic/DRC_REVIEW.md` now exists; 6 of 7 flagged footprints
+  differ from stock only by a phantom 180° pad-rotation token (harmless). (#399)
+
+**Gates that were green about the wrong thing (fixed):** mezzanine check named Q1 only — now
+max over every top-side part, C8/C9 16 mm, **INA226 stack height still UNMEASURED (WARN, #391
+open, margin today 2.00 mm)**; `nova_geometry.yaml` was read by nothing (now tested);
+EAR_SECTORS and the leg mesh-health list each had a copy CI never ran (now in CI, with a
+guard test on the leg list); shoulder_sw1 gets a real cutout gate instead of a no-op sweep.
+
+**Bench-owned, open:** #391 caliper INA226 stack · #401 run gate 9b · #395 v7 EN_BUCKS
+pull-up · SW1 lamp rating at 16.8 V ⬜ · TVS regen scope capture.
+
+**Process:** stacked PR gets CLOSED (not retargeted) when its base branch is deleted on
+merge — rebase `--onto main` and open fresh. `gh pr close` / `--force` are on the deny list.
 
 ## 🔧 2026-07-31 — BOARDS IN HAND, SOLDERING STARTED
 
