@@ -1,0 +1,31 @@
+{
+  "part": "coax_hfe_plate",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": null,
+  "material": "PA6-CF (coax family, print-batch.md:80)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "STATUS.md:282 'a printed coax the HFE servo would not go into'; docs/checklists/print-batch.md:162 'bench questions against a printed coax \u2014 and the coax was redesigned since (#234/#235/#240)'; ~/claude-memory/patterns/physical-parts-drift-from-the-repo.md 2026-08-06 recovery: 'coax_hfe_plate, twice \u2014 matches no revision of any file that still exists'",
+  "status": "retired \u2014 deleted from HEAD, no current repo path",
+  "downloads_exports": [
+    {
+      "file": "coax_hfe_plate.stl",
+      "stl_sha256_16": "130833a66b7bcb22",
+      "git_head": "1bfa0881ca030c79305904ac1e117888e50d8b6e",
+      "git_head_date": "2026-07-12",
+      "matches_head": false,
+      "head_hash": null,
+      "note": "path hardware/cad/leg_v6/coax_hfe_plate.stl deleted from HEAD"
+    },
+    {
+      "file": "coax_hfe_plate (1).stl",
+      "stl_sha256_16": "8d2edb942391c419",
+      "git_head": "77dc74c223d46f35bccf52beabbe960f043433f0",
+      "git_head_date": "2026-07-16",
+      "matches_head": false,
+      "head_hash": null,
+      "note": "path hardware/cad/leg_v6/coax_hfe_plate.stl deleted from HEAD"
+    }
+  ],
+  "notes": "CORRECTION to the memory's phrasing: an independent sha256 re-check in this backfill DOES find exact git-blob matches for both Downloads exports \u2014 2026-07-12 and 2026-07-16 revisions of hardware/cad/leg_v6/coax_hfe_plate.stl. The memory's 'matches no revision of any file that still exists' meant no match against a CURRENTLY TRACKED path (the part was retired in #234/#235/#240 and the file deleted outright), not that no historical git blob matched \u2014 it does, we can name the exact commits. The design this bench part belongs to is still gone (superseded by coax_hfe_block); recording here so a future check does not have to redo the 'no match' search from scratch."
+}

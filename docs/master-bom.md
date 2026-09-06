@@ -45,11 +45,11 @@ Phases (per `hardware/pcb-mods/README.md`): 0 design (closed) · 1 hardware brin
 ## Logic board — `nova_pcb_v6_logic` (✅ ORDERED ×5 — JLCPCB 2026-07-01, 4L/1oz/HASL)
 | Part | Ref | Status |
 |---|---|---|
-| **SN74LVC125AD** SOIC-14 ×5 | U7 | 🛒 ⚠️ ORDER LVC NOT HC — 5V-tolerant inputs (servo bus is 5V-TTL; HC at 3.3V isn't 5V-tolerant → servo response over-drives input). Same SOIC-14 pinout, VCC 3.3V (max 3.6V). Sch value was stale "74LS125" (5V TTL, wrong for 3.3V). Changed 2026-06-14. |
+| **SN74LVC125AD** SOIC-14 ×5 | U7 | ✅ **populated stage 3** (BUILD_PLAN.md:625 — "U8 (SOIC-8) — and U7 (SOIC-14) on the logic board"). 5V-tolerant inputs (servo bus is 5V-TTL; HC at 3.3V isn't 5V-tolerant → servo response over-drives input). Same SOIC-14 pinout, VCC 3.3V (max 3.6V). Sch value was stale "74LS125" (5V TTL, wrong for 3.3V). Changed 2026-06-14. |
 | R7 = 10kΩ 0603 | R7 | 🛒 ADD — bus idle pull-up (BUS_SIGNAL→+3V3), keeps half-duplex bus defined in TX/RX turnaround. Added 2026-06-14. |
 | **2.54 shorting jumper — SPC02SYAN (S9001-ND) ×10** | **`JP1`** | ✅ ordered 2026-06-22 in the same batch as U7 / R1 / FB1 (all since fitted, so the bag arrived). **Was missing from this BOM until 2026-08-09.** `JP1` is a bus-master selector and is **inert without a shunt** — the 3-pin header alone connects nothing. **2–3 = Pattern B (v1 default, Teensy through the `U7` buffer). 1–2 = Pattern A (bench/debug from the Jetson via `J9`).** ⚠️ **No shunt fitted = the servo bus has NO master and nothing talks** — a safe default, but an easy "why is the bus dead" at bring-up |
-| Teensy 4.1 socket — PPTC241LFBN-RC ×2 | U6 | 🛒 |
-| Arduino Nano socket — PPTC151LFBN-RC ×2 | U12 | 🛒 (Phase 2) |
+| Teensy 4.1 socket — PPTC241LFBN-RC ×2 | U6 | ✅ ordered 2026-06-22 (order-list.md:80) — ⬜ confirm in hand before stage 10 |
+| Arduino Nano socket — PPTC151LFBN-RC ×2 | U12 | ✅ ordered 2026-06-22 (order-list.md:80) — ⬜ confirm in hand before stage 10 (Phase 2) |
 | R1 = 22Ω 0603 (RC0603FR-0722RL) | R1 | 🛒 ADD to DigiKey — un-DNP'd 2026-06-13 (was open bus) |
 | FB1 = ferrite 0603 600Ω@100MHz | FB1 | 🛒 ADD to DigiKey — un-DNP'd 2026-06-13 |
 | R2–R6 = 1kΩ 0603 ×5 | R2–R6 | 🛒 ADD — OLED SPI series protection (5V Nano logic → SSD1331), added 2026-06-14 |
@@ -344,8 +344,8 @@ received (standoffs, wick, rings, MRBF+5191, 12AWG, bench gear), **both PCBs ord
 2026-07-01** (~$203 all-in, one parcel, 3-4d build + 2-4d DDP ship).
 
 **🔴 Order now (blocks v1 bring-up, longest leads):**
-1. **Feetech servo daisy/extension cables** — never received; ~15-20 mixed 200/300mm (also the
-   VCC-pull donor stock). AliExpress slow boat → order immediately.
+1. **Feetech servo daisy/extension cables** — ~~never received; ~15-20 mixed 200/300mm (also the
+   VCC-pull donor stock). AliExpress slow boat → order immediately.~~ → **stale: already RE-ORDERED 2026-07-11** (line 239 — 1st Amazon order cancelled, 2× waveshare 5264-3PIN kit re-ordered, arr ~Jul 13). No doc records the re-order actually arriving → ⬜ confirm arrival on the bench, don't re-order.
 2. **STS3215 19kg top-up** — count shelf first (~6 of 8 at last audit → buy 2 + 1 spare, ~$75);
    also confirm 4× 30kg hips in hand (12 active total).
 3. **+1 INA226 20A R002 module** — 0 spares (arm U12 ate the 4th; 4th now = L2). Same GODIYMODULES

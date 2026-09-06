@@ -1,0 +1,36 @@
+{
+  "part": "femur_R",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/leg_v6/femur_R.stl",
+  "material": "PA6-CF (print-batch.md:80)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "docs/checklists/print-batch.md:380 'printed: femur x1 ... 2026-08-02' (slicer receipt in the same section names femur_R specifically); ~/claude-memory/patterns/physical-parts-drift-from-the-repo.md 2026-08-06 recovery: 'femur_R -0.97 cm3 (-1.21%) <- the #276/#277 cable groove'",
+  "status": "behind",
+  "downloads_exports": [
+    {
+      "file": "femur_R.stl",
+      "stl_sha256_16": "081957bae335cd21",
+      "git_head": "4d4ba02f0739686665027f3151223028dc7f5c41",
+      "git_head_date": "2026-07-13",
+      "matches_head": false,
+      "head_hash": "73824b973ac2ce6d"
+    },
+    {
+      "file": "femur_R (1).stl",
+      "stl_sha256_16": "0ef9c2e10e7481e7",
+      "git_head": "0abd9e177ed3ebd456975b73a27428fb0b71be4f",
+      "git_head_date": "2026-08-03",
+      "matches_head": false,
+      "head_hash": "73824b973ac2ce6d"
+    },
+    {
+      "file": "femur_R (2).stl",
+      "stl_sha256_16": "73824b973ac2ce6d",
+      "git_head": "f01b7d30ac95b163f005e008e0da0e9ab634f9a1",
+      "git_head_date": "2026-08-06",
+      "matches_head": true
+    }
+  ],
+  "notes": "The bench part (printed 2026-08-02) predates ALL three export revisions found here (07-13, 08-03, 08-06) except the 07-13 one, and per the memory recovery is missing the #276/#277 cable groove (both landed 08-05/08-06) \u2014 i.e. it is BEHIND, consistent with the 07-13 (#84) export being the closest available match, though no export exactly dated 08-02 was found. Flagging as behind rather than asserting an exact git_head."
+}

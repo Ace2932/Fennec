@@ -1,0 +1,20 @@
+{
+  "part": "femur_L",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/leg_v6/femur_L.stl",
+  "material": "PA6-CF (print-batch.md:80)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "~/claude-memory/nova-proj/reference-printing-setup.md 2026-08-07/08 bench session: '2x femur_L at the current revision'",
+  "status": "current",
+  "downloads_exports": [
+    {
+      "file": "femur_L.stl",
+      "stl_sha256_16": "b6efce7a57088cf7",
+      "git_head": "f01b7d30ac95b163f005e008e0da0e9ab634f9a1",
+      "git_head_date": "2026-08-06",
+      "matches_head": true
+    }
+  ],
+  "notes": "Export hash equals current HEAD blob hash \u2014 matches memory's own 'current revision' characterization. Two femur_L were printed at this revision; only one Downloads export."
+}

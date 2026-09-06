@@ -1,0 +1,28 @@
+{
+  "part": "tibia_L",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/leg_v6/tibia_L.stl",
+  "material": "PA6-CF (print-batch.md:80)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "docs/checklists/print-batch.md:380 (generic 'tibia x1' 2026-08-02); ~/claude-memory/patterns/physical-parts-drift-from-the-repo.md 2026-08-10 addendum: 'tibia_L (1) Aug 6 = f01b7d30, byte-identical to HEAD; tibia_L Aug 5 = 2d05ef68, behind #277' \u2014 Aiden CONFIRMED both are in service (DECIDED drift)",
+  "status": "one current, one DECIDED-behind (owner-confirmed)",
+  "downloads_exports": [
+    {
+      "file": "tibia_L.stl",
+      "stl_sha256_16": "6d3f0305a1a7d6de",
+      "git_head": "2d05ef68575798ba37c1562fd02cca1c5d5023ff",
+      "git_head_date": "2026-08-05",
+      "matches_head": false,
+      "head_hash": "4ccaa7c08ba3c878"
+    },
+    {
+      "file": "tibia_L (1).stl",
+      "stl_sha256_16": "4ccaa7c08ba3c878",
+      "git_head": "f01b7d30ac95b163f005e008e0da0e9ab634f9a1",
+      "git_head_date": "2026-08-06",
+      "matches_head": true
+    }
+  ],
+  "notes": "Two left tibiae are knowingly on the bench at different revisions: one current, one missing the #277 cable-exit chamfer. Owner-confirmed acceptable per the memory's 2026-08-10 entry ('the other one has the gap in the back but just not chamferred fully, still fits okay')."
+}

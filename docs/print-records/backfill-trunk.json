@@ -1,0 +1,21 @@
+{
+  "part": "trunk",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/chassis/trunk.stl",
+  "material": "unknown \u2014 backfilled",
+  "settings": "unknown \u2014 backfilled",
+  "source": "~/claude-memory/nova-proj/reference-printing-setup.md 2026-08-07/08 bench session 'trunk printed last, with the directive that did not exist until this session'; ~/claude-memory/patterns/physical-parts-drift-from-the-repo.md DECIDED-drift case (FOOT_CSK_D 6.4->6.0, #301/#321) records both hashes: bench e995d822ec2b89dc, repo fa8a2fc99be3dbd2",
+  "status": "behind \u2014 DECIDED drift, owner-confirmed acceptable",
+  "downloads_exports": [
+    {
+      "file": "trunk.stl",
+      "stl_sha256_16": "e995d822ec2b89dc",
+      "git_head": "1bfa0881ca030c79305904ac1e117888e50d8b6e",
+      "git_head_date": "2026-07-12",
+      "matches_head": false,
+      "head_hash": "fa8a2fc99be3dbd2"
+    }
+  ],
+  "notes": "This backfill's independent sha256 check reproduces the exact hash pair the memory already recorded by hand (e995d822ec2b89dc / fa8a2fc99be3dbd2) \u2014 a good cross-check that the hashing procedure used here is correct. Aiden was asked before the FOOT_CSK_D 6.4->6.0 change and chose fix-now-but-do-not-reprint: 0.10mm of wall is under one 0.4mm extrusion width, through-bolt+nyloc still bears. Deliberate, not undeclared, drift."
+}

@@ -306,6 +306,8 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 
 ## Build Roadmap
 
+**Superseded — this roadmap is the May-2026 plan kept for history. Live state: [`STATUS.md`](STATUS.md) (boards fabbed + populated to stage 9, firmware links, legs printing).**
+
 ### Phase 0 — Pre-build setup (current)
 
 3-week sequenced plan in [`docs/work-schedule.md`](./docs/work-schedule.md). Front-loads leg-joint CAD + prints; reserves 2026-05-29 away-week for laptop-only PCB schematic work in KiCad.
@@ -337,7 +339,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [ ] Backup: continue Teensy firmware / URDF / ROS 2 scaffolding if PCB stalls or finishes early
 
 **Week 4+ (back to shop):**
-- [ ] Bench-validate prints; submit Gerbers to PCBWay (~$60); continue Phase 1 hardware bring-up
+- [x] ~~Bench-validate prints; submit Gerbers to PCBWay (~$60)~~ — both boards fabbed at JLCPCB 2026-07-01 (~$203 all-in, see STATUS.md); continue Phase 1 hardware bring-up
 - [ ] Order remaining parts (switch, Pololu bucks ×4, charger bundle, safety parts, accessories) — NVMe deferred
 
 ### Phase 1 — Hardware bring-up (weeks 1-4)

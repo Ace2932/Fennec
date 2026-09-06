@@ -1,0 +1,20 @@
+{
+  "part": "l2_adapter",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/chassis/l2_adapter.stl",
+  "material": "PETG-CF or PA6-CF (print-batch.md:81 lists both as acceptable)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "~/claude-memory/nova-proj/reference-printing-setup.md 2026-08-07/08 bench session: 'Printed and CONFIRMED FITTING: l2_adapter (the #278 fix ...)'",
+  "status": "current",
+  "downloads_exports": [
+    {
+      "file": "l2_adapter.stl",
+      "stl_sha256_16": "431b2e6eef45d9d5",
+      "git_head": "0ffa7b33c804cf0cc3569eba0a15e9d6cc150fc1",
+      "git_head_date": "2026-08-06",
+      "matches_head": true
+    }
+  ],
+  "notes": "Export hash equals current HEAD blob hash \u2014 matches the #278 fix commit exactly, and memory records the fit as CONFIRMED on the bench."
+}

@@ -4,6 +4,13 @@ From the 2026-07-06 batch-questions review. The caliper prereqs are now
 CLEARED (Jetson heatsink 34.9, D456 rear pattern confirmed, pack 510 g, 5191
 = external mount) — so floor_plate / battery_pocket no longer risk a re-print.
 
+**Every print gets a record in `docs/print-records/`** (`slice_plate.py` writes
+it going forward; commit it when the plate is actually printed — the 19
+`backfill-<part>.json` records there are hand-authored exceptions for prints
+that predate this, see that directory's README) — that is the only way "which
+revision is this bench part?" stays a diff instead of an archaeology exercise
+(see `~/claude-memory/patterns/physical-parts-drift-from-the-repo.md`).
+
 ## ✅ RESOLVED 2026-07-13 — servo disc-interface dims verified (issue #85)
 
 First-article caught one wrong ASSUMED servo dim: idler wheel center hub **Ø8.8**

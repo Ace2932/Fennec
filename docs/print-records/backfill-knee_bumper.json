@@ -1,0 +1,20 @@
+{
+  "part": "knee_bumper",
+  "printed": true,
+  "backfilled": "2026-09-05 from ~/Downloads hash vs git history",
+  "repo_path": "hardware/cad/leg_v6/knee_bumper.stl",
+  "material": "TPU 95A (print-batch.md:82)",
+  "settings": "unknown \u2014 backfilled",
+  "source": "docs/checklists/print-batch.md:82,92 'knee_bumper x4+1 PRINTED'",
+  "status": "current",
+  "downloads_exports": [
+    {
+      "file": "knee_bumper.stl",
+      "stl_sha256_16": "0b443b5ff121b41b",
+      "git_head": "c693a203151cd25d2c225b79de9bbb6ce3383dcc",
+      "git_head_date": "2026-07-11",
+      "matches_head": true
+    }
+  ],
+  "notes": "Export hash equals current HEAD blob hash \u2014 bench part is current."
+}
