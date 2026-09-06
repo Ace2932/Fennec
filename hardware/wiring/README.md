@@ -12,6 +12,7 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
                               ├── E-stop NC (Mxuteuk HB2-ES544, 22 mm latching)
                               │        │ kills leg + hip + L2 + arm EN (EN_BUCKS)
                               │        │ Jetson rail stays live for debug
+                              │        │ 2nd NC contact block → J21 → SafetyFSM (below)
                               │
                               ├── SW1 master rocker (Blue Sea 8282 Contura, ~18 A,
                               │        front-shoulder panel — VBAT → VBAT_PROTECTED;
@@ -23,10 +24,12 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
                                 │                                 (8× STS3215 19kg femur/tibia)
                                 │                                 ★ 4× XT30 star injection
                                 │                                 1000 µF / 25V bulk cap at each
+                                │                                 2× SMBJ8.5A TVS across injections
                                 │
                                 ├─ Pololu D42V110F12 → 12V/9A   → hip rail
                                 │                                 (4× STS3215 30kg ONLY)
                                 │                                 XT30 injection at chassis floor
+                                │                                 SMBJ13A TVS across injection
                                 │
                                 ├─ Pololu D24V22F12  → 12V/2.6A → L2 LiDAR (dedicated)
                                 │                                 LC filter on output:
@@ -48,6 +51,39 @@ the feed itself is only ever broken by the fuse, Q1 and SW1. (2) **The UBEC is d
 NOT killed by either** — it has no EN, so `V5_AUX` stays up through a hardcut, which is what
 keeps the comparators latched. The one thing that kills it is SW1 (or the pack).
 
+### Regen TVS clamps (harness parts — not on either PCB)
+
+E-stop pressed mid-gait disables the bucks (output high-Z, can no longer sink regen to the
+battery) while the legs keep coasting and generating — the only sink left is the bulk caps,
+and 1 J into ~5000 µF from the 7.5 V leg rail works out to roughly 21 V against 25 V-rated
+caps. Normal-operation regen is already safe (the Pololu bucks are synchronous and sink
+current back to the battery while enabled); the clamp only matters during the disable/e-stop
+window. Order source: `docs/order-list.md:33,58-59,249-256`.
+
+| Injection | TVS part | Qty | Standoff / clamp (datasheet) |
+|---|---|---|---|
+| V7V5_LEG XT30s (leg rail) | SMBJ8.5A | 2 | 8.5 V standoff, 14.4 V max clamping voltage (`V_C` at rated `I_PPM`) |
+| V12_HIP XT30 (hip rail) | SMBJ13A | 1 | 13 V standoff, 21.5 V max clamping voltage |
+| V12_L2 XT30 (optional) | SMBJ13A | 1 (optional) | same as above |
+
+These clamps protect the 25 V bulk caps only — they do not protect the STS3215 servos: the
+leg-rail STS3215s (7.4 V variant, 19 kg) have an absolute max of 8.4 V (`docs/setup-servos.md:92`,
+`BOM.md:64`), and the SMBJ8.5A's 14.4 V max clamping voltage is well above that, so servo
+exposure during an e-stop regen event is unquantified and needs a scope capture (same
+instrument gap as #244).
+
+Numbers above are from the Vishay `SMBJ5.0A thru SMBJ188A` TransZorb datasheet (doc #88392,
+rev 09-Jan-2024), electrical characteristics table: SMBJ8.5A row (V_BR 9.44–10.4 V, V_C
+14.4 V), SMBJ13A row (V_BR 14.4–15.9 V, V_C 21.5 V). Both standoff voltages sit above their
+rail's nominal voltage (8.5 V > 7.5 V leg rail, 13 V > 12 V hip rail — required so the TVS
+doesn't conduct in normal operation), and both clamping voltages land safely under the 25 V
+cap rating, which is the point of installing them.
+
+**Install (per injection pigtail, unidirectional, all parts):** solder across the XT30
+pigtail on the **servo side** of the connector (downstream of the injection point, closest to
+what's generating), **cathode (banded end) to +, anode to GND**. Heat-shrink over the joint —
+same idiom as every other XT/fuse joint (`docs/master-bom.md` harness-consumables table).
+
 ## Safety chain trip points (highest pack voltage first)
 
 | Trip | Pack V | Cell V | Action |
@@ -56,6 +92,14 @@ keeps the comparators latched. The one thing that kills it is SW1 (or the pack).
 | 2 | ~~13.0 V~~ **13.03 V measured-parts** | 3.26 V/cell | LM393 comparator → Teensy GPIO **pin 4** → `/battery_low` Bool → Jetson `systemctl poweroff` (clean SD unmount). ~30-60 s window. |
 | 3 | ~~12.4 V~~ **12.56 V measured-parts** | 3.14 V/cell | Second LM393 stage → **BSS138 (Q2) pulls EN_BUCKS low → all bucks off** (leg/hip/L2/arm); Q4 also kills Jetson EN. Autonomous backstop. (Q1 IRLB3034 = reverse-polarity protection, separate — does NOT break the battery feed.) |
 | — | — | — | E-stop (manual, SW2 NC) — pulls EN_BUCKS low via Q3 → kills leg + hip + L2 + **arm** buck EN. Jetson stays alive. |
+| — | — | — | E-stop (manual, J21 2nd NC) — same button press, tells software: contact opens → Teensy pin 5 reads HIGH (fail-safe) → `SafetyFSM` latches e-stop state, which is what preflight's estop check reads. Does not itself de-energize anything. |
+
+⚠️ **The HB2-ES544 needs TWO separate NC contact blocks** — one per path above. SW2 is the
+hardware kill (button → Q3 → EN_BUCKS, de-energizes the bucks regardless of firmware); J21 is
+the software sense (button → Teensy → `SafetyFSM`, no power path). They are electrically
+independent so either one failing doesn't silently take out the other, but that also means
+both must be wired and both must change state on the same press — see harness row below and
+the continuity check in `docs/pre-power-on-validation.md`.
 
 ⚠️ **Rows 2–3 carry the MEASURED-parts predictions (2026-08-08): 13.03 / 12.56 V** — the
 fitted divider is 0.1794 (R2 99.7k / R3 21.8k) against the UBEC's measured 4.98 V.
@@ -141,6 +185,11 @@ on the servo. Each servo-side plug is assembled from three sources:
 Steps per link: stock Feetech 3-wire cable → **pull the VCC pin from the upstream end** → crimp the
 XT30-fed VCC branch into the servo-side housing. Result: signal path unbroken J8→servo1→…→servo12,
 power a star from the XT30s, and a 12V↔7.5V boundary is physically impossible to miscount.
+
+⚠️ **Each local XT30 injection carries a TVS clamp** (SMBJ8.5A on the 7.5V/leg injections,
+SMBJ13A on the 12V/hip injection) — soldered across the pigtail on the servo side, cathode
+(band) to +, heat-shrunk. See "Regen TVS clamps" above for parts, install, and why. Do this
+before crimping the VCC branch into the servo-side housing, not after.
 
 **Connector housings — don't mix:** servo ports are **Molex 5264-style 2.54mm** (Feetech standard);
 **JST-XH is the board side only** (J8 pigtail). Don't crimp XH housings for servo ends. Chain entry
@@ -229,8 +278,9 @@ built-in WiFi.
 
 | Wire | Gauge | Use |
 |------|-------|-----|
-| 18 AWG silicone | 18 AWG | Servo power (7.5 V + 12 V rails), battery feed to bucks |
-| 22 AWG hookup | 22 AWG | Signal-level (INA226 I²C, comparator outputs, E-stop pairs, buck EN, SW1 lamp ground, RGB LED data) |
+| 18 AWG silicone | 18 AWG | Servo power (7.5 V + 12 V rails), battery feed to bucks — per-station U1–U5 landings only (each ≤ ~6 A input) |
+| 12 AWG silicone | 12 AWG | Pack pigtail → MRBF-30 (Blue Sea 5191 block) → J1 XT60 — the summed ~14-15 A sustained / 25-30 A transient path the 30 A fuse protects; 5/16" (M8) 12-10 AWG ring lugs at the 5191 stud (`docs/master-bom.md:228,231`) |
+| 22 AWG hookup | 22 AWG | Signal-level (INA226 I²C, comparator outputs, E-stop pairs (incl. J21 GPIO sense), buck EN, SW1 lamp ground, RGB LED data) |
 | Feetech TTL daisy-chain | 28 AWG (vendor) | Servo bus signal + power passthrough **within one voltage segment only** (see dual-voltage note — no power across 12V↔7.5V boundary) |
 
 ## Color code
@@ -419,6 +469,10 @@ across the throw is supply+load; the survivor is the lamp.
 | **white** 18 AWG | load (LED pole) | `SW1`.2 | `VBAT_PROTECTED` |
 | **black** 22 AWG | lamp | **`SW2`.1** | `GND` (~20 mA) |
 
+⬜ verify: the lamp is fed from `VBAT_PROTECTED` (up to 16.8 V at full charge) — the Blue Sea
+8282's lamp rating vs that must be confirmed from the primary datasheet (secondary listings
+say 12 V/24 V dual-rated, primary site was unreachable).
+
 ⛔ Lamp ground is **NOT** `J2`.2/`M1`.2 (the clearance-hazard headers above — where the
 M1 short actually happened) and **NOT** `J1`.1 (`BATT_NEG`, routes lamp current around Q1).
 
@@ -497,10 +551,30 @@ bundle.
   grip. Check bundle fit and the drop-to-boards run with real cables.
 - Battery leads: 18 AWG silicone, exit the pack's REAR face behind the
   trunk end, rise through the shoulder-flange bottom notch (y ±10 →
-  z 12) to the MRBF block on the floor plate (`../cad/chassis/README.md`)
+  z 12 — **TRUNK frame**: x fore-aft, y lateral, z up from trunk floor
+  bottom, per `chassis/trunk.scad` / `chassis/riser_bay.scad`) to the MRBF
+  block on the floor plate (`../cad/chassis/README.md`), lined with the TPU
+  `lead_notch_grommet` (`../cad/chassis/lead_notch_grommet.scad`) — same
+  liner role as `case_slot_grommet` above. `docs/improvement-backlog.md`
+  AUD-12b labels this same notch "x±10, z −38.1..−26" — that is
+  **shoulder-LOCAL frame** (x lateral from centerline, z=0 at the haa axes,
+  per `leg_v6/shoulder.scad`'s own frame comment; `lead_notch_grommet.scad`
+  states outright it is "built in the SAME shoulder-LOCAL frame as
+  shoulder.scad itself, not trunk world coords"). Same physical notch, two
+  different frames — not a contradiction, but read each label in its own
+  frame.
 - ~~E-stop button on chassis side panel~~ **side panel is impossible** —
   the mezzanine owns every wall-depth column (chassis review 2026-07-06).
   E-stop = pod ABOVE the riser deck rear strip, designed with the hood.
+- **E-stop 2nd NC contact → logic board J21:** 2-pin, 22 AWG, from the HB2-ES544's *second*
+  NC contact block (the first drives SW2 → EN_SW → Q3 → EN_BUCKS, see safety-chain section
+  above). J21 pin 1 = signal → Teensy pin 5 (`ESTOP_PIN`, `INPUT_PULLUP`,
+  `firmware/teensy/firmware/src/main.cpp:113`); J21 pin 2 = GND. NC-to-GND = LOW idle;
+  pressed OR wire-break/unplug = HIGH (fail-safe) — confirmed against the routed net
+  (`docs/pre-power-on-validation.md` §1, "Routed F.Cu J21.1→U6.T5") and
+  `hardware/pcb-mods/nova_pcb_v6_logic/04_bus_master.kicad_sch`. SW2 kills the bucks in
+  hardware; J21 tells `SafetyFSM` in software — wire both, they are not redundant paths to
+  the same effect.
 
 ## Outstanding wiring decisions
 

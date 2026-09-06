@@ -212,7 +212,7 @@ unfused: a chafed wire or dropped tool across VBAT is the one fire-class failure
   time — NOT paralleled)** real Isc = 16.8 V ÷ ~4–10 mΩ ≈ **1.7–4 kA**, vs MRBF's 10 kA AIC (≈9 kA at 16.8 V) → 2–5× margin, at
   ⅓ the size/weight of a Class T block — better fit for the chassis. Class T (5007 + JJN-30)
   remains the upgrade path if the pack ever grows or parallels.
-- Install: 5191 screwed to chassis near the pack; battery XT60 pigtail → 10 AWG ring → stud →
+- Install: 5191 screwed to chassis near the pack; battery XT60 pigtail → 12 AWG (12-10) ring → stud →
   MRBF-30 → output ring → J1 lead.
 - Still banned: ANL/MIDI/blade (1–6 kA AIC — can fail-to-interrupt even on this pack).
 

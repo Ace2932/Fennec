@@ -174,6 +174,16 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
       **Firmware:** Teensy ESTOP = pin 5 → J21.1 (contact-to-GND, no board pull-up) → set
       `pinMode(5, INPUT_PULLUP)` or pin 5 floats → unreliable read. (Separate sense path from the
       *hardware* kill SW2→EN_SW→Q3→EN_BUCKS, which de-energizes the bucks regardless of firmware.)
+- [ ] **E-stop continuity check (both contacts, same press):** button released → J21 shorted
+      (NC, contact-to-GND) → Teensy pin 5 reads LOW; button pressed → J21 open → pin 5 reads
+      HIGH. Meter-check this on J21 directly, then confirm SW2 (the hardware path) also opens
+      on the SAME press — one NC block failing to change state while the other does is the
+      HB2-ES544 either missing its 2nd contact block or one block miswired.
+- [ ] **TVS present, band toward +** — SMBJ8.5A ×2 on the leg (V7V5_LEG) XT30 injection
+      pigtails, SMBJ13A on the hip (V12_HIP) injection pigtail (optional on V12_L2). Confirm
+      each is soldered across the pigtail on the servo side with the banded (cathode) end to
+      + before first power — reversed polarity shorts the rail instead of clamping it. See
+      `hardware/wiring/README.md` "Regen TVS clamps".
 - [ ] **JP1 (JP_BUS_MASTER) reachable after stack-up** — single config jumper, logic board
       TOP face at (160, 86), **same face as the socketed Teensy U6 + USB** (verified from
       .kicad_pcb). That face must mount outward for USB access → JP1 should be reachable; just
