@@ -1541,17 +1541,23 @@ def main():
           f'underside ({DECK_BOT}), margin={DECK_BOT - lb_top_z:.2f}mm')
     bad |= not ok
 
-    # (c) Q1 (TO-220, top ≈ board_top + 18) clears the logic board
-    # underside (LOGIC_BOARD_Z0, power_board_model.py). The logic board
-    # sits on the pb->lb standoff directly above the power board's TOP
-    # FACE -- NOT pinned to Q1's height (preview_assembly.py) -- so this
-    # must be checked explicitly rather than assumed by construction.
-    q1 = next(c for c in pb_tops if c['ref'] == 'Q1')
-    ok = q1['z1'] <= LOGIC_BOARD_Z0
-    print(('OK    ' if ok else 'FAIL  ') + f"Q1 top (z={q1['z1']:.2f}) clears logic "
-          f'board underside ({LOGIC_BOARD_Z0:.2f}), '
-          f'margin={LOGIC_BOARD_Z0 - q1["z1"]:.2f}mm')
+    # (c) EVERY power-board top-side part (max z1 over pb_tops) clears the
+    # logic board underside (LOGIC_BOARD_Z0, power_board_model.py). The
+    # logic board sits on the pb->lb standoff directly above the power
+    # board's TOP FACE -- NOT pinned to any one part's height
+    # (preview_assembly.py) -- so this must be checked explicitly rather
+    # than assumed by construction, and checked against the whole set, not
+    # a single named ref (#391 -- Q1-only missed the taller INA226/C8/C9).
+    tallest = max(pb_tops, key=lambda c: c['z1'])
+    ok = tallest['z1'] <= LOGIC_BOARD_Z0
+    print(('OK    ' if ok else 'FAIL  ') + f"tallest power-board top part ({tallest['ref']} "
+          f"z={tallest['z1']:.2f}) clears logic board underside ({LOGIC_BOARD_Z0:.2f}), "
+          f"margin={LOGIC_BOARD_Z0 - tallest['z1']:.2f}mm")
     bad |= not ok
+    for c in pb_tops:
+        if c['ref'] in pbm.UNMEASURED:
+            print(f"WARN  {c['ref']} height ({pbm.INA226_STACK_MM}mm) is UNMEASURED "
+                  f"(STATUS.md) -- caliper before trusting this margin")
 
     # (d) trunk rear corner slabs (POSTS, z24.5..47.2 -- distinct from the
     # z0..3.9 stock floor above): same known-zone logic as case 2, but run
@@ -1569,17 +1575,16 @@ def main():
 
     # (e) logic board B.Cu underside (3x 0.6mm 0603 resistors -- the only
     # B.Cu parts on this board, the parsed parts reaching lowest into the
-    # 20mm pb->lb gap) clears Q1's top (the power board's tallest top-side
-    # part, which sits in the same gap). Trivially true by construction
-    # (Q1 top z45.62, logic B.Cu underside z47.02+ -> ~1.4mm) but now
-    # asserted against real parsed geometry on both sides of the gap
-    # instead of assumed.
+    # 20mm pb->lb gap) clears the tallest power-board top-side part, which
+    # sits in the same gap (#391 -- this used to assume Q1 was that part;
+    # checked against `tallest` from case (c) so it stays true if a taller
+    # part is added/re-measured later).
     lb_bot_z = min(c['z0'] for c in lb_bots)
     lb_bot_ref = min(lb_bots, key=lambda c: c['z0'])['ref']
-    ok = lb_bot_z >= q1['z1']
+    ok = lb_bot_z >= tallest['z1']
     print(('OK    ' if ok else 'FAIL  ') + f'logic board B.Cu underside ({lb_bot_ref} '
-          f'z={lb_bot_z:.2f}) clears Q1 top ({q1["z1"]:.2f}) in the pb->lb gap, '
-          f'margin={lb_bot_z - q1["z1"]:.2f}mm')
+          f"z={lb_bot_z:.2f}) clears {tallest['ref']} top ({tallest['z1']:.2f}) in the "
+          f"pb->lb gap, margin={lb_bot_z - tallest['z1']:.2f}mm")
     bad |= not ok
 
     # (f) mezzanine standoff hardware (AUD-4): model the 4 floor->power

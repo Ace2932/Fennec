@@ -18,6 +18,7 @@ $OS -o battery_pocket.stl battery_pocket.scad
 $OS -o head.stl head.scad          # fwd head (D456 face + L2 crown)
 $OS -o head_ear.stl head_ear.scad          # fennec ear / antenna mast (R)
 $OS -o head_ear_L.stl head_ear_L.scad      # ear (L mirror)
+$PY occlusion_ear.py --check               # #396: EAR_SECTORS still bounds the shipped mesh
 $OS -o l2_adapter.stl l2_adapter.scad      # L2 accessible-mount plate
 $OS -o control_pod.stl control_pod.scad    # rear-top E-stop + OLED pod
 $OS -o neck_bracket.stl neck_bracket.scad   # front-shoulder-deck adapter

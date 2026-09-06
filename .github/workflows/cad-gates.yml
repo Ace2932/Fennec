@@ -45,6 +45,11 @@ on:
       - 'sim/nova_mjx/nova.xml'
       - 'sim/nova_mjx/build_mjcf.py'
       - 'ros2_ws/src/nova_ops/nova_ops/rom_envelope_table.py'
+      # occlusion_ear.py --check (chassis-gates) reads this file's EAR_SECTORS
+      # by path -- see occlusion_ear.py:33-38. Same lesson as the two entries
+      # above: narrowed to the one file that's the actual dependency, not the
+      # whole lidar_selffilter/ directory.
+      - 'ros2_ws/src/nova_ops/nova_ops/lidar_selffilter/mask.py'
   push:
     branches: [main]
     paths:
@@ -73,6 +78,7 @@ on:
       - 'sim/nova_mjx/nova.xml'
       - 'sim/nova_mjx/build_mjcf.py'
       - 'ros2_ws/src/nova_ops/nova_ops/rom_envelope_table.py'
+      - 'ros2_ws/src/nova_ops/nova_ops/lidar_selffilter/mask.py'
 
 jobs:
   leg-gates:
@@ -197,6 +203,16 @@ jobs:
         # Leg-vs-chassis interference, fastener families, posture ROM envelope.
         working-directory: hardware/cad/chassis
         run: python check_fit.py
+
+      - name: EAR_SECTORS still bounds the shipped mesh (#396)
+        # This ran ONLY from build_all.sh, which no workflow invokes -- same
+        # hole as the mesh-health step below: a gate wired into build_all.sh
+        # alone is not wired into CI. --check loads the committed head_ear.stl
+        # / head_ear_L.stl (no OpenSCAD; see occlusion_ear.py's __main__ block)
+        # and re-derives mask.py's EAR_SECTORS from them, so it needs nothing
+        # this job doesn't already install.
+        working-directory: hardware/cad/chassis
+        run: python occlusion_ear.py --check
 
       # #321 second half. slice_plate.py also had refs=0, and
       # docs/checklists/print-batch.md calls its registry "the authority for
