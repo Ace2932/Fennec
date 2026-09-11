@@ -14,6 +14,7 @@
 #include "hfe_envelope.h"
 #include "slew_limiter.h"
 #include "safety_state.h"
+#include "loop_timing.h"
 #include "limp_controller.h"
 
 // Joint count = 12 (4 legs × 3 joints). Names/frame_id stay empty in
@@ -570,11 +571,11 @@ volatile uint32_t tick_missed  = 0;     // count of ISR fires that found tick_pe
 #define NOVA_WATCHDOG_TICKS 200
 #endif
 volatile uint32_t main_loop_iter = 0;
-volatile uint32_t last_observed_iter = 0;
-volatile uint32_t no_progress_ticks = 0;
-volatile uint32_t watchdog_resets   = 0;    // survives across resets? no — but
-                                            // useful for in-session diag if a
-                                            // reset was caught + recovered.
+// The trip decision lives in loop_timing.h (nova::ProgressWatchdog, host-
+// tested -- #358 extraction). Only tick_isr() touches this object, so it
+// needs no volatile of its own; main_loop_iter stays volatile because the
+// main loop writes it and the ISR reads it.
+nova::ProgressWatchdog loop_watchdog(NOVA_WATCHDOG_TICKS);
 
 void tick_isr() {
   if (tick_pending) tick_missed++;
@@ -582,37 +583,26 @@ void tick_isr() {
   tick_isr_us  = micros();
 
   // Software watchdog: did the main loop advance since last ISR fire?
-  uint32_t iter_now = main_loop_iter;
-  if (iter_now != last_observed_iter) {
-    last_observed_iter = iter_now;
-    no_progress_ticks = 0;
-  } else {
-    no_progress_ticks++;
-    if (no_progress_ticks >= NOVA_WATCHDOG_TICKS) {
-      // SCB AIRCR — system reset request. VECTKEY = 0x05FA, SYSRESETREQ = 1.
-      // ARMv7-M canonical reboot path; no return. Teensy 4 imxrt.h exposes
-      // the AIRCR register directly as a uint32_t macro.
-      SCB_AIRCR = 0x05FA0004;
-      while (1) {}   // wait for reset to land
-    }
+  // Trips after NOVA_WATCHDOG_TICKS consecutive fires with no change
+  // (nova::ProgressWatchdog::tick). The RESET stays here: how a board reboots
+  // is the one non-portable line.
+  if (loop_watchdog.tick(main_loop_iter)) {
+    // SCB AIRCR — system reset request. VECTKEY = 0x05FA, SYSRESETREQ = 1.
+    // ARMv7-M canonical reboot path; no return. Teensy 4 imxrt.h exposes
+    // the AIRCR register directly as a uint32_t macro.
+    SCB_AIRCR = 0x05FA0004;
+    while (1) {}   // wait for reset to land
   }
 }
 
-// Histogram is per response-latency in microseconds. Bucket width 2 µs,
-// 64 buckets = 0..128 µs, last bucket = overflow. Reset each report.
-constexpr int      HIST_BUCKETS    = 64;
-constexpr uint32_t HIST_BUCKET_US  = 2;
-uint32_t hist[HIST_BUCKETS];
-uint32_t max_latency_us  = 0;
-uint32_t tick_count_window = 0;
-
-// Per-tick handler execution time histogram — separate from response-latency.
-// Bucket width 10 µs, 64 buckets = 0..640 µs, last = overflow. Captures the
-// cost of the work inside the tick (bus, INA226 poll, micro-ROS pubs).
-constexpr int      EXEC_HIST_BUCKETS   = 64;
-constexpr uint32_t EXEC_HIST_BUCKET_US = 10;
-uint32_t exec_hist[EXEC_HIST_BUCKETS];
-uint32_t max_exec_us = 0;
+// Response-latency histogram: bucket width 2 µs, 64 buckets = 0..128 µs,
+// last bucket = overflow. Reset each report. Per-tick handler exec-time
+// histogram: 10 µs x 64 = 0..640 µs, last = overflow -- the cost of the work
+// inside the tick (bus, INA226 poll, micro-ROS pubs), kept separate from
+// scheduling jitter. Both are nova::LatencyHistogram (loop_timing.h, host-
+// tested -- #358 extraction); bucket edges, p99 walk and reset are unchanged.
+nova::LatencyHistogram<64, 2>  latency_hist;
+nova::LatencyHistogram<64, 10> exec_time_hist;
 
 #ifdef NOVA_USE_MICRO_ROS
 rcl_publisher_t heartbeat_pub;
@@ -830,21 +820,9 @@ void safety_clear_callback(const void* msgin) {
 }
 #endif
 
-// Walk histogram cumulatively, return bucket-midpoint µs where cumulative
-// count first exceeds 99 % of total. Overflow bucket reports n_buckets *
-// bucket_us. Used for both response-latency (hist, 2 µs buckets) and
-// exec-time (exec_hist, 10 µs buckets) histograms.
-uint32_t compute_p99_us(const uint32_t* h, int n_buckets, uint32_t bucket_us,
-                        uint32_t total_count) {
-  if (total_count == 0) return 0;
-  uint32_t target = (total_count * 99 + 99) / 100;   // ceil(0.99 * n)
-  uint32_t cum = 0;
-  for (int i = 0; i < n_buckets; i++) {
-    cum += h[i];
-    if (cum >= target) return i * bucket_us + bucket_us / 2;
-  }
-  return n_buckets * bucket_us;
-}
+// compute_p99_us (cumulative walk to ceil(0.99 n), bucket midpoint, overflow =
+// n_buckets * bucket_us) moved to loop_timing.h as nova::compute_p99_us
+// (2026-09-10, #358) -- LatencyHistogram::p99_us() calls it.
 
 void setup() {
   // GPIO directions
@@ -1233,11 +1211,7 @@ void loop() {
     uint32_t handler_start_us = micros();
     uint32_t latency_us = handler_start_us - fire_us;
 
-    uint32_t b = latency_us / HIST_BUCKET_US;
-    if (b >= (uint32_t)HIST_BUCKETS) b = HIST_BUCKETS - 1;
-    hist[b]++;
-    if (latency_us > max_latency_us) max_latency_us = latency_us;
-    tick_count_window++;
+    latency_hist.record(latency_us);
 
     // Servo bus — one read per tick (round-robin) + decimated SYNC_WRITE
     // broadcast of the latest joint_commands. Both no-ops at the wire level
@@ -1383,10 +1357,7 @@ void loop() {
     // real work cost (bus + I²C + publishes + executor spin) separately
     // from scheduling jitter.
     uint32_t exec_us = micros() - handler_start_us;
-    uint32_t eb = exec_us / EXEC_HIST_BUCKET_US;
-    if (eb >= (uint32_t)EXEC_HIST_BUCKETS) eb = EXEC_HIST_BUCKETS - 1;
-    exec_hist[eb]++;
-    if (exec_us > max_exec_us) max_exec_us = exec_us;
+    exec_time_hist.record(exec_us);
   }
 
   if (heartbeat_ms >= HEARTBEAT_PERIOD_MS) {
@@ -1523,12 +1494,10 @@ void loop() {
   if (stats_ms >= STATS_PERIOD_MS) {
     stats_ms = 0;
 #ifdef NOVA_USE_MICRO_ROS
-    loop_max_msg.data = (int32_t)max_latency_us;
-    loop_p99_msg.data = (int32_t)compute_p99_us(
-        hist, HIST_BUCKETS, HIST_BUCKET_US, tick_count_window);
-    loop_exec_max_msg.data = (int32_t)max_exec_us;
-    loop_exec_p99_msg.data = (int32_t)compute_p99_us(
-        exec_hist, EXEC_HIST_BUCKETS, EXEC_HIST_BUCKET_US, tick_count_window);
+    loop_max_msg.data      = (int32_t)latency_hist.max_us();
+    loop_p99_msg.data      = (int32_t)latency_hist.p99_us();
+    loop_exec_max_msg.data = (int32_t)exec_time_hist.max_us();
+    loop_exec_p99_msg.data = (int32_t)exec_time_hist.p99_us();
     tick_missed_msg.data = (int32_t)tick_missed;
     RCSOFTCHECK(rcl_publish(&loop_max_pub,      &loop_max_msg,      NULL));
     RCSOFTCHECK(rcl_publish(&loop_p99_pub,      &loop_p99_msg,      NULL));
@@ -1536,11 +1505,8 @@ void loop() {
     RCSOFTCHECK(rcl_publish(&loop_exec_p99_pub, &loop_exec_p99_msg, NULL));
     RCSOFTCHECK(rcl_publish(&tick_missed_pub,   &tick_missed_msg,   NULL));
 #endif
-    max_latency_us = 0;
-    max_exec_us = 0;
-    tick_count_window = 0;
-    for (int i = 0; i < HIST_BUCKETS; i++)      hist[i]      = 0;
-    for (int i = 0; i < EXEC_HIST_BUCKETS; i++) exec_hist[i] = 0;
+    latency_hist.reset();
+    exec_time_hist.reset();
     // tick_missed is a monotonic counter, NOT reset — let it accumulate so
     // host-side dashboards can spot a long-term regression.
   }
