@@ -163,3 +163,50 @@ def test_reassign_id_fails_when_old_id_not_responding():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+# ---------------------------------------------------------------------------
+# read_reg() / identify(): tell the 7.4 V STS3215 from the 12 V ST-3215-C018
+# by the servo's own EEPROM max-input-voltage limit (reg 0x0E).
+# ---------------------------------------------------------------------------
+
+def read_response(sid, data, err=0x00):
+    """FF FF id len err data... checksum, len = len(data) + 2."""
+    body = bytes([sid, len(data) + 2, err]) + bytes(data)
+    return b"\xff\xff" + body + bytes([sid_mod.checksum(body)])
+
+
+def _identity_responses(sid, max_v):
+    # order matches identify(): fw, servo_ver, max_v, min_v, max_torque, present_v
+    return [read_response(sid, [3, 7]), read_response(sid, [9, 3]),
+            read_response(sid, [max_v]), read_response(sid, [40]),
+            read_response(sid, [0xE8, 0x03]), read_response(sid, [75])]
+
+
+def test_read_reg_returns_payload_bytes():
+    ser = FakeSerial([read_response(4, [0xE8, 0x03])])
+    assert sid_mod.read_reg(ser, 4, 0x10, 2) == bytes([0xE8, 0x03])
+
+
+def test_read_reg_rejects_corrupt_checksum():
+    bad = bytearray(read_response(4, [80]))
+    bad[-1] ^= 0xFF
+    assert sid_mod.read_reg(FakeSerial([bytes(bad)]), 4, 0x0E, 1) is None
+
+
+def test_read_reg_rejects_error_byte():
+    assert sid_mod.read_reg(FakeSerial([read_response(4, [80], err=0x20)]), 4, 0x0E, 1) is None
+
+
+def test_identify_flags_a_7v4_servo_as_not_for_the_hip_rail():
+    d = sid_mod.identify(FakeSerial(_identity_responses(4, 80)), 4)
+    assert d["family"] == "7.4V" and d["max_v"] == 80 and d["max_torque"] == 1000
+
+
+def test_identify_reads_a_12v_part():
+    d = sid_mod.identify(FakeSerial(_identity_responses(4, 140)), 4)
+    assert d["family"] == "12V"
+
+
+def test_identify_none_when_servo_silent():
+    assert sid_mod.identify(FakeSerial([]), 4) is None
