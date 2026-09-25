@@ -26,10 +26,15 @@ leg:
   hip_offset:  0.0643  # HAA axis -> HFE axis, lateral (+y). MEASURED 2026-07-02.
   femur:       0.1069  # HFE axis -> KFE axis.  MEASURED 2026-07-01 (STL bores).
   tibia:       0.1290  # KFE axis -> foot.      MEASURED 2026-07-01 (STL foot-post ctr).
-  # joint travel limits (rad), conservative placeholders — not test-enforced
-  haa_range:   0.7
-  hfe_range:   1.5
-  kfe_range:   2.2
+  # #72: haa_range/hfe_range/kfe_range placeholders (0.7 symmetric / 1.5 / 2.2)
+  # used to live here, untested (test_urdf_sync.py only ever checked
+  # hip_offset/femur/tibia) and stale against the real, asymmetric ROM
+  # (nova.urdf.xacro haa_in=0.262/haa_out=0.698, kfe_range=1.9). Deleted
+  # rather than fixed: grepping the repo for haa_range/hfe_range/kfe_range
+  # shows nothing reads them FROM THIS FILE — the real joint-limit source of
+  # truth is nova_locomotion's LegParams (leg_ik.py) and the URDF, both
+  # already covered by test_urdf_sync.py's other asserts. A dead, unchecked
+  # copy is worse than no copy.
 
 # --- servo / actuator (verified, dimensions.md §1) ---
 servo:
