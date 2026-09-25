@@ -80,11 +80,29 @@ def torques(env, policy, n, steps, cmd, field=None):
 
     tau, alive = go(jax.random.PRNGKey(0))
     tau, alive = np.asarray(tau), np.asarray(alive)
-    return tau[alive > 0.5]                                         # (samples, 12)
+    return tau[alive > 0.5], longest_hot_run(tau, alive)            # (samples, 12), (12,)
 
 
-def table(name, tau):
+def longest_hot_run(tau, alive, dt=0.02):
+    """Per joint: the longest CONTINUOUS stretch (s) above 80 % of stall in any
+    episode — what the STS3215's own overload unload (>80 % duty for 2 s -> 20 %
+    output) actually keys on. tau (T, n, 12), alive (T, n)."""
+    stall = np.array([STALL[j] for _ in LEG_NAMES for j in JOINTS])
+    hot = (tau > 0.8 * stall) & (alive[..., None] > 0.5)
+    run = np.zeros(hot.shape[1:])
+    best = np.zeros(hot.shape[1:])
+    for t in range(hot.shape[0]):
+        run = np.where(hot[t], run + 1, 0)
+        best = np.maximum(best, run)
+    return best.max(axis=0) * dt
+
+
+def table(name, res):
+    tau, runs = res
     print(f"\n{name}: |tau| N*m  p50 / p95 / max   (% steps > 80% stall)")
+    print("  longest continuous >80% run (s; servo unloads at 2.0): "
+          + "  ".join(f"{l}_{j} {runs[3 * li + ji]:.2f}" for li, l in enumerate(LEG_NAMES)
+                      for ji, j in enumerate(JOINTS)))
     for j, jn in enumerate(JOINTS):
         cells = []
         for li, ln in enumerate(LEG_NAMES):
@@ -102,6 +120,7 @@ def main():
     ap.add_argument("--goal-acc-reg", type=int, default=0)
     ap.add_argument("--episodes", type=int, default=32)
     ap.add_argument("--steps", type=int, default=400)
+    ap.add_argument("--no-counterfactual", action="store_true")
     a = ap.parse_args()
 
     def mk():
@@ -119,6 +138,8 @@ def main():
     table(f"curb {CURB_CM} cm (0.25 m/s)", torques(env, policy, a.episodes, a.steps, [0.25, 0, 0],
                                                     curb_field(env, CURB_CM / 100)))
 
+    if a.no_counterfactual:
+        return
     print("\ncounterfactual: curb course success %, policy NOT retrained")
     print(f"  {'upgrade':24s} " + " ".join(f"{h} cm" for h in (3, 4, 5)))
     for label, groups in (("none", []), ("rear kfe -> 2.94", ["RL_kfe", "RR_kfe"]),
