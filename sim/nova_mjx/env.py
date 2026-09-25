@@ -1502,7 +1502,8 @@ class NovaJoystick(PipelineEnv):
         return obs
 
 
-def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0):
+def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0,
+                          curb_frac=0.0):
     """Build the per-env randomization fn.
 
     terrain_max: rough-ground ceiling (None -> terrain.TERRAIN_MAX = flat). Obs is
@@ -1584,7 +1585,7 @@ def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_f
             is_flat = jax.random.uniform(kt3, ()) < flat_frac
             level = jp.where(is_flat, 0.0,
                              jax.random.uniform(kt2, (), minval=0.0, maxval=tmax))
-            hfield = terrain_field(kt1, level, step_frac, stair_frac)
+            hfield = terrain_field(kt1, level, step_frac, stair_frac, curb_frac=curb_frac)
             return geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield
 
         geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield = rand(rng)

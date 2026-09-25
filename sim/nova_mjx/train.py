@@ -371,7 +371,7 @@ def run_stage(env, args, terrain, stair_frac, timesteps, ckpt_dir, restore,
         network_factory=net,
         randomization_fn=make_domain_randomize(terrain, args.dr_scale,
                                                args.step_frac, stair_frac,
-                                               args.flat_frac),
+                                               args.flat_frac, curb_frac=args.curb_frac),
         save_checkpoint_path=str(ckpt_dir),
         restore_checkpoint_path=restore, restore_params=restore_params,
         # Per-STAGE seed. The DR draw (friction, per-body mass, kp, kv — env.py
@@ -469,6 +469,9 @@ def main():
                          "NOVA_GOAL_ACC=50 -> 7.67 rad/s^2). 0 = no profile (register 0 = max)")
     ap.add_argument("--joint-stale-p", type=float, default=0.0,
                     help="P(a joint reading is one control step old) — round-robin polling")
+    ap.add_argument("--curb-frac", type=float, default=0.0,
+                    help="fraction of envs that are CURB PYRAMIDS (rings stepping up "
+                         "terrain.CURB_M*level around spawn). Needs --terrain>0.")
     ap.add_argument("--asym", action="store_true",
                     help="asymmetric actor-critic: blind actor, privileged critic")
     ap.add_argument("--ref-gait", action="store_true",
@@ -516,7 +519,8 @@ def main():
                        ref_gait=args.ref_gait, ref_height=args.ref_height)
     print(f"study flags: torque_limit {args.torque_limit}  goal_acc_reg {args.goal_acc_reg} "
           f"({goal_acc_rad(args.goal_acc_reg):.2f} rad/s^2)  joint_stale_p {args.joint_stale_p}  "
-          f"asym {args.asym}  ref_gait {args.ref_gait} (h {args.ref_height})")
+          f"asym {args.asym}  ref_gait {args.ref_gait} (h {args.ref_height})  "
+          f"curb_frac {args.curb_frac}")
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
     print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac,
                       args.flat_frac, args.w_climb, args.w_pbrs, args.footswing_max,
