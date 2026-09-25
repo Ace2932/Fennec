@@ -24,6 +24,15 @@ on:
       # seconds long and run in the `pytest` job below.
       - 'scripts/**'
       - 'hardware/pcb-mods/tools/**'
+      # Contract tests in nova_ops read these directly: test_firmware_topic_contract
+      # (main.cpp, ina226_telemetry.h, platformio.ini, firmware README),
+      # test_joint_map / test_limp_pose (hfe_envelope.h), test_supports_table
+      # (docs/checklists/print-batch.md), and the pre-power-on + BUILD_PLAN
+      # bead/address tables. A firmware- or docs-only PR is exactly the one that
+      # breaks those contracts, and it triggered nothing (e.g. #418 ran zero checks).
+      - 'firmware/**'
+      - 'docs/**'
+      - 'hardware/pcb-mods/BUILD_PLAN.md'
   push:
     branches: [main]
     paths:
@@ -42,6 +51,15 @@ on:
       # seconds long and run in the `pytest` job below.
       - 'scripts/**'
       - 'hardware/pcb-mods/tools/**'
+      # Contract tests in nova_ops read these directly: test_firmware_topic_contract
+      # (main.cpp, ina226_telemetry.h, platformio.ini, firmware README),
+      # test_joint_map / test_limp_pose (hfe_envelope.h), test_supports_table
+      # (docs/checklists/print-batch.md), and the pre-power-on + BUILD_PLAN
+      # bead/address tables. A firmware- or docs-only PR is exactly the one that
+      # breaks those contracts, and it triggered nothing (e.g. #418 ran zero checks).
+      - 'firmware/**'
+      - 'docs/**'
+      - 'hardware/pcb-mods/BUILD_PLAN.md'
 
 jobs:
   pytest:
