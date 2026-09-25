@@ -74,8 +74,35 @@ ceiling 8.59 / 8.61 / 8.73 rad/s². **The register does not lift the ceiling.**
 - **It is not power**: peak duty stays at 17-38 %. The servo's own trajectory
   generator (~8.5 rad/s²) is the limit, so `NOVA_GOAL_ACC 50` and a torque
   limit of 600 change nothing here, unloaded.
-- Not tested: EEPROM reg 85 (Maximum_Acceleration, factory area; LeRobot writes
-  254) and MODE 2 (PWM) with a host PD loop. Both are persistent EEPROM writes.
+- ~~Not tested: EEPROM reg 85 and MODE 2~~ → tested the same day, below.
+
+### The ceiling is a register: reg 85 Maximum_Acceleration (measured 2026-09-25)
+As-shipped reads: reg 85 = **50** (not in the Feetech memory table; LeRobot names it
+`Maximum_Acceleration` and writes 254), reg 86 = 1, lock 0x37 = 1. 50 × 100 steps/s² =
+5000 steps/s² = 7.7 rad/s²: that IS the ceiling above. All writes below were made with
+the lock at 1 (lost at power cycle) and restored to the as-shipped values after.
+
+| config | 1.4 Hz ratio / lag | 2 Hz ratio / lag | 3 Hz ratio / lag | ceiling est. |
+|---|---|---|---|---|
+| reg 85 = 50 (factory) | 0.53 / 331 ms | 0.27 / 261 ms | 0.13 / 192 ms | 8.4-9.8 rad/s² |
+| **reg 85 = 254**, acc 0 or 254 | **0.97 / 60 ms** | **0.99 / 75 ms** | 0.55 / 173 ms | **40 rad/s²** (254 × 100 steps/s² = 39) |
+| reg 85 = 254, TORQUE_LIMIT 600 | – | 1.00 / 75 ms | 0.56 / 173 ms | 41 rad/s² |
+| **MODE 2 + host PD** (KP 2, KD 0.08, FF, ~1430 Hz loop) | 1.10 / 16 ms | 1.11 / 20 ms | 0.84 / 27 ms | – |
+
+CSVs: `leg_sine15_r85_254_acc{0,254}_*`, `leg_sine15_r85_254_tl{1000,600}_*`.
+MODE 2: `scripts/bench_mode2_pd.py` (printed table only).
+
+- **Position mode can pass a 2 Hz gait swing once reg 85 is raised.** The ceiling was
+  a factory setting, not physics. Setting it to 254 is the LeRobot default for every
+  SO-100/101 servo.
+- **TORQUE_LIMIT is a PWM duty cap (#428 check 1):** at 600 the peak duty clamps at
+  exactly 600 and the 3 Hz top speed drops from 2500 to 2100 steps/s. With reg 85 at 254,
+  unloaded 2 Hz already peaks at 64 % duty and 3 Hz at 81 %, so a 600 cap will bite
+  under load.
+- **MODE 2 + a host PD loop** tracks to 3 Hz with 8-27 ms lag against 60-75 ms for
+  position mode at reg 85 = 254. Ratios above 1 are overshoot: the gains are untuned.
+  This loop ran at ~1430 Hz on one servo from the Mac; the Teensy runs 12 servos at a
+  200 Hz tick, so on the robot the lag will be larger. Unmeasured.
 
 ## Homing convention (measured, servo ID 1)
 - **home_tick = 2048** by construction: Feetech one-key center (`--center`, reg
