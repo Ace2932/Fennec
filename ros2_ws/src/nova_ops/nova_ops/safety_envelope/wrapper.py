@@ -63,6 +63,12 @@ from nova_ops.rom_envelope import haa_urdf_canonical, hfe_bounds
 # so 3 samples ≠ 3 fresh reads of one joint. Window by time, not count:
 _LOAD_WINDOW_SEC = 0.30
 _LOAD_REFUSE_THRESHOLD = 0.70
+# /joint_states effort[] arrives in the firmware's wire unit: STS3215 present-load,
+# 0.1 % of stall per count, signed (-1000..+1000; firmware/teensy/firmware/README.md
+# /joint_states row). Every threshold here is a FRACTION of stall (0.70), so the
+# raw value must be scaled at ingest — feeding it unscaled made any load over 0.1 %
+# read as "over 70 %" and refused nearly every load-increasing move.
+_EFFORT_COUNTS_PER_STALL = 1000.0
 
 # If we haven't seen a command for this long, treat the next command as
 # the first sample (velocity check should not compare against ancient
@@ -176,11 +182,13 @@ class SafeJointCommandPublisher:
         for idx, eff in enumerate(msg.effort):
             joint_id = idx + 1
             # Keep the SIGN — the load-refusal direction check needs to know
-            # which way the joint is straining (effort is signed, normalized
-            # to ±fraction of stall torque). Was abs(): that discarded the
+            # which way the joint is straining. Was abs(): that discarded the
             # direction, which is why the refusal couldn't tell "push harder"
-            # from "back off" and blocked both.
-            self._load_samples[joint_id].append((stamp_ns, float(eff)))
+            # from "back off" and blocked both. Scaled from firmware counts to
+            # ±fraction of stall here, the one place effort enters.
+            self._load_samples[joint_id].append(
+                (stamp_ns, float(eff) / _EFFORT_COUNTS_PER_STALL)
+            )
 
     def _load_window(self, joint_id: int, now_ns: int):
         """Return (mean_abs, load_sign) over the effort samples within

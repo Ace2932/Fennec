@@ -171,7 +171,7 @@ def test_load_refusal_holds_position():
     # Establish baseline
     sw.publish(_CmdMsg([0.1]))
     # Pretend load samples come in over the threshold
-    js = types.SimpleNamespace(effort=[0.85])  # 85% > 70% threshold
+    js = types.SimpleNamespace(effort=[850])  # 850 counts = 85% > 70% threshold
     sw.on_joint_states(js)
     sw.on_joint_states(js)
     sw.on_joint_states(js)
@@ -188,7 +188,7 @@ def test_load_refusal_allows_backoff():
     pass — only load-increasing moves are refused. Pre-fix it held both."""
     sw, node, pub = _wrapper(1)
     sw.publish(_CmdMsg([0.3]))  # baseline at +0.3
-    js = types.SimpleNamespace(effort=[0.85])  # +85% load → straining toward +
+    js = types.SimpleNamespace(effort=[850])  # +85% load → straining toward +
     sw.on_joint_states(js)
     sw.on_joint_states(js)
     sw.on_joint_states(js)
@@ -199,6 +199,22 @@ def test_load_refusal_allows_backoff():
     assert math.isclose(out, 0.28, abs_tol=1e-6), (
         f"load-reducing back-off should pass, got {out}"
     )
+
+
+def test_load_refusal_reads_effort_in_firmware_counts():
+    """/joint_states effort is firmware counts (0.1 % of stall), not a fraction.
+    A 5 % load (50 counts) is ordinary and must NOT be refused; read unscaled
+    it was 50 > 0.70 and every load-increasing move was held."""
+    sw, node, pub = _wrapper(1)
+    sw.publish(_CmdMsg([0.1]))
+    js = types.SimpleNamespace(effort=[50])  # 5 % of stall
+    sw.on_joint_states(js)
+    sw.on_joint_states(js)
+    sw.on_joint_states(js)
+    node.advance(0.020)
+    sw.publish(_CmdMsg([0.12]))
+    out = pub.published[-1][0]
+    assert math.isclose(out, 0.12, abs_tol=1e-6), f"5% load refused: held at {out}"
 
 
 # ---- posture gate (the chassis envelope, at the choke point) ---------------
