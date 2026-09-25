@@ -55,16 +55,14 @@ class Rail {
   // poll() reads the current chip state. Cheap (~120 µs typ for the 3 reads
   // over I²C @ 400 kHz). Updates the sample struct atomically from the
   // caller's perspective — this is single-threaded code, no locking needed.
+  // A failed read marks the sample invalid (-> NaN on /power_rails, #439);
+  // the logic is rail_read() in rail_sample.h, native-tested.
   void poll() {
     if (!present_) {
       sample_.valid = false;
       return;
     }
-    sample_.bus_voltage_v = ina_.getBusVoltage();
-    sample_.current_a     = ina_.getCurrent();
-    sample_.power_w       = ina_.getPower();
-    sample_.valid         = true;
-    sample_.last_us       = micros();
+    rail_read(ina_, sample_, micros());
   }
 
   const RailSample& sample() const { return sample_; }
