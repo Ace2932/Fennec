@@ -13,6 +13,15 @@
 // is what arms the fleet (if the FSM allows motion -- the boot self-test's
 // pre-seeded latch still keeps it limp). disarm() is never gated: cutting
 // torque is always allowed, including from rc_init_fail_reset() in setup().
+//
+// #437 — TORQUE-OFF IS CONFIRMED, NOT ASSUMED. E-stop, overload limp and
+// battery-low all end in disarm(), and it used to send one TORQUE_ENABLE=0 per
+// servo and ignore the result: one bad frame left that joint holding torque,
+// and for overload and battery-low there is no hardware backstop at that
+// moment. Now: one broadcast (ID 0xFE, no ACK) reaches every servo in a single
+// frame, then each present servo is written AND read back until it reports 0
+// or OFF_RETRIES attempts are spent. A servo that never confirms is returned
+// in the failed mask and counted in off_fail_count() (/torque_off_fail).
 #pragma once
 
 #include <stdint.h>
@@ -41,12 +50,36 @@ class ServoFleet {
     }
   }
 
-  // TORQUE_ENABLE=0 on every present servo.
-  void disarm(uint16_t present_mask) {
+  // Attempts per servo (write + read-back) before it is counted as failed.
+  // ponytail: 3 x (1.5 ms write + 1.5 ms read timeout) x 12 = ~108 ms worst
+  // case, blocking, if the whole bus is dead; inside the 1 s watchdog budget.
+  // Tune from bench timing if a partial-bus fault makes the stop feel slow.
+  static constexpr uint8_t OFF_RETRIES = 3;
+
+  // TORQUE_ENABLE=0 on the whole bus, confirmed per present servo (#437).
+  // Returns the mask of servos that never confirmed torque off.
+  uint16_t disarm(uint16_t present_mask) {
+    bus_.broadcast_write_byte(feetech::REG_TORQUE_ENABLE, 0);
+    uint16_t failed = 0;
     for (uint8_t i = 0; i < n_; i++) {
-      if (present_mask & (uint16_t)(1u << i)) bus_.torque_enable(id_base_ + i, false);
+      if (!(present_mask & (uint16_t)(1u << i))) continue;
+      uint8_t id = id_base_ + i;
+      bool off = false;
+      for (uint8_t a = 0; a < OFF_RETRIES && !off; a++) {
+        bus_.torque_enable(id, false);   // ACK ignored: the read-back is the proof
+        uint8_t v = 1;
+        off = bus_.read_byte(id, feetech::REG_TORQUE_ENABLE, &v) == BusT::OK && v == 0;
+      }
+      if (!off) {
+        failed |= (uint16_t)(1u << i);
+        off_fail_count_++;
+      }
     }
+    return failed;
   }
+
+  // Lifetime count of servos that did not confirm torque off (#437).
+  uint32_t off_fail_count() const { return off_fail_count_; }
 
   // Call once per safety tick, AFTER SafetyFSM::update(). The first call marks
   // the safety loop live and arms the fleet if motion is enabled (#436); every
@@ -73,6 +106,7 @@ class ServoFleet {
   uint16_t torque_limit_;
   uint8_t  goal_acc_;
   bool     safety_live_ = false;
+  uint32_t off_fail_count_ = 0;
 };
 
 }  // namespace nova

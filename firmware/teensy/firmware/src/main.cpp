@@ -284,7 +284,8 @@ volatile uint32_t servo_read_err_count = 0;
 uint8_t  servo_stall_count[NOVA_JOINT_COUNT] = {0};
 volatile uint16_t servo_stall_mask = 0;     // bit i set = joint i has tripped
 
-// Write TORQUE_ENABLE to every PRESENT servo. Blocking (~0.4 ms/servo) — only
+// Write TORQUE_ENABLE to every PRESENT servo (torque-off: broadcast first, then
+// per-servo write + read-back, #437). Blocking (~0.4 ms/servo, more on retry) — only
 // called on the first safety tick, on stall-fault entry, and on fault clear;
 // never the hot path. The logic lives in servo_fleet.h (native-tested,
 // test_servo_fleet); arming is refused until the first safety tick (#436).
@@ -628,6 +629,7 @@ rcl_publisher_t servo_read_err_pub;
 rcl_publisher_t servo_err_timeout_pub;
 rcl_publisher_t servo_err_bad_frame_pub;
 rcl_publisher_t servo_err_servo_pub;
+rcl_publisher_t torque_off_fail_pub;   // #437
 rcl_publisher_t firmware_version_pub;
 rcl_publisher_t servo_voltage_pub;
 rcl_publisher_t servo_temperature_pub;
@@ -655,6 +657,7 @@ std_msgs__msg__Int32 servo_read_err_msg;
 std_msgs__msg__Int32 servo_err_timeout_msg;
 std_msgs__msg__Int32 servo_err_bad_frame_msg;
 std_msgs__msg__Int32 servo_err_servo_msg;
+std_msgs__msg__Int32 torque_off_fail_msg;
 std_msgs__msg__Bool  safety_clear_msg;
 std_msgs__msg__Float32MultiArray power_rails_msg;
 std_msgs__msg__String firmware_version_msg;
@@ -1066,6 +1069,13 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "servo_err_servo"));
+  // #437 — servos that did not confirm TORQUE_ENABLE=0 after a disarm.
+  // Non-zero means a stop left at least one joint holding torque.
+  RCCHECK(rclc_publisher_init_default(
+      &torque_off_fail_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "torque_off_fail"));
   RCCHECK(rclc_publisher_init_default(
       &firmware_version_pub,
       &node,
@@ -1417,6 +1427,8 @@ void loop() {
     RCSOFTCHECK(rcl_publish(&servo_err_timeout_pub,   &servo_err_timeout_msg,   NULL));
     RCSOFTCHECK(rcl_publish(&servo_err_bad_frame_pub, &servo_err_bad_frame_msg, NULL));
     RCSOFTCHECK(rcl_publish(&servo_err_servo_pub,     &servo_err_servo_msg,     NULL));
+    torque_off_fail_msg.data = (int32_t)servo_fleet.off_fail_count();
+    RCSOFTCHECK(rcl_publish(&torque_off_fail_pub, &torque_off_fail_msg, NULL));
     // Firmware version — publish every 10 s (1 Hz heartbeat / 10), low-rate
     // identity ping so reconnecting hosts can pick it up without restart.
     static uint32_t fw_pub_count = 0;

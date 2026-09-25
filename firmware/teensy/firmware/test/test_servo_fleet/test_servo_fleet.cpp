@@ -115,9 +115,46 @@ void test_boot_latched_fault_keeps_the_fleet_limp_on_the_first_tick(void) {
   TEST_ASSERT_EQUAL_INT(N, bus.count("TE"));
 }
 
+// ---- #437 ------------------------------------------------------------------
+
+void test_torque_off_survives_a_dropped_first_frame(void) {
+  // One bad frame used to leave that joint holding torque: disarm() sent one
+  // unchecked TORQUE_ENABLE=0 per servo. Drop the first frame on the wire and
+  // every servo must still end with torque off, with no failure counted.
+  FakeBus bus;
+  nova::ServoFleet<FakeBus> fleet(bus, 1, N, 600, 50);
+  bus.drop = {0};
+
+  fleet.disarm(ALL);
+  for (uint8_t id = 1; id <= N; id++) {
+    TEST_ASSERT_FALSE_MESSAGE(bus.s[id].torque,
+        ("servo " + std::to_string(id) + " still holds torque after disarm (#437)").c_str());
+  }
+  TEST_ASSERT_EQUAL_UINT32(0, fleet.off_fail_count());
+}
+
+void test_a_servo_that_never_confirms_is_counted_not_hidden(void) {
+  // A stuck servo (ignores every frame) cannot be forced off; the retry cap
+  // must end the attempt and the failure must be COUNTED for /torque_off_fail.
+  // Servo 12 is on the bus but missing from present_mask (its boot ping was
+  // lost): only the broadcast reaches it.
+  FakeBus bus;
+  nova::ServoFleet<FakeBus> fleet(bus, 1, N, 600, 50);
+  bus.s[5].deaf = true;
+
+  TEST_ASSERT_EQUAL_HEX16((uint16_t)(1u << 4), fleet.disarm(ALL & ~(1u << 11)));
+  TEST_ASSERT_FALSE_MESSAGE(bus.s[12].torque, "broadcast TORQUE_ENABLE=0 missing");
+  TEST_ASSERT_EQUAL_UINT32(1, fleet.off_fail_count());
+  TEST_ASSERT_EQUAL_INT(nova::ServoFleet<FakeBus>::OFF_RETRIES, bus.count("TE 5=0"));
+  for (uint8_t id = 1; id <= N; id++)
+    if (id != 5) TEST_ASSERT_FALSE(bus.s[id].torque);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_no_torque_enable_before_the_first_safety_tick);
   RUN_TEST(test_boot_latched_fault_keeps_the_fleet_limp_on_the_first_tick);
+  RUN_TEST(test_torque_off_survives_a_dropped_first_frame);
+  RUN_TEST(test_a_servo_that_never_confirms_is_counted_not_hidden);
   return UNITY_END();
 }

@@ -8,7 +8,7 @@ End-to-end micro-ROS round-trip green on Jetson; 20-topic contract implemented; 
 
 - Teensy → XRCE-DDS over USB-CDC → `micro_ros_agent` → ROS 2 Humble
 - IntervalTimer ISR-driven 200 Hz tick. Skeleton-only p99 = 1 µs (=50× under the <100 µs gate). Real numbers will grow once a servo is on the bus and reads stop timing out — `/loop_exec_p99_us` is the topic to watch.
-- 26 publishers + 5 subscribers wired (see "ROS 2 topics" below). The rmw pools that hold them are sized in `nova_microros.meta` (32 pub / 8 sub; upstream default is 10 / 5) -- `test_firmware_entity_caps.py` fails if main.cpp outgrows it. Heartbeat → joint-state-from-bus → joint-command-to-bus loop is closed in code.
+- 27 publishers + 5 subscribers wired (see "ROS 2 topics" below). The rmw pools that hold them are sized in `nova_microros.meta` (32 pub / 8 sub; upstream default is 10 / 5) -- `test_firmware_entity_caps.py` fails if main.cpp outgrows it. Heartbeat → joint-state-from-bus → joint-command-to-bus loop is closed in code.
 - Safety FSM with E-stop + battery-low latch, `/safety_clear` reset path, boot self-test seeding.
 - GitHub Actions CI green on every PR (Arduino-only env).
 
@@ -89,6 +89,7 @@ Group by purpose. All `std_msgs/Int32` counters are monotonic from boot unless n
 | Pub | `/servo_err_timeout` | `Int32` | 1 Hz | no servo response inside the read window |
 | Pub | `/servo_err_bad_frame` | `Int32` | 1 Hz | checksum / header garbled — bus-integrity signal |
 | Pub | `/servo_err_servo` | `Int32` | 1 Hz | servo responded with non-zero error byte (overheat/overload/voltage) |
+| Pub | `/torque_off_fail` | `Int32` | 1 Hz | lifetime count of servos that did not read back TORQUE_ENABLE=0 after a disarm (broadcast + per-servo write, 3 tries each; #437). **Non-zero = a stop left a joint holding torque** |
 
 ### Safety
 | Direction | Topic | Type | Rate | Notes |
