@@ -1,0 +1,34 @@
+#!/bin/bash
+# fennec-train-status <run>: state, per-stage progress, rate, latest eval, ETA (#412)
+run=${1:?usage: fennec-train-status <run>}; R=~/fennec-runs/$run
+echo "unit: $(systemctl --user is-active fennec-train@$run 2>/dev/null)  (NRestarts=$(systemctl --user show -p NRestarts --value fennec-train@$run 2>/dev/null))"
+for p in $(find $R -maxdepth 2 -name plan.json | sort); do
+  ~/fennec-train/bin/python - "$p" <<'PY'
+import json, pathlib, sys, time, csv
+sys.path.insert(0, str(pathlib.Path.home() / "codebases/Fennec/sim/nova_mjx"))
+from ckpt_utils import stage_done_steps
+p = pathlib.Path(sys.argv[1]); run = p.parent; plan = json.loads(p.read_text())
+left_total, rate = 0, None
+for st in plan["stages"]:
+    d = run / st["name"]
+    done = sum(stage_done_steps(x) or 0 for x in d.glob("run_*") if x.is_dir())
+    left_total += max(0, st["timesteps"] - done)
+    last = ""
+    log = d / "train_log.csv"
+    if log.exists():
+        rows = [r for r in csv.reader(log.open()) if len(r) == 3]
+        if rows:
+            last = f"eval_reward {float(rows[-1][2]):.1f}"
+        if len(rows) >= 2 and not (d / "DONE").exists():
+            (t0, s0, _), (t1, s1, _) = rows[-2], rows[-1]
+            if float(t1) > float(t0) and int(s1) > int(s0):
+                rate = (int(s1) - int(s0)) / (float(t1) - float(t0))
+    tag = "DONE" if (d / "DONE").exists() else f"{done:,}/{st['timesteps']:,}"
+    print(f"  {run.name}/{st['name']:4s} {tag:>24s}  {last}")
+evals = sorted(x.name for x in run.glob("eval_*.json"))
+if evals:
+    print(f"  {run.name} evals: {', '.join(evals)}")
+if rate:
+    print(f"  {run.name}: {rate*3600/1e6:.0f}M steps/h, ETA {left_total/rate/3600:.1f} h ({time.strftime('%H:%M', time.localtime(time.time()+left_total/rate))})")
+PY
+done
