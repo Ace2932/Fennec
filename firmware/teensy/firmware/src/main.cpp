@@ -1499,25 +1499,13 @@ void loop() {
     power_rails_ms = 0;
     // Pull the latest per-rail samples into the Float32MultiArray buffer.
     // Order: leg_v leg_a leg_w hip_v hip_a hip_w jetson_v jetson_a jetson_w
-    // (+ l2_v l2_a l2_w at [9..11] when NOVA_INA226_L2 → 12-float layout).
-    const nova::RailSample& s_leg    = rail_leg.sample();
-    const nova::RailSample& s_hip    = rail_hip.sample();
-    const nova::RailSample& s_jetson = rail_jetson.sample();
-    power_rails_data[0] = s_leg.bus_voltage_v;
-    power_rails_data[1] = s_leg.current_a;
-    power_rails_data[2] = s_leg.power_w;
-    power_rails_data[3] = s_hip.bus_voltage_v;
-    power_rails_data[4] = s_hip.current_a;
-    power_rails_data[5] = s_hip.power_w;
-    power_rails_data[6] = s_jetson.bus_voltage_v;
-    power_rails_data[7] = s_jetson.current_a;
-    power_rails_data[8] = s_jetson.power_w;
-#ifdef NOVA_INA226_L2
-    const nova::RailSample& s_l2 = rail_l2.sample();
-    power_rails_data[9]  = s_l2.bus_voltage_v;
-    power_rails_data[10] = s_l2.current_a;
-    power_rails_data[11] = s_l2.power_w;
-#endif
+    // (+ l2_v l2_a l2_w at [9..11] when NOVA_INA226_L2 → 12-float layout) —
+    // the order of rails[]. An invalid sample (INA226 did not ACK at boot)
+    // publishes NaN for all three of its fields, not 0.0 (#439, rail_sample.h).
+    static_assert(POWER_RAILS_FIELDS == 3 * INA226_RAIL_COUNT, "3 floats per rail");
+    for (uint8_t r = 0; r < INA226_RAIL_COUNT; r++) {
+      nova::rail_fields(rails[r]->sample(), &power_rails_data[3 * r]);
+    }
 #ifdef NOVA_USE_MICRO_ROS
     RCSOFTCHECK(rcl_publish(&power_rails_pub, &power_rails_msg, NULL));
 #endif
