@@ -472,6 +472,10 @@ def main():
     ap.add_argument("--curb-frac", type=float, default=0.0,
                     help="fraction of envs that are CURB PYRAMIDS (rings stepping up "
                          "terrain.CURB_M*level around spawn). Needs --terrain>0.")
+    ap.add_argument("--overload-model", action="store_true",
+                    help="model the servo's >80%%-duty-for-2s self-unload (latched 20%% output)")
+    ap.add_argument("--w-overload", type=float, default=0.0,
+                    help="cost on continuous >80%% duty runs past 1 s (0 = off)")
     ap.add_argument("--asym", action="store_true",
                     help="asymmetric actor-critic: blind actor, privileged critic")
     ap.add_argument("--ref-gait", action="store_true",
@@ -516,11 +520,13 @@ def main():
                        torque_limit=args.torque_limit,
                        goal_acc=goal_acc_rad(args.goal_acc_reg),
                        joint_stale_p=args.joint_stale_p, asym=args.asym,
-                       ref_gait=args.ref_gait, ref_height=args.ref_height)
+                       ref_gait=args.ref_gait, ref_height=args.ref_height,
+                       overload_model=args.overload_model, w_overload=args.w_overload)
     print(f"study flags: torque_limit {args.torque_limit}  goal_acc_reg {args.goal_acc_reg} "
           f"({goal_acc_rad(args.goal_acc_reg):.2f} rad/s^2)  joint_stale_p {args.joint_stale_p}  "
           f"asym {args.asym}  ref_gait {args.ref_gait} (h {args.ref_height})  "
-          f"curb_frac {args.curb_frac}")
+          f"curb_frac {args.curb_frac}  overload_model {args.overload_model} "
+          f"w_overload {args.w_overload}")
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
     print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac,
                       args.flat_frac, args.w_climb, args.w_pbrs, args.footswing_max,

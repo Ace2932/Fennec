@@ -243,6 +243,10 @@ REF_N = 33             # lift-table samples
 # and was dropped. Use 75 for "the servo as it really is in position mode".
 POSITION_MODE_ACC_REG = 75
 
+OVERLOAD_DUTY = 0.8    # Feetech default unload: above 80 % duty ...
+OVERLOAD_S = 2.0       # ... for 2 s ...
+OVERLOAD_OUT = 0.2     # ... -> 20 % output (peer research, SmallDog + Feetech table)
+
 
 def goal_acc_rad(reg):
     """STS3215 GOAL_ACC register (units of 100 steps/s^2) -> rad/s^2. 0 = off."""
@@ -395,7 +399,7 @@ class NovaJoystick(PipelineEnv):
                  eff_scale=1.0, eff_scale_speed=False, kp_scale=1.0,
                  knee_config="elbow_back", torque_limit=1.0, goal_acc=0.0,
                  joint_stale_p=0.0, asym=False, ref_gait=False,
-                 ref_height=REF_HEIGHT, **kwargs):
+                 ref_height=REF_HEIGHT, overload_model=False, w_overload=0.0, **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
@@ -444,6 +448,17 @@ class NovaJoystick(PipelineEnv):
         # so it multiplies the full-voltage stall in forcerange; DR's T_LO..T_HI
         # (battery sag / heat) then multiplies on top -> 0.42..0.60 of stall.
         self._torque_limit = float(torque_limit)
+        # SERVO OVERLOAD UNLOAD (Feetech default Unloading_Conditions: >80 % duty
+        # for 2 s -> 20 % output). "Duty" is taken as |actuator force| / the part's
+        # full-voltage stall (forcerange BEFORE torque_limit and DR). Recovery is
+        # undocumented -> modelled as LATCHED for the rest of the episode. hot_t /
+        # tripped are tracked even with the model OFF ("would have tripped"
+        # diagnostic, metric n_tripped); only the physics cut is gated.
+        # ponytail: latched-until-reset worst case; replace with the measured
+        # recovery once a servo is tripped on the bench.
+        self._overload = bool(overload_model)
+        self._w_overload = float(w_overload)
+        self._stall_nom = sys.actuator_forcerange[:, 1]
         if self._torque_limit != 1.0:
             sys = sys.replace(
                 actuator_forcerange=sys.actuator_forcerange * self._torque_limit)
@@ -629,6 +644,8 @@ class NovaJoystick(PipelineEnv):
             "prop_hist": jp.zeros((HIST, PROP)),
             # servo profile state (goal_acc): setpoint + its velocity, per joint
             "sp": q[7:], "sp_v": jp.zeros(self._nu),
+            # servo overload: continuous seconds above 80 % duty, latched unload
+            "hot_t": jp.zeros(self._nu), "tripped": jp.zeros(self._nu, dtype=bool),
             "step": 0,
             # climb telescoping state (see step()): base z at spawn, and the
             # running high-water mark. The metrics emit per-step DELTAS of these;
@@ -678,7 +695,8 @@ class NovaJoystick(PipelineEnv):
             "w_track", "w_yaw", "w_progress", "w_air", "w_clearance", "w_swingref",
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_carry", "w_gait",
-            "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand",
+            "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand", "w_overload",
+            "n_tripped",
             "w_climb", "w_beta_climb",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
             # carried leg reads ~1.0 here while the others cycle
@@ -727,12 +745,24 @@ class NovaJoystick(PipelineEnv):
         # sensing uncertainty is covered by the joint obs noise + joint_bias.
         last_ctrl = info["last_ctrl"]
         ctrl = jp.where(jp.abs(ctrl - last_ctrl) > DEADBAND, ctrl, last_ctrl)
+        phys = self.sys
+        if self._overload:      # a tripped servo delivers 20 % of its capped output
+            cut = jp.where(info["tripped"], OVERLOAD_OUT, 1.0)
+            phys = phys.replace(actuator_forcerange=phys.actuator_forcerange * cut[:, None])
         if self._goal_acc > 0.0:
             pipeline_state, sp, sp_v = self._profiled_step(
-                state.pipeline_state, ctrl, info["sp"], info["sp_v"])
+                state.pipeline_state, ctrl, info["sp"], info["sp_v"], phys)
             info = {**info, "sp": sp, "sp_v": sp_v}
+        elif self._overload:
+            pipeline_state = jax.lax.scan(
+                lambda ps, _: (self._pipeline.step(phys, ps, ctrl, self._debug), None),
+                state.pipeline_state, (), self._n_frames)[0]
         else:
             pipeline_state = self.pipeline_step(state.pipeline_state, ctrl)
+        duty = jp.abs(pipeline_state.qfrc_actuator[6:]) / self._stall_nom
+        hot_t = jp.where(duty > OVERLOAD_DUTY, info["hot_t"] + self._dt, 0.0)
+        info = {**info, "hot_t": hot_t,
+                "tripped": info["tripped"] | (hot_t >= OVERLOAD_S)}
 
         # ---- mid-episode PUSH: kick base xy velocity, learn to recover ----
         do_push = (info["step"] % self._push_interval == 0) & (info["step"] > 0)
@@ -1123,6 +1153,9 @@ class NovaJoystick(PipelineEnv):
         # nothing — so putting it down is strictly uphill. A normal stride stays
         # below AIR_MAX and pays 0.
         w_carry = -1.5 * carry_cost
+        # COST on sustained near-stall runs, starting at 1 s (half the unload
+        # window): the policy should never get near the servo's 2 s self-unload.
+        w_overload = -self._w_overload * jp.sum(jp.clip(info["hot_t"] - 1.0, 0.0, 1.0))
         w_actrate = -0.02 * act_rate
         w_energy = -2e-3 * energy
         w_jerk = -0.01 * jerk
@@ -1132,7 +1165,7 @@ class NovaJoystick(PipelineEnv):
                   + w_pose + 0.1 + w_climb + beta_climb + w_pbrs_climb
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_carry
-                  + w_actrate + w_energy + w_jerk + w_stand)
+                  + w_actrate + w_energy + w_jerk + w_stand + w_overload)
         # w_climb-aware clip — UPPER bound only. The climb reward can legitimately
         # spike to w_climb·(one riser) = w_climb·STAIR_RISE·level ≤ w_climb·0.08 (the
         # curriculum caps level at tmax=1) on top of the task; the flat +10 ceiling
@@ -1251,7 +1284,8 @@ class NovaJoystick(PipelineEnv):
             w_upright=w_upright, w_angvel=w_angvel, w_height=w_height, w_z=w_z,
             w_slip=w_slip, w_splay=w_splay, w_carry=w_carry, w_gait=w_gait,
             w_actrate=w_actrate,
-            w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand,
+            w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand, w_overload=w_overload,
+            n_tripped=jp.sum(info["tripped"].astype(jp.float32)),
             w_climb=w_climb, w_beta_climb=beta_climb,
             air_FL=foot_air_f[0], air_FR=foot_air_f[1],
             air_RL=foot_air_f[2], air_RR=foot_air_f[3],
@@ -1280,13 +1314,14 @@ class NovaJoystick(PipelineEnv):
         hk = self._ref_table[i0] * (1.0 - f) + self._ref_table[i0 + 1] * f   # (4,2)
         return jp.concatenate([jp.zeros((4, 1)), hk], axis=1).reshape(-1)
 
-    def _profiled_step(self, pipeline_state, goal, sp, sp_v):
+    def _profiled_step(self, pipeline_state, goal, sp, sp_v, sys=None):
         """n_frames physics substeps with the STS3215's internal trapezoidal
         setpoint profile between the goal register and the position loop: the
         setpoint velocity ramps at <= goal_acc and brakes in time to stop at the
         goal (v_des = sqrt(2 a |err|)), capped at SERVO_VMAX. The position
         actuator then tracks the SETPOINT, not the raw goal."""
         a, h = self._goal_acc, self.sys.opt.timestep
+        sys = self.sys if sys is None else sys
 
         def f(carry, _):
             ps, sp, v = carry
@@ -1294,7 +1329,7 @@ class NovaJoystick(PipelineEnv):
             v_des = jp.sign(err) * jp.minimum(SERVO_VMAX, jp.sqrt(2.0 * a * jp.abs(err)))
             v = v + jp.clip(v_des - v, -a * h, a * h)
             sp = sp + v * h
-            ps = self._pipeline.step(self.sys, ps, sp, self._debug)
+            ps = self._pipeline.step(sys, ps, sp, self._debug)
             return (ps, sp, v), None
 
         (ps, sp, v), _ = jax.lax.scan(f, (pipeline_state, sp, sp_v), (), self._n_frames)

@@ -81,7 +81,8 @@ def score(env, policy, n, steps, seed, pin_cmd, terrain=0.0, step_frac=0.0):
             swing=m["swing_h_per_step"] * alive,
             air=jp.stack([m[f"airT_{k}"] for k in ("FL", "FR", "RL", "RR")], 1)
             * alive[:, None],
-            cot=power / (mass * 9.81 * jp.maximum(spd, 0.05)) * moving * alive)
+            cot=power / (mass * 9.81 * jp.maximum(spd, 0.05)) * moving * alive,
+            tripped=m["n_tripped"] * alive)
         alive = alive * (1.0 - s.done)
         return (s, alive), rec
 
@@ -104,6 +105,7 @@ def score(env, policy, n, steps, seed, pin_cmd, terrain=0.0, step_frac=0.0):
         "swing_cm": float(100 * rec["swing"].sum() / na),
         "air": [float(x) for x in rec["air"].sum((0, 1)) / na],
         "cot": float(rec["cot"].sum() / nm),
+        "servos_tripped_end": float(rec["tripped"][-1].mean()),
     }
 
 
@@ -120,6 +122,8 @@ def main():
     ap.add_argument("--steps", type=int, default=500)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--json", default=None)
+    ap.add_argument("--overload-model", action="store_true",
+                    help="servo self-unload after 2 s above 80%% duty (latched)")
     ap.add_argument("--terrain", type=float, default=0.0,
                     help="rough-terrain ceiling for the eval envs (0 = flat)")
     ap.add_argument("--step-frac", type=float, default=0.0,
@@ -129,7 +133,8 @@ def main():
     env = NovaJoystick(torque_limit=a.eval_torque_limit,
                        goal_acc=goal_acc_rad(a.eval_goal_acc_reg),
                        joint_stale_p=a.joint_stale_p, asym=a.asym,
-                       ref_gait=a.ref_gait, ref_height=a.ref_height)
+                       ref_gait=a.ref_gait, ref_height=a.ref_height,
+                       overload_model=a.overload_model)
     policy = load_policy(a.policy, env, a.asym)
     out = {"policy": a.policy, "eval_torque_limit": a.eval_torque_limit,
            "eval_goal_acc_reg": a.eval_goal_acc_reg, "joint_stale_p": a.joint_stale_p,
@@ -139,7 +144,8 @@ def main():
         out[name] = r
         print(f"{name:5s} fall {r['fall']:5.1%}  spd% {r['spd_pct']:5.1f}  "
               f"verr {r['verr']:.3f}  yerr {r['yerr']:.3f}  swing {r['swing_cm']:.2f}cm  "
-              f"air {' '.join(f'{x:.2f}' for x in r['air'])}  CoT {r['cot']:.2f}")
+              f"air {' '.join(f'{x:.2f}' for x in r['air'])}  CoT {r['cot']:.2f}  "
+              f"tripped/robot {r['servos_tripped_end']:.2f}")
     if a.json:
         with open(a.json, "w") as f:
             json.dump(out, f, indent=1)
