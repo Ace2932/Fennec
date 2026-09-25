@@ -55,7 +55,7 @@ from typing import Deque, Dict, Optional
 
 from .limits import JointLimits, confirmed_haa_inboard_urdf
 from .counters import EnvelopeCounters
-from nova_ops.rom_envelope import hfe_bounds
+from nova_ops.rom_envelope import haa_urdf_canonical, hfe_bounds
 
 
 # Load check uses a time-window mean of /joint_states.effort[] per
@@ -237,14 +237,12 @@ class SafeJointCommandPublisher:
             if max(idxs) >= len(cmd_msg.position):
                 continue
             haa, hfe, kfe = (cmd_msg.position[i] for i in idxs)
-            inboard = confirmed_haa_inboard_urdf(haa_id)
-            if inboard is None:
+            if confirmed_haa_inboard_urdf(haa_id) is None:
                 lo_a, hi_a = hfe_bounds(leg, haa, kfe)
                 lo_b, hi_b = hfe_bounds(leg, -haa, kfe)  # unconfirmed -> both ways
                 lo, hi = max(lo_a, lo_b), min(hi_a, hi_b)
             else:
-                # URDF -> canonical: outboard is the side opposite `inboard`
-                lo, hi = hfe_bounds(leg, -inboard * haa, kfe)
+                lo, hi = hfe_bounds(leg, haa_urdf_canonical(leg, haa), kfe)
             if not (lo <= hfe <= hi):
                 clamped = max(lo, min(hi, hfe))
                 self._log(

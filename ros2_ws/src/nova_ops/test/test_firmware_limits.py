@@ -383,7 +383,14 @@ def test_hfe_envelope_buckets_span_the_whole_raw_range_with_no_gaps():
 def test_firmware_window_is_NEVER_looser_than_the_host_gate(sign):
     """The safety property. A backstop that permits what the host refuses is
     not a backstop — and this must hold for BOTH servo mounting directions,
-    since urdf_sign reverses which raw end is which."""
+    since urdf_sign reverses which raw end is which.
+
+    Compared at the same PHYSICAL posture, not the same grid number. HAAS is
+    canonical (+ = outboard); the firmware sees URDF (+ = foot toward +y), which
+    is the negation on the right legs. Feeding the grid number to both sides
+    let the firmware read it as URDF too and agree with itself — FR's window at
+    a 15 deg inboard tuck was +61 against a true +21. The flip is spelled out
+    here rather than imported, so the check cannot share the code's mistake."""
     import math
 
     from nova_ops.rom_envelope import hfe_bounds
@@ -402,7 +409,8 @@ def test_firmware_window_is_NEVER_looser_than_the_host_gate(sign):
 
     for li, (leg, haa_id, hfe_id) in enumerate(zip(legs, haa_ids, hfe_ids)):
         for haa_deg in HAAS:
-            haa_raw = rad_to_raw(math.radians(haa_deg), calib[haa_id])
+            urdf_deg = -haa_deg if leg in ("FR", "RR") else haa_deg
+            haa_raw = rad_to_raw(math.radians(urdf_deg), calib[haa_id])
             # the bucket the firmware would select
             sel = None
             for b in range(n):
