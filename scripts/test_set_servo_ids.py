@@ -180,7 +180,8 @@ def _identity_responses(sid, max_v):
     # order matches identify(): fw, servo_ver, max_v, min_v, max_torque, present_v
     return [read_response(sid, [3, 7]), read_response(sid, [9, 3]),
             read_response(sid, [max_v]), read_response(sid, [40]),
-            read_response(sid, [0xE8, 0x03]), read_response(sid, [75])]
+            read_response(sid, [0xE8, 0x03]), read_response(sid, [75]),
+            read_response(sid, [50])]  # reg 85 max accel, as shipped
 
 
 def test_read_reg_returns_payload_bytes():
@@ -210,3 +211,42 @@ def test_identify_reads_a_12v_part():
 
 def test_identify_none_when_servo_silent():
     assert sid_mod.identify(FakeSerial([]), 4) is None
+
+
+# ---------------------------------------------------------------------------
+# set_max_accel(): reg 85 Maximum_Acceleration, persisted with the EEPROM lock.
+# Sequence: read lock, write lock=0, write 85, write lock=1, read 85 back.
+# ---------------------------------------------------------------------------
+
+def _max_accel_responses(sid, readback, write85=None):
+    return [read_response(sid, [1]), status_response(sid),
+            write85 if write85 is not None else status_response(sid),
+            status_response(sid), read_response(sid, [readback])]
+
+
+def _writes(ser):
+    """(reg, value) of every WRITE_DATA frame sent, in order."""
+    return [(f[5], f[6]) for f in ser.sent if f[4] == 0x03]
+
+
+def test_set_max_accel_trusts_the_read_back_not_the_reply():
+    # bench 2026-09-25: the reply to the reg 85 write came back failed, yet the
+    # value read back 254 and survived a power cycle.
+    ser = FakeSerial(_max_accel_responses(1, 254, write85=b""))
+    assert sid_mod.set_max_accel(ser, 1, settle_s=0) is True
+
+
+def test_set_max_accel_fails_when_the_read_back_disagrees():
+    ser = FakeSerial(_max_accel_responses(1, 50))
+    assert sid_mod.set_max_accel(ser, 1, settle_s=0) is False
+
+
+def test_set_max_accel_unlocks_writes_then_always_relocks():
+    ser = FakeSerial(_max_accel_responses(1, 254))
+    sid_mod.set_max_accel(ser, 1, settle_s=0)
+    assert _writes(ser) == [(0x37, 0), (85, 254), (0x37, 1)]
+
+
+def test_identify_reports_reg_85():
+    d = sid_mod.identify(FakeSerial(_identity_responses(4, 140)), 4)
+    assert d["max_accel"] == 50

@@ -66,7 +66,7 @@ streamed at 100 Hz (the firmware command rate), ~2400 samples/s.
 | 3.0 | 0.13 | 192 ms | 9.78 rad/s² | 22 % |
 
 GOAL_ACC at 2 Hz (`leg_sine15_acc{0,50,254}_2hz.csv`): ratio 0.26 / 0.27 / 0.27,
-ceiling 8.59 / 8.61 / 8.73 rad/s². **The register does not lift the ceiling.**
+ceiling 8.59 / 8.61 / 8.73 rad/s². **The register does not lift the ceiling** (true only while reg 85 = 50: once reg 85 is raised, a nonzero GOAL_ACC IS the limit; see below).
 
 - **Position mode cannot pass a 1.4-2 Hz gait swing**: half the amplitude at
   1.4 Hz, a quarter at 2 Hz. It matches the sim's profile model (~0.45), not a
@@ -92,6 +92,15 @@ the lock at 1 (lost at power cycle) and restored to the as-shipped values after.
 CSVs: `leg_sine15_r85_254_acc{0,254}_*`, `leg_sine15_r85_254_tl{1000,600}_*`.
 MODE 2: `scripts/bench_mode2_pd.py` (printed table only).
 
+- **GOAL_ACC is the working limit once reg 85 is raised; 0 means "use reg 85".**
+  With reg 85 = 254, acc 50 gives 0.53 / 0.27 at 1.4 / 2 Hz (the old ceiling) while
+  acc 0 or 100 gives 0.97 / 0.99 (`leg_sine15_r85_254_acc{50,100}_*`). The firmware
+  wrote NOVA_GOAL_ACC 50 on every arm, which would have undone reg 85; it is now 0.
+- **Reg 85 persists.** Written with the lock at 0, relocked, power-cycled: it read back
+  254 and a 2 Hz sine gave 0.99 (`leg_sine15_r85_254_persisted_2hz.csv`). The status
+  reply to that write came back failed even though it landed, so
+  `set-servo-ids.py --set-max-accel` trusts the read-back. The #462 leg control
+  servo now carries 254 permanently.
 - **Position mode can pass a 2 Hz gait swing once reg 85 is raised.** The ceiling was
   a factory setting, not physics. Setting it to 254 is the LeRobot default for every
   SO-100/101 servo.

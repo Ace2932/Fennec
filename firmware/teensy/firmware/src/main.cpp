@@ -268,13 +268,24 @@ volatile uint32_t servo_read_err_count = 0;
 // via /safety_clear once the jam is fixed. Thresholds are build-flag tunable.
 #ifndef NOVA_STALL_LOAD_RAW
 #define NOVA_STALL_LOAD_RAW 900     // of 1000 = 90% of stall torque
+#endif
 // Fleet dynamics written on EVERY arm (RAM regs reset on servo power-cycle):
 // torque limit 600 permille — gait stance needs ~45% of the 19kg servos, so
 // 60% keeps 1.3x headroom while a trip/jam saturates at 60% instead of full
-// stall through the gears (leg_v6 movement review, 2026-07-03). Goal acc 50
-// (x100 steps/s^2) softens torque-on snap and commanded steps.
+// stall through the gears (leg_v6 movement review, 2026-07-03). Bench
+// 2026-09-25 (#466): this register is a PWM DUTY cap (peak duty clamps at
+// exactly 600, 3 Hz top speed 2500 -> 2100 steps/s). Raising it is #428.
+#ifndef NOVA_TORQUE_LIMIT_RAW
 #define NOVA_TORQUE_LIMIT_RAW 600
-#define NOVA_GOAL_ACC 50
+#endif
+// Goal acc 0 = "use the servo's maximum", which is reg 85 Maximum_Acceleration
+// (set to 254 at assembly: set-servo-ids.py --set-max-accel). Any NONZERO value
+// is the working accel limit: bench 2026-09-25 with reg 85 = 254, acc 50 gave a
+// 2 Hz sine ratio of 0.27 (the old ~8.5 rad/s^2 ceiling) while acc 0 or 100 gave
+// 0.99. So 50 here silently undid reg 85 on every arm. The torque-on snap it was
+// meant to soften is handled by arm() writing goal = present first.
+#ifndef NOVA_GOAL_ACC
+#define NOVA_GOAL_ACC 0
 #endif
 #ifndef NOVA_OVERTEMP_C
 #define NOVA_OVERTEMP_C 70          // °C — act before the servo's own ~80°C cutoff
