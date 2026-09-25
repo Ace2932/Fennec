@@ -242,6 +242,13 @@ REF_N = 33             # lift-table samples
 # 3 Hz. A goal-velocity feedforward version chattered into bistable limit cycles
 # and was dropped. Use 75 for "the servo as it really is in position mode".
 POSITION_MODE_ACC_REG = 75
+# ...but that ceiling is the FACTORY value of register 85 (Maximum_Acceleration =
+# 50). With reg85 = 254 (#466 bench) the servo tracks 0.97 / 0.99 / 0.55 at
+# 1.4 / 2 / 3 Hz with 60-75 ms lag — and the PLAIN actuator here (no profile,
+# --goal-acc-reg 0) is the closest model: 0.99 / 0.84 / 0.54, slightly slow at 2 Hz
+# because the damping caps no-load speed at 2.8 rad/s while the bench shows ~3.8.
+# Adding any profile only makes it slower. So: reg85=254 -> --goal-acc-reg 0.
+POSITION_MODE_R85_254_ACC_REG = 0
 
 OVERLOAD_DUTY = 0.8    # Feetech default unload: above 80 % duty ...
 OVERLOAD_S = 2.0       # ... for 2 s ...
