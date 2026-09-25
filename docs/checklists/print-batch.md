@@ -232,6 +232,24 @@ because the first version of this table drifted between being written and being 
 
 <!-- END GENERATED BLOCK: supports-table -->
 
+**Two supports traps the registry cannot express** (carried from #273, found 2026-08-05):
+
+- ⚠️ **`femur` — supports ON is correct, but BLOCK them over the cable tunnel.** The femur
+  has a fully closed internal cable tunnel whose roof is a **19.00 mm unsupported bridge**
+  (measured at the throat, x 36–39: free passage **5.90 mm tall × 19.00 mm wide**). Printed
+  −Z down, the slicer fills the tunnel with support, and a servo connector head (**9.8 ×
+  4.6 mm**) then will not pass. The 2026-08-02 femur had to be opened with a file and
+  pliers. **Paint a support blocker over the tunnel, or use "support on build plate only".**
+  PA6-CF bridges 19 mm unaided. The tunnel is identical in every femur revision (77dc74c,
+  7955d1b, 0abd9e1), and `overhang_checks()` cannot see it — it measures unsupported area
+  reaching the bed, not support landing inside a passage that must stay clear.
+- ⚠️ **`knee_arm` — supports OFF is not optional.** It prints horn-seat face down, so the
+  Ø6.5 `HORN_CTR_D` counterbore starts at the bed and runs up `HORN_CTR_DEEP` = 2.5 mm
+  before a 6.5 mm bridge. Supports ON fill that blind pocket and do not come out; the hub
+  it clears stands 2.00 mm proud (calipered 2026-08-03), leaving 0.5 mm of slack, and the
+  1.5 mm floor cannot be deepened (LA-23; `ARM_THK` is shared with the coax/femur yoke
+  arms). A trapped print is a reprint (~8 g, under an hour).
+
 ## 2. Slicer spec
 
 | Class | Walls | Layer | Infill | Notes |
