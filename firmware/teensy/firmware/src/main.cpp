@@ -310,6 +310,10 @@ void poll_one_servo() {
   uint8_t buf[8];
   feetech::Bus::Result rc = servo_bus.read_block(
       id, feetech::REG_PRESENT_POSITION_L, 8, buf, /*timeout_us=*/2500);
+  // #438: a servo answering again after a timeout has rebooted (brownout /
+  // bucks back after a hard cut) with default torque limit + goal acc;
+  // re-write both now, before this tick's broadcast_servo_commands().
+  servo_fleet.on_poll(servo_rr_idx, rc);
   if (rc == feetech::Bus::OK) {
     servo_position_raw[servo_rr_idx] = feetech::pack_u16_le(buf[0], buf[1]);
     servo_velocity_raw[servo_rr_idx] = feetech::pack_s16_le(buf[2], buf[3]);

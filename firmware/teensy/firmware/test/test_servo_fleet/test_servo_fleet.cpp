@@ -150,11 +150,38 @@ void test_a_servo_that_never_confirms_is_counted_not_hidden(void) {
     if (id != 5) TEST_ASSERT_FALSE(bus.s[id].torque);
 }
 
+// ---- #438 ------------------------------------------------------------------
+
+void test_a_servo_that_drops_and_returns_gets_its_dynamics_rewritten(void) {
+  // A brownout resets the servo's RAM: torque limit and goal acc come back at
+  // power-on defaults and used to stay there until the next fault clear.
+  FakeBus bus;
+  nova::ServoFleet<FakeBus> fleet(bus, 1, N, 600, 50);
+  const uint8_t i = 4, id = 5;
+
+  fleet.on_poll(i, FakeBus::OK);            // healthy: nothing to rewrite
+  TEST_ASSERT_EQUAL_INT(0, bus.count("TL") + bus.count("ACC"));
+
+  fleet.on_poll(i, FakeBus::ERR_TIMEOUT);   // rail browns out
+  bus.s[id].torque_limit = 1000;            // ...and the servo reboots
+  bus.s[id].goal_acc = 0;
+  fleet.on_poll(i, FakeBus::OK);            // answers again
+
+  TEST_ASSERT_EQUAL_UINT16_MESSAGE(600, bus.s[id].torque_limit,
+      "torque limit not re-written after the servo came back (#438)");
+  TEST_ASSERT_EQUAL_UINT8_MESSAGE(50, bus.s[id].goal_acc,
+      "goal acc not re-written after the servo came back (#438)");
+
+  fleet.on_poll(i, FakeBus::OK);            // once only, not every poll
+  TEST_ASSERT_EQUAL_INT(1, bus.count("TL"));
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_no_torque_enable_before_the_first_safety_tick);
   RUN_TEST(test_boot_latched_fault_keeps_the_fleet_limp_on_the_first_tick);
   RUN_TEST(test_torque_off_survives_a_dropped_first_frame);
   RUN_TEST(test_a_servo_that_never_confirms_is_counted_not_hidden);
+  RUN_TEST(test_a_servo_that_drops_and_returns_gets_its_dynamics_rewritten);
   return UNITY_END();
 }

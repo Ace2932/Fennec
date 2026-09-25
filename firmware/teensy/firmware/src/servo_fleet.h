@@ -22,6 +22,15 @@
 // frame, then each present servo is written AND read back until it reports 0
 // or OFF_RETRIES attempts are spent. A servo that never confirms is returned
 // in the failed mask and counted in off_fail_count() (/torque_off_fail).
+//
+// #438 — RE-APPLY DYNAMICS WHEN A SERVO COMES BACK. Torque limit and goal acc
+// are RAM registers, written only on arm. A servo whose rail browns out (or
+// whose bucks return after a hard cut) reboots at its own defaults (full
+// torque limit, acc 0; servo defaults unverified) and kept them until the next
+// fault clear. on_poll() tracks per-servo presence from the poll loop's read
+// result; the first good read after a timeout re-writes both registers. The
+// poll runs before broadcast_servo_commands() in the same tick, so that lands
+// before the next goal write.
 #pragma once
 
 #include <stdint.h>
@@ -92,6 +101,20 @@ class ServoFleet {
 
   bool safety_live() const { return safety_live_; }
 
+  // Call with every poll read's result for joint index i (#438). A timeout
+  // marks the servo lost; the next good read re-writes its dynamics. Only a
+  // timeout counts as gone -- a bad frame or servo error byte means it is
+  // still powered and answering.
+  void on_poll(uint8_t i, typename BusT::Result rc) {
+    const uint16_t bit = (uint16_t)(1u << i);
+    if (rc == BusT::ERR_TIMEOUT) {
+      lost_ |= bit;
+    } else if (rc == BusT::OK && (lost_ & bit)) {
+      lost_ &= (uint16_t)~bit;
+      write_dynamics(id_base_ + i);
+    }
+  }
+
   // Torque limit + goal acc. Both are RAM registers that reset when the servo
   // power-cycles, so they must be rewritten on every arm.
   void write_dynamics(uint8_t id) {
@@ -107,6 +130,7 @@ class ServoFleet {
   uint8_t  goal_acc_;
   bool     safety_live_ = false;
   uint32_t off_fail_count_ = 0;
+  uint16_t lost_ = 0;       // bit i: joint i's latest poll timed out (#438)
 };
 
 }  // namespace nova
