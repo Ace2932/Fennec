@@ -212,3 +212,20 @@ def test_leg_ik_stays_pure_math_no_ros_package_pull_in():
         [sys.executable, "-c", src], capture_output=True, text=True, check=True
     ).stdout.strip()
     assert out == "[]", f"leg_ik dragged in {out}"
+
+
+def test_solve_side_clamp_is_mirror_symmetric():
+    """The same CANONICAL foot target on a left leg and its mirrored right twin
+    must clamp to the same canonical hfe (only haa flips sign). solve_side used to
+    hand hfe_bounds the right leg's NEGATED haa, so a 40 deg inboard tuck on RR got
+    the OUTBOARD envelope: RL clamped hfe to -18.9 deg, RR allowed -70.5 deg."""
+    import math
+    from nova_locomotion.kinematics.leg_ik import LegParams, solve_side
+    p = LegParams()
+    for foot in ((-0.02, 0.0, -0.10), (0.03, 0.0, -0.12), (-0.02, 0.12, -0.10)):
+        for lf, lr in (("FL", "FR"), ("RL", "RR")):
+            a = solve_side("left", foot, p, leg=lf)
+            b = solve_side("right", foot, p, leg=lr)
+            assert math.isclose(a[0], -b[0], abs_tol=1e-9), (lf, lr, foot)
+            assert math.isclose(a[1], b[1], abs_tol=1e-9), (lf, lr, foot, a, b)
+            assert math.isclose(a[2], b[2], abs_tol=1e-9), (lf, lr, foot)
