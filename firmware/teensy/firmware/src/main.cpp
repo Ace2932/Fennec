@@ -521,12 +521,9 @@ void broadcast_servo_commands() {
   // into the LiPo, same "expected to collapse rather than fight the fault"
   // philosophy as the E-stop limp path. Keep last_cmd_goal in sync with
   // whatever this pass actually wrote so next tick's slew starts from the
-  // real (possibly clamped) position, not the pre-clamp one.
+  // real (possibly clamped) position, not the pre-clamp one (slew_limiter.h).
   hfe_envelope.apply(goals, servo_position_raw, servo_present_mask);
-  for (size_t leg = 0; leg < nova::HFE_ENV_LEGS; leg++) {
-    const size_t hi = nova::hfe_env_hfe_index(leg);
-    last_cmd_goal[hi] = goals[hi];
-  }
+  nova::slew_commit(last_cmd_goal, goals, NOVA_JOINT_COUNT);
 
   servo_bus.sync_write_goal_positions(ids, goals, NOVA_JOINT_COUNT);
 }
