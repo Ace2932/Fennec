@@ -541,7 +541,8 @@ def main():
             restore_params = pickle.load(f)
         restore = None
         print(f"GRAFT init from {args.restore_params_pkl} "
-              f"(obs {int(restore_params[0].mean.shape[0])}) — checkpoint dir skipped")
+              f"(obs {jax.tree_util.tree_map(lambda m: m.shape, restore_params[0].mean)}) "
+              f"— checkpoint dir skipped")
     else:
         # In curriculum mode the stage dirs are OFF LIMITS to this scan: the loop
         # below walks the stages in order and chains each off the previous one, so
