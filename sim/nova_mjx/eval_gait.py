@@ -47,8 +47,8 @@ def load_policy(path, env, asym):
     return ppo_networks.make_inference_fn(net)(params, deterministic=True)
 
 
-def score(env, policy, n, steps, seed, pin_cmd):
-    dr = make_domain_randomize(0.0)
+def score(env, policy, n, steps, seed, pin_cmd, terrain=0.0, step_frac=0.0):
+    dr = make_domain_randomize(terrain, step_frac=step_frac, flat_frac=0.0)
     keys = jax.random.split(jax.random.PRNGKey(seed + 1), n)
     venv = DomainRandomizationVmapWrapper(env, functools.partial(dr, rng=keys))
     mass = float(jp.sum(env.sys.body_mass))
@@ -120,6 +120,10 @@ def main():
     ap.add_argument("--steps", type=int, default=500)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--json", default=None)
+    ap.add_argument("--terrain", type=float, default=0.0,
+                    help="rough-terrain ceiling for the eval envs (0 = flat)")
+    ap.add_argument("--step-frac", type=float, default=0.0,
+                    help="fraction of eval envs with discrete steps (needs --terrain)")
     a = ap.parse_args()
 
     env = NovaJoystick(torque_limit=a.eval_torque_limit,
@@ -128,9 +132,10 @@ def main():
                        ref_gait=a.ref_gait, ref_height=a.ref_height)
     policy = load_policy(a.policy, env, a.asym)
     out = {"policy": a.policy, "eval_torque_limit": a.eval_torque_limit,
-           "eval_goal_acc_reg": a.eval_goal_acc_reg, "joint_stale_p": a.joint_stale_p}
+           "eval_goal_acc_reg": a.eval_goal_acc_reg, "joint_stale_p": a.joint_stale_p,
+           "terrain": a.terrain, "step_frac": a.step_frac}
     for name, pin in (("fwd", jp.array([0.25, 0.0, 0.0])), ("mixed", None)):
-        r = score(env, policy, a.episodes, a.steps, a.seed, pin)
+        r = score(env, policy, a.episodes, a.steps, a.seed, pin, a.terrain, a.step_frac)
         out[name] = r
         print(f"{name:5s} fall {r['fall']:5.1%}  spd% {r['spd_pct']:5.1f}  "
               f"verr {r['verr']:.3f}  yerr {r['yerr']:.3f}  swing {r['swing_cm']:.2f}cm  "

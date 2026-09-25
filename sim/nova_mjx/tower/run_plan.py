@@ -13,7 +13,7 @@ Each stage trains into <run>/<name>/. Re-running the SAME command is the
 resume: a stage's done steps are summed from every attempt's PROGRESS pointer
 (train.py writes one run_<ts>/ per attempt, each counting only itself), only the
 remainder is trained, and a finished stage is skipped. A stage with "init"
-starts from that stage's policy.pkl on its FIRST attempt only; later attempts
+starts from that stage's policy.pkl (or an absolute .pkl path) on its FIRST attempt only; later attempts
 resume their own checkpoint. Evals (eval_gait.py) run once each, written to
 <run>/eval_<name>.json, skipped if present.
 """
@@ -41,13 +41,17 @@ def main(plan_path):
         sdir.mkdir(exist_ok=True)
         done = done_steps(sdir)
         left = st["timesteps"] - done
-        if left <= 0 or (sdir / "DONE").exists():
+        if "--curriculum" in st.get("args", []):
+            left = st["timesteps"]   # train.py's curriculum mode is budget-aware itself
+        if (sdir / "DONE").exists() or left <= 0:
             print(f"[plan] {st['name']}: done ({done:,}/{st['timesteps']:,}) - skip", flush=True)
             continue
         cmd = [py, "train.py", "--ckpt", str(sdir), "--timesteps", str(left),
                "--out", str(sdir / "policy.pkl"), *st.get("args", [])]
         if st.get("init") and not any(sdir.glob("run_*/*/")):
-            cmd += ["--restore-params-pkl", str(run / st["init"] / "policy.pkl")]
+            init = pathlib.Path(st["init"]).expanduser()
+            src = init if init.is_absolute() else run / st["init"] / "policy.pkl"
+            cmd += ["--restore-params-pkl", str(src)]
         print(f"[plan] {st['name']}: {done:,} done, training {left:,}: {' '.join(cmd)}",
               flush=True)
         subprocess.run(cmd, cwd=HERE, check=True)
