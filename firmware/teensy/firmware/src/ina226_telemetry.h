@@ -16,6 +16,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <INA226.h>
+#include "rail_sample.h"   // RailSample + rail_fields() (native-testable, #439)
 
 namespace nova {
 
@@ -29,14 +30,6 @@ constexpr uint8_t INA226_ADDR_L2     = 0x45;
 // Override per-rail at construct time if shunt geometry differs.
 constexpr float DEFAULT_SHUNT_OHM = 0.002f;
 constexpr float DEFAULT_MAX_AMP   = 20.0f;
-
-struct RailSample {
-  float bus_voltage_v = 0.0f;
-  float current_a     = 0.0f;
-  float power_w       = 0.0f;
-  bool  valid         = false;     // true if last read succeeded
-  uint32_t last_us    = 0;
-};
 
 class Rail {
  public:

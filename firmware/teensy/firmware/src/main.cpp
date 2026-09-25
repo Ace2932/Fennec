@@ -16,6 +16,7 @@
 #include "safety_state.h"
 #include "loop_timing.h"
 #include "limp_controller.h"
+#include "servo_fleet.h"
 
 // Joint count = 12 (4 legs × 3 joints). Names/frame_id stay empty in
 // skeleton — Nova URDF wiring lands once gait controller is on the Jetson.
@@ -283,20 +284,16 @@ volatile uint32_t servo_read_err_count = 0;
 uint8_t  servo_stall_count[NOVA_JOINT_COUNT] = {0};
 volatile uint16_t servo_stall_mask = 0;     // bit i set = joint i has tripped
 
-// Write TORQUE_ENABLE to every PRESENT servo. Blocking (~0.4 ms/servo) — only
-// called at boot, on stall-fault entry, and on fault clear; never the hot path.
+// Write TORQUE_ENABLE to every PRESENT servo (torque-off: broadcast first, then
+// per-servo write + read-back, #437). Blocking (~0.4 ms/servo, more on retry) — only
+// called on the first safety tick, on stall-fault entry, and on fault clear;
+// never the hot path. The logic lives in servo_fleet.h (native-tested,
+// test_servo_fleet); arming is refused until the first safety tick (#436).
+nova::ServoFleet<feetech::Bus> servo_fleet(servo_bus, SERVO_ID_BASE, NOVA_JOINT_COUNT,
+                                           NOVA_TORQUE_LIMIT_RAW, NOVA_GOAL_ACC);
 void set_fleet_torque(bool on) {
-  for (uint8_t i = 0; i < NOVA_JOINT_COUNT; i++) {
-    if (servo_present_mask & (uint16_t)(1u << i)) {
-      uint8_t id = SERVO_ID_BASE + i;
-      if (on) {
-        // dynamics BEFORE enable so the first held pose is already limited
-        servo_bus.set_torque_limit(id, NOVA_TORQUE_LIMIT_RAW);
-        servo_bus.set_goal_acc(id, NOVA_GOAL_ACC);
-      }
-      servo_bus.torque_enable(id, on);
-    }
-  }
+  if (on) servo_fleet.arm(servo_present_mask);
+  else    servo_fleet.disarm(servo_present_mask);
 }
 
 void poll_one_servo() {
@@ -313,6 +310,10 @@ void poll_one_servo() {
   uint8_t buf[8];
   feetech::Bus::Result rc = servo_bus.read_block(
       id, feetech::REG_PRESENT_POSITION_L, 8, buf, /*timeout_us=*/2500);
+  // #438: a servo answering again after a timeout has rebooted (brownout /
+  // bucks back after a hard cut) with default torque limit + goal acc;
+  // re-write both now, before this tick's broadcast_servo_commands().
+  servo_fleet.on_poll(servo_rr_idx, rc);
   if (rc == feetech::Bus::OK) {
     servo_position_raw[servo_rr_idx] = feetech::pack_u16_le(buf[0], buf[1]);
     servo_velocity_raw[servo_rr_idx] = feetech::pack_s16_le(buf[2], buf[3]);
@@ -632,6 +633,7 @@ rcl_publisher_t servo_read_err_pub;
 rcl_publisher_t servo_err_timeout_pub;
 rcl_publisher_t servo_err_bad_frame_pub;
 rcl_publisher_t servo_err_servo_pub;
+rcl_publisher_t torque_off_fail_pub;   // #437
 rcl_publisher_t firmware_version_pub;
 rcl_publisher_t servo_voltage_pub;
 rcl_publisher_t servo_temperature_pub;
@@ -659,6 +661,7 @@ std_msgs__msg__Int32 servo_read_err_msg;
 std_msgs__msg__Int32 servo_err_timeout_msg;
 std_msgs__msg__Int32 servo_err_bad_frame_msg;
 std_msgs__msg__Int32 servo_err_servo_msg;
+std_msgs__msg__Int32 torque_off_fail_msg;
 std_msgs__msg__Bool  safety_clear_msg;
 std_msgs__msg__Float32MultiArray power_rails_msg;
 std_msgs__msg__String firmware_version_msg;
@@ -707,10 +710,11 @@ rclc_executor_t executor;
 // HOLDING TORQUE with no safety loop, no watchdog and no recovery. Now: cut
 // torque, flash a 10 Hz burst (distinct from the 2 Hz waiting-for-agent
 // blink), then reset exactly like the software watchdog (tick_isr) so the
-// board retries from scratch.
+// board retries from scratch. Since #436 setup() no longer arms, so the fleet
+// is already limp here; the cut stays as a backstop.
 // ponytail: a PERSISTENT init failure (e.g. entity caps too small, see
-// nova_microros.meta) becomes a reboot loop (~2 s+ per boot) that toggles
-// torque on/off each boot; add a boot-count in a noinit RAM word to stay limp
+// nova_microros.meta) becomes a reboot loop (~2 s+ per boot) -- limp, since
+// #436, but silent; add a boot-count in a noinit RAM word to stop retrying
 // after N tries if that is ever seen on the bench. A dead agent does NOT loop here --
 // rclc_support_init above retries forever before any RCCHECK runs.
 [[noreturn]] static void rc_init_fail_reset() {
@@ -906,11 +910,10 @@ void setup() {
     }
   }
 
-  // Arm servo torque on every present servo (decision 2026-06-27: FW ALWAYS
-  // writes TORQUE_ENABLE rather than trusting each servo's EEPROM default — a
-  // torque-off EEPROM would silently ignore every goal). Skip if booting into a
-  // latched fault; the loop re-arms on clear.
-  if (safety_fsm.motion_enabled()) set_fleet_torque(true);
+  // Servo torque is NOT armed here (#436). This point is before the micro-ROS
+  // agent wait (30-60 s on a cold boot) and before tick_timer.begin(), so
+  // armed servos would hold torque with no SafetyFSM, stall guard or watchdog
+  // running. The first safety tick in loop() arms instead (servo_fleet.h).
 
 #ifdef NOVA_USE_MICRO_ROS
   set_microros_serial_transports(Serial);
@@ -1070,6 +1073,13 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "servo_err_servo"));
+  // #437 — servos that did not confirm TORQUE_ENABLE=0 after a disarm.
+  // Non-zero means a stop left at least one joint holding torque.
+  RCCHECK(rclc_publisher_init_default(
+      &torque_off_fail_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "torque_off_fail"));
   RCCHECK(rclc_publisher_init_default(
       &firmware_version_pub,
       &node,
@@ -1321,6 +1331,14 @@ void loop() {
       for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) servo_stall_count[i] = 0;
       limp_controller.reset();   // defensive — should already be idle here
     }
+    // #436: boot arm, on the FIRST safety tick — the FSM has just evaluated
+    // the live E-stop / battery-low pins, the tick timer and watchdog are
+    // running. Arm servo torque on every present servo (decision 2026-06-27:
+    // FW ALWAYS writes TORQUE_ENABLE rather than trusting each servo's EEPROM
+    // default — a torque-off EEPROM would silently ignore every goal). Skipped
+    // if booting into a latched fault (boot self-test); the clear path above
+    // re-arms. No-op on every later tick.
+    servo_fleet.safety_tick(safety_fsm.motion_enabled(), servo_present_mask);
 
 #ifdef NOVA_USE_MICRO_ROS
     // Edge-change publish for raw safety signals (host sees the source)
@@ -1413,6 +1431,8 @@ void loop() {
     RCSOFTCHECK(rcl_publish(&servo_err_timeout_pub,   &servo_err_timeout_msg,   NULL));
     RCSOFTCHECK(rcl_publish(&servo_err_bad_frame_pub, &servo_err_bad_frame_msg, NULL));
     RCSOFTCHECK(rcl_publish(&servo_err_servo_pub,     &servo_err_servo_msg,     NULL));
+    torque_off_fail_msg.data = (int32_t)servo_fleet.off_fail_count();
+    RCSOFTCHECK(rcl_publish(&torque_off_fail_pub, &torque_off_fail_msg, NULL));
     // Firmware version — publish every 10 s (1 Hz heartbeat / 10), low-rate
     // identity ping so reconnecting hosts can pick it up without restart.
     static uint32_t fw_pub_count = 0;
@@ -1479,25 +1499,13 @@ void loop() {
     power_rails_ms = 0;
     // Pull the latest per-rail samples into the Float32MultiArray buffer.
     // Order: leg_v leg_a leg_w hip_v hip_a hip_w jetson_v jetson_a jetson_w
-    // (+ l2_v l2_a l2_w at [9..11] when NOVA_INA226_L2 → 12-float layout).
-    const nova::RailSample& s_leg    = rail_leg.sample();
-    const nova::RailSample& s_hip    = rail_hip.sample();
-    const nova::RailSample& s_jetson = rail_jetson.sample();
-    power_rails_data[0] = s_leg.bus_voltage_v;
-    power_rails_data[1] = s_leg.current_a;
-    power_rails_data[2] = s_leg.power_w;
-    power_rails_data[3] = s_hip.bus_voltage_v;
-    power_rails_data[4] = s_hip.current_a;
-    power_rails_data[5] = s_hip.power_w;
-    power_rails_data[6] = s_jetson.bus_voltage_v;
-    power_rails_data[7] = s_jetson.current_a;
-    power_rails_data[8] = s_jetson.power_w;
-#ifdef NOVA_INA226_L2
-    const nova::RailSample& s_l2 = rail_l2.sample();
-    power_rails_data[9]  = s_l2.bus_voltage_v;
-    power_rails_data[10] = s_l2.current_a;
-    power_rails_data[11] = s_l2.power_w;
-#endif
+    // (+ l2_v l2_a l2_w at [9..11] when NOVA_INA226_L2 → 12-float layout) —
+    // the order of rails[]. An invalid sample (INA226 did not ACK at boot)
+    // publishes NaN for all three of its fields, not 0.0 (#439, rail_sample.h).
+    static_assert(POWER_RAILS_FIELDS == 3 * INA226_RAIL_COUNT, "3 floats per rail");
+    for (uint8_t r = 0; r < INA226_RAIL_COUNT; r++) {
+      nova::rail_fields(rails[r]->sample(), &power_rails_data[3 * r]);
+    }
 #ifdef NOVA_USE_MICRO_ROS
     RCSOFTCHECK(rcl_publish(&power_rails_pub, &power_rails_msg, NULL));
 #endif

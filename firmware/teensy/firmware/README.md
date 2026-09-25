@@ -8,7 +8,7 @@ End-to-end micro-ROS round-trip green on Jetson; 20-topic contract implemented; 
 
 - Teensy → XRCE-DDS over USB-CDC → `micro_ros_agent` → ROS 2 Humble
 - IntervalTimer ISR-driven 200 Hz tick. Skeleton-only p99 = 1 µs (=50× under the <100 µs gate). Real numbers will grow once a servo is on the bus and reads stop timing out — `/loop_exec_p99_us` is the topic to watch.
-- 26 publishers + 5 subscribers wired (see "ROS 2 topics" below). The rmw pools that hold them are sized in `nova_microros.meta` (32 pub / 8 sub; upstream default is 10 / 5) -- `test_firmware_entity_caps.py` fails if main.cpp outgrows it. Heartbeat → joint-state-from-bus → joint-command-to-bus loop is closed in code.
+- 27 publishers + 5 subscribers wired (see "ROS 2 topics" below). The rmw pools that hold them are sized in `nova_microros.meta` (32 pub / 8 sub; upstream default is 10 / 5) -- `test_firmware_entity_caps.py` fails if main.cpp outgrows it. Heartbeat → joint-state-from-bus → joint-command-to-bus loop is closed in code.
 - Safety FSM with E-stop + battery-low latch, `/safety_clear` reset path, boot self-test seeding.
 - GitHub Actions CI green on every PR (Arduino-only env).
 
@@ -89,6 +89,7 @@ Group by purpose. All `std_msgs/Int32` counters are monotonic from boot unless n
 | Pub | `/servo_err_timeout` | `Int32` | 1 Hz | no servo response inside the read window |
 | Pub | `/servo_err_bad_frame` | `Int32` | 1 Hz | checksum / header garbled — bus-integrity signal |
 | Pub | `/servo_err_servo` | `Int32` | 1 Hz | servo responded with non-zero error byte (overheat/overload/voltage) |
+| Pub | `/torque_off_fail` | `Int32` | 1 Hz | lifetime count of servos that did not read back TORQUE_ENABLE=0 after a disarm (broadcast + per-servo write, 3 tries each; #437). **Non-zero = a stop left a joint holding torque** |
 
 ### Safety
 | Direction | Topic | Type | Rate | Notes |
@@ -122,7 +123,7 @@ its built-in defaults instead of the calibrated tables.
 ### Power telemetry
 | Direction | Topic | Type | Rate | Notes |
 |-----------|-------|------|------|-------|
-| Pub | `/power_rails` | `Float32MultiArray` | 10 Hz | **12 floats** with `NOVA_INA226_L2` (which IS set — `platformio.ini:61`, in `teensy_base.build_flags`): `[leg_v, leg_a, leg_w, hip_v, hip_a, hip_w, jetson_v, jetson_a, jetson_w, l2_v, l2_a, l2_w]`. **9 floats only if that flag is removed** — `POWER_RAILS_FIELDS` switches on it (`main.cpp:838-841`). Read by index, no MultiArrayLayout dims populated. ⚠️ **This row said 9 until 2026-08-12.** The 4th INA226 (L2 rail @0x45) was decided 2026-06-30 and the contract was never updated, so anything sized from this table would have silently dropped the L2 rail. |
+| Pub | `/power_rails` | `Float32MultiArray` | 10 Hz | **12 floats** with `NOVA_INA226_L2` (which IS set — `platformio.ini:61`, in `teensy_base.build_flags`): `[leg_v, leg_a, leg_w, hip_v, hip_a, hip_w, jetson_v, jetson_a, jetson_w, l2_v, l2_a, l2_w]`. **9 floats only if that flag is removed** — `POWER_RAILS_FIELDS` switches on it (`main.cpp:838-841`). Read by index, no MultiArrayLayout dims populated. **A rail whose INA226 did not ACK at boot publishes `NaN` in all three of its fields** (#439; a chip that drops off mid-run is not yet detected — `Rail::poll()` never clears `valid` once set) — 0.0 means a rail genuinely reading zero, never a dead sensor; consumers must `isnan`-check before using a value. ⚠️ **This row said 9 until 2026-08-12.** The 4th INA226 (L2 rail @0x45) was decided 2026-06-30 and the contract was never updated, so anything sized from this table would have silently dropped the L2 rail. |
 | Pub | `/servo_voltage` | `Float32MultiArray` | 5 Hz | 12 floats, per joint, volts (`PRESENT_VOLTAGE` raw × 0.1). **Added to this table 2026-08-10 — published since the servo-health work landed (`main.cpp:1493`) but never in the contract, so downstream guessed the name.** |
 | Pub | `/servo_temperature` | `Float32MultiArray` | 5 Hz | 12 floats, per joint, °C (`REG_PRESENT_TEMPERATURE` 0x3F, u8). Feeds the firmware-local overtemp guard at `NOVA_OVERTEMP_C` 70 °C, which trips limp ahead of the servo's own ~80 °C cutoff (`main.cpp:333`). **Same omission.** |
 
