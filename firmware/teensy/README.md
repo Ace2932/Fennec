@@ -12,7 +12,7 @@ Critical-path Phase 1 deliverable. The Teensy owns the Feetech servo bus in v1 �
 - **Safety monitor:**
   - INA226 ×3 I²C reads (leg / hip / Jetson rails; optional 4th on L2 rail) → `/diagnostics`
   - E-stop GPIO sense — when pressed, halts servo commands and publishes E-stop event
-  - **Battery low GPIO sense** — 13.0V comparator output → debounce → publish `/battery_low` (Jetson subscribes, runs `systemctl poweroff` for clean SD unmount before the 12.4V hard cutoff fires)
+  - **Battery low GPIO sense** — 13.03V comparator output (measured-parts value; see `hardware/wiring/README.md`'s safety-chain trip-point table) → debounce → publish `/battery_low` (Jetson subscribes, runs `systemctl poweroff` for clean SD unmount before the 12.56V hard cutoff fires — 0.47V margin)
 - **micro-ROS client over USB** to Jetson
 
 ### Pattern A fallback path

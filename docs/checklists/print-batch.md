@@ -85,7 +85,7 @@ the (now-chamfered) battery-lead notch, same family as `case_slot_grommet`.
 | Material | Parts |
 |---|---|
 | PA6-CF (DRY 80 °C/10 h; no anneal — §3) | coax, femur, tibia, knee_arm, shoulder, shoulder_plate (+L variants), strap ×4, **`head`**, **`neck_bracket`**, **`battery_pocket`** (#24 2026-07-10: stays PA6-CF — belly crush guard over the LiPo, puncture=fire #15; impact toughness > flatness) — 4 walls / 40 % / gyroid (**AUDITED** `neck_bracket_analysis.py`: faceplant SF ~12; ⚠ the L2-scan **vibration/resonance** is a stiffness concern, unverified — modal check on the first print) |
-| PETG-CF | riser_bay, floor_plate, **`head_ear` ×2** (split off the head 2026-07-07 — prints FLAT, low-warp. Bolts to the head ear-pad; OPTIONAL per the WiFi-antenna decision #32. **MATERIAL 2026-07-13: plain PETG or ASA — NOT a CF filament.** The ear is an antenna mast; carbon fiber is conductive at 2.4/5 GHz and detunes/absorbs the whip (several dB). Rigid low-loss dielectric holds the mast stiff with no RF penalty. If the ears end up pure styling, any filament is fine. **YAWED +45° edge-on to the L2** (`head_ear.scad EAR_YAW`, occlusion_ear.py): blocked LiDAR arc 28.5°→13.8°/ear, ~29° total FoV recovered; ears lean back. First-article: check base stiffness on the longer cantilever), **`l2_adapter`** (FLAT bottom-down, ~6 g; PA6-CF also fine — it carries the L2 mass so PA6-CF preferred if in stock), **`control_pod`** (COLUMN-FACE-DOWN, ~24 g; rear-top E-stop + OLED mount) |
+| PETG-CF | riser_bay, floor_plate, **`head_ear` ×2** (split off the head 2026-07-07 — prints FLAT, low-warp. Bolts to the head ear-pad; OPTIONAL per the WiFi-antenna decision #32. **MATERIAL 2026-07-13: plain PETG or ASA — NOT a CF filament.** The ear is an antenna mast; carbon fiber is conductive at 2.4/5 GHz and detunes/absorbs the whip (several dB). Rigid low-loss dielectric holds the mast stiff with no RF penalty. If the ears end up pure styling, any filament is fine. **YAWED +45° edge-on to the L2** (`head_ear.scad EAR_YAW`, occlusion_ear.py): blocked LiDAR arc 28.5°→13.8°/ear, ~29° total FoV recovered; ears lean back. First-article: check base stiffness on the longer cantilever), **`l2_adapter`** (FLAT bottom-down, ~6 g; PA6-CF also fine — it carries the L2 mass so PA6-CF preferred if in stock), **`control_pod`** (~~COLUMN-FACE-DOWN~~ → +Z / deck-face-down, ~24 g; rear-top E-stop + OLED mount — RESOLVED #383, 2026-08-16) |
 | TPU 95A | ✅ **SM3_Foot shoe ×4+1 PRINTED** (STOCK geometry — crush-zone v2 still waits for first-article fit, #20) · ✅ **skid_rail ×2 PRINTED** · ✅ **knee_bumper ×4+1 PRINTED** (backlog #15 B, replaced the retired ~~tibia_pad~~ — wraps the tibia knee-block, U opening up) · ✅ **cable_clip ×27 PRINTED 2026-08-01** (20 install + 7 spares; batch printed ahead of the §4 first-article step — see the anchor-topology note in §1b) · ⬜ **grommet_insert ×6** · ⬜ **case_slot_grommet** (#41 follow-up, -Y CASE_SLOT edge liner) · ⬜ **lead_notch_grommet ×2** (AUD-12b, 2026-07-10 — battery-lead notch edge liner, one per shoulder/trunk end) |
 
 ### 1b. TPU print status — measured, 2026-07-31
@@ -256,7 +256,7 @@ because the first version of this table drifted between being written and being 
 |---|---|---|---|---|
 | legs PA6-CF | 4 | 0.2 | 40% (**tibia 25%** — stress audit SF 35) | orientations per part headers: femur/tibia flat −Z, coax rear-face-down + supports under the yoke bridge, shoulder rear-face-down + tree supports, tibia tab-down + pillars, **shoulder_plate BACK-FACE-DOWN** (corrected 2026-08-02 — this said "horn-seat-down", which is `knee_arm`'s doctrine copied onto a part whose own header calls it *geometrically impossible*: the flange runs to y=2.00, 15.75 mm below the horn-seat plane at y=17.75, so it cannot rest there. Bed face is y=FACE_Y1=21.75), knee_arm underside-down, strap flat. **⚠ LA-3 (2026-07-11): femur_L / tibia_L do NOT share the R orientation** — the Z-mirror flips which face is flat, so "flat/tab face −Z down" applied to an L part prints it upside-down (tibia_L lands on two ~25.4mm² islands = tip-over risk). Rotate femur_L/tibia_L **180° about X from the R orientation** so they rest on the same flat face R does. ✅ **LA-3 does NOT extend to `shoulder_plate_L`, `coax_L` or `coax_hfe_block_L`** — those are X-mirrors, and only the Z-mirror changes which face is flat. `shoulder_plate_L` in particular is the **same shape** as the R (measured 2026-08-02: symmetric about its own midplane, the sole difference is the LA-2 dot, 7.41 mm³) — print both **back-face-down, same transform**, and nest them. |
 | head/bracket PA6-CF | 4–5 | 0.2 | 40–60% | `head` CROWN/PAD-DOWN (the flat crown top on the bed = best L2-seat + ear-pad surface; the boss + tilted face + cheeks rise → tree supports under the tilted-face + cheek overhangs); `neck_bracket` BASE-DOWN (deck face on the bed, wall+gussets rise); `l2_adapter` FLAT bottom-down (zero supports) |
-| chassis PETG-CF | 3 | 0.25 | 20% | riser DECK-FACE-DOWN (zero supports); floor_plate flat (zero supports); jetson_case_mount base-down (uprights rise, no overhangs after the #34 rework); `jetson_clamp_bar` ×2 flat (PA6-CF; #44 — removable case hold-downs, replaced the 4 clamps); `control_pod` COLUMN-FACE-DOWN (riser-facing face on the bed; light supports under the deck + OLED-panel overhangs). **`battery_pocket` prints PA6-CF settings** (§1 row / #24, not PETG), FLOOR-DOWN opening-up, 🔴 **`supports="normal"` — NOT zero.** This cell read "zero supports" until 2026-08-05 and that was **stale by the AUD-11 top-flange redesign (2026-07-10)**, which is what put a flange out over air. `slice_plate.py`'s ray-cast gate measures **639 mm² of unsupported area at a 34.8 mm drop** — printing that unsupported droops or fails outright on a ~60 g part. The registry in `hardware/cad/slice_plate.py` is the authority for orientation+supports; when this table disagrees with it, the table is the stale one. (`jetson_cowl` RETIRED #41 — do NOT print) |
+| chassis PETG-CF | 3 | 0.25 | 20% | riser DECK-FACE-DOWN (zero supports); floor_plate flat (zero supports); jetson_case_mount base-down (uprights rise, no overhangs after the #34 rework); `jetson_clamp_bar` ×2 flat (PA6-CF; #44 — removable case hold-downs, replaced the 4 clamps); `control_pod` ~~COLUMN-FACE-DOWN (riser-facing face on the bed)~~ → **+Z** (deck-face down; RESOLVED #383, 2026-08-16); light supports under the deck + OLED-panel overhangs. **`battery_pocket` prints PA6-CF settings** (§1 row / #24, not PETG), FLOOR-DOWN opening-up, 🔴 **`supports="normal"` — NOT zero.** This cell read "zero supports" until 2026-08-05 and that was **stale by the AUD-11 top-flange redesign (2026-07-10)**, which is what put a flange out over air. `slice_plate.py`'s ray-cast gate measures **639 mm² of unsupported area at a 34.8 mm drop** — printing that unsupported droops or fails outright on a ~60 g part. The registry in `hardware/cad/slice_plate.py` is the authority for orientation+supports; when this table disagrees with it, the table is the stale one. (`jetson_cowl` RETIRED #41 — do NOT print) |
 | TPU | 2 | 0.2 | 100% | clips/rails/grommet flat; **knee_bumper U-opening-UP**; shoe per stock orientation |
 
 ### 2b. `hardware/cad/slice_plate.py` — slice from the CLI, and prove the settings landed
@@ -346,12 +346,16 @@ retired a defect, since `check_hole_breakout` had both bores recorded as leaving
 ≤0.2 mm of real wall. The earlier "nothing about them should be cleaned up" no
 longer applies. `control_pod` is not printed yet, so nothing drifts.
 
-**Parts marked UNRESOLVED** — `spacer`, `trunk`, `head_ear(_L)` —
+**Parts marked UNRESOLVED** — ~~`spacer`,~~ `trunk`, `head_ear(_L)` —
 are printable but cannot be sliced yet, each for a recorded reason:
-`spacer` names no material anywhere though 8
-are needed; `trunk` is built by `trunk_build.py` so the freshness gate skips it;
-the ears are deliberately non-CF (#32 — the CF detunes the antenna) and no
-non-CF material is modelled yet. `--list` prints this set as a to-do.
+~~`spacer` names no material anywhere though 8 are needed~~ — `spacer` moved
+to the registry's **RETIRED** set (#383 part 1): it's the Jetson standoff
+washer for the bare devkit carrier, superseded 2026-07-07 when the Jetson
+moved into its official case, placed in no assembly — do NOT print; `trunk`
+is built by `trunk_build.py` so the freshness gate skips it; the ears are
+deliberately non-CF (#32 — the CF detunes the antenna) and no non-CF material
+is modelled yet. `--list` prints trunk/`head_ear(_L)` as UNRESOLVED and
+`spacer` under RETIRED.
 
 ⚠️ **These five were in the tool's "not printable" exclusion list on the first
 pass**, which made its coverage line read "covers every STL". That is this
@@ -598,7 +602,8 @@ batching them.
 - [ ] Left mirrors + 3 more leg sets + 2nd shoulder + plates + 3 more straps
 - [ ] Chassis set: **`trunk` (DERIVED, 2026-07-10 — replaces the stock shell;
       see `trunk_build.py`)**, riser_bay, floor_plate, battery_pocket, jetson_case_mount
-      + `jetson_clamp` ×4 (removable case hold-downs), neck_bracket (final),
+      + `jetson_clamp_bar` ×2 (removable case hold-downs, replaced the 4 clamps,
+      #44), neck_bracket (final),
       head (final — AFTER the fennec styling pass + bench-verified mounts, else
       it re-prints), control_pod (rear-top E-stop + OLED) + its 4 riser heat-sets
       (pressed from the pad pocket face)
@@ -606,11 +611,13 @@ batching them.
       TOP heat-sets (from above) + BASE heat-sets (from below) → bolt the cradle
       to the deck → assemble the case fully (bezel on the +y face) OFF-robot →
       DROP it in (ports face −y/right) → **plug the −y STRAIGHT cables now (full
-      access)** → **bolt on `jetson_cowl` ×1** (2× M3 from the −y side into the
-      −y upright heat-sets — shields the plugs from a right-side-fall crush; route
-      cables down the cowl floor → riser −Y `CASE_SLOT` x−30..30/y−51.5..−47 → bay)
-      → set the 4 `jetson_clamp`s on the upright tops, M3×8 down, capping the case
-      corner columns (TPU/EVA shim each for preload).
+      access)** → route cables through riser −Y `CASE_SLOT` x−30..30/y−51.5..−47 →
+      bay (~~bolt on `jetson_cowl` ×1 to shield the plugs~~ — `jetson_cowl`
+      RETIRED 2026-07-10, #41, superseded by right-angle plug adapters; cables
+      drop through the slot unshielded now) → bolt the 2 `jetson_clamp_bar`s onto
+      the ±Y upright tops (2× M2 each), each bar capping its side's 2 corner
+      columns (~~set the 4 `jetson_clamp`s, M3×8 down~~ — 2 bars replaced the 4
+      clamps, #44; TPU/EVA shim each for preload).
 - [ ] TPU: remaining 3+1 shoes, 2nd rail, 18 clips, 3+1 knee_bumper
 - [ ] Spares: **2–3 horn discs**, 1 shoe, 4 clips
 - [ ] Weigh the full set → final URDF masses; update

@@ -1,5 +1,7 @@
 // =============================================================================
-// V6 Shoulder — one crossmember per trunk end (SAME part both ends; print 2).
+// V6 Shoulder — one crossmember per trunk end. ~~SAME part both ends; print 2~~
+// — not since #377 (2026-08-15): the FRONT end prints `shoulder_sw1.scad`
+// (SW1 master-switch cutout added), this file (plain) prints the REAR only.
 // =============================================================================
 // Frame: X = lateral from robot centerline, Y = fore-aft with 0 at the hip
 // stations (+Y = horn/forward side), Z = 0 at the haa axes.

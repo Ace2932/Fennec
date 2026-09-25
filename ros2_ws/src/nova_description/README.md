@@ -4,26 +4,36 @@ URDF/xacro for the NovaSM3 12-DOF quadruped. This is the keystone the sim +
 planning stack was blocked on (MJX gait training, Isaac/VLA, MoveIt, RViz,
 robot_localization, gait COM-compensation all consume it).
 
-## ⚠️ Status: FIRST-CUT — link kinematics are PLACEHOLDERS
+## Status: link kinematics are MEASURED; masses/inertias are CALIBRATED estimates, not weighed
 
-- **Exact:** kinematic tree, joint types/axes, joint names, ID↔name map, STS3215
-  effort/velocity limits, and the **visual/collision meshes** (the real carved
-  NovaSM3 STLs from `original_body_files/`).
-- **NOT exact (every value tagged `TODO-CAD` in `urdf/nova.urdf.xacro`):** link
-  offsets (axis-to-axis distances), joint position ranges, masses, inertias.
-  These live in the mesh geometry / leg_v5 assembly and were not measured (no
-  mesh tool in the authoring env).
+~~FIRST-CUT — link kinematics are PLACEHOLDERS~~ — superseded 2026-07-06 onward;
+no property in `urdf/nova.urdf.xacro` is tagged `TODO-CAD` any more.
 
-**Do NOT train a gait or plan motion on this until the `TODO-CAD` values are
-replaced with measurements from CAD** — the link offsets are SpotMicro-class
-guesses and the kinematics will be wrong. The visuals are correct, so loading it
-in RViz immediately shows where the offsets need fixing.
+- **Exact / measured:** kinematic tree, joint types/axes, joint names, ID↔name map,
+  STS3215 effort/velocity limits, the **visual/collision meshes** (the real carved
+  NovaSM3 STLs from `original_body_files/`), **link offsets** (measured 2026-07-02
+  from the Assembly_NOVA_SM3 Fusion share; the leg_v6 hip-grid station fixed
+  2026-07-27 (#165) — `body_half_x` is the haa station and stays 0.1412, the
+  separate `hip_to_upper_x` (0.0116) carries the haa→hfe offset per leg end;
+  `test_urdf_sync.py` pins `body_half_x - hip_to_upper_x` against the CAD), and
+  **joint position ranges** (set from the CAD fit-gate crouch sweep, 2026-07-06,
+  refined by #47's measured hfe sweep, 2026-07-11).
+- **Estimated, not weighed:** link masses/inertias are COMPUTED (2026-07-13,
+  `tools/compute_inertials.py`) from the real leg_v6 meshes + embedded servos, and
+  CALIBRATED against measured print density + a 60 g servo-box allowance — real
+  numbers, not a guess, but not a scale reading either. Still owed: weigh every
+  printed part and replace these with measured masses (backlog #5/#13); the
+  xacro also flags the left/right mirror sign on the inertia tensors as
+  "verify in sim".
 
-### How to refine (the one remaining task)
-Measure from the leg_v5 assembly / `original_body_files/SM3_Frame_*` meshes:
-`body_half_x/y`, `mount_z`, `hip_to_upper_*`, `upper_to_lower_z` (femur length),
-`lower_to_foot_z` (tibia length), per-joint `*_range`, and link masses/inertias.
-Replace the matching xacro properties, then re-check in RViz.
+The kinematics are trustworthy enough to plan/train motion on; the mass/inertia
+values are a calibrated estimate, so treat dynamics-sensitive results (torque
+margins, balance) with that caveat until the weigh-in above lands.
+
+### How to refine (remaining task)
+Weigh every printed part and feed the measured masses back into
+`tools/compute_inertials.py`, then update `urdf/nova.urdf.xacro`'s mass/inertia
+properties and re-check in RViz.
 
 ## Layout
 - `urdf/nova.urdf.xacro` — robot: properties + base + 4× leg macro

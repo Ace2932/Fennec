@@ -122,8 +122,12 @@ Open items are tracked as issues: **#164** (rear ROM rows + rear hfe sign, sev:h
   no-op, so an un-negated regeneration silently puts the rear bound on the WRONG SIDE. No LiPo-powered ROM
   extremes on the rear legs until then.
 - **FIXED (docs)**: leg chirality pairs **diagonally** (front +y = R, rear +y = **L**) — `leg_v6/README.md`.
-- **🟠 DECISION (gait/sim)**: URDF `body_half_x`/MJX `MOUNT.x` 0.1412 is the *stock* hfe station; v6 puts the
-  pitch axes at ±129.6 ⇒ the modeled stance is 23.2 mm longer fore-aft than the robot. Folds into B2.
+- ~~**🟠 DECISION (gait/sim)**: URDF `body_half_x`/MJX `MOUNT.x` 0.1412 is the *stock* hfe station; v6 puts the
+  pitch axes at ±129.6 ⇒ the modeled stance is 23.2 mm longer fore-aft than the robot. Folds into B2.~~
+  → **RESOLVED #165 (2026-07-27)**: `body_half_x` stays 0.1412 — it's the real haa station (the hardware,
+  literally); the new `hip_to_upper_x = 0.0116` property carries the haa→hfe offset per leg end instead,
+  giving a real pitch-axis station of 0.1296 (259.2 mm spacing, not the stock 282.4). `test_urdf_sync.py`
+  pins `body_half_x - hip_to_upper_x == 0.1296` against the CAD.
 
 ## 🟢 2026-06-27 — Boards FAB-READY (supersedes the "Pending board edit" + B1 items below)
 Both boards **fab_gate GO**, branch `feat/power-board-arm-routed` (HEAD 475cdc5). The two "Pending board edit"
@@ -298,9 +302,12 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
    after `rclc_support_init`.
 6. Firmware bench bring-up (real SN74LVC125A + INA226 + STS3215) + servo ID assignment
    (`docs/setup-servos.md`). Bus half-duplex timing — `pre-power-on-validation.md` §10.
-7. **B2** — remaining CAD: joint ranges, masses/inertias, the `body_half_x` 0.1412-vs-±129.6 hfe
-   station decision, and `nova_description/README.md` still warns "do NOT train a gait until the
-   TODO-CAD values are…" which is now stale against its own xacro.
+7. **B2** — remaining CAD: ~~joint ranges,~~ masses/inertias (joint ranges are measured, #47/2026-07-06;
+   ~~the `body_half_x` 0.1412-vs-±129.6 hfe station decision~~ RESOLVED #165, see above; ~~and
+   `nova_description/README.md` still warns "do NOT train a gait until the TODO-CAD values are…" which
+   is now stale against its own xacro~~ — README corrected to match the xacro, this pass). Still open:
+   weigh every printed part and replace the calibrated mass/inertia estimates with measured values
+   (backlog #5/#13).
 8. Leg first-article print (PA6-CF).
 
 ## 🔩 MECHANICAL ASSEMBLY — readiness audit 2026-08-24

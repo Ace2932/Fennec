@@ -54,11 +54,14 @@ constexpr uint32_t LIMP_HOLD_US = 1000000UL;
 //
 //   * BATTERY-LOW — CONTROLLED LIMP. This is not an operator emergency stop
 //     and it is not "already broken": it is debounced (50 ms,
-//     SafetyFSM::BATT_LOW_DEBOUNCE_TICKS) off a comparator set at 13.0 V,
-//     and the pack's actual hard cutoff is the LVC MOSFET at 12.4 V — about
-//     0.6 V of real margin that removes power at the HARDWARE level
-//     regardless of what the firmware does. There is genuine budget to fold
-//     the legs into a stable pose before that hard drop.
+//     SafetyFSM::BATT_LOW_DEBOUNCE_TICKS) off a comparator set at 13.03 V
+//     (measured-parts value; was estimated 13.0 V), and the pack's actual
+//     hard cutoff is the LVC MOSFET at 12.56 V (measured-parts; was
+//     estimated 12.4 V) — about 0.47 V of real margin (was estimated 0.6 V;
+//     see hardware/wiring/README.md's safety-chain trip-point table) that
+//     removes power at the HARDWARE level regardless of what the firmware
+//     does. There is genuine budget to fold the legs into a stable pose
+//     before that hard drop.
 inline bool fault_gets_controlled_limp(SafetyState fault) {
   return fault == SAFETY_BATTERY_LOW_LATCHED;
 }
