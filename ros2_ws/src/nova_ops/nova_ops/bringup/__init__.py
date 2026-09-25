@@ -19,43 +19,75 @@ Each profile is a sequence of "actions":
 # the learned path must carry the SAME protection as the scripted one,
 # and a copy-paste of this list is exactly how it would quietly stop.
 _MOTION_STACK = [
-            # FIRST, and before preflight: the Teensy boots with BOTH
-            # protection tables wide open (per-joint 0..4095, posture backstop
-            # off) and only the host can narrow them (#185). Listed ahead of
-            # preflight deliberately — ros2 launch does not guarantee start
-            # ORDER, so this is intent, not a guarantee, and #187's arming
-            # check has to tolerate the race with a wait window.
-            ("node", "nova_ops", "firmware_tables", {"_respawn": True}),
-            ("launch", "nova_ops", "preflight.launch.py", {}),
-            ("launch", "nova_ops", "dashcam.launch.py", {}),
-            # robot_state_publisher — /robot_description + /tf for the 3D robot
-            # in Foxglove (and any TF consumer) during gait bring-up.
-            ("launch", "nova_description", "robot_state.launch.py", {}),
-            # §10 battery_low -> clean poweroff. Safety-critical: the ONLY
-            # nova_ops node not allowed to crash silently.
-            ("node", "nova_ops", "battery_shutdown_node", {"_respawn": True}),
-            # Teensy /heartbeat watchdog -> /system_ok (audit gap closure)
-            ("node", "nova_ops", "liveness_node", {"_respawn": True}),
-            # systemd WATCHDOG=1 feeder — hang recovery when run under
-            # deploy/nova-bringup.service (WatchdogSec=15, NotifyAccess=all);
-            # idles harmlessly outside systemd. See nova_ops/watchdog/.
-            ("node", "nova_ops", "watchdog_node", {"_respawn": True}),
-            # Foxglove bridge — live gait/IMU/telemetry viz during bring-up
-            # (ws://<jetson>:8765). Most useful profile for it: watch the
-            # policy obs/actions + joint tracking while the robot walks.
-            (
-                "node",
-                "foxglove_bridge",
-                "foxglove_bridge",
-                {"port": 8765, "address": "0.0.0.0"},
-            ),
-            # Gait controller (#285 — this used to say package 'nova_gait',
-            # executable 'gait_controller', neither of which ever existed;
-            # verified against nova_locomotion/setup.py entry_points:
-            # "gait_node = nova_locomotion.node:main"). Refuses to leave
-            # idle until it observes a preflight PASS on /preflight/status
-            # (see nova_locomotion/node.py PreflightGate; bypass with the
-            # require_preflight:=false node param for bench debugging).
+    # FIRST, and before preflight: the Teensy boots with BOTH
+    # protection tables wide open (per-joint 0..4095, posture backstop
+    # off) and only the host can narrow them (#185). Listed ahead of
+    # preflight deliberately — ros2 launch does not guarantee start
+    # ORDER, so this is intent, not a guarantee, and #187's arming
+    # check has to tolerate the race with a wait window.
+    ("node", "nova_ops", "firmware_tables", {"_respawn": True}),
+    ("launch", "nova_ops", "preflight.launch.py", {}),
+    ("launch", "nova_ops", "dashcam.launch.py", {}),
+    # robot_state_publisher — /robot_description + /tf for the 3D robot
+    # in Foxglove (and any TF consumer) during gait bring-up.
+    ("launch", "nova_description", "robot_state.launch.py", {}),
+    # §10 battery_low -> clean poweroff. Safety-critical: the ONLY
+    # nova_ops node not allowed to crash silently.
+    ("node", "nova_ops", "battery_shutdown_node", {"_respawn": True}),
+    # Teensy /heartbeat watchdog -> /system_ok (audit gap closure)
+    ("node", "nova_ops", "liveness_node", {"_respawn": True}),
+    # systemd WATCHDOG=1 feeder — hang recovery when run under
+    # deploy/nova-bringup.service (WatchdogSec=15, NotifyAccess=all);
+    # idles harmlessly outside systemd. See nova_ops/watchdog/.
+    ("node", "nova_ops", "watchdog_node", {"_respawn": True}),
+    # Foxglove bridge — live gait/IMU/telemetry viz during bring-up
+    # (ws://<jetson>:8765). Most useful profile for it: watch the
+    # policy obs/actions + joint tracking while the robot walks.
+    (
+        "node",
+        "foxglove_bridge",
+        "foxglove_bridge",
+        {"port": 8765, "address": "0.0.0.0"},
+    ),
+    # Gait controller (#285 — this used to say package 'nova_gait',
+    # executable 'gait_controller', neither of which ever existed;
+    # verified against nova_locomotion/setup.py entry_points:
+    # "gait_node = nova_locomotion.node:main"). Refuses to leave
+    # idle until it observes a preflight PASS on /preflight/status
+    # (see nova_locomotion/node.py PreflightGate; bypass with the
+    # require_preflight:=false node param for bench debugging).
+]
+
+# Shared by `sensors` and `slam`: RealSense + dashcam + Foxglove bridge.
+# LiDAR is deliberately NOT here — `sensors` wants the driver's raw,
+# unfiltered stream for lidar smoke tests, while `slam` needs the driver
+# remapped so lidar_selffilter_node can sit in front of POINT-LIO (#441).
+# One shared driver action between the two profiles would either give
+# `sensors` filtered points it didn't ask for, or launch the driver twice
+# (real UDP socket bind) when `full` pulls in both `walk`+`slam` — so each
+# profile lists its own `unitree_lidar_ros2` action instead.
+_SENSOR_STACK = [
+    (
+        "launch",
+        "realsense2_camera",
+        "rs_launch.py",
+        {
+            "enable_color": "true",
+            "enable_depth": "true",
+            "enable_gyro": "true",
+            "enable_accel": "true",
+        },
+    ),
+    ("launch", "nova_ops", "dashcam.launch.py", {}),
+    # Foxglove bridge — WebSocket for live viz from a laptop/browser
+    # (connect ws://<jetson>:8765). apt: ros-humble-foxglove-bridge.
+    # SKIPs cleanly if not installed (composer checks the package).
+    (
+        "node",
+        "foxglove_bridge",
+        "foxglove_bridge",
+        {"port": 8765, "address": "0.0.0.0"},
+    ),
 ]
 
 PROFILES = {
@@ -74,36 +106,39 @@ PROFILES = {
         "description": "RealSense + L2 + dashcam — sensor smoke tests + data collection",
         "preflight": False,  # sensors don't need servo bus
         "actions": [
-            (
-                "launch",
-                "realsense2_camera",
-                "rs_launch.py",
-                {
-                    "enable_color": "true",
-                    "enable_depth": "true",
-                    "enable_gyro": "true",
-                    "enable_accel": "true",
-                },
-            ),
+            *_SENSOR_STACK,
             ("launch", "unitree_lidar_ros2", "launch.py", {}),
-            ("launch", "nova_ops", "dashcam.launch.py", {}),
-            # Foxglove bridge — WebSocket for live viz from a laptop/browser
-            # (connect ws://<jetson>:8765). apt: ros-humble-foxglove-bridge.
-            # SKIPs cleanly if not installed (composer checks the package).
-            (
-                "node",
-                "foxglove_bridge",
-                "foxglove_bridge",
-                {"port": 8765, "address": "0.0.0.0"},
-            ),
         ],
     },
     "slam": {
-        "description": "sensors + POINT-LIO + robot_state_publisher",
+        "description": "sensors + self-filtered L2 + POINT-LIO + robot_state_publisher",
         "preflight": False,
         "actions": [
-            # Compose by reference: load `sensors` profile first.
-            ("include_profile", "sensors"),
+            *_SENSOR_STACK,
+            # #441: lidar_selffilter_node existed but no profile launched
+            # it, so POINT-LIO mapped the robot's own ear-mast returns as
+            # obstacles. cloud_topic is the unitree_lidar_ros2 launch arg
+            # confirmed from its source (docs/setup-network.md); moving
+            # the raw driver off its /unilidar/cloud default lets the
+            # filter republish the FILTERED cloud back onto that exact
+            # name, which is what POINT-LIO's own config already expects
+            # (unilidar_l2.yaml: `lid_topic: /unilidar/cloud`) — so
+            # POINT-LIO's launch action below needs no change at all.
+            (
+                "launch",
+                "unitree_lidar_ros2",
+                "launch.py",
+                {"cloud_topic": "/unilidar/cloud_raw"},
+            ),
+            (
+                "node",
+                "nova_ops",
+                "lidar_selffilter_node",
+                {
+                    "input_topic": "/unilidar/cloud_raw",
+                    "output_topic": "/unilidar/cloud",
+                },
+            ),
             ("launch", "point_lio", "mapping_unilidar_l2.launch.py", {}),
             # robot_state_publisher (URDF landed 2026-07-13) — publishes
             # /robot_description + the sensor<->base TF tree POINT-LIO needs.
