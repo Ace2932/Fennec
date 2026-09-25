@@ -15,6 +15,15 @@ Critical-path Phase 1 deliverable. The Teensy owns the Feetech servo bus in v1 �
   - **Battery low GPIO sense** — 13.03V comparator output (measured-parts value; see `hardware/wiring/README.md`'s safety-chain trip-point table) → debounce → publish `/battery_low` (Jetson subscribes, runs `systemctl poweroff` for clean SD unmount before the 12.56V hard cutoff fires — 0.47V margin)
 - **micro-ROS client over USB** to Jetson
 
+> ⚠️ **`BATTERY_LOW_PIN` fails UNSAFE on an open J20 (#435, noted 2026-09-25).** `main.cpp` sets
+> pin 4 to `INPUT_PULLDOWN`, and the comparator output is active-high (HIGH = battery low). The
+> `R8` 10k pull-up that makes it high is on the *power* board, across the J20 ribbon. So an
+> unplugged or broken ribbon reads LOW = **"battery OK"**, silently. The E-stop input is the
+> opposite (`INPUT_PULLUP`, open reads pressed), so it fails safe. For `BATT_LOW` the
+> **hardware hard-cut (`HARDCUT` → Q2/Q4) is the only backstop.** It is on the power board and
+> does not depend on J20. v7: invert the comparator output polarity so an open line reads
+> "battery low", and flip this read to match (`hardware/pcb-mods/BUILD_PLAN.md` §8).
+
 ### Pattern A fallback path
 
 When `JP_BUS_MASTER` solder bridge is flipped to A, the bus is driven by FE-URT-1 (Jetson direct). Teensy stays alive for INA226 + E-stop duties but stops driving the 74HC125. Used for:
