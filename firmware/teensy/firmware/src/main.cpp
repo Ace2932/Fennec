@@ -17,6 +17,7 @@
 #include "loop_timing.h"
 #include "limp_controller.h"
 #include "servo_fleet.h"
+#include "telemetry_schedule.h"
 
 // Joint count = 12 (4 legs × 3 joints). Names/frame_id stay empty in
 // skeleton — Nova URDF wiring lands once gait controller is on the Jetson.
@@ -222,7 +223,7 @@ void read_ina226_stub() {
   // Round-robin sample. Single chip per tick keeps the I²C bus + main loop
   // budget tight; full set refreshes every INA226_RAIL_COUNT ticks.
   rails[ina226_rr_idx]->poll();
-  ina226_rr_idx = (ina226_rr_idx + 1) % INA226_RAIL_COUNT;
+  ina226_rr_idx = nova::rr_next(ina226_rr_idx, INA226_RAIL_COUNT);
 }
 
 // ---------------- Servo round-robin telemetry ----------------
@@ -353,18 +354,17 @@ void poll_one_servo() {
       default: break;
     }
   }
-  servo_rr_idx = (servo_rr_idx + 1) % NOVA_JOINT_COUNT;
+  servo_rr_idx = nova::rr_next(servo_rr_idx, NOVA_JOINT_COUNT);
 }
 
 // ---------------- Servo command broadcast ----------------
-// Every CMD_BROADCAST_DECIMATE ticks (= 40 Hz at 200 Hz tick) send a
+// Every CMD_BROADCAST_DECIMATE ticks (= 100 Hz at 200 Hz tick) send a
 // SYNC_WRITE goal-position frame to all 12 servos with the latest latched
 // commands. Decimation keeps bus utilization sane and matches typical gait
 // command rate. Gated on safety_fsm.motion_enabled() — never writes while
-// E-stop or battery-low are latched.
-constexpr uint8_t CMD_BROADCAST_DECIMATE = 2;   // 200 Hz / 2 = 100 Hz
-// (backlog #21 bus-schedule rework, 2026-07-06: was 5 = 40 Hz. Gait wants
-// >= 100 Hz command; the slew constant below scales with the period.)
+// E-stop or battery-low are latched. The constant and the decimator live in
+// telemetry_schedule.h (#358), where the resulting rate is tested.
+using nova::CMD_BROADCAST_DECIMATE;
 uint8_t cmd_decimate_count = 0;
 
 // Slew limit — max raw-units change per broadcast (= per 10 ms at 100 Hz).
@@ -375,10 +375,7 @@ uint8_t cmd_decimate_count = 0;
 #ifndef NOVA_SLEW_MAX_DELTA
 #define NOVA_SLEW_MAX_DELTA 20
 #endif
-// Feedback polls per 5 ms tick (per-joint rate = 200*N/12 Hz): 3 -> 50 Hz
-#ifndef NOVA_POLLS_PER_TICK
-#define NOVA_POLLS_PER_TICK 3
-#endif
+// NOVA_POLLS_PER_TICK (feedback polls per tick) moved to telemetry_schedule.h.
 
 // Per-joint last-commanded raw goal, used to compute the slew-limited
 // next value. Initialized to "no command yet" sentinel; on first broadcast
@@ -439,9 +436,7 @@ void broadcast_servo_commands() {
   // ever having arrived — the whole point of the firmware fault path is to
   // not depend on the host being alive.
   if (!limping && joint_cmd_rx_count == 0) return;
-  cmd_decimate_count++;
-  if (cmd_decimate_count < CMD_BROADCAST_DECIMATE) return;
-  cmd_decimate_count = 0;
+  if (!nova::decimate(cmd_decimate_count, CMD_BROADCAST_DECIMATE)) return;
 
   uint8_t ids[NOVA_JOINT_COUNT];
   uint16_t goals[NOVA_JOINT_COUNT];
@@ -521,12 +516,9 @@ void broadcast_servo_commands() {
   // into the LiPo, same "expected to collapse rather than fight the fault"
   // philosophy as the E-stop limp path. Keep last_cmd_goal in sync with
   // whatever this pass actually wrote so next tick's slew starts from the
-  // real (possibly clamped) position, not the pre-clamp one.
+  // real (possibly clamped) position, not the pre-clamp one (slew_limiter.h).
   hfe_envelope.apply(goals, servo_position_raw, servo_present_mask);
-  for (size_t leg = 0; leg < nova::HFE_ENV_LEGS; leg++) {
-    const size_t hi = nova::hfe_env_hfe_index(leg);
-    last_cmd_goal[hi] = goals[hi];
-  }
+  nova::slew_commit(last_cmd_goal, goals, NOVA_JOINT_COUNT);
 
   servo_bus.sync_write_goal_positions(ids, goals, NOVA_JOINT_COUNT);
 }
@@ -538,17 +530,13 @@ elapsedMillis power_rails_ms;
 elapsedMillis servo_health_ms;
 elapsedMillis imu_ms;
 const uint32_t TICK_PERIOD_US = 1000000UL / NOVA_LOOP_HZ;
-const uint32_t HEARTBEAT_PERIOD_MS = 1000;
-const uint32_t STATS_PERIOD_MS = 1000;
-const uint32_t IMU_PERIOD_MS = 10;             // 100 Hz — see note below
-const uint32_t POWER_RAILS_PERIOD_MS = 100;    // 10 Hz — matches Phase 1 spec
-const uint32_t SERVO_HEALTH_PERIOD_MS = 200;   // 5 Hz — voltage + temperature
-// 100 Hz. NOT a free choice: policy_node runs control_hz = 50 (policy_node.py:185)
-// and consumes gyro + projected gravity as observation dims 0..5, so the IMU must
-// publish at least at control rate; 2x gives margin for scheduling jitter without
-// the policy ever reusing a sample. poll_imu() already reads the chip and updates
-// the tilt filter every tick at NOVA_LOOP_HZ = 200, so every published sample here
-// is fresh -- this rate only controls how often that fresh state leaves the board.
+// Publish periods (and why IMU is 100 Hz) live in telemetry_schedule.h (#358),
+// where test_telemetry_schedule pins each topic's rate on a simulated clock.
+using nova::HEARTBEAT_PERIOD_MS;
+using nova::STATS_PERIOD_MS;
+using nova::IMU_PERIOD_MS;
+using nova::POWER_RAILS_PERIOD_MS;
+using nova::SERVO_HEALTH_PERIOD_MS;
 
 // IntervalTimer ISR drives the tick. Handler in loop() measures
 // ISR-fire → handler-entry latency = pure scheduling jitter (target: a
@@ -1390,8 +1378,7 @@ void loop() {
     exec_time_hist.record(exec_us);
   }
 
-  if (heartbeat_ms >= HEARTBEAT_PERIOD_MS) {
-    heartbeat_ms = 0;
+  if (nova::rate_due(heartbeat_ms, HEARTBEAT_PERIOD_MS)) {
     digitalWrite(LED_PIN, !digitalRead(LED_PIN));   // 1 Hz LED
 #ifdef NOVA_USE_MICRO_ROS
     heartbeat_msg.data++;
@@ -1436,7 +1423,7 @@ void loop() {
     // Firmware version — publish every 10 s (1 Hz heartbeat / 10), low-rate
     // identity ping so reconnecting hosts can pick it up without restart.
     static uint32_t fw_pub_count = 0;
-    if ((fw_pub_count++ % 10) == 0) {
+    if (nova::every_nth_from_first(fw_pub_count, nova::FW_VERSION_EVERY_N_HEARTBEATS)) {
       RCSOFTCHECK(rcl_publish(&firmware_version_pub, &firmware_version_msg, NULL));
     }
 #else
@@ -1458,8 +1445,7 @@ void loop() {
   // real one -- its /imu liveness gate would go green on a sensor that is not
   // there. Silence is the honest signal; the gate then refuses, which is the
   // documented behaviour with no driver (policy_node.py:152).
-  if (imu_ms >= IMU_PERIOD_MS) {
-    imu_ms = 0;
+  if (nova::rate_due(imu_ms, IMU_PERIOD_MS)) {
 #ifdef NOVA_USE_MICRO_ROS
     if (imu_ok) {
       float q[4];
@@ -1480,8 +1466,7 @@ void loop() {
 #endif
   }
 
-  if (servo_health_ms >= SERVO_HEALTH_PERIOD_MS) {
-    servo_health_ms = 0;
+  if (nova::rate_due(servo_health_ms, SERVO_HEALTH_PERIOD_MS)) {
     // Convert raw voltage (0.1 V units) + temperature (°C, already cooked)
     // into float arrays. Conversion math stays here — host-side consumers
     // see scaled values, not raw bytes.
@@ -1495,8 +1480,7 @@ void loop() {
 #endif
   }
 
-  if (power_rails_ms >= POWER_RAILS_PERIOD_MS) {
-    power_rails_ms = 0;
+  if (nova::rate_due(power_rails_ms, POWER_RAILS_PERIOD_MS)) {
     // Pull the latest per-rail samples into the Float32MultiArray buffer.
     // Order: leg_v leg_a leg_w hip_v hip_a hip_w jetson_v jetson_a jetson_w
     // (+ l2_v l2_a l2_w at [9..11] when NOVA_INA226_L2 → 12-float layout) —
@@ -1511,8 +1495,7 @@ void loop() {
 #endif
   }
 
-  if (stats_ms >= STATS_PERIOD_MS) {
-    stats_ms = 0;
+  if (nova::rate_due(stats_ms, STATS_PERIOD_MS)) {
 #ifdef NOVA_USE_MICRO_ROS
     loop_max_msg.data      = (int32_t)latency_hist.max_us();
     loop_p99_msg.data      = (int32_t)latency_hist.p99_us();
