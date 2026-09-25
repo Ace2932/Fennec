@@ -16,6 +16,7 @@
 #include "safety_state.h"
 #include "loop_timing.h"
 #include "limp_controller.h"
+#include "servo_fleet.h"
 
 // Joint count = 12 (4 legs × 3 joints). Names/frame_id stay empty in
 // skeleton — Nova URDF wiring lands once gait controller is on the Jetson.
@@ -284,19 +285,14 @@ uint8_t  servo_stall_count[NOVA_JOINT_COUNT] = {0};
 volatile uint16_t servo_stall_mask = 0;     // bit i set = joint i has tripped
 
 // Write TORQUE_ENABLE to every PRESENT servo. Blocking (~0.4 ms/servo) — only
-// called at boot, on stall-fault entry, and on fault clear; never the hot path.
+// called on the first safety tick, on stall-fault entry, and on fault clear;
+// never the hot path. The logic lives in servo_fleet.h (native-tested,
+// test_servo_fleet); arming is refused until the first safety tick (#436).
+nova::ServoFleet<feetech::Bus> servo_fleet(servo_bus, SERVO_ID_BASE, NOVA_JOINT_COUNT,
+                                           NOVA_TORQUE_LIMIT_RAW, NOVA_GOAL_ACC);
 void set_fleet_torque(bool on) {
-  for (uint8_t i = 0; i < NOVA_JOINT_COUNT; i++) {
-    if (servo_present_mask & (uint16_t)(1u << i)) {
-      uint8_t id = SERVO_ID_BASE + i;
-      if (on) {
-        // dynamics BEFORE enable so the first held pose is already limited
-        servo_bus.set_torque_limit(id, NOVA_TORQUE_LIMIT_RAW);
-        servo_bus.set_goal_acc(id, NOVA_GOAL_ACC);
-      }
-      servo_bus.torque_enable(id, on);
-    }
-  }
+  if (on) servo_fleet.arm(servo_present_mask);
+  else    servo_fleet.disarm(servo_present_mask);
 }
 
 void poll_one_servo() {
@@ -707,10 +703,11 @@ rclc_executor_t executor;
 // HOLDING TORQUE with no safety loop, no watchdog and no recovery. Now: cut
 // torque, flash a 10 Hz burst (distinct from the 2 Hz waiting-for-agent
 // blink), then reset exactly like the software watchdog (tick_isr) so the
-// board retries from scratch.
+// board retries from scratch. Since #436 setup() no longer arms, so the fleet
+// is already limp here; the cut stays as a backstop.
 // ponytail: a PERSISTENT init failure (e.g. entity caps too small, see
-// nova_microros.meta) becomes a reboot loop (~2 s+ per boot) that toggles
-// torque on/off each boot; add a boot-count in a noinit RAM word to stay limp
+// nova_microros.meta) becomes a reboot loop (~2 s+ per boot) -- limp, since
+// #436, but silent; add a boot-count in a noinit RAM word to stop retrying
 // after N tries if that is ever seen on the bench. A dead agent does NOT loop here --
 // rclc_support_init above retries forever before any RCCHECK runs.
 [[noreturn]] static void rc_init_fail_reset() {
@@ -906,11 +903,10 @@ void setup() {
     }
   }
 
-  // Arm servo torque on every present servo (decision 2026-06-27: FW ALWAYS
-  // writes TORQUE_ENABLE rather than trusting each servo's EEPROM default — a
-  // torque-off EEPROM would silently ignore every goal). Skip if booting into a
-  // latched fault; the loop re-arms on clear.
-  if (safety_fsm.motion_enabled()) set_fleet_torque(true);
+  // Servo torque is NOT armed here (#436). This point is before the micro-ROS
+  // agent wait (30-60 s on a cold boot) and before tick_timer.begin(), so
+  // armed servos would hold torque with no SafetyFSM, stall guard or watchdog
+  // running. The first safety tick in loop() arms instead (servo_fleet.h).
 
 #ifdef NOVA_USE_MICRO_ROS
   set_microros_serial_transports(Serial);
@@ -1321,6 +1317,14 @@ void loop() {
       for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) servo_stall_count[i] = 0;
       limp_controller.reset();   // defensive — should already be idle here
     }
+    // #436: boot arm, on the FIRST safety tick — the FSM has just evaluated
+    // the live E-stop / battery-low pins, the tick timer and watchdog are
+    // running. Arm servo torque on every present servo (decision 2026-06-27:
+    // FW ALWAYS writes TORQUE_ENABLE rather than trusting each servo's EEPROM
+    // default — a torque-off EEPROM would silently ignore every goal). Skipped
+    // if booting into a latched fault (boot self-test); the clear path above
+    // re-arms. No-op on every later tick.
+    servo_fleet.safety_tick(safety_fsm.motion_enabled(), servo_present_mask);
 
 #ifdef NOVA_USE_MICRO_ROS
     // Edge-change publish for raw safety signals (host sees the source)
