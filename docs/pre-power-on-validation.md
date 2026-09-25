@@ -193,7 +193,7 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
       (bulk caps Ø10×17 mm, INA226 modules) clear the M3×20 standoff gap (≤~17 mm target).
 
 **🟢 Low — protected or bench-only:**
-- [ ] **J1 XT60** — post-polarity-fix: `pad1=BATT_NEG(−)/chamfer side, pad2=VBAT(+)/flat side` (see §1e — was reversed, fixed 2026-06-29). Q1 reverse-prot covers a slip, but confirm flat=+.
+- [ ] **J1 XT60** — post-polarity-fix: `pad1=BATT_NEG(−)/chamfer side, pad2=VBAT(+)/flat side` (see §1e — was reversed, fixed 2026-06-29). Q1 reverse-prot covers a slip, but confirm flat=+. ⚠ superseded by docs/power-chain-fmea.md#pc-01 (as built, it does not)
 - [ ] **SW1** — confirm the physical switch is rated for full pack current (~15–18 A).
 - [ ] **J9 FE-URT-1** — Pattern-A bench adapter only; confirm its data pin = MASTER_A if used.
 - [ ] **Q1 IRLB3034** — TO-220 G/D/S = pin 1/2/3 (matches footprint); confirm tab = Drain.
@@ -371,7 +371,7 @@ mitigation is to RAISE `BATT_LOW` (R4/R5), not to lower `HARDCUT`.
 Record: actual `BATT_LOW` V, actual `HARDCUT` V, hysteresis band, measured window in
 seconds, and V5_AUX under load at the moment of each trip.
 
-## 🟡 3. Inrush into bulk capacitance (~5470µF: 5×1000µF + 3×470µF)
+## 🟡 3. Inrush into bulk capacitance (~5470µF: 5×1000µF + 3×470µF) ⚠ superseded by docs/power-chain-fmea.md#pc-10 (hot-plug sees 940 µF)
 Charged 16.8V pack → XT60 → ~5470µF = hard inrush spike + connector arc. No precharge.
 - [ ] First connect at CURRENT-LIMITED bench supply (0.5A) — watch for sustained inrush
 - [ ] Inspect XT60 contacts after several connect cycles (pitting = consider precharge resistor)

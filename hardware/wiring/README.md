@@ -49,7 +49,7 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
 elements in the battery feed — both act by pulling buck **EN** pins low (`EN_BUCKS`/`EN_JET`);
 the feed itself is only ever broken by the fuse, Q1 and SW1. (2) **The UBEC is deliberately
 NOT killed by either** — it has no EN, so `V5_AUX` stays up through a hardcut, which is what
-keeps the comparators latched. The one thing that kills it is SW1 (or the pack).
+keeps the comparators latched. The one thing that kills it is SW1 (or the pack). ⚠ superseded by ../../docs/power-chain-fmea.md#pc-07 (not latched: 0.28 V hysteresis only)
 
 ### Regen TVS clamps (harness parts — not on either PCB)
 
@@ -218,7 +218,7 @@ Teensy 4.1                          I²C bus (separate from Arduino Nano aux bus
                                               l2_v, l2_a, l2_w]
 ```
 
-**Current-sense wiring (CRITICAL — PCB carries NO shunt; R13/R14 deleted):** the INA226 reads current only if the rail flows through its onboard 2 mΩ shunt (IN+→IN−). The board exposes just I²C+power; IN+/IN− are the module's **screw terminals** → wire **inline in the harness**: rail source → IN+ → shunt → IN− → load.
+**Current-sense wiring (CRITICAL — PCB carries NO shunt; R13/R14 deleted):** the INA226 reads current only if the rail flows through its onboard 2 mΩ shunt (IN+→IN−). The board exposes just I²C+power; IN+/IN− are the module's **screw terminals** → wire **inline in the harness**: rail source → IN+ → shunt → IN− → load. ⚠ superseded by ../../docs/power-chain-fmea.md (R13/R14 designators were reused: R13 = e-stop pull-up, R14 = hardcut hysteresis — both live)
 - **Hip (0x41 @ J7) / Jetson (0x44 @ J12) / L2 (0x45 @ J13):** single XT30 injection → insert the module there → full rail current. ✓
 - **Leg (0x40):** rail stars into **4× XT30 (J3–J6) on the PCB** → no single point carries total leg current. **DECISION 2026-06-26: DEFERRED (not needed for v1).** ⚠️ Leg INA reads **nothing** unless IN−/VBUS is **tapped to the leg rail** at assembly (board wires only I²C+power; IN± = module screw terminals, VBUS tied to IN−): **tap IN− → `leg_v` valid, `leg_a` invalid** (no inline shunt) = voltage-only; **leave IN− unwired → BOTH `leg_v` and `leg_a` invalid** (not just current). Total leg current has no clean inline point (4× XT30 star) regardless. Leg stall/over-current is covered by **per-servo STS3215 load** (`effort[]` on the bus); hip/Jetson INA cover rail current. Adding total-leg sense (RAW/clean split + sense-loop connector at U1 VOUT) is a **v7-rev** item only if board-level total-leg-power logging is ever wanted — see scope in chat 2026-06-26.
 
