@@ -153,7 +153,7 @@ def build_hfe_envelope_data(calib: Dict[int, JointHomeCalib]) -> List[float]:
     table would clamp some legs against a window built from a guessed home,
     which is the #154 shape: a wrong command with a limit that agrees with it.
     """
-    from ..rom_envelope import hfe_bounds
+    from ..rom_envelope import haa_urdf_canonical, hfe_bounds
     from ..rom_envelope_table import HAAS, KFES
 
     needed = [jid for _, haa_id, hfe_id in _ENV_LEGS for jid in (haa_id, hfe_id)]
@@ -181,7 +181,13 @@ def build_hfe_envelope_data(calib: Dict[int, JointHomeCalib]) -> List[float]:
                 lo = hi = 0.5 * (lo + hi)
             a, b = rad_to_raw(lo, hfe_c), rad_to_raw(hi, hfe_c)
             hfe_lo, hfe_hi = (a, b) if a <= b else (b, a)
-            ra, rb = (rad_to_raw(math.radians(d), haa_c) for d in span)
+            # HAAS is CANONICAL (+ = outboard); rad_to_raw takes URDF. On the
+            # right legs they are negated — reading the grid as URDF put the
+            # inboard buckets on the OUTBOARD raw side, ~40 deg too loose.
+            ra, rb = (
+                rad_to_raw(haa_urdf_canonical(leg, math.radians(d)), haa_c)
+                for d in span
+            )
             haa_lo, haa_hi = (ra, rb) if ra <= rb else (rb, ra)
             rows.append([haa_lo, haa_hi, _clip(hfe_lo), _clip(hfe_hi)])
 

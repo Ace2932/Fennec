@@ -187,6 +187,7 @@ def solve_side(
     measured cap (see LegParams.hfe_min_front).
     """
     t1, t2, t3 = inverse_kinematics(foot, p, knee_forward)
+    haa_canon = t1                    # hfe_bounds takes CANONICAL haa (+ = outboard)
     if side == "right":
         t1 = -t1
     elif side != "left":
@@ -196,7 +197,7 @@ def solve_side(
         # posture to one worst-case scalar cost real stride: the trot's +59.4 deg
         # front excursion is chassis-clear at haa 0 (bound +70.6) and was being
         # pulled back to +50, a bound that only applies at full outboard splay.
-        env_lo, env_hi = hfe_bounds(leg, t1, t3)
+        env_lo, env_hi = hfe_bounds(leg, haa_canon, t3)
         hfe_lo = max(env_lo, p.hfe_min_front if leg in FRONT_LEGS else p.hfe_min)
         hfe_hi = min(env_hi, -p.hfe_min)
         t2 = max(hfe_lo, min(hfe_hi, t2))

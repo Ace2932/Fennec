@@ -164,17 +164,21 @@ def test_sit_and_down_UNLOCK_with_a_recorded_haa_confirmation(monkeypatch):
     leg's haa, pose_for('sit')/pose_for('down') stop raising and return
     poses whose haa sits at the asymmetric window's 40 deg outboard edge
     (never the 15 deg inboard side — SIT_JOINTS only ever splays outboard)."""
-    from nova_ops.safety_envelope.derived_signs import HAA_IDS
+    from nova_ops.safety_envelope.derived_signs import (
+        DERIVED_HAA_INBOARD_SIGN,
+        HAA_IDS,
+    )
     from nova_ops.safety_envelope.limits import record_haa_confirmation
 
     _isolate_haa_confirmations(monkeypatch)
-    # sign chosen per leg so the ALREADY-COMPUTED physical splay target
-    # (+40 deg on left legs, -40 deg mirrored on right legs) lands inside
-    # the confirmed asymmetric window -- see limits._hip_abduction.
-    for leg, sign in (("FL", -1), ("FR", +1), ("RL", -1), ("RR", +1)):
+    # The RAW signs the bench probe would actually record (confirm_haa_sign
+    # only ever returns the derived one). These used to be hand-picked
+    # (FL -1, FR +1) to fit a window that applied the raw sign as if it were
+    # URDF — the front pair were the WRONG signs, chosen to fit the H1 bug.
+    for leg in LEGS:
         record_haa_confirmation(
             HAA_IDS[leg],
-            sign=sign,
+            sign=DERIVED_HAA_INBOARD_SIGN[HAA_IDS[leg]],
             observed_utc="2026-08-08T00:00:00",
             method="test",
             assembly=leg,
@@ -203,7 +207,13 @@ def test_sit_and_down_still_raise_if_only_SOME_legs_are_confirmed(monkeypatch):
 
     _isolate_haa_confirmations(monkeypatch)
     record_haa_confirmation(
-        HAA_IDS["FL"], sign=-1, observed_utc="t", method="m", assembly="FL"
+        # the DERIVED raw sign, so FL itself unlocks and the raise comes from
+        # the unconfirmed legs — not from FL's own window (H1)
+        HAA_IDS["FL"],
+        sign=+1,
+        observed_utc="t",
+        method="m",
+        assembly="FL",
     )
     # RL, FR, RR left unconfirmed
     with pytest.raises(ValueError, match="gate window"):

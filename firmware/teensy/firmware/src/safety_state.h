@@ -26,7 +26,8 @@ class SafetyFSM {
   // Battery-low debounce: N consecutive ticks of HIGH on the comparator
   // before we latch. At 200 Hz tick, 10 samples = 50 ms — long enough to
   // ride out a single capacitive glitch, short enough to react before the
-  // 12.4 V MOSFET hard-cutoff fires.
+  // 12.56 V MOSFET hard-cutoff fires (measured-parts value; was estimated
+  // 12.4 V — see hardware/wiring/README.md's safety-chain trip-point table).
   static constexpr uint8_t BATT_LOW_DEBOUNCE_TICKS = 10;
 
   void update(bool estop_pressed_now, bool batt_low_now) {

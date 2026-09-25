@@ -139,6 +139,30 @@ jobs:
         working-directory: firmware/teensy/firmware
         run: pio run -e teensy41
 
+      # The rmw entity pools are static and sized by the colcon metas at
+      # library-build time; upstream's teensy41 default (10 publishers) is
+      # smaller than main.cpp needs (26). Prove nova_microros.meta actually
+      # reached the COMPILED library rather than trusting the ini line: every
+      # RMW_UXRCE_MAX_* in the meta must appear in the generated config.h.
+      # No config.h found = fail (a missing file is not a pass).
+      - name: Entity caps reached the built library
+        working-directory: firmware/teensy/firmware
+        run: |
+          python3 - <<'EOF'
+          import json, pathlib, re, sys
+          cfgs = list(pathlib.Path(".pio/libdeps/teensy41").rglob("rmw_microxrcedds_c/config.h"))
+          if not cfgs: sys.exit("no rmw_microxrcedds_c/config.h under .pio/libdeps/teensy41")
+          cfg = cfgs[0].read_text()
+          args = json.load(open("nova_microros.meta"))["names"]["rmw_microxrcedds"]["cmake-args"]
+          bad = []
+          for a in args:
+              m = re.fullmatch(r"-D(RMW_UXRCE_MAX_\w+)=(\d+)", a)
+              if m and not re.search(rf"#define\s+{m[1]}\s+{m[2]}\b", cfg):
+                  bad.append(a)
+              elif m: print("ok", a)
+          sys.exit(f"{cfgs[0]} does not carry {bad}" if bad else 0)
+          EOF
+
       - name: Report size
         working-directory: firmware/teensy/firmware
         if: success()

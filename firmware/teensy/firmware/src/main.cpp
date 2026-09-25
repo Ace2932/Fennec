@@ -78,8 +78,8 @@ nova::LimpController limp_controller;
 // before the tick timer starts. Bits:
 //   0 = ESTOP_PIN read HIGH at boot (button pressed / contact open at
 //       startup — operator fault, refuse to arm)
-//   1 = BATTERY_LOW_PIN read HIGH at boot (pack already under 13.0V —
-//       refuse to arm)
+//   1 = BATTERY_LOW_PIN read HIGH at boot (pack already under 13.03V
+//       measured-parts trip — refuse to arm)
 // Non-zero result means safety_fsm pre-seeded to a latched fault.
 uint8_t boot_self_test_flags = 0;
 
@@ -113,7 +113,7 @@ constexpr uint8_t I2C_SCL_PIN    = 19;
 // Safety GPIO
 constexpr uint8_t ESTOP_PIN       = 5;   // E-stop NC contact (J21) w/ INPUT_PULLUP. NC closed = LOW idle;
                                          // pressed OR wire-break/unplug = HIGH (fail-safe)
-constexpr uint8_t BATTERY_LOW_PIN = 4;   // input from 13.0V comparator (HIGH = below 13.0V)
+constexpr uint8_t BATTERY_LOW_PIN = 4;   // input from 13.03V comparator (measured-parts; HIGH = below 13.03V)
 constexpr uint8_t LED_PIN         = LED_BUILTIN;
 
 // ---------------- Feetech bus (Pattern B half-duplex via 74HC125) ----------------
@@ -283,12 +283,6 @@ volatile uint32_t servo_read_err_count = 0;
 uint8_t  servo_stall_count[NOVA_JOINT_COUNT] = {0};
 volatile uint16_t servo_stall_mask = 0;     // bit i set = joint i has tripped
 
-// STS3215 present-load is sign-magnitude: low 10 bits = magnitude (0..1000),
-// bit 10 = direction. Take the magnitude regardless of direction.
-static inline uint16_t load_magnitude(int16_t raw) {
-  return (uint16_t)raw & 0x03FF;
-}
-
 // Write TORQUE_ENABLE to every PRESENT servo. Blocking (~0.4 ms/servo) — only
 // called at boot, on stall-fault entry, and on fault clear; never the hot path.
 void set_fleet_torque(bool on) {
@@ -311,7 +305,7 @@ void poll_one_servo() {
   // REG_PRESENT_TEMPERATURE (0x3F). Layout:
   //   [0..1] = PRESENT_POSITION_L/H   (u16 LE)
   //   [2..3] = PRESENT_VELOCITY_L/H   (s16 LE sign-magnitude)
-  //   [4..5] = PRESENT_LOAD_L/H       (s16 LE sign-magnitude)
+  //   [4..5] = PRESENT_LOAD_L/H       (bit-10 sign-magnitude, 0..1000)
   //   [6]    = PRESENT_VOLTAGE        (u8, 0.1 V units)
   //   [7]    = PRESENT_TEMPERATURE    (u8, °C)
   // One frame, full per-joint snapshot. Wire cost ~80 µs TX + ~150 µs
@@ -322,7 +316,7 @@ void poll_one_servo() {
   if (rc == feetech::Bus::OK) {
     servo_position_raw[servo_rr_idx] = feetech::pack_u16_le(buf[0], buf[1]);
     servo_velocity_raw[servo_rr_idx] = feetech::pack_s16_le(buf[2], buf[3]);
-    servo_load_raw    [servo_rr_idx] = feetech::pack_s16_le(buf[4], buf[5]);
+    servo_load_raw    [servo_rr_idx] = feetech::decode_load(buf[4], buf[5]);  // bit 10 sign
     servo_voltage_raw [servo_rr_idx] = buf[6];
     servo_temp_c      [servo_rr_idx] = buf[7];
     servo_present_mask |= (uint16_t)(1u << servo_rr_idx);
@@ -330,7 +324,7 @@ void poll_one_servo() {
     // Stall / overtemp guard: sustained high load OR overtemp on this joint
     // trips a fleet LIMP (torque off) once — stops the stall current before it
     // fries the servo or browns the hip rail. Latched; operator clears.
-    uint16_t load_mag = load_magnitude(servo_load_raw[servo_rr_idx]);
+    uint16_t load_mag = feetech::load_magnitude(servo_load_raw[servo_rr_idx]);
     bool joint_bad = (load_mag >= NOVA_STALL_LOAD_RAW) ||
                      (servo_temp_c[servo_rr_idx] >= NOVA_OVERTEMP_C);
     if (joint_bad) {
@@ -707,7 +701,25 @@ rcl_allocator_t allocator;
 rcl_node_t node;
 rclc_executor_t executor;
 
-#define RCCHECK(fn) { rcl_ret_t rc = fn; if (rc != RCL_RET_OK) { /* hold LED on to flag init fail */ digitalWrite(LED_PIN, HIGH); while(1) { delay(100); } } }
+// Entity-init failure (node / publisher / subscription / executor, all AFTER
+// rclc_support_init). Was LED-on while(1): that ran after set_fleet_torque(true)
+// and before the tick timer + software watchdog start, so the servos were left
+// HOLDING TORQUE with no safety loop, no watchdog and no recovery. Now: cut
+// torque, flash a 10 Hz burst (distinct from the 2 Hz waiting-for-agent
+// blink), then reset exactly like the software watchdog (tick_isr) so the
+// board retries from scratch.
+// ponytail: a PERSISTENT init failure (e.g. entity caps too small, see
+// nova_microros.meta) becomes a reboot loop (~2 s+ per boot) that toggles
+// torque on/off each boot; add a boot-count in a noinit RAM word to stay limp
+// after N tries if that is ever seen on the bench. A dead agent does NOT loop here --
+// rclc_support_init above retries forever before any RCCHECK runs.
+[[noreturn]] static void rc_init_fail_reset() {
+  set_fleet_torque(false);
+  for (int i = 0; i < 20; i++) { digitalWrite(LED_PIN, !digitalRead(LED_PIN)); delay(50); }
+  SCB_AIRCR = 0x05FA0004;   // VECTKEY | SYSRESETREQ, same as tick_isr
+  while (1) {}
+}
+#define RCCHECK(fn) { rcl_ret_t rc = fn; if (rc != RCL_RET_OK) { rc_init_fail_reset(); } }
 #define RCSOFTCHECK(fn) { rcl_ret_t rc = fn; (void)rc; }
 
 void joint_cmd_callback(const void* msgin) {

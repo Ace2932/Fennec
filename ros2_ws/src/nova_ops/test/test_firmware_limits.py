@@ -38,7 +38,7 @@ def test_haa_asymmetric_when_sign_known():
     old = dict(limits_mod.HAA_INBOARD_SIGN)
     old_rec = dict(limits_mod.HAA_SIGN_CONFIRMATION)
     try:
-        for jid, sign in ((1, +1), (4, -1)):  # +1: +cmd = inboard
+        for jid, sign in ((1, +1), (4, -1)):  # +1: +RAW counts = inboard
             limits_mod.record_haa_confirmation(
                 jid,
                 sign=sign,
@@ -47,12 +47,15 @@ def test_haa_asymmetric_when_sign_known():
                 assembly="leg_v6 rev2",
             )
         lim = load_default_limits()
+        # The window is URDF radians; front haa urdf_sign is -1, so a raw
+        # +1-inboard FL is URDF-NEGATIVE inboard (H1). This asserted the raw
+        # sign applied directly — 40 deg toward the LiPo on both front legs.
         j1 = lim.get(1)
-        assert math.isclose(j1.upper, math.radians(15.0))
-        assert math.isclose(j1.lower, -math.radians(40.0))
+        assert math.isclose(j1.upper, math.radians(40.0))
+        assert math.isclose(j1.lower, -math.radians(15.0))
         j4 = lim.get(4)
-        assert math.isclose(j4.upper, math.radians(40.0))
-        assert math.isclose(j4.lower, -math.radians(15.0))
+        assert math.isclose(j4.upper, math.radians(15.0))
+        assert math.isclose(j4.lower, -math.radians(40.0))
     finally:
         limits_mod.HAA_INBOARD_SIGN.clear()
         limits_mod.HAA_INBOARD_SIGN.update(old)
@@ -380,7 +383,14 @@ def test_hfe_envelope_buckets_span_the_whole_raw_range_with_no_gaps():
 def test_firmware_window_is_NEVER_looser_than_the_host_gate(sign):
     """The safety property. A backstop that permits what the host refuses is
     not a backstop — and this must hold for BOTH servo mounting directions,
-    since urdf_sign reverses which raw end is which."""
+    since urdf_sign reverses which raw end is which.
+
+    Compared at the same PHYSICAL posture, not the same grid number. HAAS is
+    canonical (+ = outboard); the firmware sees URDF (+ = foot toward +y), which
+    is the negation on the right legs. Feeding the grid number to both sides
+    let the firmware read it as URDF too and agree with itself — FR's window at
+    a 15 deg inboard tuck was +61 against a true +21. The flip is spelled out
+    here rather than imported, so the check cannot share the code's mistake."""
     import math
 
     from nova_ops.rom_envelope import hfe_bounds
@@ -399,7 +409,8 @@ def test_firmware_window_is_NEVER_looser_than_the_host_gate(sign):
 
     for li, (leg, haa_id, hfe_id) in enumerate(zip(legs, haa_ids, hfe_ids)):
         for haa_deg in HAAS:
-            haa_raw = rad_to_raw(math.radians(haa_deg), calib[haa_id])
+            urdf_deg = -haa_deg if leg in ("FR", "RR") else haa_deg
+            haa_raw = rad_to_raw(math.radians(urdf_deg), calib[haa_id])
             # the bucket the firmware would select
             sel = None
             for b in range(n):
