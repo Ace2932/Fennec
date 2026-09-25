@@ -234,6 +234,16 @@ REF_DZ_MAX = 0.08      # m — lift-table span
 REF_N = 33             # lift-table samples
 
 
+# POSITION-MODE CALIBRATION (2026-09-25, #428 check 4, docs/bench/leg_sine15_*.csv):
+# the real STS3215 tracks a ±15 deg goal sine 0.99 / 1.01 / 0.53 / 0.27 / 0.13 at
+# 0.5 / 1 / 1.4 / 2 / 3 Hz whatever GOAL_ACC says (an optimal ~8.8 rad/s^2 tracker).
+# This follower (brake-to-stop-at-goal) matches the trot band at --goal-acc-reg 75
+# (11.5 rad/s^2 nominal): 0.96 / 0.87 / 0.50 / 0.26 / 0.30 — over-tracks only at
+# 3 Hz. A goal-velocity feedforward version chattered into bistable limit cycles
+# and was dropped. Use 75 for "the servo as it really is in position mode".
+POSITION_MODE_ACC_REG = 75
+
+
 def goal_acc_rad(reg):
     """STS3215 GOAL_ACC register (units of 100 steps/s^2) -> rad/s^2. 0 = off."""
     return reg * 100.0 * 2.0 * 3.141592653589793 / 4096.0
