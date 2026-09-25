@@ -1,4 +1,9 @@
-"""How tall a curb can a policy step up? A fixed course, not sampled terrain.
+"""How tall a step can a policy get up? A fixed course, not sampled terrain.
+
+⚠ With nova.xml's 5 cm hfield cells the "curb" is a ONE-CELL RAMP, not a vertical
+riser: 3 cm = ~31 deg, 4 cm = ~39 deg, 8 cm = ~58 deg (fennec-94 review,
+2026-09-25). Heights below are ramp-step heights. A real riser is harder; a true
+curb course needs 1-1.5 cm cells (#456/#457).
 
 eval_gait's --terrain/--step-frac scorecard turned out NOT to test this: robots
 travel ~1.15 m per episode from a 60 cm flat spawn pad onto sparse terrain, and a
@@ -82,7 +87,8 @@ def main():
     env = NovaJoystick(asym=a.asym, ref_gait=a.ref_gait, joint_stale_p=0.5,
                        torque_limit=a.torque_limit, goal_acc=goal_acc_rad(a.goal_acc_reg))
     policy = load_policy(a.policy, env, a.asym)
-    print(f"curb at x={CURB_X} m, fwd 0.25 m/s, {a.steps} steps, {a.episodes} DR episodes/height")
+    print(f"1-cell RAMP step (5 cm cells, not a vertical riser) at x={CURB_X} m, fwd 0.25 m/s, "
+          f"{a.steps} steps, {a.episodes} DR episodes/height")
     print(f"{'curb cm':>7s} {'up %':>6s} {'fell %':>7s} {'median base x':>14s}")
     for h in HEIGHTS_CM:
         up, fell, mx = run(env, policy, h / 100, a.episodes, a.steps, 0)
