@@ -574,22 +574,55 @@ def test_an_UNCONFIRMED_sign_does_not_unlock_the_wide_ROM(monkeypatch):
     assert limits.confirmed_haa_sign(jid) is None
 
 
-def test_a_CONFIRMED_sign_does_unlock_it(monkeypatch):
+@pytest.mark.skipif(not MJCF.exists(), reason="MJCF not present")
+def test_a_CONFIRMED_sign_unlocks_the_wide_side_OUTBOARD(monkeypatch):
+    """H1. The unlocked window is in URDF radians; the confirmed sign is in RAW
+    counts. This used to assert FL = [-40, +15] straight from the raw sign —
+    which is the bug, not the spec: FL's urdf_sign is -1, so URDF -40 on FL is
+    40 deg INBOARD, toward the LiPo. Asserted against the MODEL instead of a
+    hand-typed window: for every leg, confirm exactly what the bench tool would
+    record, then pose each window edge through MJCF forward kinematics and
+    check which way the foot actually went.
+    """
+    mujoco = pytest.importorskip("mujoco")
     monkeypatch.setattr(limits, "HAA_INBOARD_SIGN", dict(limits.HAA_INBOARD_SIGN))
     monkeypatch.setattr(
         limits, "HAA_SIGN_CONFIRMATION", dict(limits.HAA_SIGN_CONFIRMATION)
     )
-    jid = HAA_IDS["FL"]
-    limits.record_haa_confirmation(
-        jid,
-        sign=+1,  # +counts = inboard, so outboard is the NEGATIVE side
-        observed_utc="2026-07-27T18:00:00Z",
-        method="homing sweep",
-        assembly="leg_v6 rev2 / FL",
-    )
-    lim = limits._hip_abduction(jid)
-    assert lim.lower == pytest.approx(-math.radians(40.0))
-    assert lim.upper == pytest.approx(+math.radians(15.0))
+    m = mujoco.MjModel.from_xml_path(str(MJCF))
+    d = mujoco.MjData(m)
+
+    def foot_y(leg: str, ang: float) -> float:
+        mujoco.mj_resetData(m, d)
+        j = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, f"{leg}_haa")
+        d.qpos[m.jnt_qposadr[j]] = ang
+        mujoco.mj_forward(m, d)
+        b = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, f"{leg}_foot")
+        return float(d.xpos[b][1])
+
+    for leg in LEFT + RIGHT:
+        jid = HAA_IDS[leg]
+        # a +100-count probe the operator saw go the way the derivation says
+        sign = confirm_haa_sign(jid, +100, DERIVED_HAA_INBOARD_SIGN[jid] > 0)
+        limits.record_haa_confirmation(
+            jid,
+            sign=sign,
+            observed_utc="2026-07-27T18:00:00Z",
+            method="bench probe",
+            assembly=f"leg_v6 rev2 / {leg}",
+        )
+        lim = limits._hip_abduction(jid)
+        y0 = foot_y(leg, 0.0)
+        side = 1 if y0 > 0 else -1
+        wide, narrow = (
+            (lim.lower, lim.upper)
+            if abs(lim.lower) > abs(lim.upper)
+            else (lim.upper, lim.lower)
+        )
+        assert abs(wide) == pytest.approx(math.radians(40.0)), leg
+        assert abs(narrow) == pytest.approx(math.radians(15.0)), leg
+        assert (foot_y(leg, wide) - y0) * side > 0, f"{leg}: 40 deg side is INBOARD"
+        assert (foot_y(leg, narrow) - y0) * side < 0, f"{leg}: 15 deg side is OUTBOARD"
 
 
 def test_a_confirmation_disagreeing_with_its_own_sign_is_caught(monkeypatch):
