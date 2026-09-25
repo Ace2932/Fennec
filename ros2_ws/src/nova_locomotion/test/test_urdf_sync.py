@@ -70,8 +70,16 @@ def test_leg_lengths_match_urdf():
 # real and enforce it against the same two consumers checked above.
 
 _GEOMETRY_YAML = os.path.normpath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "hardware",
-                 "cad", "nova_geometry.yaml")
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "..",
+        "hardware",
+        "cad",
+        "nova_geometry.yaml",
+    )
 )
 
 
@@ -85,7 +93,9 @@ def test_nova_geometry_yaml_matches_leg_ik_and_urdf():
     p = LegParams()
     text = open(_URDF).read()
 
-    assert leg["hip_offset"] == pytest.approx(p.hip_offset), "yaml hip_offset diverged from LegParams"
+    assert leg["hip_offset"] == pytest.approx(p.hip_offset), (
+        "yaml hip_offset diverged from LegParams"
+    )
     assert leg["femur"] == pytest.approx(p.femur), "yaml femur diverged from LegParams"
     assert leg["tibia"] == pytest.approx(p.tibia), "yaml tibia diverged from LegParams"
 
@@ -94,12 +104,25 @@ def test_nova_geometry_yaml_matches_leg_ik_and_urdf():
         + _prop(text, "upper_to_lower_y")
         + _prop(text, "lower_to_foot_y")
     )
-    assert leg["hip_offset"] == pytest.approx(lateral), "yaml hip_offset diverged from URDF"
+    assert leg["hip_offset"] == pytest.approx(lateral), (
+        "yaml hip_offset diverged from URDF"
+    )
     assert leg["femur"] == pytest.approx(abs(_prop(text, "upper_to_lower_z"))), (
         "yaml femur diverged from URDF"
     )
     assert leg["tibia"] == pytest.approx(abs(_prop(text, "lower_to_foot_z"))), (
         "yaml tibia diverged from URDF"
+    )
+
+    # #72: haa_range/hfe_range/kfe_range used to live under `leg` here, stale
+    # and never checked by anything (this test only ever asserted the three
+    # keys above). Deleted rather than fixed, since nothing reads them from
+    # this file. Guard against a future field joining `leg` unchecked again —
+    # the same drift, a second time.
+    assert set(leg) == {"hip_offset", "femur", "tibia"}, (
+        "nova_geometry.yaml's `leg` block grew a field this test doesn't "
+        "validate — either assert it against its real source of truth "
+        "(URDF / LegParams) or don't add it (#72)"
     )
 
 
