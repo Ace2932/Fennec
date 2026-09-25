@@ -26,6 +26,7 @@ on:
       - 'hardware/pcb-mods/tools/**'
       # Contract tests in nova_ops read these directly: test_firmware_topic_contract
       # (main.cpp, ina226_telemetry.h, platformio.ini, firmware README),
+      # test_firmware_entity_caps (main.cpp, platformio.ini, nova_microros.meta),
       # test_joint_map / test_limp_pose (hfe_envelope.h), test_supports_table
       # (docs/checklists/print-batch.md), and the pre-power-on + BUILD_PLAN
       # bead/address tables. A firmware- or docs-only PR is exactly the one that
@@ -53,6 +54,7 @@ on:
       - 'hardware/pcb-mods/tools/**'
       # Contract tests in nova_ops read these directly: test_firmware_topic_contract
       # (main.cpp, ina226_telemetry.h, platformio.ini, firmware README),
+      # test_firmware_entity_caps (main.cpp, platformio.ini, nova_microros.meta),
       # test_joint_map / test_limp_pose (hfe_envelope.h), test_supports_table
       # (docs/checklists/print-batch.md), and the pre-power-on + BUILD_PLAN
       # bead/address tables. A firmware- or docs-only PR is exactly the one that
