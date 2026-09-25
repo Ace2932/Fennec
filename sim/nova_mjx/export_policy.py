@@ -26,8 +26,12 @@ def extract(params):
     the 2-tuple. Index instead of unpacking so both work (value net is not
     exported; the robot doesn't need it)."""
     norm, pol = params[0], params[1]
-    mean = np.asarray(norm.mean, np.float32)
-    std = np.asarray(norm.std, np.float32)
+    # asym (privileged critic): the normalizer is a dict per obs key; the ACTOR
+    # reads "state" only, so that is the whole deploy normalizer.
+    mean = np.asarray(norm.mean["state"] if isinstance(norm.mean, dict) else norm.mean,
+                      np.float32)
+    std = np.asarray(norm.std["state"] if isinstance(norm.std, dict) else norm.std,
+                     np.float32)
     layers = pol["params"]
     W, b = [], []
     i = 0
@@ -83,6 +87,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--policy", default="nova_policy.pkl")
     ap.add_argument("--npz", default="nova_policy.npz")
+    ap.add_argument("--ref-height", type=float, default=0.04,
+                    help="ref_gait policies: the --ref-height they TRAINED with (m)")
     ap.add_argument("--onnx", default="nova_policy.onnx")
     ap.add_argument("--label", default="", help="human name for this policy "
                     "(e.g. 'omni-flat-40M') — travels in the artifact metadata")
@@ -127,8 +133,19 @@ def main():
               "label": np.str_(args.label or "unlabeled")}
     for i, (Wi, bi) in enumerate(zip(W, b)):
         bundle[f"W{i}"], bundle[f"b{i}"] = Wi, bi
+    ref = obs_dim == HIST * PROP + 3 + act_dim + 2      # ref_gait: +[sin, cos] clock
+    if ref:
+        from env import (ref_lift_table, REF_DZ_MAX, BLIND_CMD_F, GAIT_OFFSETS,
+                         GAIT_DUTY)
+        bundle.update({"ref_table": np.asarray(ref_lift_table(), np.float32),
+                       "ref_height": np.float32(args.ref_height),
+                       "ref_dz_max": np.float32(REF_DZ_MAX),
+                       "ref_freq": np.float32(BLIND_CMD_F),
+                       "gait_offsets": np.asarray(GAIT_OFFSETS, np.float32),
+                       "gait_duty": np.float32(GAIT_DUTY)})
+        print(f"IK swing reference bundled: h {args.ref_height} m, {BLIND_CMD_F} Hz")
     # self-consistency: the bundled obs_dim MUST equal the runner's build_obs math
-    expect = HIST * PROP + 3 + act_dim
+    expect = HIST * PROP + 3 + act_dim + (2 if ref else 0)
     assert obs_dim == expect, (
         f"obs_dim {obs_dim} != HIST*PROP+3+act {expect} — the trained net and the "
         f"env obs layout disagree; the runner would reject this. Do not ship.")
@@ -156,15 +173,22 @@ def main():
         # build the reference net exactly as ppo.train does with
         # normalize_observations=True (the DEFAULT make_ppo_networks preprocessor
         # is identity -> would skip normalization and mis-verify).
+        asym = isinstance(params[0].mean, dict)
+        obs_size = ({k: v.shape for k, v in params[0].mean.items()} if asym
+                    else mean.shape[0])
         net = ppo_networks.make_ppo_networks(
-            mean.shape[0], len(DEFAULT_POSE),
+            obs_size, len(DEFAULT_POSE),
             preprocess_observations_fn=running_statistics.normalize,
             policy_hidden_layer_sizes=(128, 128, 128, 128),
-            value_hidden_layer_sizes=(256, 256, 256, 256))
+            value_hidden_layer_sizes=(256, 256, 256, 256),
+            **({"policy_obs_key": "state", "value_obs_key": "privileged_state"}
+               if asym else {}))
         infer = ppo_networks.make_inference_fn(net)(params, deterministic=True)
         rng = jax.random.PRNGKey(0)
         obs = np.asarray(jax.random.normal(rng, (mean.shape[0],)))
-        brax_a = np.asarray(infer(obs, rng)[0])
+        full = ({"state": obs, "privileged_state": np.zeros(obs_size["privileged_state"])}
+                if asym else obs)
+        brax_a = np.asarray(infer(full, rng)[0])
         np_a = forward_np(obs, mean, std, W, b)
         err = float(np.max(np.abs(brax_a - np_a)))
         print(f"numpy vs Brax max|err| = {err:.2e}  {'OK' if err < 1e-4 else 'MISMATCH'}")

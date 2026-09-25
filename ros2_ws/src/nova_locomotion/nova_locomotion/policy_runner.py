@@ -18,6 +18,7 @@ import numpy as np
 CMD_SCALE = np.array([2.0, 2.0, 0.25], dtype=np.float32)
 HIST = 3
 PROP = 30
+DT = 0.02                                   # 50 Hz control, as in sim
 
 
 class NovaPolicy:
@@ -45,7 +46,16 @@ class NovaPolicy:
         self.meta = {k: (d[k].item() if d[k].ndim == 0 else d[k].tolist())
                      for k in ("obs_dim", "act_dim", "sha", "created", "label")
                      if k in d.files}
-        expected_obs = self.hist * self.prop + 3 + self.nu
+        # IK SWING REFERENCE (optional, sim gait-study ref_gait): the artifact then
+        # carries the lift table + clock, the runner keeps the phase, appends
+        # [sin, cos](2 pi phase) to the obs and adds the reference to the targets.
+        self.ref = None
+        if "ref_table" in d.files:
+            self.ref = {k: d[k].astype(np.float32) for k in
+                        ("ref_table", "gait_offsets")}
+            self.ref.update({k: float(d[k]) for k in
+                             ("ref_height", "ref_dz_max", "ref_freq", "gait_duty")})
+        expected_obs = self.hist * self.prop + 3 + self.nu + (2 if self.ref else 0)
         weights_obs = int(self.mean.shape[0])
         if weights_obs != expected_obs:
             raise ValueError(
@@ -66,6 +76,22 @@ class NovaPolicy:
     def reset(self):
         self.last_action = np.zeros(self.nu, np.float32)
         self.prop_hist = None            # filled (tiled) on the first frame
+        self.phase = 0.0                 # reference clock, [0, 1)
+
+    def ref_offset(self, phase):
+        """(12,) joint offsets of the IK swing reference at `phase` — the numpy
+        twin of sim env._ref_offset (trot schedule, lift h*sin(pi*swing_frac),
+        lift -> (hfe, kfe) by linear interpolation in the exported table)."""
+        r = self.ref
+        ph = np.mod(phase + r["gait_offsets"], 1.0)
+        sf = np.clip((ph - r["gait_duty"]) / (1.0 - r["gait_duty"]), 0.0, 1.0)
+        lift = r["ref_height"] * np.sin(np.pi * sf)
+        n = len(r["ref_table"])
+        u = np.clip(lift / r["ref_dz_max"], 0.0, 1.0) * (n - 1)
+        i0 = np.clip(np.floor(u).astype(int), 0, n - 2)
+        f = (u - i0)[:, None]
+        hk = r["ref_table"][i0] * (1.0 - f) + r["ref_table"][i0 + 1] * f
+        return np.concatenate([np.zeros((4, 1)), hk], axis=1).reshape(-1).astype(np.float32)
 
     def _frame(self, gyro, proj_grav, joint_pos, joint_vel):
         """One proprioceptive frame (30). Inputs in the ROBOT/URDF frame + joint
@@ -88,7 +114,9 @@ class NovaPolicy:
             self.prop_hist.reshape(-1),
             np.asarray(cmd, np.float32) * self.cmd_scale,   # from the artifact
             self.last_action,
-        ]).astype(np.float32)
+        ] + ([np.array([np.sin(2 * np.pi * self.phase),
+                        np.cos(2 * np.pi * self.phase)], np.float32)]
+             if self.ref else [])).astype(np.float32)
 
     def infer(self, obs):
         """obs (105,) -> action (12) in [-1,1]. Stores it as last_action."""
@@ -105,4 +133,8 @@ class NovaPolicy:
         """One 50 Hz step: sensors -> 12 joint POSITION targets (rad)."""
         obs = self.build_obs(gyro, proj_grav, cmd, joint_pos, joint_vel)
         a = self.infer(obs)
-        return self.default_pose + a * self.action_scale
+        q = self.default_pose + a * self.action_scale
+        if self.ref:
+            q = q + self.ref_offset(self.phase)
+            self.phase = (self.phase + self.ref["ref_freq"] * DT) % 1.0
+        return q
