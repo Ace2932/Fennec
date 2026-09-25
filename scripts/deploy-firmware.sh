@@ -47,6 +47,42 @@ err()  { printf "${RED}[deploy] %s${RESET}\n" "$*" >&2; }
 
 remote() { ssh -o ConnectTimeout=5 "$JETSON_HOST" "$@"; }
 
+# Runs pgrep for the gait/policy entry points over ssh and returns pgrep's
+# own rc unchanged (0 = match, 1 = no match, 2/3 = pgrep's own error).
+# Factored out of cmd_deploy so it's unit-testable without an ssh round
+# trip (test overrides `remote` to run the pgrep locally instead).
+gait_guard_check() {
+    set +e
+    remote "pgrep -f 'gait_node|policy_node'" >/dev/null 2>&1
+    local rc=$?
+    set -e
+    return $rc
+}
+
+# Pulls the git SHA embedded in a /firmware_version echo
+# ("nova-teensy <sha> loop=<hz>Hz", see main.cpp / NOVA_BUILD_GIT_SHA) and
+# compares it against this checkout's HEAD. Factored out of cmd_verify so
+# it's unit-testable on canned topic output, no ssh round trip needed.
+check_firmware_sha() {
+    local topic_output="$1"
+    local remote_sha local_sha
+    remote_sha=$(printf '%s\n' "$topic_output" | grep -oE 'nova-teensy [0-9a-f]+' | awk '{print $2}' | head -1)
+    if [ -z "$remote_sha" ]; then
+        err "could not find a git SHA in /firmware_version output"
+        return 1
+    fi
+    local_sha=$(git rev-parse --short HEAD 2>/dev/null || echo "")
+    if [ -z "$local_sha" ]; then
+        warn "not in a git checkout; skipping firmware SHA check"
+        return 0
+    fi
+    if [ "$remote_sha" != "$local_sha" ]; then
+        err "firmware SHA mismatch: running $remote_sha, this checkout's HEAD is $local_sha. Flash may not have taken, or you're verifying against the wrong checkout."
+        return 1
+    fi
+    ok "firmware SHA matches HEAD ($local_sha)"
+    return 0
+}
 
 cmd_verify() {
     log "querying /firmware_version on $JETSON_HOST..."
@@ -56,13 +92,18 @@ cmd_verify() {
         timeout 3 ros2 topic echo --once /firmware_version" 2>&1)
     rc=$?
     set -e
-    if [ $rc -eq 0 ]; then
-        ok "remote /firmware_version:"
-        printf '%s\n' "$output" | sed 's/^/  /'
-    else
+    if [ $rc -ne 0 ]; then
         err "could not read /firmware_version (agent down? firmware not flashed?)"
         printf '%s\n' "$output" | sed 's/^/  /' >&2
         exit 4
+    fi
+    ok "remote /firmware_version:"
+    printf '%s\n' "$output" | sed 's/^/  /'
+
+    # Step 9 (per header): confirm the running firmware is actually the
+    # SHA that's now HEAD, not merely that the topic answered at all.
+    if ! check_firmware_sha "$output"; then
+        exit 9
     fi
 }
 
@@ -100,28 +141,30 @@ cmd_deploy() {
     fi
 
     log "checking remote safety state..."
-    # Refuse if gait controller is running (motion during reboot = bad day).
+    # Refuse if gait_node or policy_node is running (motion during reboot =
+    # bad day). Those are the actual entry points (nova_locomotion/setup.py)
+    # — there is no "gait_controller" executable.
     #
     # rc is captured rather than tested inline: pgrep exits 1 for "no match" but
     # 2/3 for its OWN errors, and `if remote "pgrep ..." >/dev/null 2>&1` folded
     # those together — a pgrep that could not run read as "gait is not running"
     # and the guard passed. Unknown is not the same as safe.
     set +e
-    remote "pgrep -x gait_controller" >/dev/null 2>&1
+    gait_guard_check
     gait_rc=$?
     set -e
     if [ "$gait_rc" -eq 0 ]; then
         if [ "$DEPLOY_FORCE" != "1" ]; then
-            err "gait_controller is running on $JETSON_HOST. Stop it first, or DEPLOY_FORCE=1."
+            err "gait_node/policy_node is running on $JETSON_HOST. Stop it first, or DEPLOY_FORCE=1."
             exit 5
         fi
-        warn "gait_controller running but DEPLOY_FORCE set; proceeding anyway"
+        warn "gait_node/policy_node running but DEPLOY_FORCE set; proceeding anyway"
     elif [ "$gait_rc" -gt 1 ]; then
         if [ "$DEPLOY_FORCE" != "1" ]; then
-            err "could not determine whether gait_controller is running (pgrep rc=$gait_rc). Refusing: this guard exists to stop motion during the post-flash reboot, and an unreadable state is not a safe one. DEPLOY_FORCE=1 to override."
+            err "could not determine whether gait_node/policy_node is running (pgrep rc=$gait_rc). Refusing: this guard exists to stop motion during the post-flash reboot, and an unreadable state is not a safe one. DEPLOY_FORCE=1 to override."
             exit 5
         fi
-        warn "gait_controller state unknown (pgrep rc=$gait_rc) but DEPLOY_FORCE set; proceeding anyway"
+        warn "gait_node/policy_node state unknown (pgrep rc=$gait_rc) but DEPLOY_FORCE set; proceeding anyway"
     fi
 
     # Refuse if /estop reports released. Spec: "Refuse to deploy if
@@ -206,8 +249,12 @@ cmd_deploy() {
 }
 
 
-case "${1:-deploy}" in
-    deploy) cmd_deploy ;;
-    verify) cmd_verify ;;
-    *) err "unknown action: $1 (expected: deploy | verify)"; exit 2 ;;
-esac
+# Guarded so tests can `source` this file (to unit-test gait_guard_check /
+# check_firmware_sha) without also triggering a real deploy/verify run.
+if [ "${BASH_SOURCE[0]:-$0}" = "$0" ]; then
+    case "${1:-deploy}" in
+        deploy) cmd_deploy ;;
+        verify) cmd_verify ;;
+        *) err "unknown action: $1 (expected: deploy | verify)"; exit 2 ;;
+    esac
+fi
