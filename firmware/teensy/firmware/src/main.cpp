@@ -78,8 +78,8 @@ nova::LimpController limp_controller;
 // before the tick timer starts. Bits:
 //   0 = ESTOP_PIN read HIGH at boot (button pressed / contact open at
 //       startup — operator fault, refuse to arm)
-//   1 = BATTERY_LOW_PIN read HIGH at boot (pack already under 13.0V —
-//       refuse to arm)
+//   1 = BATTERY_LOW_PIN read HIGH at boot (pack already under 13.03V
+//       measured-parts trip — refuse to arm)
 // Non-zero result means safety_fsm pre-seeded to a latched fault.
 uint8_t boot_self_test_flags = 0;
 
@@ -113,7 +113,7 @@ constexpr uint8_t I2C_SCL_PIN    = 19;
 // Safety GPIO
 constexpr uint8_t ESTOP_PIN       = 5;   // E-stop NC contact (J21) w/ INPUT_PULLUP. NC closed = LOW idle;
                                          // pressed OR wire-break/unplug = HIGH (fail-safe)
-constexpr uint8_t BATTERY_LOW_PIN = 4;   // input from 13.0V comparator (HIGH = below 13.0V)
+constexpr uint8_t BATTERY_LOW_PIN = 4;   // input from 13.03V comparator (measured-parts; HIGH = below 13.03V)
 constexpr uint8_t LED_PIN         = LED_BUILTIN;
 
 // ---------------- Feetech bus (Pattern B half-duplex via 74HC125) ----------------
