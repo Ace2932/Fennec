@@ -301,6 +301,79 @@ def test_posture_gate_is_conservative_while_haa_sign_is_unknown():
     assert out[0] < fold - 1e-9
 
 
+
+def _posture_bound_both_ways(leg, haa, kfe):
+    from nova_ops.rom_envelope import hfe_bounds
+
+    (lo_a, hi_a), (lo_b, hi_b) = hfe_bounds(leg, haa, kfe), hfe_bounds(leg, -haa, kfe)
+    return max(lo_a, lo_b), min(hi_a, hi_b)
+
+
+def test_posture_gate_holds_on_the_PUBLISHED_pose_mid_transition():
+    """M1. The gate used to run on the COMMANDED haa/kfe, before the velocity
+    clamp. Tucking FL's hip to -13 while unfolding hfe from +60 to +5 at 50 Hz,
+    haa arrives in 4 ticks but hfe needs 13 — so the published pose sat at
+    haa -13 / hfe +42.4 against a +20 bound. The envelope is a property of what
+    is PUBLISHED; check every tick of the real transition against it."""
+    node, pub = _FakeNode(), _FakePub()
+    sw = SafeJointCommandPublisher(node, load_default_limits(), pub)
+    fl = sw._leg_ids["FL"]
+    kfe = math.radians(-80.0)
+    sw.publish(_cmd_with(fl, 0.0, math.radians(60.0), kfe))
+    for _ in range(8):
+        node.advance(0.02)
+        sw.publish(_cmd_with(fl, math.radians(-13.0), math.radians(5.0), kfe))
+        haa, hfe, k = (pub.published[-1][j - 1] for j in fl)
+        lo, hi = _posture_bound_both_ways("FL", haa, k)
+        assert lo - 1e-9 <= hfe <= hi + 1e-9, (
+            f"published FL haa {math.degrees(haa):+.1f} hfe {math.degrees(hfe):+.1f}"
+            f" outside the chassis envelope [{math.degrees(lo):+.1f}, "
+            f"{math.degrees(hi):+.1f}]"
+        )
+        # the next velocity step must start from what was published
+        assert sw._last_cmd[fl[1]] == hfe
+
+
+def test_CONFIRMED_hips_gate_only_the_inboard_direction(monkeypatch):
+    """M2. Once a hip's sign is confirmed the gate knows which side is inboard,
+    so an OUTBOARD splay must not be charged the belly-pack cap. Checking both
+    ways regardless clamped the #145 'down'/limp pose (haa 40 outboard, hfe +40)
+    to hfe +4.8 on both front legs — the pose could never be reached. And the
+    INBOARD side must still be gated: confirmation narrows the check, it does
+    not drop it."""
+    from nova_ops.safety_envelope import limits as limits_mod
+    from nova_ops.safety_envelope.derived_signs import (
+        DERIVED_HAA_INBOARD_SIGN,
+        HAA_IDS,
+    )
+    from nova_ops.safety_envelope.limp_pose import limp_pose_canonical
+
+    monkeypatch.setattr(limits_mod, "HAA_INBOARD_SIGN", dict(limits_mod.HAA_INBOARD_SIGN))
+    monkeypatch.setattr(
+        limits_mod, "HAA_SIGN_CONFIRMATION", dict(limits_mod.HAA_SIGN_CONFIRMATION)
+    )
+    for jid in HAA_IDS.values():
+        limits_mod.record_haa_confirmation(
+            jid, sign=DERIVED_HAA_INBOARD_SIGN[jid], observed_utc="t",
+            method="bench probe", assembly="test",
+        )
+    node, pub = _FakeNode(), _FakePub()
+    sw = SafeJointCommandPublisher(node, load_default_limits(), pub)
+    pose = limp_pose_canonical()
+    cmd = [a for leg in ("FL", "FR", "RL", "RR") for a in pose[leg]]
+    sw.publish(_CmdMsg(cmd))
+    for leg in ("FL", "FR", "RL", "RR"):
+        hfe_id = sw._leg_ids[leg][1]
+        assert pub.published[-1][hfe_id - 1] == pytest.approx(math.radians(40.0)), leg
+
+    # the same fold with FL tucked 13 deg INBOARD (URDF -13 on a left leg)
+    fl = sw._leg_ids["FL"]
+    node.advance(1.0)  # stale last command: no velocity clamp in the way
+    sw.publish(_cmd_with(fl, math.radians(-13.0), math.radians(40.0), math.radians(-90.0)))
+    assert pub.published[-1][fl[1] - 1] < math.radians(40.0) - 1e-9, (
+        "inboard tuck + fold was NOT clamped — the gate dropped the inboard side"
+    )
+
 # ---- END-TO-END: a real gait pose must survive the envelope ------------------
 #
 # THE MISSING TEST CLASS. solve_side, within_limits and limits.py were each

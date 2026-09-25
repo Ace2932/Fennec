@@ -38,7 +38,7 @@ def test_haa_asymmetric_when_sign_known():
     old = dict(limits_mod.HAA_INBOARD_SIGN)
     old_rec = dict(limits_mod.HAA_SIGN_CONFIRMATION)
     try:
-        for jid, sign in ((1, +1), (4, -1)):  # +1: +cmd = inboard
+        for jid, sign in ((1, +1), (4, -1)):  # +1: +RAW counts = inboard
             limits_mod.record_haa_confirmation(
                 jid,
                 sign=sign,
@@ -47,12 +47,15 @@ def test_haa_asymmetric_when_sign_known():
                 assembly="leg_v6 rev2",
             )
         lim = load_default_limits()
+        # The window is URDF radians; front haa urdf_sign is -1, so a raw
+        # +1-inboard FL is URDF-NEGATIVE inboard (H1). This asserted the raw
+        # sign applied directly — 40 deg toward the LiPo on both front legs.
         j1 = lim.get(1)
-        assert math.isclose(j1.upper, math.radians(15.0))
-        assert math.isclose(j1.lower, -math.radians(40.0))
+        assert math.isclose(j1.upper, math.radians(40.0))
+        assert math.isclose(j1.lower, -math.radians(15.0))
         j4 = lim.get(4)
-        assert math.isclose(j4.upper, math.radians(40.0))
-        assert math.isclose(j4.lower, -math.radians(15.0))
+        assert math.isclose(j4.upper, math.radians(15.0))
+        assert math.isclose(j4.lower, -math.radians(40.0))
     finally:
         limits_mod.HAA_INBOARD_SIGN.clear()
         limits_mod.HAA_INBOARD_SIGN.update(old)
