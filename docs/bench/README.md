@@ -52,6 +52,31 @@ at ~6 % of stall torque (gearbox friction carries the rest). Corrected 2026-09-2
   raw→N·m (~1048 raw @ 0.11 N·m)~~ the register is duty, not torque, so there is
   no raw→N·m anchor here (corrected 2026-09-25, see the warning above).
 
+## Sine tracking @ 7.5 V, no load (#428 check 4, measured 2026-09-25)
+Leg servo (7.4 V part, the #462 control unit), horn free, ±15° about 2048, goals
+streamed at 100 Hz (the firmware command rate), ~2400 samples/s.
+`bench_step_response.py --sine-hz ...` · CSVs `leg_sine15_<hz>hz.csv`.
+
+| Hz | amplitude ratio | lag | accel ceiling est. | peak duty |
+|---:|---:|---:|---:|---:|
+| 0.5 | 0.99 | 80 ms | tracking | 17 % |
+| 1.0 | 1.01 | 237 ms | tracking | 38 % |
+| **1.4** | **0.53** | 331 ms | 8.35 rad/s² | 37 % |
+| **2.0** | **0.27** | 261 ms | 8.80 rad/s² | 26 % |
+| 3.0 | 0.13 | 192 ms | 9.78 rad/s² | 22 % |
+
+GOAL_ACC at 2 Hz (`leg_sine15_acc{0,50,254}_2hz.csv`): ratio 0.26 / 0.27 / 0.27,
+ceiling 8.59 / 8.61 / 8.73 rad/s². **The register does not lift the ceiling.**
+
+- **Position mode cannot pass a 1.4-2 Hz gait swing**: half the amplitude at
+  1.4 Hz, a quarter at 2 Hz. It matches the sim's profile model (~0.45), not a
+  plain position servo (~0.87).
+- **It is not power**: peak duty stays at 17-38 %. The servo's own trajectory
+  generator (~8.5 rad/s²) is the limit, so `NOVA_GOAL_ACC 50` and a torque
+  limit of 600 change nothing here, unloaded.
+- Not tested: EEPROM reg 85 (Maximum_Acceleration, factory area; LeRobot writes
+  254) and MODE 2 (PWM) with a host PD loop. Both are persistent EEPROM writes.
+
 ## Homing convention (measured, servo ID 1)
 - **home_tick = 2048** by construction: Feetech one-key center (`--center`, reg
   0x28 <- 128) sets present-position = 2048 at the held pose. Home EVERY joint
