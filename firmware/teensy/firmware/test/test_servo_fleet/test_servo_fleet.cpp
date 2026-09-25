@@ -23,6 +23,8 @@ struct FakeBus {
     bool torque = true;      // TORQUE_ENABLE register
     uint16_t torque_limit = 1000;   // power-on default
     uint8_t goal_acc = 0;           // power-on default
+    uint16_t pos = 2048;            // present position
+    uint16_t goal = 0;              // stale goal left from before torque-off
   };
 
   Servo s[16];               // indexed by servo ID (1..12 used)
@@ -60,6 +62,18 @@ struct FakeBus {
     note("RD", id, reg);
     if (!reaches(id)) return ERR_TIMEOUT;
     if (reg == feetech::REG_TORQUE_ENABLE) *out = s[id].torque ? 1 : 0;
+    return OK;
+  }
+  Result read_position(uint8_t id, uint16_t* out, uint32_t = 0) {
+    note("RPOS", id, 0);
+    if (!reaches(id)) return ERR_TIMEOUT;
+    *out = s[id].pos;
+    return OK;
+  }
+  Result write_goal_position(uint8_t id, uint16_t v, uint32_t = 0) {
+    note("GOAL", id, v);
+    if (!reaches(id)) return ERR_TIMEOUT;
+    s[id].goal = v;
     return OK;
   }
   // Broadcast: no ACK. A dropped broadcast reaches nobody.
@@ -116,6 +130,39 @@ void test_boot_latched_fault_keeps_the_fleet_limp_on_the_first_tick(void) {
 }
 
 // ---- #437 ------------------------------------------------------------------
+
+// ---- #431 / #466: goal = present before torque-on ---------------------------
+
+void test_arm_holds_present_position_before_enabling_torque(void) {
+  // With torque off the servo keeps a stale goal while the joint drifts. Arming
+  // must first make the goal WHERE THE JOINT IS, then enable -- never enable
+  // toward the stale goal (a full-profile snap once reg 85 = 254).
+  FakeBus bus;
+  nova::ServoFleet<FakeBus> fleet(bus, 1, N, 600, 0);
+  for (auto& sv : bus.s) { sv.torque = false; sv.goal = 100; }
+  bus.s[3].pos = 1234;
+  fleet.safety_tick(true, ALL);
+  TEST_ASSERT_EQUAL_UINT16_MESSAGE(1234, bus.s[3].goal, "goal not set to present");
+  TEST_ASSERT_TRUE(bus.s[3].torque);
+  int goal_at = -1, te_at = -1;
+  for (int k = 0; k < (int)bus.log.size(); k++) {
+    if (bus.log[k] == "GOAL 3=1234" && goal_at < 0) goal_at = k;
+    if (bus.log[k] == "TE 3=1" && te_at < 0) te_at = k;
+  }
+  TEST_ASSERT_TRUE_MESSAGE(goal_at >= 0 && te_at > goal_at, "TORQUE_ENABLE before GOAL=present");
+}
+
+void test_arm_leaves_a_servo_limp_when_its_position_cannot_be_read(void) {
+  FakeBus bus;
+  nova::ServoFleet<FakeBus> fleet(bus, 1, N, 600, 0);
+  for (auto& sv : bus.s) sv.torque = false;
+  fleet.safety_tick(false, ALL);          // go live without arming
+  bus.drop.insert(bus.frame);             // servo 1's position read is lost
+  uint16_t skipped = fleet.arm(ALL);
+  TEST_ASSERT_EQUAL_HEX16(0x0001, skipped);
+  TEST_ASSERT_FALSE_MESSAGE(bus.s[1].torque, "armed toward an unknown goal");
+  TEST_ASSERT_TRUE(bus.s[2].torque);
+}
 
 void test_torque_off_survives_a_dropped_first_frame(void) {
   // One bad frame used to leave that joint holding torque: disarm() sent one
@@ -180,6 +227,8 @@ int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_no_torque_enable_before_the_first_safety_tick);
   RUN_TEST(test_boot_latched_fault_keeps_the_fleet_limp_on_the_first_tick);
+  RUN_TEST(test_arm_holds_present_position_before_enabling_torque);
+  RUN_TEST(test_arm_leaves_a_servo_limp_when_its_position_cannot_be_read);
   RUN_TEST(test_torque_off_survives_a_dropped_first_frame);
   RUN_TEST(test_a_servo_that_never_confirms_is_counted_not_hidden);
   RUN_TEST(test_a_servo_that_drops_and_returns_gets_its_dynamics_rewritten);

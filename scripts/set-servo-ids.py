@@ -6,6 +6,15 @@
   ./set-servo-ids.py --port /dev/ttyUSB0 --center 7   # one-key MID calibrate
   ./set-servo-ids.py --port /dev/ttyUSB0 --verify-fleet
   ./set-servo-ids.py --port /dev/ttyUSB0 --identify 1  # 7.4 V or 12 V part?
+  ./set-servo-ids.py --port /dev/ttyUSB0 --set-max-accel 1  # reg 85 -> 254, once
+
+--set-max-accel writes reg 85 (Maximum_Acceleration, factory EEPROM, not in the
+Feetech memory table; LeRobot writes 254) and verifies it by read-back. It ships
+at 50 = 7.7 rad/s^2, which caps position-mode tracking at 0.27 of a 2 Hz ±15°
+swing; 254 gives 0.99 (bench, #466). It persists across power cycles (checked
+2026-09-25), so it is a one-time assembly step for EVERY servo, alongside the ID.
+The firmware must then write GOAL_ACC 0: any nonzero GOAL_ACC is the working
+limit (acc 50 put the 0.27 back with reg 85 at 254).
 
 --identify reads the servo's own EEPROM voltage limit (reg 0x0E, 0.1 V). The
 7.4 V STS3215 and the 12 V ST-3215-C018 share the name, outline and spline but
@@ -31,6 +40,7 @@ connected, a broadcast/ping to ID 1 collides and the response is garbage.
 import argparse
 import os
 import sys
+import time
 
 import serial  # pyserial
 import yaml
@@ -104,7 +114,8 @@ def identify(ser, sid):
     """Identity + voltage family of one servo, or None if it doesn't answer."""
     raw = {}
     for name, reg, n in (("fw", 0x00, 2), ("servo_ver", 0x03, 2), ("max_v", 0x0E, 1),
-                         ("min_v", 0x0F, 1), ("max_torque", 0x10, 2), ("present_v", 0x3E, 1)):
+                         ("min_v", 0x0F, 1), ("max_torque", 0x10, 2), ("present_v", 0x3E, 1),
+                         ("max_accel", REG_MAX_ACCEL, 1)):
         raw[name] = read_reg(ser, sid, reg, n)
         if raw[name] is None:
             return None
@@ -115,8 +126,30 @@ def identify(ser, sid):
         "min_v": raw["min_v"][0],              # 0.1 V
         "max_torque": raw["max_torque"][0] | (raw["max_torque"][1] << 8),
         "present_v": raw["present_v"][0],      # 0.1 V
+        "max_accel": raw["max_accel"][0],      # reg 85, 100 steps/s^2
         "family": "12V" if raw["max_v"][0] >= MAX_V_12V_PART else "7.4V",
     }
+
+
+REG_LOCK = 0x37        # 0 = EEPROM writes persist, 1 = they are lost at power cycle
+REG_MAX_ACCEL = 85     # Maximum_Acceleration (factory EEPROM)
+MAX_ACCEL_TARGET = 254
+
+
+def set_max_accel(ser, sid, value=MAX_ACCEL_TARGET, settle_s=0.05):
+    """Persistently write reg 85. The servo's status reply to an EEPROM write can
+    come back failed or late (bench 2026-09-25) even when the write lands, so
+    the READ-BACK is the proof, and the lock is always restored."""
+    if read_reg(ser, sid, REG_LOCK, 1) is None:
+        return False
+    try:
+        write_reg(ser, sid, REG_LOCK, [0])
+        write_reg(ser, sid, REG_MAX_ACCEL, [value])  # reply unreliable: see docstring
+        time.sleep(settle_s)
+    finally:
+        write_reg(ser, sid, REG_LOCK, [1])
+    got = read_reg(ser, sid, REG_MAX_ACCEL, 1)
+    return got is not None and got[0] == value
 
 
 def load_joint_id_map(path=JOINT_ID_MAP_PATH):
@@ -180,6 +213,10 @@ def main():
                     help="one-key mid calibration at the CURRENT pose")
     ap.add_argument("--identify", type=int, metavar="ID",
                     help="read voltage limit + versions: 7.4 V or 12 V part?")
+    ap.add_argument("--set-max-accel", type=int, metavar="ID",
+                    help="persistently set reg 85 Maximum_Acceleration (default 254)")
+    ap.add_argument("--value", type=int, default=MAX_ACCEL_TARGET,
+                    help="value for --set-max-accel")
     ap.add_argument("--verify-fleet", action="store_true",
                     help="ping every ID in joint_id_map.yaml + flag unexpected IDs")
     a = ap.parse_args()
@@ -205,10 +242,21 @@ def main():
         print(f"servo {a.identify}: fw {d['fw'][0]}.{d['fw'][1]}  servo ver "
               f"{d['servo_ver'][0]}.{d['servo_ver'][1]}  max input "
               f"{d['max_v'] / 10:.1f} V  min input {d['min_v'] / 10:.1f} V  "
-              f"max torque {d['max_torque']}  now {d['present_v'] / 10:.1f} V")
+              f"max torque {d['max_torque']}  now {d['present_v'] / 10:.1f} V  "
+              f"reg85 max accel {d['max_accel']}")
         print(f"  -> {d['family']} part"
               + ("" if d["family"] == "12V" else "  (NOT for the 12 V hip rail)"))
         return 0
+
+    if a.set_max_accel is not None:
+        before = read_reg(ser, a.set_max_accel, REG_MAX_ACCEL, 1)
+        if before is None:
+            print(f"servo {a.set_max_accel} not responding")
+            return 1
+        ok = set_max_accel(ser, a.set_max_accel, a.value)
+        print(f"servo {a.set_max_accel}: reg 85 {before[0]} -> {a.value}: "
+              f"{'OK (read back)' if ok else 'FAILED read-back'}")
+        return 0 if ok else 1
 
     if a.verify_fleet:
         expected = load_joint_id_map()

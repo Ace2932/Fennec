@@ -48,15 +48,31 @@ class ServoFleet {
 
   // TORQUE_ENABLE=1 on every present servo, dynamics first. No-op until the
   // safety loop has ticked once (#436).
-  void arm(uint16_t present_mask) {
-    if (!safety_live_) return;
+  //
+  // GOAL = PRESENT BEFORE ENABLE (#431). With torque off the servo keeps its
+  // last goal, and the joint can be moved by hand or gravity meanwhile; enabling
+  // torque then drives it straight back at the servo's full profile. That was
+  // softened by goal acc 50, but reg 85 = 254 + acc 0 (#466) makes it ~5x
+  // faster. So each servo is told to hold where it is first. A servo whose
+  // position cannot be read is left limp rather than armed toward an unknown
+  // goal; the returned mask names them.
+  uint16_t arm(uint16_t present_mask) {
+    if (!safety_live_) return 0;
+    uint16_t skipped = 0;
     for (uint8_t i = 0; i < n_; i++) {
       if (!(present_mask & (uint16_t)(1u << i))) continue;
       uint8_t id = id_base_ + i;
+      uint16_t pos = 0;
+      if (bus_.read_position(id, &pos) != BusT::OK) {
+        skipped |= (uint16_t)(1u << i);
+        continue;
+      }
+      bus_.write_goal_position(id, pos);
       // dynamics BEFORE enable so the first held pose is already limited
       write_dynamics(id);
       bus_.torque_enable(id, true);
     }
+    return skipped;
   }
 
   // Attempts per servo (write + read-back) before it is counted as failed.
