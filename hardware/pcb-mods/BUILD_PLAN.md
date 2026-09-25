@@ -629,7 +629,7 @@ minimum: bottom SMD, then top SMD, then THT.
 | **7** ✅ | **F** | SW1, SW2 terminal blocks | SW1.2 is a 14 A plane pad. Still low profile, so do it before the tall connectors crowd the iron. |
 | **8** ✅ | **F** | XT30 ×8 + XT60 J1, buck stations U1–U4, **and Q1 (TO-220)** | The bulk of the high-current THT, plus Q1 — pad 3 is a 14 A GND inject. **Last preheat stage; see the note below.** Soldered from the bottom face, which already carries 20 SMD parts — hence C1–C6 must still be off. |
 | **9** ✅ | B + F | Electrolytics: C1–C6 (bottom), C8–C9 (top) | Tall, polarised, **~105 °C-rated — below the 100–130 °C board preheat.** After every preheat joint, and after stage 8 because the bottom cans would block access to stage 8's solder side. |
-| **10** ⏭ **NEXT — after the §6 gate** | **F** | Modules: **U9–U12** (INA226 ×4 — see §4, U12 is the L2 monitor), U6 (Teensy 4.1), U12-logic (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. Note `U12` names *different* parts on the two boards: INA226 on power, Arduino Nano on logic. |
+| **10** ⏭ **NEXT — after the §6 gate** | **F** | Modules: **U9–U12** (INA226 ×4 — see §4, U12 is the L2 monitor), U6 (Teensy 4.1), U12-logic (Nano) | Heat-sensitive, tallest, and the parts you most want to be able to remove. Socket where possible. Note `U12` names *different* parts on the two boards: INA226 on power, Arduino Nano on logic. **Includes the `OE_TX`/`OE_RX` pull-up bodge on the logic board, before the Teensy goes in — see below (#434).** Gates 9a and 9b (§6) come first. |
 
 ### 🔴 Stage 3 also carries a bodge: `U8` has NO supply decoupling on the board
 
@@ -654,6 +654,39 @@ than the 22 AWG solid. Keep the loop short and flat, then confirm **4→8 ≈ 9.
 
 ⚠️ **Do not carry this bodge to `U7`.** The logic board's `C1` 100nF is a real routed
 part on `GND`↔`+3V3` (stage 5). U7 is decoupled by design; U8 is not.
+
+### 🔴 Stage 10 carries a bodge on the LOGIC board: pull-ups on `OE_TX` / `OE_RX` (#434)
+
+Added 2026-09-25. Read from `nova_pcb_v6_logic.kicad_pcb`: `OE_TX` touches only `U6`.5 and
+`U7`.1, and `OE_RX` only `U6`.6 and `U7`.4. **Nothing holds either high** while the Teensy is
+booting, being flashed, or has not yet configured the pins. They are the active-low output
+enables of both '125 gates, so both gates can drive the servo bus at once in that window. This
+is a different bodge from the `U8` one above. `U7`'s decoupling is fine.
+
+**Fit two 10k resistors, `U7`.1 → `+3V3` and `U7`.4 → `+3V3`**, at stage 10 before the Teensy
+goes in. Nearest `+3V3` points, from the board file (logic board, F.Cu):
+
+| from | nearest `+3V3` | span |
+|---|---|---|
+| `U7`.1 `OE_TX` (159.53, 66.19) | `U7`.14 (164.47, 66.19), straight across the package | 4.94 mm |
+| `U7`.4 `OE_RX` (159.53, 70.00) | `U7`.10 (164.47, 71.27), diagonal | ~5.1 mm |
+
+⚠️ **Straight across from `U7`.4 is `U7`.11, which is unconnected**, not `+3V3`. Do not land
+the second resistor there. Other `+3V3` pads if the leads get crowded: `U7`.13 (164.47, 67.46),
+`C1`.2 (165.47, 62.77), `R7`.1 (167.18, 72.00). Neither span fits an 0603 (1.6 mm). Use the
+`U8` method: tack the resistor at the `+3V3` end and run a wick-strand link to the signal lead.
+An axial resistor laid across the package would also span it; whether one is on hand is
+unverified. Flux, and watch for bridges to `U7`.2/.3/.5, the neighbours at 1.27 mm.
+
+**Check, with the Teensy OUT of its socket:**
+
+1. Unpowered: `U7`.1 ↔ `J20`.5 = **10k**, `U7`.4 ↔ `J20`.5 = **10k**. With the Teensy out, the
+   bodge resistor is the only path to `+3V3` on either net. ~0 Ω = bridged to a `+3V3` pin.
+2. Powered: **J20 ribbon unplugged**, bench supply **3.3 V, 20 mA limit** into `J20`.5 (+) /
+   `J20`.3 (−). With the Teensy out, nothing else supplies `+3V3` (its only source is
+   `U6`.T3V3O). **`U7`.1 and `U7`.4 both read ~3.3 V (high).** A pin reading 0 V has no pull-up.
+
+**Result:** _owed — not yet fitted._
 
 ### Per-stage parts, with VALUES
 
@@ -695,7 +728,7 @@ a part marked "470" is 47 pF and gives you no soft-start at all.
 | part | the trap |
 |---|---|
 | **J1 XT60, J3–J7 / J12–J14 XT30** | **pad 1 = NEGATIVE, pad 2 = POSITIVE**, uniformly across all 9 AMASS parts — re-read from the board file 2026-08-13, 0 exceptions. `J1.1 = BATT_NEG`, `J1.2 = VBAT`. Do **not** assume pad 1 is +. On the board, **pad 1 is the roundrect pad, pad 2 is the round one**. ⚠️ **`J1` is the ONLY XT with no `+`/`−` silk** — see the row below. This exact reversal has been caught before on this board. |
-| **`J1` specifically — meter it, do not eyeball it** | All eight XT30s carry `−`/`+` silk text (checked: every mark lands on the correct pad). **`J1` carries none** — its silk is body outline only. The outline *is* asymmetric (two chamfered corners at the pad-1/negative end, square at pad-2/positive, matching the XT60 housing's own chamfer and the "flat = +" rule), but that cue is hidden the moment the connector sits on it, and the part drops in 180° out perfectly happily on symmetric 4.5 mm drills. **This is worse than a reversed pack: `BATT_NEG` is not GND — it runs to `Q1`'s drain — so fitting `J1` rotated swaps the nets UPSTREAM of the reverse-polarity protection and defeats it.** Identify by continuity against parts already fitted: **`J1`.2 `VBAT` → rings to `SW1`.1** (stage 7); **`J1`.1 `BATT_NEG` → rings to `D1`.2 / `R_gs1`.2 / `C_gs1`.2** (stage 5). ⚠️ And the discriminator that catches the intuitive error: **`J1`.1 will NOT ring to GND.** Probing for ground on the negative pad finds nothing and invites you onto the wrong pad. |
+| **`J1` specifically — meter it, do not eyeball it** | All eight XT30s carry `−`/`+` silk text (checked: every mark lands on the correct pad). **`J1` carries none** — its silk is body outline only. The outline *is* asymmetric (two chamfered corners at the pad-1/negative end, square at pad-2/positive, matching the XT60 housing's own chamfer and the "flat = +" rule), but that cue is hidden the moment the connector sits on it, and the part drops in 180° out perfectly happily on symmetric 4.5 mm drills. **This is worse than a reversed pack: `BATT_NEG` is not GND — it runs to `Q1`'s drain — so fitting `J1` rotated swaps the nets UPSTREAM of the reverse-polarity protection and defeats it.** Identify by continuity against parts already fitted: **`J1`.2 `VBAT` → rings to `SW1`.1** (stage 7); **`J1`.1 `BATT_NEG` → rings to `D1`.2 / `R_gs1`.2 / `C_gs1`.2** (stage 5) **→ until the §6 gate 9a rework (#429, 2026-09-25) moves those three ends to GND. After it, use `J1`.1 → `Q1`.2.** ⚠️ And the discriminator that catches the intuitive error: **`J1`.1 will NOT ring to GND.** Probing for ground on the negative pad finds nothing and invites you onto the wrong pad. |
 | **C1–C9 electrolytics** | Polarised, and split across both faces (C1–C6 bottom, C8/C9 top), so "the stripe faces the same way" is not a single rule — check each against its own silk. |
 | **D1 BZT52C18** | Zener, SOD-123F. Cathode band. Backwards it clamps nothing and conducts the wrong way. |
 | **Q1 IRLB3034PBF** | TO-220-3. Its pad 3 is the 14 A GND inject; pad 1 is `Net-(D1-K)`, pad 2 is `BATT_NEG`. **⚠️ The TO-220 TAB is bonded to the drain = `BATT_NEG`, not GND** — and `SW1` switches only the positive rail, so the tab is live whenever the pack is plugged in, switch off included. Bolting it to a grounded chassis or a shared heatsink shorts drain→source and **silently, permanently bypasses reverse-polarity protection**. Mount isolated or free-standing; if it is ever heatsinked, mica/silpad + shoulder bush and ~~meter tab-to-GND for an open~~ **meter tab-to-CHASSIS for an open** first. ⛔ **The struck-out wording is wrong and would fail a good board:** tab-to-*board*-GND is asymmetric by design — Q1's body diode runs source→drain, so red on `Q1`.3 conducts (~0.5 V in diode mode) and red on the tab reads OL. **The asymmetry is the pass; ~0 Ω both polarities is the failure** (drain-source shorted, protection already gone). ✅ Confirmed asymmetric on the build board 2026-08-16 (§6). Also note the tab is internally the same metal as pin 2, so tab↔pin 2 is 0 Ω by construction and tests no solder joint. |
@@ -943,6 +976,9 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
   verified by measurement (R2, R3, R4, R5, R6, R7, R8, R9, R15, R16), every reading
   inside 1 %. Sense divider from the measured parts is 21.8/(99.7+21.8) = **0.1794**
   (nominal 0.1803) → trips at **≈13.08 V warn / 12.61 V hardcut**, 0.5 % high.
+  **→ superseded 2026-09-25, #432:** that pair assumes a 5.00 V UBEC and no hysteresis. With the
+  measured 4.98 V and the `R14`/`R15` loading, the expected trips are `BATT_LOW` 12.96 falling /
+  13.06 rising and `HARDCUT` 12.42 falling / 12.70 rising. See `pre-power-on-validation.md` §2.
 - 🔴 **AFTER stage 3 — the SOIC probe tables.** Computed from the two `.kicad_pcb`
   netlists (resistors only; caps open, semiconductors off), 2026-08-06. **Clean before
   probing** — wet flux shunts the 1M-range readings.
@@ -1157,6 +1193,62 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
   a bare PCB. Run `pre-power-on-validation.md` §1c **connector mating audit
   (HARD GATE)** and §1e (connector polarity, buck variants, INA addressing)
   here. Fitting Teensy/Nano/INA modules first makes rework much worse.
+- 🔴 **9a — `Q1` reverse-polarity test + gate-network rework (#429). HARD GATE before ANY
+  powered step on the board** (before `pre-power-on-validation.md` §2's sweep and §3's first
+  power-up). Added 2026-09-25.
+
+  **The defect, read from `nova_pcb_v6_power_v2.kicad_pcb`:** `Q1` pad 1 = `Net-(D1-K)`, pad 2 =
+  `BATT_NEG`, pad 3 = `GND`. The IRLB3034 is G-D-S, so the drain is `BATT_NEG` and the source
+  is GND. But `D1`.2 (anode), `R_gs1`.2 and `C_gs1`.2 all sit on **`BATT_NEG`, the drain**, not
+  on the source. With the pack in the right way round that is harmless (`BATT_NEG` ≈ GND), which
+  is why every audit passed it. With `J1` reversed, `BATT_NEG` is the positive terminal, `D1`
+  conducts forward into the gate, and Q1 turns on. The reversed pack then reaches C8/C9, the
+  UBEC and `M1`. Root cause is the schematic symbol (v7 list, §8).
+
+  **1. Test the board as built (expected to FAIL).** Bench supply **5 V, 20 mA limit**, leads
+  **reversed** on `J1` (+ to `J1`.1 `BATT_NEG`, − to `J1`.2 `VBAT`). **SW1 on. No buck module
+  plugged in, UBEC disconnected from `J2`.** It is soldered on this build (`order-list.md`
+  §"Wiring to `J2`"), so lift its input red from `J2`.1 for the test. `M1` stays on and will see
+  reverse polarity if Q1 conducts; at 20 mA that is an accepted risk (unverified whether the
+  module survives). Measure **`J1`.1 → `Q1`.3** (red on `J1`.1) and the supply current.
+
+  | reading | means |
+  |---|---|
+  | **~5.0 V across `J1`.1→`Q1`.3, supply current ~0** | **protected** — Q1 off, the whole supply is across it |
+  | **clearly below 5 V**, supply current above zero | **defeated** — Q1 is conducting |
+
+  ⚠️ **Do not wait for ~0 V or the 20 mA limit as the fail signature.** With no buck or UBEC
+  loading GND, the only loads are `M1`, `R2`+`R3` (121.5k) and C8/C9. Q1 then works as a
+  source follower. The gate sits ~one diode drop below `J1`.1 through `D1`, and `Q1`.3 rises to
+  about Vgs(th) below the gate. So a defeated board should read roughly Vgs(th) + one diode drop,
+  **~1.6–3.2 V** (IRLB3034 Vgs(th) 1.0–2.5 V from the datasheet, `D1` forward drop ~0.6–0.7 V;
+  both unverified here). It may never reach the 20 mA limit. There is also a steady
+  ~(5 − 0.6)/10k ≈ 0.44 mA path `BATT_NEG` → `D1` → gate → `R17` → `VBAT_PROTECTED` on the
+  defeated board, which is on the edge of a bench supply's current resolution. **The voltage is
+  the verdict.** The ~0 V / current-limit picture applies only with a real load fitted.
+
+  **2. Rework (the fix on v6).** Lift the **`BATT_NEG` end** of each of the three parts and wire
+  all three to **`Q1`.3** (the source, GND):
+
+  | part | lift this end | pad at | to `Q1`.3 (103.58, 56.50) |
+  |---|---|---|---|
+  | `C_gs1` 0.47 µF | pad 2 | (96.20, 67.75) | ~13.5 mm |
+  | `R_gs1` 100k | pad 2 | (98.85, 72.25) | ~16.4 mm |
+  | `D1` BZT52C18 | pad 2 (anode) | (93.00, 70.25) | ~17.4 mm |
+
+  Leave the `Net-(D1-K)` ends (gate side) soldered. All three `BATT_NEG` pads are the heavy
+  3.0 mm-trace / pour pads from the stage-5 note in §2a, so use **TS-D24 at 380 °C** to lift
+  them, not TS-ILS. Put Kapton under each lifted end so it cannot drop back onto its
+  `BATT_NEG` pad. Join the three lifted ends with one short fine wire and run it to the
+  `Q1`.3 lead on the top face. ⚠️ **Not `J1`.1 and not any `BATT_NEG` point.** Those put the
+  network back on the drain. After the rework, `D1`.2 / `R_gs1`.2 / `C_gs1`.2 **no longer ring
+  to `J1`.1**, so gate A1's probe "`J1`.1 ↔ `D1`.2 (or `R_gs1`.2)" becomes **`J1`.1 ↔ `Q1`.2**
+  for any re-run. The wire end now rings to `Q1`.3 at 0 Ω.
+
+  **3. Re-run step 1. Pass = ~5.0 V across `J1`.1→`Q1`.3 and no supply current.** Then restore
+  the UBEC's `J2`.1 lead. Record both runs here.
+
+  **Result:** _owed — not yet run on the bench._ (Before rework: ___ V / ___ mA. After: ___ V / ___ mA.)
 - 🔴 **9b — `U6` pad→GPIO continuity (logic board), immediately before stage 10's
   socket fit.** The footprint's own descr admits the gap
   (`nova_pcb_v6_logic.kicad_pcb`, `U6`): *"Pin order from PJRC card11a rev4 --
@@ -1191,9 +1283,30 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
   the bus side, not to `U6`. `J20` pins 7/8/9 and `J21` pin 1 read off the same
   board file (`07_aux_mcu.kicad_sch` + `09_interboard.kicad_sch`).
 
+  **Power pins too (added 2026-09-25, #401).** The GPIO sweep above never touches the
+  supply pins. Pad→net read from `nova_pcb_v6_logic.kicad_pcb`: `U6` pad 1 (VIN, at
+  (125.62, 66.79)) = `V5_AUX` = `J20`.1/.2. Both `U6` pad-2 positions (GND, at (110.38, 66.79)
+  and (125.62, 69.33)) = `J20`.3. `U6`.T3V3O (3.3 V out, at (125.62, 71.87)) = `+3V3` =
+  `J20`.5. So VIN, GND and 3.3 V out are the first three pins of the same row, and T3V3O is
+  the only `+3V3` source on either board. (The other 3.3 V hole, `U6`.T3V3 at
+  (110.38, 102.35) in the opposite row, has no net.)
+
+  | Teensy pin | net | probe | expect |
+  |---|---|---|---|
+  | VIN | `V5_AUX` | Teensy VIN ↔ `J20`.1 | **0 Ω** |
+  | GND | `GND` | Teensy GND ↔ `J20`.3 | **0 Ω** |
+  | 3.3V (out) | `+3V3` | Teensy 3.3V ↔ `J20`.5 | **0 Ω** |
+  | VIN vs VUSB | — | Teensy VIN ↔ Teensy VUSB | **OL** — proves the `VUSB`↔`VIN` pad cut (§7, `pre-power-on-validation.md` §1b) |
+
+  **Press the socket down while probing.** The socket is pressure contact only, so an OL
+  in the first three rows can be the socket rather than the board. Re-seat and re-probe
+  before calling it a fail. The VUSB probe point is on the Teensy itself; it is not in the
+  board file, so find it on the PJRC card (location unverified here).
+
   **Pass: 8/8 beep to the named net, and 0/8 beep to any neighboring Teensy
   pin/pad** (the second half is what actually catches a mirrored or off-by-one
-  row — a wrong-but-still-continuous mapping passes the first half alone).
+  row — a wrong-but-still-continuous mapping passes the first half alone). **Plus the four
+  power rows above.**
   **Fail on any miss — do not seat `U6` for real (solder, or leave it
   populated) until this reruns clean.**
 
@@ -1249,9 +1362,11 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
       DHO804 deferred to Phase 5) and the documented fallback — a 10/22/47 Ω 2–3 W
       **precharge resistor — does not appear in any ✅ ordered list.**
       Not a soldering blocker; it is a **first-pack-hot-plug** blocker.
-      - First power-on is from a current-limited 0.5 A bench supply
+      - First power-on is from a current-limited ~~0.5 A~~ bench supply
         (`pre-power-on-validation.md` §3), which never creates that inrush — this
-        defers the risk, it does not clear it.
+        defers the risk, it does not clear it. **→ updated 2026-09-25, #433:** §3 now starts
+        at 15.0 V / 0.5 A UBEC-only and adds bucks one at a time at ~2 A. The supply's
+        current limit still caps the charge current, so the conclusion is unchanged.
       - **Owned mitigation:** the Chanzon **1 Ω + 4 Ω** power resistors on the
         bench-gear list. A 2-stage connect through the 4 Ω caps peak inrush near
         4.2 A at 16.8 V and dissipates the 0.77 J in the resistor, not the FET.
@@ -1278,5 +1393,31 @@ Jetson −Y bundle is **no longer blocked**; that note was stale until 2026-07-2
       suffix gets this backwards; hold the two parts together and look at the contacts.
       ⚠️ **`J1` is the EXCEPTION as built** — receiving housing with pins, the opposite of the
       XT30s. See its row in §5. Its harness half is the plug-in/socket one.
+
+---
+
+## 8. v7 respin notes
+
+The v6 boards are fabbed and match the files, so these are **notes, not copper edits**. The v6
+workaround for each is the bench step named. Other v7 items live in
+`../../docs/improvement-backlog.md` (e.g. #48, the `EN_BUCKS` pull-up).
+
+- **#429 — `Q1` gate network on the drain.** The `Q_NMOS_GSD` symbol in
+  `nova_pcb_v6_power_v2/01_battery.kicad_sch` labels **pin 2 "S" and pin 3 "D"**. The IRLB3034
+  (TO-220) is G-D-S, so pin 2 is the drain. That label is why `D1` anode / `R_gs1` / `C_gs1`
+  were wired to `BATT_NEG`. v7: fix the symbol (or use a G-D-S one) and land all three on the
+  source (GND). v6 workaround: §6 gate 9a rework.
+- **#430 — E-stop cut needs `V5_AUX`.** `R13` 10k to `V5_AUX` is Q3's only gate pull-up, so a
+  dead UBEC leaves the E-stop unable to cut the bucks. v7: bias Q3's gate from
+  `VBAT_PROTECTED` through a divider that keeps the BSS138's Vgs in rating, so the cut works
+  with the UBEC down. Values not chosen. #395 has the same `V5_AUX` dependency. v6: documented,
+  bench step in `pre-power-on-validation.md` §3 step 5.
+- **#434 — `OE_TX` / `OE_RX` have no pull-ups.** v7: 10k from each to `+3V3` on the logic
+  board. v6 workaround: the stage-10 bodge (§3).
+- **#435 — `BATT_LOW` fails unsafe on an open J20.** The comparator output is active-high
+  (high = battery low) and the Teensy reads it with `INPUT_PULLDOWN`, so an unplugged or broken
+  ribbon reads "battery OK". v7: invert the comparator output polarity so an open line reads
+  "battery low", and flip the firmware read to match. v6: documented in
+  `../../firmware/teensy/README.md`; the hardware hard-cut is the only backstop.
 
 _Inventory and nets read from the board files 2026-07-29._
