@@ -1,0 +1,43 @@
+{
+  "board": "nova_pcb_v6_logic",
+  "via_allowance_mm": 1.6,
+  "via_allowance_budget": "board (general (thickness 1.6)) in this file -- one through via traverses the full stackup, so its length-equivalent is taken as the board thickness itself (a straight top-to-bottom traversal), rounded up rather than down so the allowance is never optimistic about a via's real contribution.",
+  "groups": [
+    {
+      "name": "feetech_bus",
+      "budget": "1 Mbaud half-duplex TTL (Pattern B, #416), 1000 ns bit. 5% skew budget = 50 ns = 50000 ps / ~6.8 ps/mm (FR-4) ~= 7353 mm electrical bound -- four orders of magnitude looser than this board. tolerance_mm is therefore a LAYOUT-DISCIPLINE bound, not a timing bound: set at ~1.3x the measured spread (15.28 mm on main, 2026-09-25) so it still passes today but catches a gross miroute (e.g. one leg rerouted the long way around the board).",
+      "tolerance_mm": 20.0,
+      "max_mm": 120.0,
+      "members": [
+        {"nets": ["TEENSY_TX"]},
+        {"nets": ["TEENSY_RX"]},
+        {"nets": ["OE_TX"]},
+        {"nets": ["OE_RX"]},
+        {"nets": ["BUS_SIGNAL"]},
+        {"nets": ["BUS_SERVO"]}
+      ]
+    },
+    {
+      "name": "oled_spi",
+      "budget": "SSD1331 OLED via hardware SPI off the Arduino Nano (firmware/arduino-nano/README.md); no configured SPI clock is committed yet, so this uses the issue's own worked example: 10 MHz SPI, 100 ns bit, 5% skew budget = 5 ns = 5000 ps / ~6.8 ps/mm ~= 735 mm electrical bound. tolerance_mm = 25 mm, the issue's own chosen layout-discipline bound, ~1.3x the measured spread (18.87 mm on main, 2026-09-25, SPI_SCK+SPI_SCK_F vs SPI_MOSI+SPI_MOSI_F). Re-derive when the Nano driver commits a real SPISettings() clock.",
+      "tolerance_mm": 25.0,
+      "max_mm": 90.0,
+      "members": [
+        {"nets": ["SPI_SCK", "SPI_SCK_F"]},
+        {"nets": ["SPI_MOSI", "SPI_MOSI_F"]},
+        {"nets": ["OLED_CS", "OLED_CS_F"]},
+        {"nets": ["OLED_DC", "OLED_DC_F"]}
+      ]
+    },
+    {
+      "name": "i2c_telemetry",
+      "budget": "INA226 rail telemetry, 400 kHz fast-mode I2C (Wire.setClock(400000), firmware/teensy/firmware/src/main.cpp:858). Bit period 2500 ns; 5% skew budget = 125 ns = 125000 ps / ~6.8 ps/mm ~= 18382 mm electrical bound -- I2C has no real matching requirement at this speed. tolerance_mm = 10 mm is a generous layout-discipline ceiling on this board only (measured spread 0.004 mm on main, 2026-09-25) -- it exists only to catch a gross miroute, not to enforce margin that doesn't apply to I2C.",
+      "tolerance_mm": 10.0,
+      "max_mm": 80.0,
+      "members": [
+        {"nets": ["I2C_SCL"]},
+        {"nets": ["I2C_SDA"]}
+      ]
+    }
+  ]
+}
