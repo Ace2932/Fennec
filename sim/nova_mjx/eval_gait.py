@@ -86,7 +86,7 @@ def score(env, policy, n, steps, seed, pin_cmd, terrain=0.0, step_frac=0.0):
             * alive[:, None],
             cot=power / (mass * 9.81 * jp.maximum(spd, 0.05)) * moving * alive,
             tripped=m["n_tripped"] * alive, slew=m["slew_clip"] * alive,
-            gmax=m["g_max"] * alive)
+            gmax=m["g_max"] * alive, g2max=m["g2_max"] * alive)
         alive = alive * (1.0 - s.done)
         return (s, alive), rec
 
@@ -119,6 +119,11 @@ def score(env, policy, n, steps, seed, pin_cmd, terrain=0.0, step_frac=0.0):
         "guard_run_ms_p50": float(20 * np.percentile(rec["gmax"].max(0), 50)),
         "guard_run_ms_p99": float(20 * np.percentile(rec["gmax"].max(0), 99)),
         "guard_run_ms_max": float(20 * rec["gmax"].max()),
+        # guard v2 (stall_guard.h): same, counting only JAM polls
+        "guard2_trip_pct": float(100 * np.mean(rec["g2max"].max(0) >= FW_GUARD_POLLS)),
+        "guard2_run_ms_p50": float(20 * np.percentile(rec["g2max"].max(0), 50)),
+        "guard2_run_ms_p99": float(20 * np.percentile(rec["g2max"].max(0), 99)),
+        "guard2_run_ms_max": float(20 * rec["g2max"].max()),
     }
 
 
@@ -143,6 +148,9 @@ def main():
                     help="rough-terrain ceiling for the eval envs (0 = flat)")
     ap.add_argument("--step-frac", type=float, default=0.0,
                     help="fraction of eval envs with discrete steps (needs --terrain)")
+    ap.add_argument("--jam-joint", type=int, default=-1,
+                    help="plant a JAM: lock this joint (0-11) within +-1 mrad of its default pose, "
+                         "to prove guard v2 trips on the thing it exists for")
     a = ap.parse_args()
 
     env = NovaJoystick(torque_limit=a.eval_torque_limit,
@@ -150,6 +158,11 @@ def main():
                        joint_stale_p=a.joint_stale_p, asym=a.asym,
                        ref_gait=a.ref_gait, ref_height=a.ref_height,
                        overload_model=a.overload_model, goal_slew=a.goal_slew)
+    if a.jam_joint >= 0:
+        # joint 0 is the free base, so leg joint k is joint k+1 (damping 1e3 NaN'd MJX)
+        q0 = float(env._default_pose[a.jam_joint])
+        env.sys = env.sys.replace(jnt_range=env.sys.jnt_range.at[1 + a.jam_joint].set(
+            jp.array([q0 - 1e-3, q0 + 1e-3])))
     policy = load_policy(a.policy, env, a.asym)
     out = {"policy": a.policy, "eval_torque_limit": a.eval_torque_limit,
            "eval_goal_acc_reg": a.eval_goal_acc_reg, "joint_stale_p": a.joint_stale_p,
@@ -162,7 +175,9 @@ def main():
               f"air {' '.join(f'{x:.2f}' for x in r['air'])}  CoT {r['cot']:.2f}  "
               f"tripped/robot {r['servos_tripped_end']:.2f}  slew-clip {r['slew_clip_frac']:.1%}  "
               f"fw-guard trip {r['guard_trip_pct']:.0f}% of eps (>=90% duty run p50/p99/max "
-              f"{r['guard_run_ms_p50']:.0f}/{r['guard_run_ms_p99']:.0f}/{r['guard_run_ms_max']:.0f} ms)")
+              f"{r['guard_run_ms_p50']:.0f}/{r['guard_run_ms_p99']:.0f}/{r['guard_run_ms_max']:.0f} ms)  "
+              f"guard-v2 trip {r['guard2_trip_pct']:.0f}% (jam run p50/p99/max {r['guard2_run_ms_p50']:.0f}/"
+              f"{r['guard2_run_ms_p99']:.0f}/{r['guard2_run_ms_max']:.0f} ms)")
     if a.json:
         with open(a.json, "w") as f:
             json.dump(out, f, indent=1)

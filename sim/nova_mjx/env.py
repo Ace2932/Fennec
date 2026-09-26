@@ -254,6 +254,10 @@ FW_GOAL_SLEW = 2000 * 2 * 3.141592653589793 / 4096   # rad/s, firmware goal slew
 DUTY_SOFT = 0.8        # --w-duty bills duty above this (the servo's own unload line)
 FW_GUARD_DUTY = 0.9    # main.cpp NOVA_STALL_LOAD_RAW 900 (of 1000)
 FW_GUARD_POLLS = 5     # main.cpp NOVA_STALL_PERSIST — 5 x 20 ms polls = 100 ms
+# Guard v2 (firmware stall_guard.h, #428): a poll counts only on a JAM = the duty
+# above AND >= ERR from goal AND moved <= STILL since the previous poll.
+FW_GUARD_ERR = 60 * 2 * 3.141592653589793 / 4096     # rad, NOVA_STALL_ERR_COUNTS 60
+FW_GUARD_STILL = 3 * 2 * 3.141592653589793 / 4096    # rad, NOVA_STALL_STILL_COUNTS 3
 OVERLOAD_DUTY = 0.8    # Feetech default unload: above 80 % duty ...
 OVERLOAD_S = 2.0       # ... for 2 s ...
 OVERLOAD_OUT = 0.2     # ... -> 20 % output (peer research, SmallDog + Feetech table)
@@ -673,6 +677,7 @@ class NovaJoystick(PipelineEnv):
             "hot_t": jp.zeros(self._nu), "tripped": jp.zeros(self._nu, dtype=bool),
             # firmware stall-guard run length (polls) per joint, + episode max
             "g_run": jp.zeros(self._nu, dtype=jp.int32), "g_max": jp.zeros((), dtype=jp.int32),
+            "g2_run": jp.zeros(self._nu, dtype=jp.int32), "g2_max": jp.zeros((), dtype=jp.int32),
             "step": 0,
             # climb telescoping state (see step()): base z at spawn, and the
             # running high-water mark. The metrics emit per-step DELTAS of these;
@@ -723,7 +728,7 @@ class NovaJoystick(PipelineEnv):
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_carry", "w_gait",
             "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand", "w_overload", "w_duty", "w_guard",
-            "n_tripped", "slew_clip", "g_max",
+            "n_tripped", "slew_clip", "g_max", "g2_max",
             "w_climb", "w_beta_climb",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
             # carried leg reads ~1.0 here while the others cycle
@@ -807,8 +812,14 @@ class NovaJoystick(PipelineEnv):
         # FIRMWARE stall guard (main.cpp NOVA_STALL_LOAD_RAW 900, NOVA_STALL_PERSIST
         # 5): consecutive 50 Hz polls at >= 90 % duty; 5 = 100 ms -> latched fleet limp.
         g_run = jp.where(duty >= FW_GUARD_DUTY, info["g_run"] + 1, 0)
-        info = {**info, "hot_t": hot_t, "g_run": g_run,
+        # guard v2 (diagnostic only, no reward): the same duty AND a jam
+        q_now, q_prev = pipeline_state.q[7:], state.pipeline_state.q[7:]
+        jam = ((duty >= FW_GUARD_DUTY) & (jp.abs(ctrl - q_now) >= FW_GUARD_ERR)
+               & (jp.abs(q_now - q_prev) <= FW_GUARD_STILL))
+        g2_run = jp.where(jam, info["g2_run"] + 1, 0)
+        info = {**info, "hot_t": hot_t, "g_run": g_run, "g2_run": g2_run,
                 "g_max": jp.maximum(info["g_max"], jp.max(g_run)),
+                "g2_max": jp.maximum(info["g2_max"], jp.max(g2_run)),
                 "tripped": info["tripped"] | (hot_t >= OVERLOAD_S)}
 
         # ---- mid-episode PUSH: kick base xy velocity, learn to recover ----
@@ -1337,7 +1348,7 @@ class NovaJoystick(PipelineEnv):
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand, w_overload=w_overload,
             w_duty=w_duty, w_guard=w_guard,
             n_tripped=jp.sum(info["tripped"].astype(jp.float32)), slew_clip=slew_clip,
-            g_max=info["g_max"].astype(jp.float32),
+            g_max=info["g_max"].astype(jp.float32), g2_max=info["g2_max"].astype(jp.float32),
             w_climb=w_climb, w_beta_climb=beta_climb,
             air_FL=foot_air_f[0], air_FR=foot_air_f[1],
             air_RL=foot_air_f[2], air_RR=foot_air_f[3],
