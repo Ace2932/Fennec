@@ -256,7 +256,8 @@ FW_GUARD_DUTY = 0.9    # main.cpp NOVA_STALL_LOAD_RAW 900 (of 1000)
 FW_GUARD_POLLS = 5     # main.cpp NOVA_STALL_PERSIST — 5 x 20 ms polls = 100 ms
 OVERLOAD_DUTY = 0.8    # Feetech default unload: above 80 % duty ...
 OVERLOAD_S = 2.0       # ... for 2 s ...
-OVERLOAD_OUT = 0.2     # ... -> 20 % output (peer research, SmallDog + Feetech table)
+OVERLOAD_OUT = 0.2
+OVERLOAD_TOL = 5e-3    # numeric margin on the unload line (see step()); 80 % vs 80.5 %     # ... -> 20 % output (peer research, SmallDog + Feetech table)
 
 
 def goal_acc_rad(reg):
@@ -795,11 +796,14 @@ class NovaJoystick(PipelineEnv):
         # already carries TL x DR headroom: sag/heat). TL caps duty at TL.
         duty = jp.abs(pipeline_state.qfrc_actuator[6:]) / (
             self.sys.actuator_forcerange[:, 1] / self._torque_limit)
-        # + 1e-4: at TL <= 0.8 a saturated joint's duty is EXACTLY the TL mathematically;
-        # after DR scaling float32 rounds it to ~0.8000001, which latched spurious
-        # unloads (3/16 DR robots held at stall, TL 0.8). A real TL-800 servo clamps
-        # duty at 800 and never exceeds the >80 % unload line.
-        hot_t = jp.where(duty > OVERLOAD_DUTY + 1e-4, info["hot_t"] + self._dt, 0.0)
+        # + OVERLOAD_TOL: at TL <= 0.8 a saturated joint's duty is EXACTLY the TL
+        # mathematically. After DR scaling float32 rounded it to ~0.8000001 (3/16 DR
+        # robots latched at a held stall on CPU), and the GPU evaluation still showed
+        # 0.30 unloads/robot at TL 0.8 with a 1e-4 margin while the identical code on
+        # CPU showed 0 — consistent with reduced-precision GPU matmuls (UNVERIFIED:
+        # the GPU check could not run next to training). A real TL-800 servo clamps
+        # duty at 800, so 0.5 % margin changes nothing physical.
+        hot_t = jp.where(duty > OVERLOAD_DUTY + OVERLOAD_TOL, info["hot_t"] + self._dt, 0.0)
         # FIRMWARE stall guard (main.cpp NOVA_STALL_LOAD_RAW 900, NOVA_STALL_PERSIST
         # 5): consecutive 50 Hz polls at >= 90 % duty; 5 = 100 ms -> latched fleet limp.
         g_run = jp.where(duty >= FW_GUARD_DUTY, info["g_run"] + 1, 0)
