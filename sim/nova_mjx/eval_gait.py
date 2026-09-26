@@ -86,7 +86,7 @@ def score(env, policy, n, steps, seed, pin_cmd, terrain=0.0, step_frac=0.0):
             * alive[:, None],
             cot=power / (mass * 9.81 * jp.maximum(spd, 0.05)) * moving * alive,
             tripped=m["n_tripped"] * alive, slew=m["slew_clip"] * alive,
-            gmax=m["g_max"] * alive, g2max=m["g2_max"] * alive, i2=m["i2_leg"] * alive)
+            gmax=m["g_max"] * alive, g2max=m["g2_max"] * alive, i2=m["i2_leg"] * alive, tau=m["tau_leg"] * alive)
         alive = alive * (1.0 - s.done)
         return (s, alive), rec
 
@@ -113,6 +113,7 @@ def score(env, policy, n, steps, seed, pin_cmd, terrain=0.0, step_frac=0.0):
         # keeps stepping against the ground in this loop (no auto-reset), which would
         # otherwise inflate the guard runs and zero the trip count (review of #444).
         "i2_leg": float(rec["i2"].sum() / na),   # hfe/kfe mean (tau/tau_stall)^2 (#484)
+        "tau_leg_nm": float(rec["tau"].sum() / na),  # hfe/kfe mean |tau|, N*m (rail current)
         "servos_tripped_end": float(rec["tripped"].max(0).mean()),
         "slew_clip_frac": float(rec["slew"].sum() / na),
         # firmware stall guard: per-episode longest run at >= 90 % duty (ms at 50 Hz)
@@ -151,6 +152,7 @@ def main():
                     help="fraction of eval envs with discrete steps (needs --terrain)")
     ap.add_argument("--eff-scale", type=float, default=1.0,
                     help="leg hfe/kfe stall x this; must match the policy's training")
+    ap.add_argument("--kp-scale", type=float, default=1.0)
     ap.add_argument("--jam-joint", type=int, default=-1,
                     help="plant a JAM: lock this joint (0-11) within +-1 mrad of its default pose, "
                          "to prove guard v2 trips on the thing it exists for")
@@ -161,7 +163,7 @@ def main():
                        joint_stale_p=a.joint_stale_p, asym=a.asym,
                        ref_gait=a.ref_gait, ref_height=a.ref_height,
                        overload_model=a.overload_model, goal_slew=a.goal_slew,
-                       eff_scale=a.eff_scale)
+                       eff_scale=a.eff_scale, kp_scale=a.kp_scale)
     if a.jam_joint >= 0:
         # joint 0 is the free base, so leg joint k is joint k+1 (damping 1e3 NaN'd MJX)
         q0 = float(env._default_pose[a.jam_joint])

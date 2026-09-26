@@ -683,7 +683,7 @@ class NovaJoystick(PipelineEnv):
             # firmware stall-guard run length (polls) per joint, + episode max
             "g_run": jp.zeros(self._nu, dtype=jp.int32), "g_max": jp.zeros((), dtype=jp.int32),
             "g2_run": jp.zeros(self._nu, dtype=jp.int32), "g2_max": jp.zeros((), dtype=jp.int32),
-            "i2_leg": jp.zeros(()),
+            "i2_leg": jp.zeros(()), "tau_leg": jp.zeros(()),
             "step": 0,
             # climb telescoping state (see step()): base z at spawn, and the
             # running high-water mark. The metrics emit per-step DELTAS of these;
@@ -734,7 +734,7 @@ class NovaJoystick(PipelineEnv):
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_carry", "w_gait",
             "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand", "w_overload", "w_duty", "w_guard", "w_tau2",
-            "n_tripped", "slew_clip", "g_max", "g2_max", "i2_leg",
+            "n_tripped", "slew_clip", "g_max", "g2_max", "i2_leg", "tau_leg",
             "w_climb", "w_beta_climb",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
             # carried leg reads ~1.0 here while the others cycle
@@ -826,6 +826,7 @@ class NovaJoystick(PipelineEnv):
         i2 = (pipeline_state.qfrc_actuator[6:] / self._tau_stall) ** 2
         info = {**info, "hot_t": hot_t, "g_run": g_run, "g2_run": g2_run,
                 "i2_leg": jp.mean(i2[jp.array([1, 2, 4, 5, 7, 8, 10, 11])]),
+                "tau_leg": jp.mean(jp.abs(pipeline_state.qfrc_actuator[6:][jp.array([1, 2, 4, 5, 7, 8, 10, 11])])),
                 "g_max": jp.maximum(info["g_max"], jp.max(g_run)),
                 "g2_max": jp.maximum(info["g2_max"], jp.max(g2_run)),
                 "tripped": info["tripped"] | (hot_t >= OVERLOAD_S)}
@@ -1358,7 +1359,7 @@ class NovaJoystick(PipelineEnv):
             w_duty=w_duty, w_guard=w_guard, w_tau2=w_tau2,
             n_tripped=jp.sum(info["tripped"].astype(jp.float32)), slew_clip=slew_clip,
             g_max=info["g_max"].astype(jp.float32), g2_max=info["g2_max"].astype(jp.float32),
-            i2_leg=info["i2_leg"],
+            i2_leg=info["i2_leg"], tau_leg=info["tau_leg"],
             w_climb=w_climb, w_beta_climb=beta_climb,
             air_FL=foot_air_f[0], air_FR=foot_air_f[1],
             air_RL=foot_air_f[2], air_RR=foot_air_f[3],
