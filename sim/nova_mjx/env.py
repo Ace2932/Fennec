@@ -224,6 +224,70 @@ DEADBAND = 0.0154      # rad (10 counts) — servo ignores goal changes below th
 
 LEG_NAMES = ["FL", "FR", "RL", "RR"]
 
+# ---- gait study (2026-09-25): servo profile + IK swing reference ------------
+SERVO_VMAX = 5.2       # rad/s — profile speed cap with the SPEED register at 0
+                       # (max); the motor's own torque-speed damping (2.8 rad/s
+                       # no-load) is what actually limits the joint.
+REF_HEIGHT = 0.04      # m — IK swing-reference peak lift (ref_gait); inside the
+                       # ~4.5 cm single-foot trot ceiling measured in #311.
+REF_DZ_MAX = 0.08      # m — lift-table span
+REF_N = 33             # lift-table samples
+
+
+# POSITION-MODE CALIBRATION (2026-09-25, #428 check 4, docs/bench/leg_sine15_*.csv):
+# the real STS3215 tracks a ±15 deg goal sine 0.99 / 1.01 / 0.53 / 0.27 / 0.13 at
+# 0.5 / 1 / 1.4 / 2 / 3 Hz whatever GOAL_ACC says (an optimal ~8.8 rad/s^2 tracker).
+# This follower (brake-to-stop-at-goal) matches the trot band at --goal-acc-reg 75
+# (11.5 rad/s^2 nominal): 0.96 / 0.87 / 0.50 / 0.26 / 0.30 — over-tracks only at
+# 3 Hz. A goal-velocity feedforward version chattered into bistable limit cycles
+# and was dropped. Use 75 for "the servo as it really is in position mode".
+POSITION_MODE_ACC_REG = 75
+# ...but that ceiling is the FACTORY value of register 85 (Maximum_Acceleration =
+# 50). With reg85 = 254 (#466 bench) the servo tracks 0.97 / 0.99 / 0.55 at
+# 1.4 / 2 / 3 Hz with 60-75 ms lag — and the PLAIN actuator here (no profile,
+# --goal-acc-reg 0) is the closest model: 0.99 / 0.84 / 0.54, slightly slow at 2 Hz
+# because the damping caps no-load speed at 2.8 rad/s while the bench shows ~3.8.
+# Adding any profile only makes it slower. So: reg85=254 -> --goal-acc-reg 0.
+POSITION_MODE_R85_254_ACC_REG = 0
+
+FW_GOAL_SLEW = 2000 * 2 * 3.141592653589793 / 4096   # rad/s, firmware goal slew (3.07)
+FW_GUARD_DUTY = 0.9    # main.cpp NOVA_STALL_LOAD_RAW 900 (of 1000)
+FW_GUARD_POLLS = 5     # main.cpp NOVA_STALL_PERSIST — 5 x 20 ms polls = 100 ms
+OVERLOAD_DUTY = 0.8    # Feetech default unload: above 80 % duty ...
+OVERLOAD_S = 2.0       # ... for 2 s ...
+OVERLOAD_OUT = 0.2     # ... -> 20 % output (peer research, SmallDog + Feetech table)
+
+
+def goal_acc_rad(reg):
+    """STS3215 GOAL_ACC register (units of 100 steps/s^2) -> rad/s^2. 0 = off."""
+    return reg * 100.0 * 2.0 * 3.141592653589793 / 4096.0
+
+
+def ref_lift_table():
+    """(REF_N, 2) table of (hfe, kfe) OFFSETS from the elbow-back stand pose that
+    lift the foot straight up by dz in [0, REF_DZ_MAX], solved ONCE with the
+    VALIDATED nova_locomotion leg IK (never re-derived here — the left/right
+    frame is the dominant bug class). Same call probe_ik_swingref.build_actions
+    uses (haa 0, knee_forward=False); every sim leg shares the joint axes and
+    the stand pose, so one table serves all four legs."""
+    import os
+    import sys as _sys
+    import numpy as np
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    for pkg in ("nova_locomotion", "nova_ops"):
+        pth = os.path.join(root, "ros2_ws", "src", pkg)
+        if pth not in _sys.path:
+            _sys.path.insert(0, pth)
+    from nova_locomotion.kinematics.leg_ik import (
+        LegParams, forward_kinematics, inverse_kinematics)
+    prm = LegParams()
+    x0, d0, z0 = forward_kinematics(_ELBOW_BACK, prm)
+    out = np.zeros((REF_N, 2))
+    for i, dz in enumerate(np.linspace(0.0, REF_DZ_MAX, REF_N)):
+        _, hfe, kfe = inverse_kinematics((x0, d0, z0 + dz), prm, knee_forward=False)
+        out[i] = (hfe - _ELBOW_BACK[1], kfe - _ELBOW_BACK[2])
+    return jp.asarray(out, dtype=jp.float32)
+
 # Foot geom is a sphere of this radius centred on the foot BODY ORIGIN
 # (nova.xml: `<geom name="FL_foot" type="sphere" size="0.014" class="foot"/>`),
 # so `foot_z` (the link position) sits one radius ABOVE the ground on touchdown.
@@ -343,7 +407,10 @@ class NovaJoystick(PipelineEnv):
                  w_pbrs=W_PBRS, footswing_max=FOOTSWING_MAX, air_max=AIR_MAX,
                  w_clearance=W_CLEARANCE, w_swingref=W_SWINGREF, w_gait=W_GAIT,
                  eff_scale=1.0, eff_scale_speed=False, kp_scale=1.0,
-                 knee_config="elbow_back", **kwargs):
+                 knee_config="elbow_back", torque_limit=1.0, goal_acc=0.0,
+                 joint_stale_p=0.0, asym=False, ref_gait=False,
+                 ref_height=REF_HEIGHT, overload_model=False, w_overload=0.0,
+                 goal_slew=0.0, **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
@@ -384,6 +451,44 @@ class NovaJoystick(PipelineEnv):
             gp = sys.actuator_gainprm.at[leg_act, 0].multiply(kp_scale)
             bp = sys.actuator_biasprm.at[leg_act, 1].multiply(kp_scale)
             sys = sys.replace(actuator_gainprm=gp, actuator_biasprm=bp)
+        # FIRMWARE ACTUATOR MATCH (gait study, 2026-09-25). Every flag below
+        # defaults OFF, so the pre-study env is byte-identical.
+        #
+        # torque_limit: the STS3215 TORQUE_LIMIT register, which firmware writes on
+        # every arm (main.cpp NOVA_TORQUE_LIMIT_RAW 600 -> 0.6). It is a PWM-duty cap,
+        # so it multiplies the full-voltage stall in forcerange; DR's T_LO..T_HI
+        # (battery sag / heat) then multiplies on top -> 0.42..0.60 of stall.
+        self._torque_limit = float(torque_limit)
+        # SERVO OVERLOAD UNLOAD (Feetech default Unloading_Conditions: >80 % duty
+        # for 2 s -> 20 % output). "Duty" = |actuator force| / (this env's DR'd
+        # forcerange / torque_limit), i.e. force at 100 % duty (see step()). Recovery is
+        # undocumented -> modelled as LATCHED for the rest of the episode. hot_t /
+        # tripped are tracked even with the model OFF ("would have tripped"
+        # diagnostic, metric n_tripped); only the physics cut is gated.
+        # ponytail: latched-until-reset worst case; replace with the measured
+        # recovery once a servo is tripped on the bench.
+        # FIRMWARE GOAL SLEW LIMITER (main.cpp NOVA_SLEW_MAX_DELTA 20 raw per 10 ms
+        # broadcast = 2000 steps/s = FW_GOAL_SLEW rad/s on the GOAL). 0 = off. The
+        # clip rate is tracked either way (metric slew_clip = fraction of joints
+        # whose commanded target moved faster than the firmware would pass).
+        self._goal_slew = float(goal_slew)
+        self._overload = bool(overload_model)
+        self._w_overload = float(w_overload)
+        if self._torque_limit != 1.0:
+            sys = sys.replace(
+                actuator_forcerange=sys.actuator_forcerange * self._torque_limit)
+        # goal_acc (rad/s^2, 0 = off = the register's "0 = max"): the servo's own
+        # trapezoidal setpoint profile. GOAL_ACC is in 100 steps/s^2 units, 4096
+        # steps/rev, so firmware's NOVA_GOAL_ACC 50 == 7.67 rad/s^2 (goal_acc_rad).
+        self._goal_acc = float(goal_acc)
+        self._joint_stale_p = float(joint_stale_p)   # P(a joint reading is 1 step old)
+        self._asym = bool(asym)                      # privileged critic obs
+        self._ref_gait = bool(ref_gait)              # IK swing-reference feed-forward
+        self._ref_height = float(ref_height)
+        if self._ref_gait and heightmap:
+            raise ValueError("ref_gait is a BLIND-path study flag; the teacher has "
+                             "its own clock + swing reference")
+        self._ref_table = ref_lift_table() if self._ref_gait else None
         self._dt = 0.02                                # 50 Hz control
         n_frames = int(self._dt / sys.opt.timestep)    # 5
         super().__init__(sys, backend="mjx", n_frames=n_frames)
@@ -531,7 +636,7 @@ class NovaJoystick(PipelineEnv):
             # gait cost is OFF and the 105-d obs never reads them, so the deploy
             # path is byte-unchanged. Advanced + resampled in step().
             "gait_phase": (jax.random.uniform(kph_gait, (), minval=0.0, maxval=1.0)
-                           if self._heightmap else jp.asarray(0.0)),
+                           if (self._heightmap or self._ref_gait) else jp.asarray(0.0)),
             "cmd_f": (jax.random.uniform(kf_gait, (), minval=f_lo, maxval=f_hi)
                       if self._heightmap else jp.asarray(BLIND_CMD_F)),
             # v8 per-env gait (terrain-selected above): offsets+duty feed the
@@ -552,6 +657,12 @@ class NovaJoystick(PipelineEnv):
             "act_hist": jp.zeros((self._max_delay, self._nu)),
             "delay": jax.random.randint(kd, (), 0, self._max_delay),
             "prop_hist": jp.zeros((HIST, PROP)),
+            # servo profile state (goal_acc): setpoint + its velocity, per joint
+            "sp": q[7:], "sp_v": jp.zeros(self._nu),
+            # servo overload: continuous seconds above 80 % duty, latched unload
+            "hot_t": jp.zeros(self._nu), "tripped": jp.zeros(self._nu, dtype=bool),
+            # firmware stall-guard run length (polls) per joint, + episode max
+            "g_run": jp.zeros(self._nu, dtype=jp.int32), "g_max": jp.zeros((), dtype=jp.int32),
             "step": 0,
             # climb telescoping state (see step()): base z at spawn, and the
             # running high-water mark. The metrics emit per-step DELTAS of these;
@@ -586,6 +697,7 @@ class NovaJoystick(PipelineEnv):
                 pipeline_state.x.pos[self._foot_ids, 0],
                 pipeline_state.x.pos[self._foot_ids, 1])),
         }
+        info["jraw"] = self._jraw(pipeline_state, info)
         frame = self._prop_frame(pipeline_state, info, ko)
         info["prop_hist"] = jp.tile(frame, (HIST, 1))     # fill history with frame 0
         obs = self._get_obs(info, pipeline_state)
@@ -600,7 +712,8 @@ class NovaJoystick(PipelineEnv):
             "w_track", "w_yaw", "w_progress", "w_air", "w_clearance", "w_swingref",
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_carry", "w_gait",
-            "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand",
+            "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand", "w_overload",
+            "n_tripped", "slew_clip", "g_max",
             "w_climb", "w_beta_climb",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
             # carried leg reads ~1.0 here while the others cycle
@@ -637,14 +750,49 @@ class NovaJoystick(PipelineEnv):
         hist = jp.concatenate([action[None], info["act_hist"][:-1]], axis=0)
         applied = hist[info["delay"]]
         ctrl = self._default_pose + applied * ACTION_SCALE
+        if self._ref_gait:
+            # the reference rides the SAME transport delay as the residual: both
+            # are one goal packet on the robot, sent at phase (now - delay).
+            ph_sent = info["gait_phase"] - info["delay"] * info["cmd_f"] * self._dt
+            ctrl = ctrl + self._ref_offset(ph_sent)
         # servo firmware DEADBAND: the real STS3215 ignores goal updates smaller
         # than 10 counts (0.88 deg) -> hold the last effective target (still full
         # holding torque) unless the new target moves past the deadband. Stops the
         # policy relying on finer-than-deadband positioning. The residual sag /
         # sensing uncertainty is covered by the joint obs noise + joint_bias.
         last_ctrl = info["last_ctrl"]
+        _dmax = FW_GOAL_SLEW * self._dt
+        slew_clip = jp.mean((jp.abs(ctrl - last_ctrl) > _dmax).astype(jp.float32))
+        if self._goal_slew > 0.0:
+            _d = self._goal_slew * self._dt
+            ctrl = last_ctrl + jp.clip(ctrl - last_ctrl, -_d, _d)
         ctrl = jp.where(jp.abs(ctrl - last_ctrl) > DEADBAND, ctrl, last_ctrl)
-        pipeline_state = self.pipeline_step(state.pipeline_state, ctrl)
+        phys = self.sys
+        if self._overload:      # a tripped servo delivers 20 % of its capped output
+            cut = jp.where(info["tripped"], OVERLOAD_OUT, 1.0)
+            phys = phys.replace(actuator_forcerange=phys.actuator_forcerange * cut[:, None])
+        if self._goal_acc > 0.0:
+            pipeline_state, sp, sp_v = self._profiled_step(
+                state.pipeline_state, ctrl, info["sp"], info["sp_v"], phys)
+            info = {**info, "sp": sp, "sp_v": sp_v}
+        elif self._overload:
+            pipeline_state = jax.lax.scan(
+                lambda ps, _: (self._pipeline.step(phys, ps, ctrl, self._debug), None),
+                state.pipeline_state, (), self._n_frames)[0]
+        else:
+            pipeline_state = self.pipeline_step(state.pipeline_state, ctrl)
+        # DUTY (what the servo's Present Load reports) ~ |force| / the force this
+        # env's servo gives at 100 % duty = forcerange / torque_limit (forcerange
+        # already carries TL x DR headroom: sag/heat). TL caps duty at TL.
+        duty = jp.abs(pipeline_state.qfrc_actuator[6:]) / (
+            self.sys.actuator_forcerange[:, 1] / self._torque_limit)
+        hot_t = jp.where(duty > OVERLOAD_DUTY, info["hot_t"] + self._dt, 0.0)
+        # FIRMWARE stall guard (main.cpp NOVA_STALL_LOAD_RAW 900, NOVA_STALL_PERSIST
+        # 5): consecutive 50 Hz polls at >= 90 % duty; 5 = 100 ms -> latched fleet limp.
+        g_run = jp.where(duty >= FW_GUARD_DUTY, info["g_run"] + 1, 0)
+        info = {**info, "hot_t": hot_t, "g_run": g_run,
+                "g_max": jp.maximum(info["g_max"], jp.max(g_run)),
+                "tripped": info["tripped"] | (hot_t >= OVERLOAD_S)}
 
         # ---- mid-episode PUSH: kick base xy velocity, learn to recover ----
         do_push = (info["step"] % self._push_interval == 0) & (info["step"] > 0)
@@ -1035,6 +1183,9 @@ class NovaJoystick(PipelineEnv):
         # nothing — so putting it down is strictly uphill. A normal stride stays
         # below AIR_MAX and pays 0.
         w_carry = -1.5 * carry_cost
+        # COST on sustained near-stall runs, starting at 1 s (half the unload
+        # window): the policy should never get near the servo's 2 s self-unload.
+        w_overload = -self._w_overload * jp.sum(jp.clip(info["hot_t"] - 1.0, 0.0, 1.0))
         w_actrate = -0.02 * act_rate
         w_energy = -2e-3 * energy
         w_jerk = -0.01 * jerk
@@ -1044,7 +1195,7 @@ class NovaJoystick(PipelineEnv):
                   + w_pose + 0.1 + w_climb + beta_climb + w_pbrs_climb
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_carry
-                  + w_actrate + w_energy + w_jerk + w_stand)
+                  + w_actrate + w_energy + w_jerk + w_stand + w_overload)
         # w_climb-aware clip — UPPER bound only. The climb reward can legitimately
         # spike to w_climb·(one riser) = w_climb·STAIR_RISE·level ≤ w_climb·0.08 (the
         # curriculum caps level at tmax=1) on top of the task; the flat +10 ceiling
@@ -1069,6 +1220,7 @@ class NovaJoystick(PipelineEnv):
         # push the new proprioceptive frame into the history buffer (newest first)
         frame = self._prop_frame(pipeline_state, info, ko)
 
+        info["jraw"] = self._jraw(pipeline_state, info)
         info["rng"] = rng
         info["last_act2"] = info["last_act"]
         info["last_act"] = action
@@ -1162,7 +1314,9 @@ class NovaJoystick(PipelineEnv):
             w_upright=w_upright, w_angvel=w_angvel, w_height=w_height, w_z=w_z,
             w_slip=w_slip, w_splay=w_splay, w_carry=w_carry, w_gait=w_gait,
             w_actrate=w_actrate,
-            w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand,
+            w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand, w_overload=w_overload,
+            n_tripped=jp.sum(info["tripped"].astype(jp.float32)), slew_clip=slew_clip,
+            g_max=info["g_max"].astype(jp.float32),
             w_climb=w_climb, w_beta_climb=beta_climb,
             air_FL=foot_air_f[0], air_FR=foot_air_f[1],
             air_RL=foot_air_f[2], air_RR=foot_air_f[3],
@@ -1178,6 +1332,65 @@ class NovaJoystick(PipelineEnv):
         return state.replace(pipeline_state=pipeline_state, obs=obs,
                              reward=reward, done=done, info=info)
 
+    def _ref_offset(self, theta):
+        """(12,) joint offsets of the IK swing reference at clock phase theta: each
+        foot lifts ref_height*sin(pi*swing_frac) in its scheduled swing window
+        (trot offsets/duty, same _gait_schedule the teacher reads), 0 in stance.
+        Lift -> (hfe, kfe) by linear interpolation in the IK-solved table."""
+        _, _, swing_frac = self._gait_schedule(theta)
+        lift = self._ref_height * jp.sin(jp.pi * swing_frac)            # (4,)
+        u = jp.clip(lift / REF_DZ_MAX, 0.0, 1.0) * (REF_N - 1)
+        i0 = jp.clip(jp.floor(u).astype(jp.int32), 0, REF_N - 2)
+        f = (u - i0)[:, None]
+        hk = self._ref_table[i0] * (1.0 - f) + self._ref_table[i0 + 1] * f   # (4,2)
+        return jp.concatenate([jp.zeros((4, 1)), hk], axis=1).reshape(-1)
+
+    def _profiled_step(self, pipeline_state, goal, sp, sp_v, sys=None):
+        """n_frames physics substeps with the STS3215's internal trapezoidal
+        setpoint profile between the goal register and the position loop: the
+        setpoint velocity ramps at <= goal_acc and brakes in time to stop at the
+        goal (v_des = sqrt(2 a |err|)), capped at SERVO_VMAX. The position
+        actuator then tracks the SETPOINT, not the raw goal."""
+        a, h = self._goal_acc, self.sys.opt.timestep
+        sys = self.sys if sys is None else sys
+
+        def f(carry, _):
+            ps, sp, v = carry
+            err = goal - sp
+            v_des = jp.sign(err) * jp.minimum(SERVO_VMAX, jp.sqrt(2.0 * a * jp.abs(err)))
+            v = v + jp.clip(v_des - v, -a * h, a * h)
+            sp = sp + v * h
+            ps = self._pipeline.step(sys, ps, sp, self._debug)
+            return (ps, sp, v), None
+
+        (ps, sp, v), _ = jax.lax.scan(f, (pipeline_state, sp, sp_v), (), self._n_frames)
+        return ps, sp, v
+
+    def _privileged(self, pipeline_state, info):
+        """Critic-only state (asym): what the actor must infer from history. Base
+        linear velocity, per-foot height/contact/air time, and this env's sampled
+        dynamics (friction, per-servo torque cap and kp, latency, IMU/joint bias).
+        Never reaches the actor -> the deployed policy stays proprioceptive."""
+        x, xd = pipeline_state.x, pipeline_state.xd
+        qinv = math.quat_inv(pipeline_state.q[3:7])
+        lin_vel = math.rotate(xd.vel[0], qinv)
+        foot = x.pos[self._foot_ids]
+        foot_h = foot[:, 2] - self._terrain_ground_z(foot[:, 0], foot[:, 1])
+        contact = ((foot_h - FOOT_RADIUS) < CONTACT_EPS).astype(jp.float32)
+        return jp.concatenate([
+            lin_vel * 2.0, foot_h * 20.0, contact, info["feet_air"],
+            self.sys.geom_friction[:1, 0],
+            self.sys.actuator_forcerange[:, 1] / 2.0,
+            self.sys.actuator_gainprm[:, 0] / 35.0,
+            jp.asarray(info["delay"], jp.float32)[None] / self._max_delay,
+            info["gyro_bias"] * 10.0, info["joint_bias"] * 50.0,
+        ])
+
+    def _jraw(self, pipeline_state, info):
+        """This step's reported (joint pos, joint vel) — next step's stale value."""
+        return jp.stack([pipeline_state.q[7:] - self._default_pose + info["joint_bias"],
+                         pipeline_state.qd[6:]])
+
     def _prop_frame(self, pipeline_state, info, rng):
         """One PROP-d proprioceptive frame — ONLY signals the real robot can
         produce: IMU gyro (+ per-episode bias) + projected gravity + servo joint
@@ -1192,6 +1405,13 @@ class NovaJoystick(PipelineEnv):
         # offset joint zero, as on the real robot.
         joints = pipeline_state.q[7:] - self._default_pose + info["joint_bias"]
         joint_vel = pipeline_state.qd[6:]
+        if self._joint_stale_p > 0.0:
+            # round-robin servo polling: a joint's reading may be one control step
+            # old. info["jraw"] holds last step's (pos, vel) — set in step().
+            stale = jax.random.bernoulli(jax.random.fold_in(rng, 7),
+                                         self._joint_stale_p, (self._nu,))
+            joints = jp.where(stale, info["jraw"][0], joints)
+            joint_vel = jp.where(stale, info["jraw"][1], joint_vel)
         frame = jp.concatenate([ang_vel * 0.25, proj_grav, joints, joint_vel * 0.05])
         k1, k2, k3, k4 = jax.random.split(rng, 4)
         noise = jp.concatenate([
@@ -1345,10 +1565,21 @@ class NovaJoystick(PipelineEnv):
             _, swing_sched, _ = self._gait_schedule(
                 info["gait_phase"], info["gait_offsets"], info["gait_duty"])
             parts.append(swing_sched)
-        return jp.concatenate(parts)
+        if self._ref_gait:
+            # the reference's clock, which the robot runs too (107-d actor obs)
+            theta = info["gait_phase"]
+            parts.append(jp.array([jp.sin(2.0 * jp.pi * theta),
+                                   jp.cos(2.0 * jp.pi * theta)]))
+        obs = jp.concatenate(parts)
+        if self._asym:
+            return {"state": obs,
+                    "privileged_state": jp.concatenate(
+                        [obs, self._privileged(pipeline_state, info)])}
+        return obs
 
 
-def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0):
+def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_frac=0.0, flat_frac=0.0,
+                          curb_frac=0.0):
     """Build the per-env randomization fn.
 
     terrain_max: rough-ground ceiling (None -> terrain.TERRAIN_MAX = flat). Obs is
@@ -1430,7 +1661,7 @@ def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_f
             is_flat = jax.random.uniform(kt3, ()) < flat_frac
             level = jp.where(is_flat, 0.0,
                              jax.random.uniform(kt2, (), minval=0.0, maxval=tmax))
-            hfield = terrain_field(kt1, level, step_frac, stair_frac)
+            hfield = terrain_field(kt1, level, step_frac, stair_frac, curb_frac=curb_frac)
             return geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield
 
         geom_fr, body_mass, body_inertia, kp, kv, damp, forcerange, hfield = rand(rng)

@@ -38,6 +38,7 @@ STEP_M = 0.05
 # walkable ramp): an 8cm rise over 5cm run. Near-vertical (>75deg) steps would
 # need TN~240; 58deg is a fair first feasibility pass. Needs the HEIGHT-MAP obs
 # to be climbable (blind can't see the step edge coming).
+CURB_M = 0.08              # m per curb ring at level 1 (curb pyramid, --curb-frac)
 STAIR_RISE = 0.08          # m per step at level 1 (brackets the ~8-12cm expected max)
 STAIR_RUN_CELLS = 4        # tread depth in cells (4 = 20cm @ 5cm cells)
 STAIR_PAD_MIN = 4          # stair-env pad floor (cells) at level 0 — joint pad+riser curriculum
@@ -56,7 +57,7 @@ STAIR_PAD_MIN = 4          # stair-env pad floor (cells) at level 0 — joint pa
 TERRAIN_MAX = 0.0
 
 
-def terrain_field(rng, level, step_frac=0.0, stair_frac=0.0, n=TN):
+def terrain_field(rng, level, step_frac=0.0, stair_frac=0.0, n=TN, curb_frac=0.0):
     """Per-env hfield data, shape (n*n,) in [0,1]. Smooth rough bumps rising from
     a flat center pad, amplitude scaled by difficulty `level`. Per-env terrain TYPE
     (mutually exclusive, by probability): `stair_frac` -> a STAIRCASE (unidirectional
@@ -111,5 +112,18 @@ def terrain_field(rng, level, step_frac=0.0, stair_frac=0.0, n=TN):
     stair_m = step_idx * (STAIR_RISE * level)
     is_stair = jax.random.uniform(kstair, ()) < stair_frac
     height_m = jp.where(is_stair, stair_m, height_m)
+
+    # CURB PYRAMID (--curb-frac, gait study 2026-09-25): concentric rings stepping UP
+    # around the spawn — ring 1 at radius U(0.3, 0.6) m, ring 2 0.5 m further out,
+    # each CURB_M*level high — so a curb sits in front of EVERY command direction
+    # within a stride or two. The sampled rough/step field rarely put raised ground
+    # under the feet at all (probe_curb_height.py docstring). Own fold_in stream:
+    # every existing terrain draw is unchanged, and curb_frac=0 is byte-identical.
+    kc1, kc2 = jax.random.split(jax.random.fold_in(rng, 5))
+    r1 = jax.random.uniform(kc1, (), minval=0.30, maxval=0.60) / 0.05     # cells
+    r2 = r1 + 0.50 / 0.05
+    curb_m = CURB_M * level * ((r >= r1).astype(jp.float32) + (r >= r2).astype(jp.float32))
+    is_curb = jax.random.uniform(kc2, ()) < curb_frac
+    height_m = jp.where(is_curb, curb_m, height_m)
 
     return jp.clip(height_m / TZ, 0.0, 1.0).reshape(-1)   # -> [0,1] hfield data

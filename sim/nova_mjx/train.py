@@ -31,7 +31,8 @@ from brax.training.agents.ppo import train as ppo
 
 from env import (NovaJoystick, make_domain_randomize, W_PBRS,
                  FOOTSWING_MAX, PBRS_LOOKAHEAD, AIR_MAX, W_CLEARANCE,
-                 W_SWINGREF, W_GAIT, F_MIN, F_MAX, GAIT_DUTY)
+                 W_SWINGREF, W_GAIT, F_MIN, F_MAX, GAIT_DUTY, REF_HEIGHT,
+                 goal_acc_rad)
 # stdlib-only helpers (importable without JAX, so they're unit-tested on a
 # laptop — see test_resume_budget.py). Re-exported here: callers that already
 # do `from train import find_latest_checkpoint` keep working.
@@ -298,7 +299,10 @@ def run_stage(env, args, terrain, stair_frac, timesteps, ckpt_dir, restore,
     net = functools.partial(
         ppo_networks.make_ppo_networks,
         policy_hidden_layer_sizes=(128, 128, 128, 128),
-        value_hidden_layer_sizes=(256, 256, 256, 256))
+        value_hidden_layer_sizes=(256, 256, 256, 256),
+        # asym: blind actor, privileged critic (env returns an obs dict)
+        **({"policy_obs_key": "state", "value_obs_key": "privileged_state"}
+           if getattr(env, "_asym", False) else {}))
 
     banked = {"step": 0}                     # last step with a checkpoint on disk
 
@@ -367,7 +371,7 @@ def run_stage(env, args, terrain, stair_frac, timesteps, ckpt_dir, restore,
         network_factory=net,
         randomization_fn=make_domain_randomize(terrain, args.dr_scale,
                                                args.step_frac, stair_frac,
-                                               args.flat_frac),
+                                               args.flat_frac, curb_frac=args.curb_frac),
         save_checkpoint_path=str(ckpt_dir),
         restore_checkpoint_path=restore, restore_params=restore_params,
         # Per-STAGE seed. The DR draw (friction, per-body mass, kp, kv — env.py
@@ -457,6 +461,29 @@ def main():
     ap.add_argument("--w-gait", type=float, default=W_GAIT,
                     help="weight of the v6 trot schedule-violation cost "
                          "(teacher-only; default env W_GAIT)")
+    # ---- gait study (2026-09-25); every default reproduces the pre-study env ----
+    ap.add_argument("--torque-limit", type=float, default=1.0,
+                    help="STS3215 TORQUE_LIMIT as a fraction (firmware writes 600 -> 0.6)")
+    ap.add_argument("--goal-acc-reg", type=int, default=0,
+                    help="STS3215 GOAL_ACC register value (100 steps/s^2 units; firmware "
+                         "NOVA_GOAL_ACC=50 -> 7.67 rad/s^2). 0 = no profile (register 0 = max)")
+    ap.add_argument("--joint-stale-p", type=float, default=0.0,
+                    help="P(a joint reading is one control step old) — round-robin polling")
+    ap.add_argument("--curb-frac", type=float, default=0.0,
+                    help="fraction of envs that are CURB PYRAMIDS (rings stepping up "
+                         "terrain.CURB_M*level around spawn). Needs --terrain>0.")
+    ap.add_argument("--goal-slew", type=float, default=0.0,
+                    help="firmware goal slew limit, rad/s (env.FW_GOAL_SLEW = 3.07 is main.cpp's); 0 = off")
+    ap.add_argument("--overload-model", action="store_true",
+                    help="model the servo's >80%%-duty-for-2s self-unload (latched 20%% output)")
+    ap.add_argument("--w-overload", type=float, default=0.0,
+                    help="cost on continuous >80%% duty runs past 1 s (0 = off)")
+    ap.add_argument("--asym", action="store_true",
+                    help="asymmetric actor-critic: blind actor, privileged critic")
+    ap.add_argument("--ref-gait", action="store_true",
+                    help="IK swing-reference feed-forward + phase obs (blind, 107-d actor)")
+    ap.add_argument("--ref-height", type=float, default=REF_HEIGHT,
+                    help="IK swing-reference peak lift (m)")
     ap.add_argument("--curriculum", action="store_true",
                     help="AUTO-RAMP terrain difficulty in stages within one run. Brax "
                          "bakes per-env terrain at env build, so this CHAINS N stages, "
@@ -491,7 +518,18 @@ def main():
                        w_climb=args.w_climb, beta_climb=args.beta_climb,
                        w_pbrs=args.w_pbrs, footswing_max=args.footswing_max,
                        air_max=args.air_max, w_clearance=args.w_clearance,
-                       w_swingref=args.w_swingref, w_gait=args.w_gait)
+                       w_swingref=args.w_swingref, w_gait=args.w_gait,
+                       torque_limit=args.torque_limit,
+                       goal_acc=goal_acc_rad(args.goal_acc_reg),
+                       joint_stale_p=args.joint_stale_p, asym=args.asym,
+                       ref_gait=args.ref_gait, ref_height=args.ref_height,
+                       overload_model=args.overload_model, w_overload=args.w_overload,
+                       goal_slew=args.goal_slew)
+    print(f"study flags: torque_limit {args.torque_limit}  goal_acc_reg {args.goal_acc_reg} "
+          f"({goal_acc_rad(args.goal_acc_reg):.2f} rad/s^2)  joint_stale_p {args.joint_stale_p}  "
+          f"asym {args.asym}  ref_gait {args.ref_gait} (h {args.ref_height})  "
+          f"curb_frac {args.curb_frac}  overload_model {args.overload_model} "
+          f"w_overload {args.w_overload}")
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
     print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac,
                       args.flat_frac, args.w_climb, args.w_pbrs, args.footswing_max,
@@ -516,7 +554,8 @@ def main():
             restore_params = pickle.load(f)
         restore = None
         print(f"GRAFT init from {args.restore_params_pkl} "
-              f"(obs {int(restore_params[0].mean.shape[0])}) — checkpoint dir skipped")
+              f"(obs {jax.tree_util.tree_map(lambda m: m.shape, restore_params[0].mean)}) "
+              f"— checkpoint dir skipped")
     else:
         # In curriculum mode the stage dirs are OFF LIMITS to this scan: the loop
         # below walks the stages in order and chains each off the previous one, so

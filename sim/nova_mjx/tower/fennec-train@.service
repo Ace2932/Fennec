@@ -1,0 +1,29 @@
+# Unattended sim training on the tower (#412). SIM ONLY: nothing here may run
+# anything under deploy/ — this box has no path to the robot.
+#
+#   install:  cp fennec-train@.service ~/.config/systemd/user/ && systemctl --user daemon-reload
+#   start:    systemctl --user start fennec-train@<run>    (runs ~/fennec-runs/<run>/cmd)
+#   status:   fennec-train-status <run>
+#
+# Resume = restart: cmd must be idempotent (tower/run_plan.py is). Not enabled
+# at boot (no [Install] WantedBy) until one full run has completed by hand.
+# NOISE (homelab#15, shared bedroom): runs are started BY HAND; stop one before
+# sleep with `systemctl --user stop fennec-train@<run>` unless night running was
+# agreed for that run.
+[Unit]
+Description=Fennec sim training run %i
+StartLimitIntervalSec=3600
+StartLimitBurst=5
+OnFailure=tower-alert@%n.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/codebases/Fennec/sim/nova_mjx
+Environment=XLA_PYTHON_CLIENT_MEM_FRACTION=0.40 MUJOCO_GL=egl PYTHONUNBUFFERED=1
+Environment=PATH=%h/fennec-train/bin:/usr/bin:/bin
+ExecStart=/bin/bash %h/fennec-runs/%i/cmd
+StandardOutput=append:%h/fennec-runs/%i/service.log
+StandardError=append:%h/fennec-runs/%i/service.log
+Restart=on-failure
+RestartSec=60
+Nice=5

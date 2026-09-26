@@ -104,6 +104,8 @@ def _install_stubs():
     env.CRAWL_DUTY = 0.75
     env.CRAWL_F_MIN, env.CRAWL_F_MAX = 0.3, 0.6
     env.CRAWL_VX_MIN, env.CRAWL_VX_MAX = 0.0, 0.12
+    env.REF_HEIGHT = 0.04                                 # gait study (train.py imports)
+    env.goal_acc_rad = lambda reg: reg * 100.0 * 2 * 3.141592653589793 / 4096
 
     class NovaJoystick:
         _cmd_lo, _cmd_hi, _cmd_stage = (-0.15, -0.15, -0.5), (0.35, 0.15, 0.5), 2
