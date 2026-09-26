@@ -472,6 +472,8 @@ def main():
     ap.add_argument("--curb-frac", type=float, default=0.0,
                     help="fraction of envs that are CURB PYRAMIDS (rings stepping up "
                          "terrain.CURB_M*level around spawn). Needs --terrain>0.")
+    ap.add_argument("--goal-slew", type=float, default=0.0,
+                    help="firmware goal slew limit, rad/s (env.FW_GOAL_SLEW = 3.07 is main.cpp's); 0 = off")
     ap.add_argument("--overload-model", action="store_true",
                     help="model the servo's >80%%-duty-for-2s self-unload (latched 20%% output)")
     ap.add_argument("--w-overload", type=float, default=0.0,
@@ -521,7 +523,8 @@ def main():
                        goal_acc=goal_acc_rad(args.goal_acc_reg),
                        joint_stale_p=args.joint_stale_p, asym=args.asym,
                        ref_gait=args.ref_gait, ref_height=args.ref_height,
-                       overload_model=args.overload_model, w_overload=args.w_overload)
+                       overload_model=args.overload_model, w_overload=args.w_overload,
+                       goal_slew=args.goal_slew)
     print(f"study flags: torque_limit {args.torque_limit}  goal_acc_reg {args.goal_acc_reg} "
           f"({goal_acc_rad(args.goal_acc_reg):.2f} rad/s^2)  joint_stale_p {args.joint_stale_p}  "
           f"asym {args.asym}  ref_gait {args.ref_gait} (h {args.ref_height})  "

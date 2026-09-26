@@ -250,6 +250,7 @@ POSITION_MODE_ACC_REG = 75
 # Adding any profile only makes it slower. So: reg85=254 -> --goal-acc-reg 0.
 POSITION_MODE_R85_254_ACC_REG = 0
 
+FW_GOAL_SLEW = 2000 * 2 * 3.141592653589793 / 4096   # rad/s, firmware goal slew (3.07)
 OVERLOAD_DUTY = 0.8    # Feetech default unload: above 80 % duty ...
 OVERLOAD_S = 2.0       # ... for 2 s ...
 OVERLOAD_OUT = 0.2     # ... -> 20 % output (peer research, SmallDog + Feetech table)
@@ -406,7 +407,8 @@ class NovaJoystick(PipelineEnv):
                  eff_scale=1.0, eff_scale_speed=False, kp_scale=1.0,
                  knee_config="elbow_back", torque_limit=1.0, goal_acc=0.0,
                  joint_stale_p=0.0, asym=False, ref_gait=False,
-                 ref_height=REF_HEIGHT, overload_model=False, w_overload=0.0, **kwargs):
+                 ref_height=REF_HEIGHT, overload_model=False, w_overload=0.0,
+                 goal_slew=0.0, **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
@@ -463,6 +465,11 @@ class NovaJoystick(PipelineEnv):
         # diagnostic, metric n_tripped); only the physics cut is gated.
         # ponytail: latched-until-reset worst case; replace with the measured
         # recovery once a servo is tripped on the bench.
+        # FIRMWARE GOAL SLEW LIMITER (main.cpp NOVA_SLEW_MAX_DELTA 20 raw per 10 ms
+        # broadcast = 2000 steps/s = FW_GOAL_SLEW rad/s on the GOAL). 0 = off. The
+        # clip rate is tracked either way (metric slew_clip = fraction of joints
+        # whose commanded target moved faster than the firmware would pass).
+        self._goal_slew = float(goal_slew)
         self._overload = bool(overload_model)
         self._w_overload = float(w_overload)
         self._stall_nom = sys.actuator_forcerange[:, 1]
@@ -703,7 +710,7 @@ class NovaJoystick(PipelineEnv):
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_carry", "w_gait",
             "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand", "w_overload",
-            "n_tripped",
+            "n_tripped", "slew_clip",
             "w_climb", "w_beta_climb",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
             # carried leg reads ~1.0 here while the others cycle
@@ -751,6 +758,11 @@ class NovaJoystick(PipelineEnv):
         # policy relying on finer-than-deadband positioning. The residual sag /
         # sensing uncertainty is covered by the joint obs noise + joint_bias.
         last_ctrl = info["last_ctrl"]
+        _dmax = FW_GOAL_SLEW * self._dt
+        slew_clip = jp.mean((jp.abs(ctrl - last_ctrl) > _dmax).astype(jp.float32))
+        if self._goal_slew > 0.0:
+            _d = self._goal_slew * self._dt
+            ctrl = last_ctrl + jp.clip(ctrl - last_ctrl, -_d, _d)
         ctrl = jp.where(jp.abs(ctrl - last_ctrl) > DEADBAND, ctrl, last_ctrl)
         phys = self.sys
         if self._overload:      # a tripped servo delivers 20 % of its capped output
@@ -1292,7 +1304,7 @@ class NovaJoystick(PipelineEnv):
             w_slip=w_slip, w_splay=w_splay, w_carry=w_carry, w_gait=w_gait,
             w_actrate=w_actrate,
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand, w_overload=w_overload,
-            n_tripped=jp.sum(info["tripped"].astype(jp.float32)),
+            n_tripped=jp.sum(info["tripped"].astype(jp.float32)), slew_clip=slew_clip,
             w_climb=w_climb, w_beta_climb=beta_climb,
             air_FL=foot_air_f[0], air_FR=foot_air_f[1],
             air_RL=foot_air_f[2], air_RR=foot_air_f[3],
