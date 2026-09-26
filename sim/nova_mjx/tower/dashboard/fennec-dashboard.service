@@ -1,0 +1,12 @@
+[Unit]
+Description=Fennec training dashboard (static, read-only, loopback only — served by the homelab front door at /fennec/)
+
+[Service]
+ExecStartPre=/usr/bin/mkdir -p %h/fennec-dashboard/www
+ExecStart=/usr/bin/python3 -m http.server 8765 --bind 127.0.0.1 --directory %h/fennec-dashboard/www
+Restart=always
+RestartSec=15
+Nice=10
+
+[Install]
+WantedBy=default.target

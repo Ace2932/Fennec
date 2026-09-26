@@ -1,9 +1,9 @@
 # Tower training dashboard
 
-**URL: https://tower.tail6cba27.ts.net/fennec/** (served by the homelab front door,
-`tailscale serve`; see `docs/superpowers/specs/2026-09-26-dashboard-front-door-design.md`
-in the homelab repo). The old `fennec-dashboard.service` (`python3 -m http.server` on
-port 8765) is retired — the front door serves `~/fennec-dashboard/www` directly.
+**URL: https://tower.tail6cba27.ts.net/fennec/** (tailnet only). `fennec-dashboard.service`
+serves the page on `127.0.0.1:8765`; the homelab front door (`tailscale serve`) proxies
+`/fennec/` to it — see `docs/superpowers/specs/2026-09-26-dashboard-front-door-design.md`
+in the homelab repo. For direct access over SSH: `ssh -N -L 8765:127.0.0.1:8765 tower`.
 
 A static page regenerated every 2 min from `~/fennec-runs`. It shows:
 
@@ -60,21 +60,18 @@ and is retried only when the pkl changes. Output: `www/media/<queue>__<variant>_
 - It only reads `~/fennec-runs`, and it never imports the training code.
 - It writes only `~/fennec-dashboard/www/index.html` and `status.json`. The writes are
   atomic, so a half-written file is never served.
-- The server is `python3 -m http.server`, bound to the Tailscale IP only, never
-  `0.0.0.0`. The page holds numbers, paths and log lines, and no secrets.
+- The server is `python3 -m http.server`, bound to `127.0.0.1` only, never
+  `0.0.0.0`. Only the homelab front door (`tailscale serve`, proxying `/fennec/`) and
+  local SSH tunnels can reach it. The page holds numbers, paths and log lines, and no secrets.
 - There is no sudo. Everything runs as systemd **user** units, which is fine
   because `Linger=yes` for aiden.
 
 ## Install (on the tower, from a checkout of this dir)
 
-The page itself is no longer served by its own unit: the homelab front door
-(`tailscale serve`) serves `~/fennec-dashboard/www` at `/fennec/` directly. Only the
-generator and render timers still run here.
-
 ```bash
 mkdir -p ~/fennec-dashboard/www/media ~/.config/systemd/user
 cp dashboard.py render_rollout.py ~/fennec-dashboard/
-cp fennec-dashboard-gen.service fennec-dashboard-gen.timer \
+cp fennec-dashboard.service fennec-dashboard-gen.service fennec-dashboard-gen.timer \
    fennec-dashboard-render.service fennec-dashboard-render.timer ~/.config/systemd/user/
 # read-only sim code for the renders (never the live checkouts); pin to what each queue trains
 git -C ~/codebases/Fennec worktree add --detach ~/fennec-dashboard/simcode-gs "$(git -C ~/codebases/Fennec rev-parse HEAD)"
@@ -82,7 +79,7 @@ git -C ~/codebases/Fennec worktree add --detach ~/fennec-dashboard/simcode-vn "$
 /usr/bin/python3 ~/fennec-dashboard/dashboard.py --selftest
 /usr/bin/python3 ~/fennec-dashboard/render_rollout.py --selftest
 systemctl --user daemon-reload
-systemctl --user enable --now fennec-dashboard-gen.timer fennec-dashboard-render.timer
+systemctl --user enable --now fennec-dashboard.service fennec-dashboard-gen.timer fennec-dashboard-render.timer
 systemctl --user list-timers | grep fennec-dashboard
 ```
 
@@ -93,8 +90,8 @@ queue.
 ## Uninstall
 
 ```bash
-systemctl --user disable --now fennec-dashboard-gen.timer fennec-dashboard-render.timer
-rm ~/.config/systemd/user/fennec-dashboard{-gen.service,-gen.timer,-render.service,-render.timer}
+systemctl --user disable --now fennec-dashboard.service fennec-dashboard-gen.timer fennec-dashboard-render.timer
+rm ~/.config/systemd/user/fennec-dashboard{.service,-gen.service,-gen.timer,-render.service,-render.timer}
 systemctl --user daemon-reload
 git -C ~/codebases/Fennec worktree remove ~/fennec-dashboard/simcode-gs
 git -C ~/codebases/Fennec worktree remove ~/fennec-dashboard/simcode-vn
