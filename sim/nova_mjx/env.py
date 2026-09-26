@@ -411,7 +411,7 @@ class NovaJoystick(PipelineEnv):
                  knee_config="elbow_back", torque_limit=1.0, goal_acc=0.0,
                  joint_stale_p=0.0, asym=False, ref_gait=False,
                  ref_height=REF_HEIGHT, overload_model=False, w_overload=0.0,
-                 goal_slew=0.0, w_duty=0.0, **kwargs):
+                 goal_slew=0.0, w_duty=0.0, w_guard=0.0, **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
@@ -477,6 +477,10 @@ class NovaJoystick(PipelineEnv):
         # which the firmware stall guard (900 / 100 ms) would fleet-limp at TL 1000.
         # Bill duty above DUTY_SOFT per joint so the gait stops living at stall.
         self._w_duty = float(w_duty)
+        # GUARD COST: bill each joint's CONSECUTIVE >= 90 % duty run past one poll,
+        # growing with the run — the firmware stall guard fleet-limps at 5 polls
+        # (100 ms). A linear duty cost (w_duty 0.5) still left 440-720 ms runs.
+        self._w_guard = float(w_guard)
         self._overload = bool(overload_model)
         self._w_overload = float(w_overload)
         if self._torque_limit != 1.0:
@@ -717,7 +721,7 @@ class NovaJoystick(PipelineEnv):
             "w_track", "w_yaw", "w_progress", "w_air", "w_clearance", "w_swingref",
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_carry", "w_gait",
-            "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand", "w_overload", "w_duty",
+            "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand", "w_overload", "w_duty", "w_guard",
             "n_tripped", "slew_clip", "g_max",
             "w_climb", "w_beta_climb",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
@@ -1192,6 +1196,7 @@ class NovaJoystick(PipelineEnv):
         # window): the policy should never get near the servo's 2 s self-unload.
         w_overload = -self._w_overload * jp.sum(jp.clip(info["hot_t"] - 1.0, 0.0, 1.0))
         w_duty = -self._w_duty * jp.sum(jp.maximum(duty - DUTY_SOFT, 0.0))
+        w_guard = -self._w_guard * jp.sum(jp.clip(info["g_run"] - 1, 0, 10).astype(jp.float32))
         w_actrate = -0.02 * act_rate
         w_energy = -2e-3 * energy
         w_jerk = -0.01 * jerk
@@ -1201,7 +1206,8 @@ class NovaJoystick(PipelineEnv):
                   + w_pose + 0.1 + w_climb + beta_climb + w_pbrs_climb
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_carry
-                  + w_actrate + w_energy + w_jerk + w_stand + w_overload + w_duty)
+                  + w_actrate + w_energy + w_jerk + w_stand + w_overload + w_duty
+                  + w_guard)
         # w_climb-aware clip — UPPER bound only. The climb reward can legitimately
         # spike to w_climb·(one riser) = w_climb·STAIR_RISE·level ≤ w_climb·0.08 (the
         # curriculum caps level at tmax=1) on top of the task; the flat +10 ceiling
@@ -1321,7 +1327,7 @@ class NovaJoystick(PipelineEnv):
             w_slip=w_slip, w_splay=w_splay, w_carry=w_carry, w_gait=w_gait,
             w_actrate=w_actrate,
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand, w_overload=w_overload,
-            w_duty=w_duty,
+            w_duty=w_duty, w_guard=w_guard,
             n_tripped=jp.sum(info["tripped"].astype(jp.float32)), slew_clip=slew_clip,
             g_max=info["g_max"].astype(jp.float32),
             w_climb=w_climb, w_beta_climb=beta_climb,

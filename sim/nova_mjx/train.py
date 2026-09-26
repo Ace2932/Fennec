@@ -475,6 +475,8 @@ def main():
                          "terrain.CURB_M*level around spawn). Needs --terrain>0.")
     ap.add_argument("--w-duty", type=float, default=0.0,
                     help="cost on per-joint duty above env.DUTY_SOFT (0.8); 0 = off")
+    ap.add_argument("--w-guard", type=float, default=0.0,
+                    help="cost on consecutive >=90%% duty polls past 1 (firmware stall guard trips at 5); 0 = off")
     ap.add_argument("--fresh-reset", action="store_true",
                     help="reset_wrapper.wrap: episodes really reset (#455) instead of brax's cached-state AutoReset")
     ap.add_argument("--goal-slew", type=float, default=0.0,
@@ -529,12 +531,12 @@ def main():
                        joint_stale_p=args.joint_stale_p, asym=args.asym,
                        ref_gait=args.ref_gait, ref_height=args.ref_height,
                        overload_model=args.overload_model, w_overload=args.w_overload,
-                       goal_slew=args.goal_slew, w_duty=args.w_duty)
+                       goal_slew=args.goal_slew, w_duty=args.w_duty, w_guard=args.w_guard)
     print(f"study flags: torque_limit {args.torque_limit}  goal_acc_reg {args.goal_acc_reg} "
           f"({goal_acc_rad(args.goal_acc_reg):.2f} rad/s^2)  joint_stale_p {args.joint_stale_p}  "
           f"asym {args.asym}  ref_gait {args.ref_gait} (h {args.ref_height})  "
           f"curb_frac {args.curb_frac}  overload_model {args.overload_model} "
-          f"w_overload {args.w_overload}  w_duty {args.w_duty}  fresh_reset {args.fresh_reset}")
+          f"w_overload {args.w_overload}  w_duty {args.w_duty}  w_guard {args.w_guard}  fresh_reset {args.fresh_reset}")
     print(f"JAX backend {jax.default_backend()}  devices {jax.devices()}")
     print_fingerprint(env, args.terrain, args.dr_scale, args.step_frac, args.stair_frac,
                       args.flat_frac, args.w_climb, args.w_pbrs, args.footswing_max,
