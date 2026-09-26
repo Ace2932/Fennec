@@ -46,7 +46,7 @@ _LEG_ORDER = ["FL", "FR", "RL", "RR"]                # LEG_NAMES order
 # (reg85=254 bench). Verified: with the OLD constants restored, the v-next code
 # reproduces the old pin 0.883890092373 exactly, so every new env flag is
 # byte-neutral when off and the shift is the model alone.
-BLIND_REWARD_PIN = 0.4895232021808624  # jax 0.6.0 / brax 0.14.2 / mujoco 3.14.0 (Mac venv)
+BLIND_REWARD_PIN = 0.4895232021808624  # jax 0.6.0 / brax 0.14.2 / mujoco 3.10.0 (Mac venv)
 
 
 def blind_pin_reward():
