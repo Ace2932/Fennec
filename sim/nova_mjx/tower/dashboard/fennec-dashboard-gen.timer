@@ -1,0 +1,10 @@
+[Unit]
+Description=Regenerate the Fennec training dashboard every 2 min
+
+[Timer]
+OnActiveSec=0
+OnBootSec=1min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Render missing Fennec rollout videos + gait diagrams (CPU only, one at a time)
+
+[Service]
+Type=oneshot
+# CPU only: no CUDA for JAX, Mesa llvmpipe (software GL) for MuJoCo's EGL renderer.
+# The GPU is full with training + Ollama; a CUDA/NVIDIA-GL context could OOM the run.
+Environment=JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES= MUJOCO_GL=egl
+Environment=__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json
+Environment=EGL_LOG_LEVEL=fatal LP_NUM_THREADS=4
+ExecStart=/usr/bin/python3 %h/fennec-dashboard/render_rollout.py --queue
+Nice=15
+CPUSchedulingPolicy=idle
+IOSchedulingClass=idle
+# 8 of 32 cores: keeps CPU heat (thermal-guard stops training at 90 C) and contention low
+CPUAffinity=24-31
+TimeoutStartSec=2h

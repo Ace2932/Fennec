@@ -1,0 +1,7 @@
+[Unit]
+Description=Regenerate the Fennec training dashboard from ~/fennec-runs (read-only)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/fennec-dashboard/dashboard.py --runs %h/fennec-runs --out %h/fennec-dashboard/www
+Nice=10

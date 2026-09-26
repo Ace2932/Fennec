@@ -1,0 +1,10 @@
+[Unit]
+Description=Check for new finished Fennec policies to render every 10 min
+
+[Timer]
+OnActiveSec=1min
+OnBootSec=5min
+OnUnitInactiveSec=10min
+
+[Install]
+WantedBy=timers.target
