@@ -18,6 +18,7 @@ Step accounting mirrors tower/fennec-train-status + ckpt_utils.stage_done_steps:
     (offset = PROGRESS of earlier labels) holds for both.
 """
 import csv
+import datetime
 import html
 import json
 import os
@@ -28,6 +29,9 @@ import sys
 import time
 
 STALE_S = 15 * 60
+GRAFANA = "http://100.118.31.63:3000/d/tower-metrics/tower"
+THERMAL_LIMIT = 90
+HEALTH_POINTS = 720          # thermal-guard.log is 1 line / 30 s: keep the last 24 h, thinned
 FEET = ("FL", "FR", "RL", "RR")
 
 
@@ -64,6 +68,13 @@ def attempt_dirs(sdir):
 
 def stage_done(sdir):
     return sum(progress_steps(d) for d in attempt_dirs(sdir))
+
+
+def mtime(p):
+    try:
+        return p.stat().st_mtime
+    except OSError:
+        return None
 
 
 def train_log(sdir):
@@ -119,6 +130,74 @@ def stage_curves(sdir, base):
     return pts
 
 
+THERMAL_RE = re.compile(r"^(\S+ \S+) gpu (\d+)C cpu (\d+)C ([\d.]+)W")
+
+
+def thermal_log(path):
+    """thermal-guard.log -> {t, gpu, cpu, w} points (last 24 h, thinned) + THERMAL STOP times."""
+    try:
+        lines = path.read_text(errors="replace").splitlines()[-2880:]
+    except OSError:
+        return {"pts": [], "stops": []}
+    pts, stops = [], []
+    for l in lines:
+        m = THERMAL_RE.match(l)
+        if m:
+            pts.append({"t": m.group(1), "gpu": int(m.group(2)), "cpu": int(m.group(3)),
+                        "w": float(m.group(4))})
+        elif "THERMAL STOP" in l:
+            stops.append(l[:19])
+    k = max(1, len(pts) // HEALTH_POINTS)
+    return {"pts": pts[::k], "stops": stops}
+
+
+def media(d):
+    """render_rollout.py outputs: {stem: {"mp4","png": bool, "json": dict|None, "err": str|None}}."""
+    out = {}
+    try:
+        files = list(d.iterdir())
+    except OSError:
+        return out
+    for p in files:
+        if p.name.startswith(".") or p.suffix not in (".mp4", ".png", ".json", ".err"):
+            continue
+        e = out.setdefault(p.stem, {"mp4": False, "png": False, "json": None, "err": None})
+        if p.suffix == ".json":
+            e["json"] = read_json(p)
+        elif p.suffix == ".err":
+            try:
+                e["err"] = p.read_text(errors="replace").strip().splitlines()[-1:][0][:300]
+            except (OSError, IndexError):
+                e["err"] = "render failed"
+        else:
+            e[p.suffix[1:]] = True
+    return out
+
+
+def iso(t):
+    return None if t is None else \
+        datetime.datetime.fromtimestamp(t).astimezone().isoformat(timespec="seconds")
+
+
+def status(data):
+    """status.json, schema 1: a stable contract read by the Grafana tower hub. Don't rename."""
+    runs = []
+    for q in data["queues"]:
+        for v in q["variants"]:
+            st = v["stages"]
+            cur = next((s for s in st if not s["DONE"]), st[-1] if st else None)
+            runs.append({
+                "run": q["name"], "variant": v["name"],
+                "stage": cur["name"] if cur else None,
+                "steps_done": int(cur["done"]) if cur else None,
+                "steps_planned": int(cur["timesteps"]) if cur else None,
+                "last_eval_reward": cur["last_reward"] if cur else None,
+                "running": bool(q["state"] == "active" and q.get("plan_variant") == v["name"]),
+                "last_update": iso(v["last_update"]),
+                "done": bool(st) and all(s["DONE"] for s in st)})
+    return {"schema": 1, "generated": iso(data["generated"]), "runs": runs}
+
+
 # ------------------------------------------------------------------ scan -----
 
 def sh(*cmd):
@@ -157,12 +236,13 @@ def service_log(path):
 def scan_variant(vdir, now):
     plan = read_json(vdir / "plan.json") or {}
     stages, curves, bounds, base = [], [], [], 0
-    rate, last_row_t, left_total = None, None, 0
+    rate, last_row_t, left_total, mtimes = None, None, 0, []
     for st in plan.get("stages", []):
         name, ts = st.get("name", "?"), int(st.get("timesteps", 0) or 0)
         sdir = vdir / name
         done, is_done = stage_done(sdir), (sdir / "DONE").exists()
         rows = train_log(sdir)
+        mtimes += [mtime(sdir / "train_log.csv")] + [mtime(a / "PROGRESS") for a in attempt_dirs(sdir)]
         if rows:
             last_row_t = max(last_row_t or 0, rows[-1][0])
         stage_rate = None
@@ -187,10 +267,11 @@ def scan_variant(vdir, now):
             evals[p.stem[5:]] = j
     return {"name": vdir.name, "stages": stages, "curves": curves, "bounds": bounds,
             "evals": evals, "rate": rate, "left": left_total, "last_row_t": last_row_t,
+            "last_update": max((t for t in mtimes if t), default=None),
             "has_data": bool(curves or evals or any(s["done"] for s in stages))}
 
 
-def scan(runs):
+def scan(runs, media_dir=None):
     now = time.time()
     queues = []
     for q in sorted(p for p in runs.iterdir() if p.is_dir()) if runs.is_dir() else []:
@@ -214,9 +295,12 @@ def scan(runs):
         last_t = max((v["last_row_t"] or 0 for v in variants), default=0) or None
         stale = bool(state == "active" and last_t and now - last_t > STALE_S)
         queues.append({"name": q.name, "state": state, "restarts": restarts, "log": log,
+                       "plan_variant": m.group(1) if (m and state == "active") else None,
                        "running": running, "variants": variants, "last_row_t": last_t,
                        "stale": stale})
-    return {"generated": now, "gpu": gpu(), "queues": queues}
+    return {"generated": now, "gpu": gpu(), "queues": queues,
+            "health": thermal_log(runs / "thermal-guard.log"),
+            "media": media(media_dir) if media_dir else {}}
 
 
 # ------------------------------------------------------------------ html -----
@@ -238,6 +322,16 @@ def cls_air(v):
     return "" if v is None else ("bad" if v > 0.9 or v < 0.05 else "")
 
 
+def guard_cells(m):
+    """Servo-protection columns; '–' in evals from code older than the field."""
+    trip, slew, g = f(m.get("servos_tripped_end")), f(m.get("slew_clip_frac")), f(m.get("guard_trip_pct"))
+    ms = [f(m.get(f"guard_run_ms_{k}")) for k in ("p50", "p99", "max")]
+    return [f'<td class="{"bad" if trip else ""} num">{fmt(trip, 2)}</td>',
+            f'<td class="num">{fmt(None if slew is None else 100 * slew)}</td>',
+            f'<td class="{"bad" if g else ""} num">{fmt(g)}</td>',
+            f'<td class="num">{"–" if ms[0] is None else "/".join(fmt(x, 0) for x in ms)}</td>']
+
+
 def score_rows(data):
     out = []
     for q in data["queues"]:
@@ -256,9 +350,46 @@ def score_rows(data):
                               f'<td class="{"bad" if fallp and fallp > 5 else ""} num">{fmt(fallp)}</td>',
                               f'<td class="num">{fmt(f(m.get("swing_cm")), 2)}</td>',
                               f'<td class="num air">{airs}</td>',
-                              f'<td class="num">{fmt(f(m.get("cot")), 2)}</td>']
+                              f'<td class="num">{fmt(f(m.get("cot")), 2)}</td>'] + guard_cells(m)
                 out.append("<tr>" + "".join(cells) + "</tr>")
     return "\n".join(out)
+
+
+COURSE_TXT = {"flat": "flat, fwd 0.25 m/s", "curb": "3 cm one-cell ramp at x = 0.4 m, fwd 0.25 m/s"}
+
+
+def media_html(data, vid):
+    """Rollout video + gait diagram per course, from render_rollout.py's cache."""
+    out = []
+    for course, txt in COURSE_TXT.items():
+        e = data["media"].get(f"{vid}__{course}")
+        if not e:
+            continue
+        src = html.escape(f"media/{vid}__{course}")
+        if e["err"] and not e["mp4"]:
+            out.append(f'<div class="mcell"><b>{course}</b> <span class="bad">render failed</span>'
+                       f'<div class="mono small">{html.escape(e["err"])}</div></div>')
+            continue
+        j = e["json"] or {}
+        fell = j.get("fell_step")
+        info = (f'dx {fmt(f(j.get("x_travel_m")), 2)} m · '
+                f'{"<span class=bad>fell at step " + str(fell) + "</span>" if fell else "no fall"} · '
+                f'≥90% duty {fmt(f(j.get("guard_cells_pct")))}% of joint-steps') if j else ""
+        out.append(f'<div class="mcell"><b>{course}</b> <span class="muted small">{txt}</span>'
+                   + (f'<video src="{src}.mp4" controls muted loop playsinline preload="metadata"></video>'
+                      if e["mp4"] else "")
+                   + (f'<img src="{src}.png" alt="gait diagram {course}" loading="lazy">' if e["png"] else "")
+                   + f'<div class="small">{info}</div></div>')
+    return f'<div class="media">{"".join(out)}</div>' if out else ""
+
+
+def health_html(h):
+    stops = "".join(f'<span class="pill bad">THERMAL STOP {html.escape(t)}</span> ' for t in h["stops"])
+    chart = '<div class="hchart"><canvas id="health"></canvas></div>' if h["pts"] else \
+        '<div class="muted">no thermal-guard.log data</div>'
+    return (f'<div class="card"><b>Tower health</b> <span class="muted small">thermal-guard.log, last 24 h · '
+            f'guard stops training at {THERMAL_LIMIT}°C for 3 checks · history: '
+            f'<a href="{GRAFANA}">Grafana tower dashboard</a></span> {stops}{chart}</div>')
 
 
 def render(data):
@@ -292,7 +423,7 @@ def render(data):
                 f"{html.escape(s['name'])} " + ("DONE" if s["DONE"] else f"{s['done']:,}/{s['timesteps']:,}")
                 for s in v["stages"])
             body = (f'<div class="charts" data-v="{vid}"></div>' if v["curves"]
-                    else '<div class="muted">no training data yet</div>')
+                    else '<div class="muted">no training data yet</div>') + media_html(data, vid)
             vsecs.append(f'<details class="variant" {"open" if v["curves"] else ""}>'
                          f'<summary><b>{html.escape(q["name"])}/{html.escape(v["name"])}</b> '
                          f'<span class="muted small">{st}</span></summary>{body}</details>')
@@ -302,9 +433,13 @@ def render(data):
                 f'{f" ({n_old} older, superseded)" if n_old > 0 else ""}.</div>')
     series = {f"{q['name']}__{v['name']}": {"c": v["curves"], "b": v["bounds"]}
               for q in data["queues"] for v in q["variants"] if v["curves"]}
+    series["_health"] = {**data["health"], "limit": THERMAL_LIMIT}
     blob = json.dumps(series, separators=(",", ":")).replace("</", "<\\/")
     gen = time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime(now))
+    hdr = "".join(f"<th>{h}</th>" for h in ("spd%", "fall%", "swing cm", "air", "CoT",
+                                              "trip", "slew%", "guard%", "guard ms"))
     return TEMPLATE.format(gen=gen, gpu=gpu_html, queues="".join(qcards), errors=err_html,
+                           health=health_html(data["health"]), hdr=hdr,
                            scores=score_rows(data) or '<tr><td colspan="12" class="muted">no evals</td></tr>',
                            variants="".join(vsecs), blob=blob)
 
@@ -340,17 +475,25 @@ details.variant{{background:var(--card);border:1px solid var(--line);border-radi
 summary{{cursor:pointer}}
 .charts{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;margin-top:8px}}
 .charts div{{position:relative;height:200px}}
+.hchart{{position:relative;height:160px;margin-top:6px}}
+a{{color:var(--s1)}}
+.media{{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;margin-top:10px}}
+.mcell video,.mcell img{{display:block;width:100%;max-width:640px;height:auto;margin-top:4px;border-radius:6px;background:#000}}
+.mcell img{{background:#fff}}
 </style></head><body>
 <h1>Fennec training · tower</h1>
 <div class="muted small">generated {gen} · page reloads every 2 min · read-only</div>
 <div class="card">{gpu}</div>
+{health}
 {queues}
 <h2>Latest errors</h2>{errors}
 <h2>Scorecard (eval_*.json)</h2>
-<div class="muted small">speed ≥90% green, &lt;50% red · fall &gt;5% red · air per foot FL FR RL RR: &gt;0.9 carried / &lt;0.05 dragged in red</div>
+<div class="muted small">speed ≥90% green, &lt;50% red · fall &gt;5% red · air per foot FL FR RL RR: &gt;0.9 carried / &lt;0.05 dragged in red ·
+trip = servos overload-tripped per robot at episode end · slew% = joint targets clipped by the firmware slew limit ·
+guard% = episodes where the firmware stall guard (≥90% duty for 100 ms) trips, red if &gt;0 · guard ms = longest ≥90% run p50/p99/max · – = field not in that eval</div>
 <div class="tbl"><table><thead>
-<tr><th rowspan="2">variant</th><th rowspan="2">eval</th><th colspan="5">fwd</th><th colspan="5">mixed</th></tr>
-<tr><th>spd%</th><th>fall%</th><th>swing cm</th><th>air</th><th>CoT</th><th>spd%</th><th>fall%</th><th>swing cm</th><th>air</th><th>CoT</th></tr>
+<tr><th rowspan="2">variant</th><th rowspan="2">eval</th><th colspan="9">fwd</th><th colspan="9">mixed</th></tr>
+<tr>{hdr}{hdr}</tr>
 </thead><tbody>{scores}</tbody></table></div>
 <h2>Training curves</h2>
 <div class="muted small">x = cumulative steps across stages and resumes; dashed line = stage boundary. Speed and air are per-step means (episode sum / episode length).</div>
@@ -376,6 +519,18 @@ document.querySelectorAll('.charts').forEach(el=>{{const v=D[el.dataset.v]; if(!
    options:{{animation:false,maintainAspectRatio:false,parsing:true,
    plugins:{{bounds:{{b:v.b}},legend:{{display:!!names,labels:{{boxWidth:10}}}},title:{{display:true,text:t}}}},
    scales:{{x:{{type:'linear',ticks:{{callback:x=>(x/1e6)+'M'}}}}}}}}}});}});}});
+const H=D._health, hc=document.getElementById('health');
+if(H&&hc&&H.pts.length){{const lab=H.pts.map(p=>p.t.slice(11,16)), ds=(l,k,col,ax)=>({{label:l,data:H.pts.map(k),
+  borderColor:col,backgroundColor:col,pointRadius:0,borderWidth:1.5,yAxisID:ax}});
+ const stops={{id:'stops',afterDraw(ch){{const x=ch.scales.x,a=ch.chartArea,k=ch.ctx;
+  H.stops.forEach(s=>{{let i=H.pts.findIndex(p=>p.t>=s);if(i<0)i=H.pts.length-1;const px=x.getPixelForValue(i);
+  k.save();k.strokeStyle=c('--bad');k.lineWidth=2;k.beginPath();k.moveTo(px,a.top);k.lineTo(px,a.bottom);k.stroke();
+  k.fillStyle=c('--bad');k.fillText('THERMAL STOP',px+3,a.top+10);k.restore();}});}}}};
+ new Chart(hc,{{type:'line',plugins:[stops],data:{{labels:lab,datasets:[ds('GPU °C',p=>p.gpu,S[0],'t'),ds('CPU °C',p=>p.cpu,S[1],'t'),
+  ds('GPU W',p=>p.w,S[2],'w'),{{...ds(H.limit+' °C limit',p=>H.limit,c('--bad'),'t'),borderDash:[5,4],borderWidth:1}}]}},
+  options:{{animation:false,maintainAspectRatio:false,plugins:{{legend:{{labels:{{boxWidth:10}}}}}},
+  scales:{{x:{{ticks:{{maxTicksLimit:12}}}},t:{{position:'left',suggestedMin:30,suggestedMax:95,title:{{display:true,text:'°C'}}}},
+  w:{{position:'right',grid:{{drawOnChartArea:false}},title:{{display:true,text:'W'}}}}}}}}}});}}
 }})();
 </script></body></html>
 """
@@ -412,7 +567,36 @@ def selftest():
         (v / "eval_x.json").write_text('{"fwd":{"spd_pct":107.7,"fall":0.1,"air":[1,0,0.3,0.3]}}')
         (runs / "q" / "service.log").write_text(
             "Traceback (most recent call last):\n  File x\nValueError: old\n[plan] s1: done\n")
-        d = scan(runs)
+        (runs / "thermal-guard.log").write_text(
+            "2026-09-25 20:21:29 gpu 76C cpu 62C 301.41W bad=0\n"
+            "2026-09-25 20:21:59 gpu 91C cpu 62C 305.00W bad=3\n"
+            "2026-09-25 20:21:59 THERMAL STOP: all fennec-train units stopped\ngarbage\n")
+        med = pathlib.Path(td) / "media"
+        med.mkdir()
+        (med / "q__V__flat.mp4").write_text("v")
+        (med / "q__V__flat.png").write_text("p")
+        (med / "q__V__flat.json").write_text('{"x_travel_m": 1.5, "fell_step": null, "guard_cells_pct": 3}')
+        (med / "q__V__curb.err").write_text("Traceback\nValueError: obs size 105 != 111\n")
+        (v / "eval_y.json").write_text('{"fwd":{"spd_pct":50,"guard_trip_pct":12.5,"guard_run_ms_p50":20,'
+                                       '"guard_run_ms_p99":140,"guard_run_ms_max":200,"slew_clip_frac":0.4}}')
+        d = scan(runs, med)
+        h = d["health"]
+        assert [p["gpu"] for p in h["pts"]] == [76, 91] and h["pts"][0]["w"] == 301.41, h
+        assert h["stops"] == ["2026-09-25 20:21:59"], h["stops"]
+        st = status(d)
+        assert st["schema"] == 1 and isinstance(st["generated"], str) and st["generated"][10] == "T"
+        types = {"run": str, "variant": str, "stage": (str, type(None)), "steps_done": (int, type(None)),
+                 "steps_planned": (int, type(None)), "last_eval_reward": (float, type(None)),
+                 "running": bool, "last_update": (str, type(None)), "done": bool}
+        for r in st["runs"]:
+            assert set(r) == set(types), r
+            for k, t in types.items():
+                assert isinstance(r[k], t), (k, r[k])
+        sv = next(r for r in st["runs"] if r["variant"] == "V")
+        # s1 DONE -> current stage is the partial s2 (its one train_log row, reward 1.0)
+        assert (sv["stage"], sv["steps_planned"], sv["last_eval_reward"], sv["done"], sv["running"]) == \
+            ("s2", 100, 1.0, False, False), sv
+        assert sv["last_update"] is not None
         vv = next(x for x in d["queues"][0]["variants"] if x["name"] == "V")
         xs = [p["x"] for p in vv["curves"]]
         # run_2 starts at run_1's BANKED 100 (not its last logged 150); half row dropped
@@ -423,6 +607,10 @@ def selftest():
         page = render(d)
         assert "107.7" in page and 'class="good num"' in page and 'class="bad num"' in page
         assert "no training data yet" in page                   # EMPTY variant
+        assert '<video src="media/q__V__flat.mp4"' in page and 'src="media/q__V__flat.png"' in page
+        assert "obs size 105 != 111" in page and "render failed" in page
+        assert '<td class="bad num">12.5</td>' in page and "20/140/200" in page and "40.0" in page
+        assert "THERMAL STOP 2026-09-25 20:21:59" in page and "tower-metrics" in page
         (runs / "q" / "service.log").write_text("[plan] s1\nTraceback (x)\n  File y\nKeyError: 'z'\n")
         assert "KeyError" in service_log(runs / "q" / "service.log")["error"]
     print("selftest OK")
@@ -435,8 +623,10 @@ def main(argv):
     runs = pathlib.Path(args.get("--runs", "~/fennec-runs")).expanduser()
     out = pathlib.Path(args.get("--out", "~/fennec-dashboard/www")).expanduser()
     out.mkdir(parents=True, exist_ok=True)
-    write_atomic(out / "index.html", render(scan(runs)))
-    print(f"wrote {out / 'index.html'}")
+    data = scan(runs, out / "media")
+    write_atomic(out / "index.html", render(data))
+    write_atomic(out / "status.json", json.dumps(status(data), indent=1))
+    print(f"wrote {out / 'index.html'} and status.json")
 
 
 if __name__ == "__main__":
