@@ -551,3 +551,25 @@ def test_margin_covers_the_producers_MEASURED_sampling_scatter():
     raw_hi = ENVELOPE["FL"][0][i0][1]
     got_hi = math.degrees(hfe_bounds("FL", 0.0, 0.0)[1])
     assert got_hi == pytest.approx(raw_hi - MARGIN_DEG, abs=1e-6), (raw_hi, got_hi)
+
+
+def test_load_refusal_fires_with_firmware_uptime_stamps():
+    """The Teensy stamps /joint_states with its UPTIME (main.cpp: ms/1000), while the
+    wrapper's clock is ROS wall time (~1.8e18 ns). The load window must use the
+    ARRIVAL time; comparing header stamps against wall time put every sample
+    ~1.8e18 ns 'in the past', so the refusal could never fire on hardware
+    (comms audit, docs/comms-telemetry-map.md). The other load tests passed only
+    because their fake message has no header and their fake clock starts at 0."""
+    sw, node, pub = _wrapper(1)
+    node._ns = 1_790_000_000_000_000_000          # realistic wall clock (2026)
+    sw.publish(_CmdMsg([0.1]))
+    js = types.SimpleNamespace(
+        effort=[850],                             # 85 % > the 70 % threshold
+        header=types.SimpleNamespace(stamp=types.SimpleNamespace(sec=120, nanosec=0)),  # uptime
+    )
+    for _ in range(3):
+        sw.on_joint_states(js)
+    node.advance(0.020)
+    sw.publish(_CmdMsg([0.163]))
+    out = pub.published[-1][0]
+    assert math.isclose(out, 0.1, abs_tol=1e-6), f"load refusal did not fire: moved to {out}"
