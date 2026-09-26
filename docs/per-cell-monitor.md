@@ -5,7 +5,7 @@ All numbers are derived in the tables below. `est` means the value was not check
 
 ## 1. Requirement
 
-**Failure caught.** The existing safety chain only sees the whole pack. The LM393 (`U8`) compares `VSENSE` = VBAT × 22k/122k. `BATT_LOW` trips at an as-built 13.03 V and `HARDCUT` at 12.56 V (`power-budget.md:209-212`).
+**Failure caught.** The existing safety chain only sees the whole pack. The LM393 (`U8`) compares `VSENSE` = VBAT × 22k/122k. `BATT_LOW` trips at an as-built 13.03 V and `HARDCUT` at 12.56 V (`power-budget.md:209-212`). ⚠ superseded by `power-chain-fmea.md#pc-11`: with the R14/R15 hysteresis loading, as built BATT_LOW is **12.96 V falling / 13.06 V rising** and HARDCUT **12.42 V falling / 12.70 V rising**. The per-cell arithmetic below still holds within ~20 mV/cell.
 If three cells sit at 3.60 V and one at 2.60 V, the pack reads 13.40 V and **neither trip fires**. `HARDCUT` only fires once the weak cell is around 2.2 V (3 × 3.45 + 2.2 = 12.55), and that is already inside the damage region (< 2.5 V).
 The only per-cell protection today is the FLY-RC balance buzzer (3.3 V/cell). It makes a sound and cuts nothing.
 
@@ -107,8 +107,13 @@ All six are soldered as flying leads to the underside of the Teensy socket pins.
 
 The pack-level `HARDCUT` is left untouched and stays independent of firmware. The per-cell cut depends on firmware: if the Teensy is dead, it does not fire. A true hardware per-cell cut (a latch, or the AFE's own UV FET drive) is v7 work.
 
+⚠ **Loop budget:** a blocking `analogRead()` with the Teensy core's default averaging can take tens of µs, and the
+firmware's loop gate is p99 < 100 µs (the project's Phase-1 timing gate). Use the non-blocking ADC path (start a
+conversion this tick, read it next tick; e.g. the ADC library's `startSingleRead`/`readSingle`, averaging 1) and
+confirm with the `loop_timing.h` exec histogram before and after. The sketch below shows the logic, not the timing.
+
 ```cpp
-// ~1 analogRead per 1 kHz tick keeps the loop p99 budget; round-robin 5 ch → 200 Hz each
+// ~1 conversion per 1 kHz tick (non-blocking, see above); round-robin 5 ch → 200 Hz each
 static const uint8_t CH[5] = {14,15,16,17,20};
 ema[i] += (analogRead(CH[i]) - ema[i]) * (1.0f/100);        // τ ≈ 0.5 s at 200 Hz
 i = (i+1) % 5;
