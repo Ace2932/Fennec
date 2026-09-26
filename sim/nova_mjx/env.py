@@ -1687,7 +1687,11 @@ def make_domain_randomize(terrain_max=None, dr_scale=1.0, step_frac=0.0, stair_f
             mscale = jax.random.uniform(k2, (sys.nbody,), minval=M_LO, maxval=M_HI)
             body_mass = sys.body_mass * mscale
             body_inertia = sys.body_inertia * mscale[:, None]
-            kp = jax.random.uniform(k3, (sys.nu,), minval=KP_LO, maxval=KP_HI)
+            # RELATIVE to the env's own kp (MJCF 35): an absolute draw silently
+            # discarded --kp-scale (found 2026-09-26). At kp_scale 1 the factor is
+            # exactly 1.0, so the default distribution is unchanged.
+            kp = jax.random.uniform(k3, (sys.nu,), minval=KP_LO, maxval=KP_HI) * (
+                sys.actuator_gainprm[:, 0] / 35.0)
             kv = jax.random.uniform(k4, (sys.nu,), minval=KV_LO, maxval=KV_HI)
             damp = sys.dof_damping * jax.random.uniform(
                 k5, (sys.nv,), minval=D_LO, maxval=D_HI)
