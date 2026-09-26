@@ -1,10 +1,9 @@
 [Unit]
-Description=Fennec training dashboard (static, read-only, Tailscale IP only)
+Description=Fennec training dashboard (static, read-only, loopback only — served by the homelab front door at /fennec/)
 
 [Service]
 ExecStartPre=/usr/bin/mkdir -p %h/fennec-dashboard/www
-ExecStart=/usr/bin/python3 -m http.server 8765 --bind 100.118.31.63 --directory %h/fennec-dashboard/www
-# the Tailscale IP may not exist yet at boot: keep retrying the bind
+ExecStart=/usr/bin/python3 -m http.server 8765 --bind 127.0.0.1 --directory %h/fennec-dashboard/www
 Restart=always
 RestartSec=15
 Nice=10

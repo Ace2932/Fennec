@@ -1,6 +1,9 @@
 # Tower training dashboard
 
-**URL (tailnet only): http://100.118.31.63:8765/**
+**URL: https://tower.tail6cba27.ts.net/fennec/** (tailnet only). `fennec-dashboard.service`
+serves the page on `127.0.0.1:8765`; the homelab front door (`tailscale serve`) proxies
+`/fennec/` to it — see `docs/superpowers/specs/2026-09-26-dashboard-front-door-design.md`
+in the homelab repo. For direct access over SSH: `ssh -N -L 8765:127.0.0.1:8765 tower`.
 
 A static page regenerated every 2 min from `~/fennec-runs`. It shows:
 
@@ -16,7 +19,8 @@ A static page regenerated every 2 min from `~/fennec-runs`. It shows:
   than 15 min old.
 - A tower health strip: GPU °C, CPU °C and GPU W from `~/fennec-runs/thermal-guard.log`
   (last 24 h), the 90 °C guard limit, and any `THERMAL STOP` line. Long history lives in
-  Grafana: http://100.118.31.63:3000/d/tower-metrics/tower (linked from the page).
+  Grafana: `/grafana/d/tower-metrics/tower` (linked from the page, relative — the front
+  door serves Grafana at `/grafana/` on the same origin as this page's `/fennec/`).
 - Scorecard servo-protection columns when the eval JSON has them: `servos_tripped_end`,
   `slew_clip_frac`, `guard_trip_pct` (red if > 0) and `guard_run_ms_p50/p99/max`.
 - Per finished variant, a rollout video and a gait diagram for two courses: flat at
@@ -56,8 +60,9 @@ and is retried only when the pkl changes. Output: `www/media/<queue>__<variant>_
 - It only reads `~/fennec-runs`, and it never imports the training code.
 - It writes only `~/fennec-dashboard/www/index.html` and `status.json`. The writes are
   atomic, so a half-written file is never served.
-- The server is `python3 -m http.server`, bound to the Tailscale IP only, never
-  `0.0.0.0`. The page holds numbers, paths and log lines, and no secrets.
+- The server is `python3 -m http.server`, bound to `127.0.0.1` only, never
+  `0.0.0.0`. Only the homelab front door (`tailscale serve`, proxying `/fennec/`) and
+  local SSH tunnels can reach it. The page holds numbers, paths and log lines, and no secrets.
 - There is no sudo. Everything runs as systemd **user** units, which is fine
   because `Linger=yes` for aiden.
 
