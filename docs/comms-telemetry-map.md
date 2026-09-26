@@ -76,7 +76,7 @@ graph LR
 - Proposed fix, one line and root-cause: `servo_fleet.disarm(0x0FFF)` right after `servo_bus.begin()` in `setup()`. Then make the telemetry publishers best-effort, or shorten the reliable timeout in the meta. Optionally add an `rmw_uros_ping_agent` reconnect loop so the safety loop keeps running while offline.
 - Bench step for #431: pull the USB cable with the servos powered and watch the LED and the torque.
 
-**F2 HIGH NEW, proven: the wrapper's load refusal can never fire on hardware.**
+**F2 HIGH NEW, proven: the wrapper's load refusal can never fire on hardware.** ⚠ **FIXED 2026-09-25 in #470** (stamp on arrival + uptime-stamp test).
 - `/joint_states` is stamped with Teensy uptime (`main.cpp:1371-1373`).
 - `wrapper.py:174-178` stores that stamp, and `_load_window` compares it against ROS wall time (`wrapper.py:193-200`, `now_ns` at `:276`), so no sample is ever inside the 0.3 s window.
 - Probe, not committed: with the fake clock set to 1.79e18 ns and `header.stamp.sec=120`, an 85% load does not stop the 0.1 → 0.163 rad move. The same message stamped with wall time is held.
@@ -136,7 +136,7 @@ graph LR
 - The sim models no observation delay. On the robot each joint is 0-20 ms stale, all 12 share one stamp, and `/imu` is 100 Hz.
 - The velocity register is assumed to be steps/s (`policy_node.py:166-170`).
 - There is no IMU mount rotation.
-- `/cmd_vel` is fed raw (`policy_node.py:332-333`), because #425 is still an open PR (`fix/policy-cmd-clip`). The sim box is vx −0.15..0.35, vy ±0.15, wz ±0.5 (`env.py:428-429`).
+- `/cmd_vel` is fed raw (`policy_node.py:332-333`), because #425 is still an open PR (`fix/policy-cmd-clip`). The sim box is vx −0.15..0.35, vy ±0.15, wz ±0.5 (`env.py:428-429`). ⚠ superseded: #425 merged 2026-09-25 (clip in `NovaPolicy.build_obs`).
 
 **F13 LOW NEW: topics with no publisher, or no consumer.**
 - No publisher: `/diagnostics` (dashcam subscribes, `dashcam/node.py:107`), `/safety_clear`, `/cmd_vel`, `/nova/mode`, `/nova/policy_enable`. The last three are operator topics; there is no teleop in the repo.
@@ -169,7 +169,7 @@ graph LR
 - Load sign bit 10: **fixed** (`feetech_protocol.h:187-195`, `main.cpp:332`).
 - #420 and #426: fixed.
 - #451, #447 and #449: merged.
-- #425: **not merged**.
+- #425: **not merged**. ⚠ superseded: merged 2026-09-25 (2b92cf5).
 - #441: inert (F3).
 - #429, #430 and #431: open, bench-gated.
 - Topic-contract gate: **merged** as #343 (pubs), #344 (subs) and #349 (`power_rails` width). It covers `main.cpp` ↔ firmware README *names* only: no types, rates or QoS, and it does not check that a host node sits on the other end. That missing check is the one that finds F5, F7, F10 and F13.
