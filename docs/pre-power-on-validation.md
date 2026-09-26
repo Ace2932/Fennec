@@ -203,7 +203,7 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
       pulls the gate above the source, so Q1 turns on and passes the reversed pack. Treat a
       reversed `J1` as destructive until the rework and the reversed-`J1` bench test in
       `../hardware/pcb-mods/BUILD_PLAN.md` §6 gate 9a have both passed. Confirm flat=+.
-      **This moves `J1` out of 🟢 Low** until 9a passes.
+      **This moves `J1` out of 🟢 Low** until 9a passes. (FMEA row: `power-chain-fmea.md#pc-01`.)
 - [ ] **SW1** — confirm the physical switch is rated for full pack current (~15–18 A).
 - [ ] **J9 FE-URT-1** — Pattern-A bench adapter only; confirm its data pin = MASTER_A if used.
 - [ ] **Q1 IRLB3034** — TO-220 G/D/S = pin 1/2/3 (matches footprint); confirm tab = Drain.
@@ -412,7 +412,7 @@ mitigation is to RAISE `BATT_LOW` (R4/R5), not to lower `HARDCUT`.
 Record: actual `BATT_LOW` V **falling and rising**, actual `HARDCUT` V **falling and rising**,
 hysteresis band, measured window in seconds, and V5_AUX under load at the moment of each trip.
 
-## 🟡 3. Inrush into bulk capacitance (~5470µF: 5×1000µF + 3×470µF)
+## 🟡 3. Inrush into bulk capacitance (~5470µF: 5×1000µF + 3×470µF) ⚠ superseded by docs/power-chain-fmea.md#pc-10 (hot-plug sees 940 µF)
 Charged 16.8V pack → XT60 → ~5470µF = hard inrush spike + connector arc. No precharge.
 - [ ] ~~First connect at CURRENT-LIMITED bench supply (0.5A) — watch for sustained inrush~~
       **→ procedure changed 2026-09-25, #433.** 0.5 A with every buck plugged in fails in two ways.
