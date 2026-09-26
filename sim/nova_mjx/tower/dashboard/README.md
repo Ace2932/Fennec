@@ -1,6 +1,9 @@
 # Tower training dashboard
 
-**URL (tailnet only): http://100.118.31.63:8765/**
+**URL: https://tower.tail6cba27.ts.net/fennec/** (served by the homelab front door,
+`tailscale serve`; see `docs/superpowers/specs/2026-09-26-dashboard-front-door-design.md`
+in the homelab repo). The old `fennec-dashboard.service` (`python3 -m http.server` on
+port 8765) is retired — the front door serves `~/fennec-dashboard/www` directly.
 
 A static page regenerated every 2 min from `~/fennec-runs`. It shows:
 
@@ -16,7 +19,8 @@ A static page regenerated every 2 min from `~/fennec-runs`. It shows:
   than 15 min old.
 - A tower health strip: GPU °C, CPU °C and GPU W from `~/fennec-runs/thermal-guard.log`
   (last 24 h), the 90 °C guard limit, and any `THERMAL STOP` line. Long history lives in
-  Grafana: http://100.118.31.63:3000/d/tower-metrics/tower (linked from the page).
+  Grafana: `/grafana/d/tower-metrics/tower` (linked from the page, relative — the front
+  door serves Grafana at `/grafana/` on the same origin as this page's `/fennec/`).
 - Scorecard servo-protection columns when the eval JSON has them: `servos_tripped_end`,
   `slew_clip_frac`, `guard_trip_pct` (red if > 0) and `guard_run_ms_p50/p99/max`.
 - Per finished variant, a rollout video and a gait diagram for two courses: flat at
@@ -63,10 +67,14 @@ and is retried only when the pkl changes. Output: `www/media/<queue>__<variant>_
 
 ## Install (on the tower, from a checkout of this dir)
 
+The page itself is no longer served by its own unit: the homelab front door
+(`tailscale serve`) serves `~/fennec-dashboard/www` at `/fennec/` directly. Only the
+generator and render timers still run here.
+
 ```bash
 mkdir -p ~/fennec-dashboard/www/media ~/.config/systemd/user
 cp dashboard.py render_rollout.py ~/fennec-dashboard/
-cp fennec-dashboard.service fennec-dashboard-gen.service fennec-dashboard-gen.timer \
+cp fennec-dashboard-gen.service fennec-dashboard-gen.timer \
    fennec-dashboard-render.service fennec-dashboard-render.timer ~/.config/systemd/user/
 # read-only sim code for the renders (never the live checkouts); pin to what each queue trains
 git -C ~/codebases/Fennec worktree add --detach ~/fennec-dashboard/simcode-gs "$(git -C ~/codebases/Fennec rev-parse HEAD)"
@@ -74,7 +82,7 @@ git -C ~/codebases/Fennec worktree add --detach ~/fennec-dashboard/simcode-vn "$
 /usr/bin/python3 ~/fennec-dashboard/dashboard.py --selftest
 /usr/bin/python3 ~/fennec-dashboard/render_rollout.py --selftest
 systemctl --user daemon-reload
-systemctl --user enable --now fennec-dashboard.service fennec-dashboard-gen.timer fennec-dashboard-render.timer
+systemctl --user enable --now fennec-dashboard-gen.timer fennec-dashboard-render.timer
 systemctl --user list-timers | grep fennec-dashboard
 ```
 
@@ -85,8 +93,8 @@ queue.
 ## Uninstall
 
 ```bash
-systemctl --user disable --now fennec-dashboard.service fennec-dashboard-gen.timer fennec-dashboard-render.timer
-rm ~/.config/systemd/user/fennec-dashboard{.service,-gen.service,-gen.timer,-render.service,-render.timer}
+systemctl --user disable --now fennec-dashboard-gen.timer fennec-dashboard-render.timer
+rm ~/.config/systemd/user/fennec-dashboard{-gen.service,-gen.timer,-render.service,-render.timer}
 systemctl --user daemon-reload
 git -C ~/codebases/Fennec worktree remove ~/fennec-dashboard/simcode-gs
 git -C ~/codebases/Fennec worktree remove ~/fennec-dashboard/simcode-vn

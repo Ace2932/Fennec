@@ -29,7 +29,7 @@ import sys
 import time
 
 STALE_S = 15 * 60
-GRAFANA = "http://100.118.31.63:3000/d/tower-metrics/tower"
+GRAFANA = "/grafana/d/tower-metrics/tower"
 THERMAL_LIMIT = 90
 HEALTH_POINTS = 720          # thermal-guard.log is 1 line / 30 s: keep the last 24 h, thinned
 FEET = ("FL", "FR", "RL", "RR")
@@ -390,10 +390,7 @@ def health_html(h):
         '<div class="muted">no thermal-guard.log data</div>'
     return (f'<div class="card"><b>Tower health</b> <span class="muted small">thermal-guard.log, last 24 h · '
             f'guard stops training at {THERMAL_LIMIT}°C for 3 checks · history: '
-            f'<a id="grafana" href="{GRAFANA}">Grafana tower dashboard</a></span> {stops}{chart}</div>'
-            # same host as this page, so an ssh tunnel (localhost:8765 + :3000) stays on the tunnel
-            "<script>document.getElementById('grafana').href = location.protocol + '//' + "
-            "location.hostname + ':3000/d/tower-metrics/tower'</script>")
+            f'<a id="grafana" href="{GRAFANA}">Grafana tower dashboard</a></span> {stops}{chart}</div>')
 
 
 def render(data):
@@ -615,10 +612,11 @@ def selftest():
         assert "obs size 105 != 111" in page and "render failed" in page
         assert '<td class="bad num">12.5</td>' in page and "20/140/200" in page and "40.0" in page
         assert "THERMAL STOP 2026-09-25 20:21:59" in page
-        assert f'<a id="grafana" href="{GRAFANA}"' in page and "location.hostname + ':3000/d/tower-metrics/tower'" in page
-        # every other link is relative so the page works through an ssh tunnel
-        assert set(re.findall(r'(?:src|href)="(https?://[^/"]+)', page)) <= \
-            {"http://100.118.31.63:3000", "https://cdnjs.cloudflare.com"}, re.findall(r'(?:src|href)="(https?://[^"]+)', page)
+        assert f'<a id="grafana" href="{GRAFANA}"' in page and GRAFANA == "/grafana/d/tower-metrics/tower"
+        assert "location.hostname" not in page      # the front door serves Grafana on the same origin
+        # every link is relative or cdnjs: the page is served at /fennec/ behind the tailnet front door
+        assert set(re.findall(r'(?:src|href)="(https?://[^/"]+)', page)) <= {"https://cdnjs.cloudflare.com"}, \
+            re.findall(r'(?:src|href)="(https?://[^"]+)', page)
         (runs / "q" / "service.log").write_text("[plan] s1\nTraceback (x)\n  File y\nKeyError: 'z'\n")
         assert "KeyError" in service_log(runs / "q" / "service.log")["error"]
     print("selftest OK")
