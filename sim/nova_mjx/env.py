@@ -245,12 +245,13 @@ POSITION_MODE_ACC_REG = 75
 # ...but that ceiling is the FACTORY value of register 85 (Maximum_Acceleration =
 # 50). With reg85 = 254 (#466 bench) the servo tracks 0.97 / 0.99 / 0.55 at
 # 1.4 / 2 / 3 Hz with 60-75 ms lag — and the PLAIN actuator here (no profile,
-# --goal-acc-reg 0) is the closest model: 0.99 / 0.84 / 0.54, slightly slow at 2 Hz
-# because the damping caps no-load speed at 2.8 rad/s while the bench shows ~3.8.
-# Adding any profile only makes it slower. So: reg85=254 -> --goal-acc-reg 0.
+# --goal-acc-reg 0) with the bench no-load speed (build_mjcf VMAX_LEG 3.83) is the
+# closest model: 0.99 / 1.02 / 0.70 — exact in the 1-2 Hz trot band, over-tracking
+# 3 Hz where the real ~40 rad/s^2 ceiling bites. So: reg85=254 -> --goal-acc-reg 0.
 POSITION_MODE_R85_254_ACC_REG = 0
 
 FW_GOAL_SLEW = 2000 * 2 * 3.141592653589793 / 4096   # rad/s, firmware goal slew (3.07)
+DUTY_SOFT = 0.8        # --w-duty bills duty above this (the servo's own unload line)
 FW_GUARD_DUTY = 0.9    # main.cpp NOVA_STALL_LOAD_RAW 900 (of 1000)
 FW_GUARD_POLLS = 5     # main.cpp NOVA_STALL_PERSIST — 5 x 20 ms polls = 100 ms
 OVERLOAD_DUTY = 0.8    # Feetech default unload: above 80 % duty ...
@@ -302,7 +303,7 @@ def ref_lift_table():
 #
 # The `airT_*` / `ghost_*` metrics keep BOTH definitions visible so this can never
 # silently drift again.
-FOOT_RADIUS = 0.014
+FOOT_RADIUS = 0.017      # #443: == build_mjcf.R_FOOT == nova_geometry.yaml leg.foot_radius
 CONTACT_EPS = 1e-3
 
 # COMMANDED footswing clearance target `c` (lift-v5, walk-these-ways pattern).
@@ -410,7 +411,7 @@ class NovaJoystick(PipelineEnv):
                  knee_config="elbow_back", torque_limit=1.0, goal_acc=0.0,
                  joint_stale_p=0.0, asym=False, ref_gait=False,
                  ref_height=REF_HEIGHT, overload_model=False, w_overload=0.0,
-                 goal_slew=0.0, **kwargs):
+                 goal_slew=0.0, w_duty=0.0, **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
@@ -472,6 +473,10 @@ class NovaJoystick(PipelineEnv):
         # clip rate is tracked either way (metric slew_clip = fraction of joints
         # whose commanded target moved faster than the firmware would pass).
         self._goal_slew = float(goal_slew)
+        # DUTY COST (v-next): trained policies sat at >= 90 % duty for ~0.5 s runs,
+        # which the firmware stall guard (900 / 100 ms) would fleet-limp at TL 1000.
+        # Bill duty above DUTY_SOFT per joint so the gait stops living at stall.
+        self._w_duty = float(w_duty)
         self._overload = bool(overload_model)
         self._w_overload = float(w_overload)
         if self._torque_limit != 1.0:
@@ -712,7 +717,7 @@ class NovaJoystick(PipelineEnv):
             "w_track", "w_yaw", "w_progress", "w_air", "w_clearance", "w_swingref",
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_carry", "w_gait",
-            "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand", "w_overload",
+            "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand", "w_overload", "w_duty",
             "n_tripped", "slew_clip", "g_max",
             "w_climb", "w_beta_climb",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
@@ -1186,6 +1191,7 @@ class NovaJoystick(PipelineEnv):
         # COST on sustained near-stall runs, starting at 1 s (half the unload
         # window): the policy should never get near the servo's 2 s self-unload.
         w_overload = -self._w_overload * jp.sum(jp.clip(info["hot_t"] - 1.0, 0.0, 1.0))
+        w_duty = -self._w_duty * jp.sum(jp.maximum(duty - DUTY_SOFT, 0.0))
         w_actrate = -0.02 * act_rate
         w_energy = -2e-3 * energy
         w_jerk = -0.01 * jerk
@@ -1195,7 +1201,7 @@ class NovaJoystick(PipelineEnv):
                   + w_pose + 0.1 + w_climb + beta_climb + w_pbrs_climb
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_carry
-                  + w_actrate + w_energy + w_jerk + w_stand + w_overload)
+                  + w_actrate + w_energy + w_jerk + w_stand + w_overload + w_duty)
         # w_climb-aware clip — UPPER bound only. The climb reward can legitimately
         # spike to w_climb·(one riser) = w_climb·STAIR_RISE·level ≤ w_climb·0.08 (the
         # curriculum caps level at tmax=1) on top of the task; the flat +10 ceiling
@@ -1315,6 +1321,7 @@ class NovaJoystick(PipelineEnv):
             w_slip=w_slip, w_splay=w_splay, w_carry=w_carry, w_gait=w_gait,
             w_actrate=w_actrate,
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand, w_overload=w_overload,
+            w_duty=w_duty,
             n_tripped=jp.sum(info["tripped"].astype(jp.float32)), slew_clip=slew_clip,
             g_max=info["g_max"].astype(jp.float32),
             w_climb=w_climb, w_beta_climb=beta_climb,
