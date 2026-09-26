@@ -326,7 +326,7 @@ def guard_cells(m):
     """Servo-protection columns; '–' in evals from code older than the field."""
     trip, slew, g = f(m.get("servos_tripped_end")), f(m.get("slew_clip_frac")), f(m.get("guard_trip_pct"))
     ms = [f(m.get(f"guard_run_ms_{k}")) for k in ("p50", "p99", "max")]
-    return [f'<td class="{"bad" if trip else ""} num">{fmt(trip, 2)}</td>',
+    return [f'<td class="{"bad" if trip else ""} num">{fmt(trip, 3)}</td>',
             f'<td class="num">{fmt(None if slew is None else 100 * slew)}</td>',
             f'<td class="{"bad" if g else ""} num">{fmt(g)}</td>',
             f'<td class="num">{"–" if ms[0] is None else "/".join(fmt(x, 0) for x in ms)}</td>']
@@ -376,7 +376,8 @@ def media_html(data, vid):
                 f'{"<span class=bad>fell at step " + str(fell) + "</span>" if fell else "no fall"} · '
                 f'≥90% duty {fmt(f(j.get("guard_cells_pct")))}% of joint-steps') if j else ""
         out.append(f'<div class="mcell"><b>{course}</b> <span class="muted small">{txt}</span>'
-                   + (f'<video src="{src}.mp4" controls muted loop playsinline preload="metadata"></video>'
+                   # #t=0.1: with preload=metadata, browsers then paint a frame instead of black
+                   + (f'<video src="{src}.mp4#t=0.1" controls muted loop playsinline preload="metadata"></video>'
                       if e["mp4"] else "")
                    + (f'<img src="{src}.png" alt="gait diagram {course}" loading="lazy">' if e["png"] else "")
                    + f'<div class="small">{info}</div></div>')
@@ -610,7 +611,7 @@ def selftest():
         page = render(d)
         assert "107.7" in page and 'class="good num"' in page and 'class="bad num"' in page
         assert "no training data yet" in page                   # EMPTY variant
-        assert '<video src="media/q__V__flat.mp4"' in page and 'src="media/q__V__flat.png"' in page
+        assert '<video src="media/q__V__flat.mp4#t=0.1"' in page and 'src="media/q__V__flat.png"' in page
         assert "obs size 105 != 111" in page and "render failed" in page
         assert '<td class="bad num">12.5</td>' in page and "20/140/200" in page and "40.0" in page
         assert "THERMAL STOP 2026-09-25 20:21:59" in page
