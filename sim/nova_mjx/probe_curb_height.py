@@ -81,11 +81,13 @@ def main():
     ap.add_argument("--ref-gait", action="store_true")
     ap.add_argument("--torque-limit", type=float, default=1.0)
     ap.add_argument("--goal-acc-reg", type=int, default=0)
+    ap.add_argument("--eff-scale", type=float, default=1.0)
     ap.add_argument("--episodes", type=int, default=32)
     ap.add_argument("--steps", type=int, default=400)
     a = ap.parse_args()
     env = NovaJoystick(asym=a.asym, ref_gait=a.ref_gait, joint_stale_p=0.5,
-                       torque_limit=a.torque_limit, goal_acc=goal_acc_rad(a.goal_acc_reg))
+                       torque_limit=a.torque_limit, goal_acc=goal_acc_rad(a.goal_acc_reg),
+                       eff_scale=a.eff_scale)
     policy = load_policy(a.policy, env, a.asym)
     print(f"1-cell RAMP step (5 cm cells, not a vertical riser) at x={CURB_X} m, fwd 0.25 m/s, "
           f"{a.steps} steps, {a.episodes} DR episodes/height")
