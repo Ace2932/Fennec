@@ -46,6 +46,24 @@ def main():
     late = np.mean([f for t, _, f in off if t > 2.2])
     assert late > 0.8 * stall, f"model OFF force {late:.2f} not near stall"
     print(f"ok  model off: flag tracked (would-trip), force still {late:.2f} N*m after 2.2 s")
+    # TL 0.8 caps duty at 0.8, so the (> 80 %) unload can NEVER fire -- under DR too.
+    # Was violated by float rounding: 3 of 16 DR robots latched at a held stall.
+    import functools
+    from brax.envs.wrappers.training import DomainRandomizationVmapWrapper
+    from env import make_domain_randomize
+    env8 = NovaJoystick(push_mag=0.0, overload_model=True, torque_limit=0.8)
+    n = 16
+    venv = DomainRandomizationVmapWrapper(env8, functools.partial(
+        make_domain_randomize(0.0), rng=jax.random.split(jax.random.PRNGKey(3), n)))
+    s8 = jax.jit(venv.reset)(jax.random.split(jax.random.PRNGKey(0), n))
+    st8 = jax.jit(venv.step)
+    a8 = np.zeros((n, 12), np.float32)
+    a8[:, KNEE] = -3.0
+    for _ in range(150):
+        s8 = st8(s8, jp.asarray(a8))
+    n_trip = int(np.asarray(s8.info["tripped"][:, KNEE]).sum())
+    assert n_trip == 0, f"{n_trip}/{n} DR robots unloaded at TL 0.8 (duty can't exceed 0.8)"
+    print("ok  TL 0.8 + DR: held stall never unloads (0/16)")
     print("ALL OVERLOAD MODEL CHECKS PASSED")
 
 

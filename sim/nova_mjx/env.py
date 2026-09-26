@@ -795,7 +795,11 @@ class NovaJoystick(PipelineEnv):
         # already carries TL x DR headroom: sag/heat). TL caps duty at TL.
         duty = jp.abs(pipeline_state.qfrc_actuator[6:]) / (
             self.sys.actuator_forcerange[:, 1] / self._torque_limit)
-        hot_t = jp.where(duty > OVERLOAD_DUTY, info["hot_t"] + self._dt, 0.0)
+        # + 1e-4: at TL <= 0.8 a saturated joint's duty is EXACTLY the TL mathematically;
+        # after DR scaling float32 rounds it to ~0.8000001, which latched spurious
+        # unloads (3/16 DR robots held at stall, TL 0.8). A real TL-800 servo clamps
+        # duty at 800 and never exceeds the >80 % unload line.
+        hot_t = jp.where(duty > OVERLOAD_DUTY + 1e-4, info["hot_t"] + self._dt, 0.0)
         # FIRMWARE stall guard (main.cpp NOVA_STALL_LOAD_RAW 900, NOVA_STALL_PERSIST
         # 5): consecutive 50 Hz polls at >= 90 % duty; 5 = 100 ms -> latched fleet limp.
         g_run = jp.where(duty >= FW_GUARD_DUTY, info["g_run"] + 1, 0)
