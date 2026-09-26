@@ -119,6 +119,7 @@ def test_run_executes_past_the_imports_and_returns_a_check_result(monkeypatch):
 
     class _FakeDurabilityPolicy:
         TRANSIENT_LOCAL = 1
+        VOLATILE = 2  # F5: the ack subscriptions use VOLATILE
 
     monkeypatch.setattr(qos_mod, "QoSProfile", _FakeQoSProfile, raising=False)
     monkeypatch.setattr(qos_mod, "ReliabilityPolicy", _FakeReliabilityPolicy, raising=False)
@@ -162,3 +163,79 @@ def test_run_executes_past_the_imports_and_returns_a_check_result(monkeypatch):
     assert result.name == "firmware_tables"
     assert result.status == CheckStatus.STALE
     assert "5 s" in result.message
+
+
+def _run_with(monkeypatch, msgs):
+    """Drive run() through a fake node that delivers `msgs` ({topic: data}) on
+    the first spin. Returns (result, {topic: qos})."""
+    qos_mod = sys.modules["rclpy.qos"]
+
+    class _QoS:
+        def __init__(self, **kw):
+            self.__dict__.update(kw)
+
+    monkeypatch.setattr(qos_mod, "QoSProfile", _QoS, raising=False)
+    monkeypatch.setattr(qos_mod, "ReliabilityPolicy",
+                        types.SimpleNamespace(RELIABLE="reliable"), raising=False)
+    monkeypatch.setattr(qos_mod, "DurabilityPolicy",
+                        types.SimpleNamespace(TRANSIENT_LOCAL="transient_local",
+                                              VOLATILE="volatile"), raising=False)
+
+    class _Node:
+        def __init__(self):
+            self.subs, self.qos, self.t = {}, {}, 0
+
+        def get_clock(self):
+            node = self
+
+            class _C:
+                def now(self_inner):
+                    node.t += 500_000_000
+                    return types.SimpleNamespace(nanoseconds=node.t)
+            return _C()
+
+        def create_subscription(self, msg_type, topic, cb, qos):
+            self.subs[topic], self.qos[topic] = cb, qos
+            return topic
+
+        def destroy_subscription(self, sub):
+            pass
+
+    node = _Node()
+
+    def spin_once(n, timeout_sec=0.0):
+        for topic, data in msgs.items():
+            if topic in n.subs:  # a topic nobody subscribed to is just unheard
+                n.subs[topic](types.SimpleNamespace(data=data))
+
+    monkeypatch.setattr(sys.modules["rclpy"], "spin_once", spin_once, raising=False)
+    return FirmwareTablesCheck().run(node), node.qos
+
+
+ACTIVE = {"firmware_tables_state": "active;missing=[]"}
+
+
+def test_F5_a_table_the_teensy_never_accepted_FAILS(monkeypatch):
+    """F5: host says `active`, but /hfe_envelope_rx is still 0 (every copy
+    rejected). Before the fix this passed preflight."""
+    r, _ = _run_with(monkeypatch, {**ACTIVE, "/joint_limits_rx": 4,
+                                   "/hfe_envelope_rx": 0, "/limp_pose_rx": 4})
+    assert r.status == CheckStatus.FAIL
+    assert "/hfe_envelope_rx" in r.message
+
+
+def test_F5_an_ack_that_never_arrives_FAILS(monkeypatch):
+    r, _ = _run_with(monkeypatch, {**ACTIVE, "/joint_limits_rx": 4,
+                                   "/hfe_envelope_rx": 4})
+    assert r.status == CheckStatus.FAIL
+    assert "/limp_pose_rx" in r.message
+
+
+def test_F5_all_three_acks_positive_PASSES_on_volatile_qos(monkeypatch):
+    r, qos = _run_with(monkeypatch, {**ACTIVE, "/joint_limits_rx": 1,
+                                     "/hfe_envelope_rx": 1, "/limp_pose_rx": 1})
+    assert r.status == CheckStatus.OK
+    # micro-ROS publishes RELIABLE+VOLATILE; TRANSIENT_LOCAL would hear nothing.
+    for t in ("/joint_limits_rx", "/hfe_envelope_rx", "/limp_pose_rx"):
+        assert qos[t].durability == "volatile", t
+    assert "/hfe_envelope_clamps" not in qos, "clamp count is not an ack"

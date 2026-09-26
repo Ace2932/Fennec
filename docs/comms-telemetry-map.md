@@ -95,7 +95,7 @@ graph LR
 - On a cold robot boot the Teensy waits forever, and an agent crash is never restarted.
 - Fix: add a `micro-ros-agent.service` (`Restart=always`, a udev symlink by Teensy serial rather than `ttyACM0`) ordered before bringup. Also, `setup-jetson.md` "handshake never completes" is stale, since `main.cpp:929` retries.
 
-**F5 MED NEW: the firmware's table acks are never read.**
+**F5 MED NEW: the firmware's table acks are never read.** ⚠ **FIXED 2026-09-26 in this PR (fix/f5-preflight-table-acks)**: preflight now requires all three `*_rx` > 0 (VOLATILE).
 - `/joint_limits_rx`, `/hfe_envelope_rx`, `/limp_pose_rx` and `/hfe_envelope_clamps` have zero subscribers.
 - `preflight/checks/firmware_tables.py:10-17` says it should require them "once #186 lands". #186 and #187 are both closed and the check was never updated, so a table the Teensy rejected still passes preflight.
 - Fix: require `*_rx > 0` (VOLATILE QoS) consistent with `firmware_tables_state`.
