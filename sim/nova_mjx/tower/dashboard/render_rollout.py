@@ -22,6 +22,16 @@ the rollout nor the render can allocate GPU memory next to a training run.
 """
 import json
 import os
+
+# CPU-ONLY, enforced here as well as in the unit (review of #446): a manual
+# `--queue` / `--job` run must not allocate GPU memory next to a training run.
+# Set before anything imports jax or opens a GL context.
+os.environ["JAX_PLATFORMS"] = "cpu"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+os.environ.setdefault("MUJOCO_GL", "egl")
+_MESA = "/usr/share/glvnd/egl_vendor.d/50_mesa.json"
+if os.path.exists(_MESA):
+    os.environ.setdefault("__EGL_VENDOR_LIBRARY_FILENAMES", _MESA)
 import pathlib
 import subprocess
 import sys

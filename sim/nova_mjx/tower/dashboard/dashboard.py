@@ -373,7 +373,7 @@ def media_html(data, vid):
         j = e["json"] or {}
         fell = j.get("fell_step")
         info = (f'dx {fmt(f(j.get("x_travel_m")), 2)} m · '
-                f'{"<span class=bad>fell at step " + str(fell) + "</span>" if fell else "no fall"} · '
+                f'{"<span class=bad>fell at step " + html.escape(str(fell)) + "</span>" if fell else "no fall"} · '
                 f'≥90% duty {fmt(f(j.get("guard_cells_pct")))}% of joint-steps') if j else ""
         out.append(f'<div class="mcell"><b>{course}</b> <span class="muted small">{txt}</span>'
                    # #t=0.1: with preload=metadata, browsers then paint a frame instead of black
@@ -426,7 +426,7 @@ def render(data):
             st = " · ".join(
                 f"{html.escape(s['name'])} " + ("DONE" if s["DONE"] else f"{s['done']:,}/{s['timesteps']:,}")
                 for s in v["stages"])
-            body = (f'<div class="charts" data-v="{vid}"></div>' if v["curves"]
+            body = (f'<div class="charts" data-v="{html.escape(vid, quote=True)}"></div>' if v["curves"]
                     else '<div class="muted">no training data yet</div>') + media_html(data, vid)
             vsecs.append(f'<details class="variant" {"open" if v["curves"] else ""}>'
                          f'<summary><b>{html.escape(q["name"])}/{html.escape(v["name"])}</b> '

@@ -104,3 +104,8 @@ rm -r ~/fennec-dashboard
   labels before it. That offset is not the previous label's last logged step. For
   example, a crash after the 6.39M eval but before that checkpoint resumes from
   4.26M, and the curve shows that rollback.
+
+**Dependency:** `render_rollout.py` imports sim code that lands with PR #444 (`eval_gait.load_policy`,
+`probe_curb_height.curb_field`, `env.goal_acc_rad`, `env._torque_limit`). Merge #444 first; until then the
+render worktrees must be pinned to `sim/gait-study` / `sim/v-next`. A failed render leaves a `.err` that is not
+retried until the policy changes — delete the `.err` to force a retry after a transient failure.
