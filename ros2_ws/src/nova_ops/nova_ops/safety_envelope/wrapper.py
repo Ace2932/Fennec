@@ -171,13 +171,13 @@ class SafeJointCommandPublisher:
         intentionally empty (firmware/teensy/firmware/README.md), so we
         treat effort[i] as joint id i+1.
         """
-        # Use msg.header.stamp if present, else current ROS time.
-        try:
-            stamp_ns = msg.header.stamp.sec * 1_000_000_000 + msg.header.stamp.nanosec
-            if stamp_ns == 0:
-                stamp_ns = self.node.get_clock().now().nanoseconds
-        except AttributeError:
-            stamp_ns = self.node.get_clock().now().nanoseconds
+        # ARRIVAL time, never msg.header.stamp: the Teensy stamps /joint_states with
+        # its UPTIME (main.cpp, ms/1000), and _load_window compares against this
+        # node's clock. Mixing the two put every sample ~1.8e18 ns "in the past", so
+        # the load refusal could never fire on hardware (comms audit 2026-09-25,
+        # test_load_refusal_fires_with_firmware_uptime_stamps). Arrival lag is a few
+        # ms against a 0.3 s window.
+        stamp_ns = self.node.get_clock().now().nanoseconds
 
         for idx, eff in enumerate(msg.effort):
             joint_id = idx + 1
