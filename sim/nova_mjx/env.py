@@ -256,8 +256,8 @@ FW_GUARD_DUTY = 0.9    # main.cpp NOVA_STALL_LOAD_RAW 900 (of 1000)
 FW_GUARD_POLLS = 5     # main.cpp NOVA_STALL_PERSIST — 5 x 20 ms polls = 100 ms
 OVERLOAD_DUTY = 0.8    # Feetech default unload: above 80 % duty ...
 OVERLOAD_S = 2.0       # ... for 2 s ...
-OVERLOAD_OUT = 0.2
-OVERLOAD_TOL = 5e-3    # numeric margin on the unload line (see step()); 80 % vs 80.5 %     # ... -> 20 % output (peer research, SmallDog + Feetech table)
+OVERLOAD_OUT = 0.2     # ... -> 20 % output (peer research, SmallDog + Feetech table)
+OVERLOAD_TOL = 5e-3    # numeric margin on the unload line (see step()); 80 % vs 80.5 %
 
 
 def goal_acc_rad(reg):
