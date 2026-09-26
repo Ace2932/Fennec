@@ -22,7 +22,7 @@ DT = 0.02                                   # 50 Hz control, as in sim
 
 
 class NovaPolicy:
-    def __init__(self, npz_path):
+    def __init__(self, npz_path, dt=DT):
         d = np.load(npz_path, allow_pickle=False)
         self.mean = d["mean"].astype(np.float32)
         self.std = d["std"].astype(np.float32)
@@ -32,6 +32,7 @@ class NovaPolicy:
         self.W = [d[f"W{i}"].astype(np.float32) for i in range(n)]
         self.b = [d[f"b{i}"].astype(np.float32) for i in range(n)]
         self.nu = len(self.default_pose)
+        self.dt = float(dt)          # control period: advances the reference phase clock
 
         # --- VALIDATE THE OBSERVATION CONTRACT (fail LOUD, not on the robot) ---
         # A weight file trained with a different obs layout (different HIST/PROP,
@@ -136,5 +137,5 @@ class NovaPolicy:
         q = self.default_pose + a * self.action_scale
         if self.ref:
             q = q + self.ref_offset(self.phase)
-            self.phase = (self.phase + self.ref["ref_freq"] * DT) % 1.0
+            self.phase = (self.phase + self.ref["ref_freq"] * self.dt) % 1.0
         return q

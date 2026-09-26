@@ -87,8 +87,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--policy", default="nova_policy.pkl")
     ap.add_argument("--npz", default="nova_policy.npz")
-    ap.add_argument("--ref-height", type=float, default=0.04,
-                    help="ref_gait policies: the --ref-height they TRAINED with (m)")
+    ap.add_argument("--ref-height", type=float, default=None,
+                    help="REQUIRED for ref_gait (107-d) policies: the --ref-height they "
+                         "TRAINED with (m). Not recoverable from the pkl, so no default.")
     ap.add_argument("--onnx", default="nova_policy.onnx")
     ap.add_argument("--label", default="", help="human name for this policy "
                     "(e.g. 'omni-flat-40M') — travels in the artifact metadata")
@@ -134,6 +135,9 @@ def main():
     for i, (Wi, bi) in enumerate(zip(W, b)):
         bundle[f"W{i}"], bundle[f"b{i}"] = Wi, bi
     ref = obs_dim == HIST * PROP + 3 + act_dim + 2      # ref_gait: +[sin, cos] clock
+    if ref and args.ref_height is None:
+        raise SystemExit("this is a ref_gait (107-d) policy: pass --ref-height = the value it "
+                         "trained with (a wrong height exports a silently wrong reference)")
     if ref:
         from env import (ref_lift_table, REF_DZ_MAX, BLIND_CMD_F, GAIT_OFFSETS,
                          GAIT_DUTY)

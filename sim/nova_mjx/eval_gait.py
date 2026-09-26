@@ -16,7 +16,9 @@ Columns:
   swing    mean height of airborne feet (cm)
   air      per-foot airborne fraction FL/FR/RL/RR (radius-corrected contact);
            a carried leg reads ~1, a dragged one ~0
-  CoT      mean mechanical power / (m g |v|)
+  CoT      mean mechanical power / (m g |v|)  (nominal mass, not the per-env DR mass)
+Known: the command is pinned after reset/step, so the reset obs and the step-250
+in-env resample each carry the sampled command for ONE step of the rollout.
 """
 import argparse
 import functools
@@ -84,7 +86,7 @@ def score(env, policy, n, steps, seed, pin_cmd, terrain=0.0, step_frac=0.0):
             * alive[:, None],
             cot=power / (mass * 9.81 * jp.maximum(spd, 0.05)) * moving * alive,
             tripped=m["n_tripped"] * alive, slew=m["slew_clip"] * alive,
-            gmax=m["g_max"])
+            gmax=m["g_max"] * alive)
         alive = alive * (1.0 - s.done)
         return (s, alive), rec
 
@@ -107,13 +109,16 @@ def score(env, policy, n, steps, seed, pin_cmd, terrain=0.0, step_frac=0.0):
         "swing_cm": float(100 * rec["swing"].sum() / na),
         "air": [float(x) for x in rec["air"].sum((0, 1)) / na],
         "cot": float(rec["cot"].sum() / nm),
-        "servos_tripped_end": float(rec["tripped"][-1].mean()),
+        # per-episode values FROZEN at the fall (max over alive steps): a fallen robot
+        # keeps stepping against the ground in this loop (no auto-reset), which would
+        # otherwise inflate the guard runs and zero the trip count (review of #444).
+        "servos_tripped_end": float(rec["tripped"].max(0).mean()),
         "slew_clip_frac": float(rec["slew"].sum() / na),
         # firmware stall guard: per-episode longest run at >= 90 % duty (ms at 50 Hz)
-        "guard_trip_pct": float(100 * np.mean(rec["gmax"][-1] >= FW_GUARD_POLLS)),
-        "guard_run_ms_p50": float(20 * np.percentile(rec["gmax"][-1], 50)),
-        "guard_run_ms_p99": float(20 * np.percentile(rec["gmax"][-1], 99)),
-        "guard_run_ms_max": float(20 * rec["gmax"][-1].max()),
+        "guard_trip_pct": float(100 * np.mean(rec["gmax"].max(0) >= FW_GUARD_POLLS)),
+        "guard_run_ms_p50": float(20 * np.percentile(rec["gmax"].max(0), 50)),
+        "guard_run_ms_p99": float(20 * np.percentile(rec["gmax"].max(0), 99)),
+        "guard_run_ms_max": float(20 * rec["gmax"].max()),
     }
 
 

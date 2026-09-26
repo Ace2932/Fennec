@@ -31,7 +31,7 @@ def hold(overload):
 
 def main():
     env, on = hold(True)
-    stall = float(env._stall_nom[KNEE])
+    stall = float(env.sys.actuator_forcerange[KNEE, 1])   # no DR, TL 1.0 -> the stall
     first = next((t for t, tr, _ in on if tr), None)
     assert first is not None, "held at stall for 3 s and never tripped"
     assert 1.9 <= first <= 2.3, f"tripped at {first:.2f} s, want ~2.0 s"

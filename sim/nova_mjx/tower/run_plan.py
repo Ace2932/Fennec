@@ -48,7 +48,9 @@ def main(plan_path):
             continue
         cmd = [py, "train.py", "--ckpt", str(sdir), "--timesteps", str(left),
                "--out", str(sdir / "policy.pkl"), *st.get("args", [])]
-        if st.get("init") and not any(sdir.glob("run_*/*/")):
+        # first attempt = no Brax checkpoint (digit-named dir) yet; any other subdir
+        # (e.g. an orbax tmp from a crash mid-first-write) doesn't count
+        if st.get("init") and not any(d.name.isdigit() for d in sdir.glob("run_*/*/")):
             init = pathlib.Path(st["init"]).expanduser()
             src = init if init.is_absolute() else run / st["init"] / "policy.pkl"
             cmd += ["--restore-params-pkl", str(src)]

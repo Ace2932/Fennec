@@ -200,7 +200,9 @@ class PolicyNode(Node):
                 "sim/nova_mjx/export_policy.py and point the policy_npz "
                 "parameter at the resulting .npz before launching this node."
             )
-        self.pol = NovaPolicy(npz)  # raises loud on an obs-contract mismatch
+        # dt = the node's real control period, so a ref-gait policy's phase clock
+        # doesn't drift if control_hz isn't 50 (review of #444)
+        self.pol = NovaPolicy(npz, dt=1.0 / float(self.get_parameter("control_hz").value))
         m = self.pol.meta
         self.get_logger().info(
             f"loaded {npz}: label='{m.get('label', '?')}' sha={m.get('sha', '?')} "

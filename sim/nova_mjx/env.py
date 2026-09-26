@@ -460,8 +460,8 @@ class NovaJoystick(PipelineEnv):
         # (battery sag / heat) then multiplies on top -> 0.42..0.60 of stall.
         self._torque_limit = float(torque_limit)
         # SERVO OVERLOAD UNLOAD (Feetech default Unloading_Conditions: >80 % duty
-        # for 2 s -> 20 % output). "Duty" is taken as |actuator force| / the part's
-        # full-voltage stall (forcerange BEFORE torque_limit and DR). Recovery is
+        # for 2 s -> 20 % output). "Duty" = |actuator force| / (this env's DR'd
+        # forcerange / torque_limit), i.e. force at 100 % duty (see step()). Recovery is
         # undocumented -> modelled as LATCHED for the rest of the episode. hot_t /
         # tripped are tracked even with the model OFF ("would have tripped"
         # diagnostic, metric n_tripped); only the physics cut is gated.
@@ -474,7 +474,6 @@ class NovaJoystick(PipelineEnv):
         self._goal_slew = float(goal_slew)
         self._overload = bool(overload_model)
         self._w_overload = float(w_overload)
-        self._stall_nom = sys.actuator_forcerange[:, 1]
         if self._torque_limit != 1.0:
             sys = sys.replace(
                 actuator_forcerange=sys.actuator_forcerange * self._torque_limit)
