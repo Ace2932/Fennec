@@ -26,9 +26,12 @@ Three operational things this doc used to leave implicit, all of which bite on C
 - **The teacher is NOT in the clone.** `sim/nova_mjx/artifacts/policies/*` is gitignored
   (`.gitignore:154`), so a fresh clone has no checkpoints and the run dies immediately. Copy the
   `.pkl` from Drive first — it is ~1.4 MB. The notebook does this and asserts it landed.
-- **There is no resume and no intermediate checkpoint.** `distill.py`'s only write is the
-  `pickle.dump` at export, so a Colab dropout loses the entire run. Point `--out` at a Drive path,
-  and calibrate the wall-clock at small scale before committing hours to the full one.
+- ~~**There is no resume and no intermediate checkpoint.** `distill.py`'s only write is the
+  `pickle.dump` at export, so a Colab dropout loses the entire run.~~ *Superseded (#413):*
+  `--ckpt DIR` checkpoints the whole run state (phase, episode/epoch, RNG, buffers, params, Adam
+  state, loss history) atomically every `--ckpt-every` episodes/epochs and at each phase change,
+  and **auto-resumes** when re-run with the same args (a different config is refused, not merged).
+  Put DIR on Drive / persistent disk. Still calibrate before committing hours (`--scale-cal`, below).
 - **`--eval-only` makes the second command cheap.** It reruns the paired eval against an
   already-exported student, so evaluating both `vx 0.35` and `vx 0.50` costs one eval, not a second
   distillation.
@@ -46,8 +49,21 @@ python distill.py \
     --label   distill-v1 \
     --bc-episodes N --bc-steps 150 \
     --dagger-episodes M --dagger-steps 150 \
-    --epochs E
+    --epochs E \
+    --ckpt    artifacts/policies/distill_ckpt_v1 --vx 0.35   # gitignored path
 ```
+
+Killed? Re-run the identical command; it prints `RESUMING ... phase X, episode N` and continues.
+
+**Calibrate first:** the same command with small N/M/E (e.g. 2x: `24 / 12 / 120`), the production
+`--bc-steps`/`--dagger-steps`, a throwaway `--ckpt`, and `--scale-cal`. It skips export/eval and
+prints s per BC episode, s per DAgger episode (first episode = XLA compile, reported separately),
+s per fit epoch, and a projected wall-clock at 1x/2x/10x/30x/100x. Fit cost is samples × epochs,
+so it grows ~SCALE² — the notebook's linear `cal × SCALE/SCALE_CAL` under-counts it.
+
+**Domain randomization is ON by default** (#413): each BC/DAgger episode draws one robot from the
+teacher's own `make_domain_randomize` (flat terrain, `--dr-scale 1.0`). `--no-dr` = the old
+nominal-only rollouts. The eval stays nominal, so the table below stays comparable.
 
 **Scale is not decided here, deliberately.** The module docstring says the production run is
 "10–100× the samples/epochs" of the defaults, and the defaults (`12/150` BC, `6/150` DAgger,
