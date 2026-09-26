@@ -81,6 +81,7 @@ this can't be misread as anything more.
 """
 import argparse
 import dataclasses
+import os
 import pickle
 import subprocess
 import sys
@@ -413,10 +414,13 @@ def export_student(net, policy_params, norm_state, out_prefix, label):
     npz_path = out_prefix.with_suffix(".npz")
     with open(pkl_path, "wb") as f:
         pickle.dump((norm_state, policy_params), f)
+    # CPU for the child: it inherits the parent's XLA_PYTHON_CLIENT_MEM_FRACTION,
+    # and a second GPU preallocation next to the parent's (and Ollama's) OOMs
+    # (2026-09-26 tower production run). The export is a numpy weight dump.
     subprocess.run(
         [sys.executable, "export_policy.py", "--policy", str(pkl_path),
          "--npz", str(npz_path), "--label", label],
-        cwd=HERE, check=True)
+        cwd=HERE, check=True, env={**os.environ, "JAX_PLATFORMS": "cpu"})
     return pkl_path, npz_path
 
 
