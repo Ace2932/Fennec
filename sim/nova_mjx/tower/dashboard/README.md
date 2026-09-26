@@ -46,6 +46,9 @@ and is retried only when the pkl changes. Output: `www/media/<queue>__<variant>_
   sim/gait-study). The env is built from the last stage's args (`--asym`, `--ref-gait`,
   `--torque-limit`, `--goal-acc-reg`, `--joint-stale-p`, `--goal-slew`,
   `--overload-model`, ...) so the policy loads. Videos are 640×480 H.264, about 0.2 MB.
+- **The pins don't follow the live checkouts.** When a queue's checkout moves, re-pin by hand:
+  `git -C ~/fennec-dashboard/simcode-vn checkout --detach "$(git -C ~/codebases/Fennec-vnext rev-parse HEAD)"`
+  (likewise `simcode-gs` from `~/codebases/Fennec`). To re-render, delete the media files.
 
 ## What it can and can't touch
 
