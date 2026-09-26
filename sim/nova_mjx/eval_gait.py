@@ -29,7 +29,8 @@ import numpy as np
 from brax import math
 from brax.envs.wrappers.training import DomainRandomizationVmapWrapper
 
-from env import NovaJoystick, make_domain_randomize, goal_acc_rad, REF_HEIGHT
+from env import (NovaJoystick, make_domain_randomize, goal_acc_rad, REF_HEIGHT,
+                 FW_GUARD_POLLS)
 
 
 def load_policy(path, env, asym):
@@ -82,7 +83,8 @@ def score(env, policy, n, steps, seed, pin_cmd, terrain=0.0, step_frac=0.0):
             air=jp.stack([m[f"airT_{k}"] for k in ("FL", "FR", "RL", "RR")], 1)
             * alive[:, None],
             cot=power / (mass * 9.81 * jp.maximum(spd, 0.05)) * moving * alive,
-            tripped=m["n_tripped"] * alive, slew=m["slew_clip"] * alive)
+            tripped=m["n_tripped"] * alive, slew=m["slew_clip"] * alive,
+            gmax=m["g_max"])
         alive = alive * (1.0 - s.done)
         return (s, alive), rec
 
@@ -107,6 +109,11 @@ def score(env, policy, n, steps, seed, pin_cmd, terrain=0.0, step_frac=0.0):
         "cot": float(rec["cot"].sum() / nm),
         "servos_tripped_end": float(rec["tripped"][-1].mean()),
         "slew_clip_frac": float(rec["slew"].sum() / na),
+        # firmware stall guard: per-episode longest run at >= 90 % duty (ms at 50 Hz)
+        "guard_trip_pct": float(100 * np.mean(rec["gmax"][-1] >= FW_GUARD_POLLS)),
+        "guard_run_ms_p50": float(20 * np.percentile(rec["gmax"][-1], 50)),
+        "guard_run_ms_p99": float(20 * np.percentile(rec["gmax"][-1], 99)),
+        "guard_run_ms_max": float(20 * rec["gmax"][-1].max()),
     }
 
 
@@ -148,7 +155,9 @@ def main():
         print(f"{name:5s} fall {r['fall']:5.1%}  spd% {r['spd_pct']:5.1f}  "
               f"verr {r['verr']:.3f}  yerr {r['yerr']:.3f}  swing {r['swing_cm']:.2f}cm  "
               f"air {' '.join(f'{x:.2f}' for x in r['air'])}  CoT {r['cot']:.2f}  "
-              f"tripped/robot {r['servos_tripped_end']:.2f}  slew-clip {r['slew_clip_frac']:.1%}")
+              f"tripped/robot {r['servos_tripped_end']:.2f}  slew-clip {r['slew_clip_frac']:.1%}  "
+              f"fw-guard trip {r['guard_trip_pct']:.0f}% of eps (>=90% duty run p50/p99/max "
+              f"{r['guard_run_ms_p50']:.0f}/{r['guard_run_ms_p99']:.0f}/{r['guard_run_ms_max']:.0f} ms)")
     if a.json:
         with open(a.json, "w") as f:
             json.dump(out, f, indent=1)
