@@ -16,6 +16,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <INA226.h>
+#include "rail_sample.h"   // RailSample + rail_fields() (native-testable, #439)
 
 namespace nova {
 
@@ -29,14 +30,6 @@ constexpr uint8_t INA226_ADDR_L2     = 0x45;
 // Override per-rail at construct time if shunt geometry differs.
 constexpr float DEFAULT_SHUNT_OHM = 0.002f;
 constexpr float DEFAULT_MAX_AMP   = 20.0f;
-
-struct RailSample {
-  float bus_voltage_v = 0.0f;
-  float current_a     = 0.0f;
-  float power_w       = 0.0f;
-  bool  valid         = false;     // true if last read succeeded
-  uint32_t last_us    = 0;
-};
 
 class Rail {
  public:
@@ -62,16 +55,14 @@ class Rail {
   // poll() reads the current chip state. Cheap (~120 µs typ for the 3 reads
   // over I²C @ 400 kHz). Updates the sample struct atomically from the
   // caller's perspective — this is single-threaded code, no locking needed.
+  // A failed read marks the sample invalid (-> NaN on /power_rails, #439);
+  // the logic is rail_read() in rail_sample.h, native-tested.
   void poll() {
     if (!present_) {
       sample_.valid = false;
       return;
     }
-    sample_.bus_voltage_v = ina_.getBusVoltage();
-    sample_.current_a     = ina_.getCurrent();
-    sample_.power_w       = ina_.getPower();
-    sample_.valid         = true;
-    sample_.last_us       = micros();
+    rail_read(ina_, sample_, micros());
   }
 
   const RailSample& sample() const { return sample_; }

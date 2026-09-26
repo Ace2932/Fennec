@@ -16,6 +16,7 @@ vendor/apt ROS packages this workspace deliberately does not source-vendor.
 Anything else (a typo, or a stub profile entry nobody ever wired up) fails
 loudly instead of silently no-op'ing at launch time.
 """
+
 import ast
 from pathlib import Path
 
@@ -61,7 +62,9 @@ def _all_node_actions():
             if key in seen:
                 continue
             seen.add(key)
-            out.append((profile_name, action[1], action[2], action[1] in local_packages))
+            out.append(
+                (profile_name, action[1], action[2], action[1] in local_packages)
+            )
     return out
 
 
@@ -149,8 +152,10 @@ def test_walk_and_policy_carry_the_same_stack():
     cannot quietly lose protection the scripted path keeps. If someone inlines
     one of them back into a literal list, this fails.
     """
+
     def non_controller(name):
         return [a for a in resolve_actions(name) if (a[0], a[2]) not in CONTROLLERS]
+
     assert non_controller("walk") == non_controller("policy")
 
 
@@ -161,4 +166,55 @@ def test_walk_and_policy_are_mutually_exclusive():
     for name in PROFILES:
         assert len(_controllers_in(name)) <= 1, (
             f"profile {name!r} resolves to two joint-command publishers: "
-            f"{sorted(_controllers_in(name))}")
+            f"{sorted(_controllers_in(name))}"
+        )
+
+
+# --- #441: `slam` must actually run lidar_selffilter_node ---
+#
+# lidar_selffilter_node existed (nova_ops/lidar_selffilter/node.py,
+# registered in setup.py) but no profile launched it, so POINT-LIO mapped
+# the robot's own unmasked ear-mast/leg returns as obstacles.
+
+
+def test_slam_profile_launches_lidar_selffilter():
+    actions = resolve_actions("slam")
+    filters = [a for a in actions if a[0] == "node" and a[2] == "lidar_selffilter_node"]
+    assert filters, f"'slam' profile has no lidar_selffilter_node action: {actions}"
+
+
+def test_slam_lidar_selffilter_is_wired_between_driver_and_point_lio():
+    """POINT-LIO's own config is fixed at `lid_topic: /unilidar/cloud`
+    (unilidar_l2.yaml, confirmed against the driver's real launch params in
+    docs/setup-network.md) and `slam`'s point_lio launch action passes it no
+    override -- so POINT-LIO only sees the filtered cloud if:
+      1. the unitree_lidar_ros2 driver is remapped OFF /unilidar/cloud
+         (else the driver and the filter both publish there and collide), and
+      2. the filter's output_topic is exactly /unilidar/cloud, fed by the
+         filter's input_topic reading whatever the driver was remapped to.
+    """
+    actions = resolve_actions("slam")
+
+    (filter_action,) = [
+        a for a in actions if a[0] == "node" and a[2] == "lidar_selffilter_node"
+    ]
+    filter_params = filter_action[3]
+    assert filter_params.get("output_topic") == "/unilidar/cloud", filter_params
+
+    lidar_launches = [
+        a
+        for a in actions
+        if a[0] == "launch" and a[1] == "unitree_lidar_ros2" and a[2] == "launch.py"
+    ]
+    assert len(lidar_launches) == 1, (
+        f"expected exactly one unitree_lidar_ros2 launch in 'slam': {lidar_launches}"
+    )
+    driver_cloud_topic = lidar_launches[0][3].get("cloud_topic", "/unilidar/cloud")
+    assert driver_cloud_topic != "/unilidar/cloud", (
+        "unitree_lidar_ros2 must be remapped off its /unilidar/cloud default in "
+        "'slam', or the driver and lidar_selffilter_node both publish there"
+    )
+    assert filter_params.get("input_topic") == driver_cloud_topic, (
+        f"lidar_selffilter_node input_topic {filter_params.get('input_topic')!r} "
+        f"doesn't match the remapped driver topic {driver_cloud_topic!r}"
+    )

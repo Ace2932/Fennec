@@ -77,6 +77,25 @@ MARGIN_DEG = 1.5
 #: the sign that depends on it.
 REAR_ENDS = frozenset({"RL", "RR"})
 
+#: The ONE left/right partition for haa. hfe_bounds() takes CANONICAL haa
+#: (+ = outboard on every leg); URDF haa is + = foot toward +y on every leg
+#: (test_positive_haa_moves_every_foot_toward_plus_y). Left legs sit at +y, so
+#: the two agree there and are NEGATED on the right.
+RIGHT_SIDES = frozenset({"FR", "RR"})
+
+
+def haa_urdf_canonical(leg: str, haa: float) -> float:
+    """URDF haa <-> canonical haa for this leg. Self-inverse (a sign flip on
+    the right legs), so the same call converts either way.
+
+    Every caller that crosses between the two frames goes through here: the
+    wrapper's posture gate (URDF -> canonical) and the firmware hfe_envelope
+    (canonical grid -> URDF, then raw). A second copy of this flip is how the
+    firmware backstop came to read the canonical grid as a URDF angle and sit
+    ~40 deg too loose on the right legs at inboard haa.
+    """
+    return -haa if leg in RIGHT_SIDES else haa
+
 
 def _bracket(vals, x):
     """Indices of the grid cells enclosing x (clamped at the edges)."""

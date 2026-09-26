@@ -173,7 +173,10 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
       a *second* NC block for J21. NO wiring → reads always-pressed or never trips.
       **Firmware:** Teensy ESTOP = pin 5 → J21.1 (contact-to-GND, no board pull-up) → set
       `pinMode(5, INPUT_PULLUP)` or pin 5 floats → unreliable read. (Separate sense path from the
-      *hardware* kill SW2→EN_SW→Q3→EN_BUCKS, which de-energizes the bucks regardless of firmware.)
+      *hardware* kill SW2→EN_SW→Q3→EN_BUCKS, which de-energizes the bucks ~~regardless of firmware~~
+      **→ corrected 2026-09-25, #430: independent of firmware, but NOT of `V5_AUX`.** `R13` 10k
+      `EN_SW`↔`V5_AUX` is the only pull-up on Q3's gate (board file), so with the UBEC dead or
+      unplugged a pressed E-stop leaves Q3 off and the bucks running. Bench step in §3 step 5.)
 - [ ] **E-stop continuity check (both contacts, same press):** button released → J21 shorted
       (NC, contact-to-GND) → Teensy pin 5 reads LOW; button pressed → J21 open → pin 5 reads
       HIGH. Meter-check this on J21 directly, then confirm SW2 (the hardware path) also opens
@@ -193,7 +196,14 @@ OLED pinout miss — that was a rigid direct-plug module, now fixed; this is the
       (bulk caps Ø10×17 mm, INA226 modules) clear the M3×20 standoff gap (≤~17 mm target).
 
 **🟢 Low — protected or bench-only:**
-- [ ] **J1 XT60** — post-polarity-fix: `pad1=BATT_NEG(−)/chamfer side, pad2=VBAT(+)/flat side` (see §1e — was reversed, fixed 2026-06-29). Q1 reverse-prot covers a slip, but confirm flat=+. ⚠ superseded by docs/power-chain-fmea.md#pc-01 (as built, it does not)
+- [ ] **J1 XT60** — post-polarity-fix: `pad1=BATT_NEG(−)/chamfer side, pad2=VBAT(+)/flat side` (see §1e — was reversed, fixed 2026-06-29). ~~Q1 reverse-prot covers a slip, but confirm flat=+.~~
+      **→ corrected 2026-09-25, #429: Q1 does NOT cover a slip on the board as built.** `D1` anode,
+      `R_gs1` and `C_gs1` land on `BATT_NEG` (`Q1`.2, the drain), not GND (`Q1`.3, the source) —
+      read from `nova_pcb_v6_power_v2.kicad_pcb`. With `J1` reversed, `D1` conducts forward and
+      pulls the gate above the source, so Q1 turns on and passes the reversed pack. Treat a
+      reversed `J1` as destructive until the rework and the reversed-`J1` bench test in
+      `../hardware/pcb-mods/BUILD_PLAN.md` §6 gate 9a have both passed. Confirm flat=+.
+      **This moves `J1` out of 🟢 Low** until 9a passes. (FMEA row: `power-chain-fmea.md#pc-01`.)
 - [ ] **SW1** — confirm the physical switch is rated for full pack current (~15–18 A).
 - [ ] **J9 FE-URT-1** — Pattern-A bench adapter only; confirm its data pin = MASTER_A if used.
 - [ ] **Q1 IRLB3034** — TO-220 G/D/S = pin 1/2/3 (matches footprint); confirm tab = Drain.
@@ -294,7 +304,8 @@ of lead-to-GND-through-the-chip. Lead-to-same-net-pad crosses the joint alone.)*
 
 ## 🟡 2. Trip-point calibration (ratiometric to V5_AUX)
 VREF tracks the UBEC, VSENSE tracks the battery. UBEC sag shifts trips LOWER (later).
-Verified-on-paper trips: BATT_LOW 13.0V, HARDCUT 12.4V (resistor math confirmed 2026-06-13).
+Verified-on-paper trips: ~~BATT_LOW 13.0V, HARDCUT 12.4V (resistor math confirmed 2026-06-13)~~
+**→ superseded 2026-09-25, #432: falling/rising pairs, see the hysteresis table below.**
 - [x] ✅ **Measured 2026-08-08: 4.98 V — PASS** (spec 5.0 V ±2%, 4.9–5.1). Bench supply
       (Kungber), **no load**, unit tested off-board before wiring to `J2`. Also read **4.98 V
       at 6.0 V in** — identical, so line regulation across 6→16.8 V is essentially flat and
@@ -317,12 +328,37 @@ Verified-on-paper trips: BATT_LOW 13.0V, HARDCUT 12.4V (resistor math confirmed 
       Refines the earlier 13.08 / 12.61 estimate, which assumed a nominal 5.00 V UBEC.
       Because the references are ratiometric to V5_AUX, these scale linearly with it — a
       UBEC sagging to 4.8 V under load would move them to ~12.6 / ~12.1 V.
-- [ ] Bench-sweep supply 13.5→12.0 V, confirm BATT_LOW and HARDCUT assert.
-      ⚠️ **Expect 13.03 / 12.56 V, NOT 13.0 / 12.4.** Those are the numbers the
-      MEASURED parts give (4.98 V UBEC, divider 0.1794 from R2 99.7k / R3 21.8k) — see
-      the table above. The old "~12.4 V" here is the nominal-parts estimate and would
-      make a CORRECT result look like a failure. Record what you actually read.
-- [ ] Confirm hysteresis (R14 470k / R15 1M) prevents chatter at threshold
+
+      ⚠️ **→ corrected 2026-09-25, #432: the 13.03 / 12.56 V row above is the NO-HYSTERESIS
+      midpoint, and neither comparator ever trips there.** The hysteresis resistors load the
+      references. In normal running both LM393 outputs are LOW (U8.2/.6 = `VSENSE` above both
+      references), so `R15` 1M (`BATT_LOW`→`VREF_G`) and `R14` 470k (`HARDCUT`→`VREF_H`) pull the
+      references DOWN (falling trip). Once tripped, the output is released and pulls them UP
+      (rising release). Same 4.98 V / 0.1794 inputs, resistor values from the board file,
+      output LOW taken as 0 V:
+
+      | | output state | VREF | VBAT trip (EXPECTED) |
+      |---|---|---|---|
+      | `BATT_LOW` **falling** (warn asserts) | LOW, R15 to 0 V | 4.98·(R5∥R15)/(R4+R5∥R15) = **2.326 V** | **12.96 V** |
+      | `BATT_LOW` **rising** (warn clears) | released, R8 10k to +3V3 | node solve → **2.343 V** | **13.06 V** (13.05 with the Teensy's pin-4 pulldown on the line, if it is ~100k — unverified) |
+      | `HARDCUT` **falling** (bucks cut) | LOW, R14 to 0 V | 4.98·(R7∥R14)/(R6+R7∥R14) = **2.227 V** | **12.42 V** |
+      | `HARDCUT` **rising** (bucks re-enable) | released, R9 10k to V5_AUX, R16 100k to GND | node solve → **2.279 V** | **12.70 V** |
+
+      These are **expected, not measured**. They replace the single-point targets in the
+      sweep below. Arithmetic is in the #432 PR body. Hysteresis bands: `BATT_LOW` ≈ 0.10 V,
+      `HARDCUT` ≈ 0.29 V.
+- [ ] Bench-sweep supply ~~13.5→12.0 V~~ **13.5→12.0 V AND back up 12.0→13.5 V** (→ changed
+      2026-09-25, #432: the trips differ by direction). Confirm BATT_LOW and HARDCUT assert on
+      the way down and release on the way up.
+      ⚠️ ~~**Expect 13.03 / 12.56 V, NOT 13.0 / 12.4.**~~ **→ corrected 2026-09-25, #432: expect
+      falling `BATT_LOW` 12.96 / `HARDCUT` 12.42 V, rising `HARDCUT` 12.70 / `BATT_LOW` 13.06 V**
+      (table above). 13.03 / 12.56 is the no-hysteresis midpoint, so a correct board would read
+      as a failure against it. The old "~12.4 V" nominal is still wrong for the same reason it
+      was before. Record all four values you actually read.
+- [ ] Confirm hysteresis (R14 470k / R15 1M) prevents chatter at threshold. The two
+      directions above are that confirmation: expect ≈ 0.10 V (`BATT_LOW`) and ≈ 0.29 V
+      (`HARDCUT`) between the falling and rising readings. ~0 V gap = that resistor is
+      missing or open.
 
 ### Bench procedure for the two LVC trips (written 2026-08-12, not yet run)
 
@@ -368,12 +404,58 @@ a realistic discharge rate and time it end-to-end: supply crosses 13.03 → Jets
 down → supply crosses 12.56. If poweroff is still running when HARDCUT fires, the
 mitigation is to RAISE `BATT_LOW` (R4/R5), not to lower `HARDCUT`.
 
-Record: actual `BATT_LOW` V, actual `HARDCUT` V, hysteresis band, measured window in
-seconds, and V5_AUX under load at the moment of each trip.
+> **→ corrected 2026-09-25, #432:** a discharging pack crosses the **falling** trips, so the
+> window is **12.96 → 12.42 = ~0.55 V (expected)**, not 0.47 V. That is ~91 % of the 0.6 V
+> `power-budget.md` assumed, so slightly more margin than stated above. Still unmeasured, so the
+> timing test is unchanged. Time it from the supply crossing 12.96 to it crossing 12.42.
+
+Record: actual `BATT_LOW` V **falling and rising**, actual `HARDCUT` V **falling and rising**,
+hysteresis band, measured window in seconds, and V5_AUX under load at the moment of each trip.
 
 ## 🟡 3. Inrush into bulk capacitance (~5470µF: 5×1000µF + 3×470µF) ⚠ superseded by docs/power-chain-fmea.md#pc-10 (hot-plug sees 940 µF)
 Charged 16.8V pack → XT60 → ~5470µF = hard inrush spike + connector arc. No precharge.
-- [ ] First connect at CURRENT-LIMITED bench supply (0.5A) — watch for sustained inrush
+- [ ] ~~First connect at CURRENT-LIMITED bench supply (0.5A) — watch for sustained inrush~~
+      **→ procedure changed 2026-09-25, #433.** 0.5 A with every buck plugged in fails in two ways.
+      Below the `HARDCUT` release point every buck is held off, so the board looks dead. Above it,
+      charging the rail caps (C1–C4 4000 µF on `V7V5_LEG` alone) can pull the supply into current
+      limit, sag the input below the 12.42 V falling trip, cut the bucks, recover, and repeat
+      **(cycling risk — unverified, reasoned from the §2 trip points)**. The first power-up is now:
+
+      **Prerequisite: `../hardware/pcb-mods/BUILD_PLAN.md` §6 gate 9a (reversed-`J1` test, #429)
+      has PASSED.** Do not put forward voltage on the board before it.
+
+      1. **Set up.** Bench supply on `J1` (+ on the flat side), **15.0 V, 0.5 A limit**.
+         **UBEC only**: every buck station's **input XT30 unplugged** (`U1`–`U4`). The logic board
+         is on the J20 ribbon **with the Teensy seated**, because the Teensy's 3.3 V out
+         (`U6`.T3V3O) is the **only source of `+3V3`** (logic board file). SW2 released, SW1 on.
+      2. **Read, and record each:**
+
+         | node | probe | expect at 15.0 V |
+         |---|---|---|
+         | `V5_AUX` | `J20`.1 (or `J2`.3) | ~4.98 V (the §2 no-load figure) |
+         | `+3V3` | `J20`.5 | ~3.3 V (Teensy regulator, unverified) |
+         | `HARDCUT` | `Q2`.1 (gate) | LOW, near 0 V. `VSENSE` = 15.0 × 0.1794 = 2.69 V, above `VREF_H` 2.23 V |
+         | `BATT_LOW` | `J20`.9 | LOW, near 0 V. 2.69 V is above `VREF_G` 2.33 V |
+         | `EN_BUCKS` | `Q3`.3 | **record it, do not judge it.** No pull-up on the board (BUILD_PLAN §5), so with no module attached it floats. It becomes meaningful in step 3 |
+
+         Supply current should settle to the UBEC + logic quiescent draw, well under the 0.5 A
+         limit (value unverified; record it). Sitting at the limit = stop, fault-find.
+      3. **Add the bucks ONE AT A TIME.** For each of `U1`–`U4`: **supply output OFF** (so the
+         module's input caps are not hot-plugged from C8/C9), plug that station's input XT30,
+         raise the limit to **~2 A**, output ON. Watch the supply current spike while that rail's
+         output caps charge, then fall back. Read VOUT at the rail connector. This is also where
+         the F7-vs-F12 check (§1c) and the ENA/ENB check (BUILD_PLAN §5) happen. Now read
+         `EN_BUCKS` (`EN_JET` at `U4`): the module's own pull-up defines it. Confirm each rail is
+         up and settled before plugging the next buck.
+      4. If the supply sits in current limit, or `V5_AUX`/VOUT pulses on and off, that is the
+         cycling above. Unplug the last buck and investigate before going on.
+      5. **E-stop cut, twice (#430).** With the bucks running: press the E-stop → every
+         `EN_BUCKS` rail (`U1`–`U3`) VOUT collapses, the Jetson rail (`U4`, `EN_JET`) stays up.
+         Release it. Then **repeat with the UBEC output disconnected** (nothing driving `J2`.3 /
+         `V5_AUX`). `R13` 10k to `V5_AUX` is Q3's only gate pull-up, so **expect the bucks to KEEP
+         running** with the button pressed. Record what you see. It is the #430 defect, not a
+         wiring fault. Note that `HARDCUT` also loses its pull-up (`R9` to `V5_AUX`) in the same
+         state, so neither cut path works without the UBEC.
 - [ ] Inspect XT60 contacts after several connect cycles (pitting = consider precharge resistor)
 - [ ] Confirm Q1 doesn't overheat on repeated inrush (IR check)
 

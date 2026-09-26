@@ -184,6 +184,20 @@ inline int16_t pack_s16_le(uint8_t lo, uint8_t hi) {
   int16_t mag = (int16_t)(raw & 0x7FFF);
   return (raw & 0x8000) ? -mag : mag;
 }
+// STS3215 PRESENT_LOAD is a DIFFERENT sign-magnitude layout from velocity:
+// bit 10 = direction, bits 0..9 = magnitude in 0.1% of stall (0..1000).
+// pack_s16_le (bit 15) read 0x0432 (load -50) as +1074 on /joint_states
+// effort — this is the decode for the load register.
+inline int16_t decode_load(uint8_t lo, uint8_t hi) {
+  uint16_t raw = pack_u16_le(lo, hi);
+  int16_t mag = (int16_t)(raw & 0x03FF);
+  return (raw & 0x0400) ? -mag : mag;
+}
+// |load| in 0.1% of stall, for the stall guard. Equal to the old
+// `raw & 0x03FF` on every 11-bit register value (pinned in the native test).
+inline uint16_t load_magnitude(int16_t load) {
+  return (uint16_t)(load < 0 ? -load : load);
+}
 inline void unpack_u16_le(uint16_t v, uint8_t* lo, uint8_t* hi) {
   *lo = (uint8_t)(v & 0xFF);
   *hi = (uint8_t)((v >> 8) & 0xFF);

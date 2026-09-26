@@ -42,10 +42,17 @@ at the HAA end and stay far from the head at any hfe). Reachable range:
         regardless of the head — this script sweeps to -95 for margin.
   kfe   -109..+109 (software range) plus a probe to the measured 118deg
         mech stop
-  haa   0/+-15 (today's conservative symmetric cap) and +-40 (the
-        outboard cap that unlocks once HAA_INBOARD_SIGN is filled at
-        homing calibration) — tested for sensitivity even though it
-        isn't legal ROM yet.
+  haa   -15 inboard .. +40 outboard (asymmetric, matching the URDF:
+        nova.urdf.xacro haa_in=0.262rad/15deg, haa_out=0.698rad/40deg;
+        same numbers as leg_v6/check_fit.py's HAA_INBOARD_MAX_DEG/
+        HAA_OUTBOARD_MAX_DEG). In THIS script's trunk-frame sign
+        convention, positive haa is outboard for FR — confirmed by
+        measurement (haa=+40 gives the head its closest approach, not
+        haa=-40; see #442). Both directions used to be swept only to
+        the old conservative +-15 cap, with +-40 printed "for context
+        only, not-yet-legal" and never fed into the pass/fail verdict
+        — so a real regression sitting between 15 and 40deg outboard
+        (the now-legal range) would never have failed the gate (#442).
 """
 import sys
 
@@ -57,12 +64,13 @@ import check_fit as cf  # validated transforms — rot(), tf(), coax_to_trunk_ba
 import cad_contains   # #195 -- installed in main(); check_fit sets up the path,
                       # so this import has to follow it
 
-#: mm. FAIL floor on closest approach inside the LEGAL ROM (haa +-15). This is
-#: a REGRESSION detector, not a design limit: the measured minimum is 31.8mm
-#: (head, hfe=-51 kfe=+50 haa=-15), so 10mm sits ~3x below it and below even the
-#: 19.5mm seen at the not-yet-legal haa=+-40 cap. Anything under it means the
-#: packaging changed materially and somebody should look, not that the robot is
-#: about to hit itself.
+#: mm. FAIL floor on closest approach inside the LEGAL ROM (haa 15deg inboard
+#: .. 40deg outboard, asymmetric — see module docstring). This is a
+#: REGRESSION detector, not a design limit: the measured minimum across that
+#: whole envelope is 16.9mm (head, hfe=-51 kfe=+30 haa=+40, the outboard cap),
+#: so 10mm sits well below it. Anything under it means the packaging changed
+#: materially and somebody should look, not that the robot is about to hit
+#: itself.
 MIN_CLEARANCE_MM = 10.0
 
 rot, tf = cf.rot, cf.tf
@@ -80,6 +88,17 @@ def place_fr(pts, haa=0.0):
         Sx = rot(haa, [1, 0, 0], [cf.HIP_FA, cf.HIP_LAT, cf.HIP_Z])
         p = tf(p, Sx)
     return p
+
+
+def haa_samples():
+    """Asymmetric legal envelope, matching leg_v6/check_fit.py's own
+    HAA_INBOARD_MAX_DEG/HAA_OUTBOARD_MAX_DEG (15deg inboard, 40deg outboard;
+    #442). Positive haa is OUTBOARD in this script's trunk-frame convention
+    (measured, not assumed: haa=+40 is where the head clearance is tightest —
+    see MIN_CLEARANCE_MM's derivation)."""
+    out = [0.0, 10.0, 20.0, 30.0, 40.0]
+    inb = [-5.0, -10.0, -15.0]
+    return out + inb
 
 
 def load_targets():
@@ -133,10 +152,11 @@ def main():
               'meaningless -- fix this before trusting anything else here.')
         return 1
 
-    print('\n-- containment sweep: hfe -35..-95 (1deg), kfe every 10deg, haa in (-15,0,15) --')
+    print('\n-- containment sweep: hfe -35..-95 (1deg), kfe every 10deg, '
+          'haa 15deg inboard..40deg outboard (asymmetric, #442) --')
     HFE = range(-35, -96, -1)
     KFE = range(-109, 110, 10)
-    HAA = (-15.0, 0.0, 15.0)
+    HAA = haa_samples()
     any_hit = False
     for hfe in HFE:
         for kfe in KFE:
@@ -149,10 +169,10 @@ def main():
                         any_hit = True
                         print(f'  CONTACT hfe={hfe:+4d} kfe={kfe:+4d} haa={haa:+5.1f} vs {name}: {n} pts')
     if not any_hit:
-        print('  0 contacts anywhere in the swept envelope (legal haa +-15, hfe to the leg\'s own '
-              '-95 structural limit, full kfe range).')
+        print('  0 contacts anywhere in the swept envelope (legal haa 15deg inboard.. '
+              '40deg outboard, hfe to the leg\'s own -95 structural limit, full kfe range).')
 
-    print('\n-- closest-approach distance (legal ROM: haa 0/+-15) --')
+    print('\n-- closest-approach distance (legal ROM: haa 15deg inboard..40deg outboard) --')
     rng = np.random.default_rng(0)
     best = {}
     for hfe in range(-35, -94, -4):
@@ -160,7 +180,7 @@ def main():
             cloud = cf.leg_cloud(hfe, kfe)
             idx = rng.choice(len(cloud), 250, replace=False)
             sub = cloud[idx]
-            for haa in (-15.0, 0.0, 15.0):
+            for haa in HAA:
                 p = place_fr(sub, haa)
                 for name, tgt in targets.items():
                     _, dist, _ = trimesh.proximity.closest_point(tgt, p)
@@ -168,23 +188,6 @@ def main():
                     if name not in best or d < best[name][0]:
                         best[name] = (d, hfe, kfe, haa)
     for name, (d, hfe, kfe, haa) in sorted(best.items(), key=lambda kv: kv[1][0]):
-        print(f'  {name:16s} min_dist={d:6.1f}mm at hfe={hfe:+4d} kfe={kfe:+4d} haa={haa:+5.1f}')
-
-    print('\n-- closest-approach at the not-yet-legal outboard cap (haa=+-40), for context only --')
-    best40 = {}
-    for hfe in range(-35, -94, -4):
-        for kfe in range(30, 110, 20):
-            cloud = cf.leg_cloud(hfe, kfe)
-            idx = rng.choice(len(cloud), 250, replace=False)
-            sub = cloud[idx]
-            for haa in (-40.0, 40.0):
-                p = place_fr(sub, haa)
-                for name, tgt in targets.items():
-                    _, dist, _ = trimesh.proximity.closest_point(tgt, p)
-                    d = float(dist.min())
-                    if name not in best40 or d < best40[name][0]:
-                        best40[name] = (d, hfe, kfe, haa)
-    for name, (d, hfe, kfe, haa) in sorted(best40.items(), key=lambda kv: kv[1][0]):
         print(f'  {name:16s} min_dist={d:6.1f}mm at hfe={hfe:+4d} kfe={kfe:+4d} haa={haa:+5.1f}')
 
     # VERDICT, derived from what was just measured.
@@ -200,7 +203,8 @@ def main():
     bad = False
     if any_hit:
         bad = True
-        print('FAIL: contact inside the legal ROM (haa +-15). See the CONTACT '
+        print('FAIL: contact inside the legal ROM (haa 15deg inboard..40deg '
+              'outboard). See the CONTACT '
               'lines above for the exact poses.')
     elif worst_d < MIN_CLEARANCE_MM:
         bad = True

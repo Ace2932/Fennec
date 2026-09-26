@@ -1,0 +1,35 @@
+(version 1)
+
+# Length-matching, in-editor best effort (#416). This is NOT the source of
+# truth -- tools/check_length_match.py + length_match.json is (see the
+# "Length matching" section in ../README.md). KiCad's DRC `skew` constraint
+# only evaluates differential pairs; these nets are single-ended TTL/SPI/I2C,
+# so there is no in-editor way to check GROUP SPREAD here. These rules only
+# express the absolute per-net `max` ceilings from length_match.json, as a
+# live nudge while routing -- they cannot catch "net A got 20mm longer than
+# net B while both stayed under max", which is exactly what the Python gate
+# checks and CI enforces.
+
+(rule "length_max_bus_class"
+    (condition "A.NetClass == 'Bus'")
+    (constraint length (max "120mm"))
+)
+
+(rule "length_max_feetech_bus_signals"
+    # TEENSY_TX/RX + OE_TX/RX are not in the Bus netclass in this project
+    # (only BUS_SIGNAL/BUS_SERVO/BUS_FILT/MASTER_A/MASTER_B are) -- named by
+    # net so the feetech_bus group's max_mm bound (length_match.json) still
+    # gets an in-editor check.
+    (condition "A.Net == 'TEENSY_TX' || A.Net == 'TEENSY_RX' || A.Net == 'OE_TX' || A.Net == 'OE_RX'")
+    (constraint length (max "120mm"))
+)
+
+(rule "SPI"
+    # oled_spi group (length_match.json): SPI_SCK/MOSI + OLED_CS/DC and their
+    # "_F" series-R continuation nets. max_mm there (90mm) bounds the SUMMED
+    # base+_F length per member; applied per-net here it's looser (no KiCad
+    # DRC construct sums two nets into one length check), so this only
+    # catches one leg running away on its own.
+    (condition "A.Net == 'SPI_SCK' || A.Net == 'SPI_SCK_F' || A.Net == 'SPI_MOSI' || A.Net == 'SPI_MOSI_F' || A.Net == 'OLED_CS' || A.Net == 'OLED_CS_F' || A.Net == 'OLED_DC' || A.Net == 'OLED_DC_F'")
+    (constraint length (max "90mm"))
+)

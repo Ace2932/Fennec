@@ -152,7 +152,7 @@ static void test_parse_error_byte_surfaced() {
   TEST_ASSERT_EQUAL_UINT8(0, plen);
 }
 
-// ---- sign-magnitude 16-bit (STS3215 present velocity / load) ----
+// ---- sign-magnitude 16-bit (STS3215 present velocity: bit 15) ----
 static void test_pack_u16_le() {
   TEST_ASSERT_EQUAL_UINT16(0x1234, pack_u16_le(0x34, 0x12));
   TEST_ASSERT_EQUAL_UINT16(0x00FF, pack_u16_le(0xFF, 0x00));
@@ -167,6 +167,23 @@ static void test_pack_s16_sign_magnitude_not_twos_complement() {
   TEST_ASSERT_EQUAL_INT16(-32767, pack_s16_le(0xFF, 0xFF));  // 0xFFFF
   // two's-complement would read 0xFFFF as -1; sign-magnitude reads -32767
   TEST_ASSERT_EQUAL_INT16(0,     pack_s16_le(0x00, 0x80));   // -0 == 0
+}
+
+// PRESENT_LOAD: bit 10 = direction, low 10 bits = magnitude (NOT bit 15).
+static void test_decode_load_bit10_sign() {
+  TEST_ASSERT_EQUAL_INT16(50,    decode_load(0x32, 0x00));   // 0x0032
+  TEST_ASSERT_EQUAL_INT16(-50,   decode_load(0x32, 0x04));   // 0x0432, was +1074
+  TEST_ASSERT_EQUAL_INT16(1000,  decode_load(0xE8, 0x03));   // 0x03E8 full stall
+  TEST_ASSERT_EQUAL_INT16(-1000, decode_load(0xE8, 0x07));   // 0x07E8
+}
+
+// Stall guard must see the same magnitude it saw before the decode fix:
+// |decode_load(raw)| == raw & 0x03FF for every 11-bit register value.
+static void test_load_magnitude_matches_old_mask() {
+  for (uint16_t raw = 0; raw < 0x800; raw++) {
+    int16_t v = decode_load((uint8_t)(raw & 0xFF), (uint8_t)(raw >> 8));
+    TEST_ASSERT_EQUAL_UINT16(raw & 0x03FF, load_magnitude(v));
+  }
 }
 
 static void test_unpack_u16_roundtrip() {
@@ -194,6 +211,8 @@ int main() {
   RUN_TEST(test_parse_error_byte_surfaced);
   RUN_TEST(test_pack_u16_le);
   RUN_TEST(test_pack_s16_sign_magnitude_not_twos_complement);
+  RUN_TEST(test_decode_load_bit10_sign);
+  RUN_TEST(test_load_magnitude_matches_old_mask);
   RUN_TEST(test_unpack_u16_roundtrip);
   return UNITY_END();
 }

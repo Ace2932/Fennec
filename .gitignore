@@ -168,3 +168,8 @@ hardware/cad/slices/
 # one-off identification renders — regenerate with openscad, do not track
 hardware/cad/chassis/renders/*_iso2.png
 hardware/cad/chassis/renders/riser_bay_under.png
+
+# Claude Code per-user settings (permissions, statusline)
+.claude/settings.local.json
+# agent git worktrees (Claude Code isolation: worktree)
+.claude/worktrees/

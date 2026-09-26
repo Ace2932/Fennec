@@ -15,7 +15,7 @@ import tempfile
 
 import numpy as np
 
-from nova_locomotion.policy_runner import HIST, PROP, NovaPolicy
+from nova_locomotion.policy_runner import CMD_SCALE, HIST, PROP, NovaPolicy
 
 OBS = HIST * PROP + 3 + 12  # 105
 
@@ -88,3 +88,16 @@ def test_build_obs_shape_and_history_order():
     assert np.allclose(o2[:3], np.full(3, 2.0) * 0.25)
     # the previous newest frame slid into the second history slot
     assert np.allclose(o2[PROP:PROP + 3], np.ones(3) * 0.25)
+
+
+def test_cmd_outside_training_box_is_clipped():
+    """A /cmd_vel past the trained range (vx 1.0, yaw 2.0) must reach the policy
+    as the box edge, not as never-seen extrapolation (peer review 2026-09-25)."""
+    p = NovaPolicy(_npz(_tmp("clip.npz")))
+    g = np.array([0.0, 0.0, -1.0])
+    wild = p.build_obs(np.zeros(3), g, [1.0, -0.4, 2.0], np.zeros(12), np.zeros(12))
+    edge = p.build_obs(np.zeros(3), g, [0.35, -0.15, 0.5], np.zeros(12), np.zeros(12))
+    c = slice(HIST * PROP, HIST * PROP + 3)
+    assert np.allclose(wild[c], edge[c])
+    inside = p.build_obs(np.zeros(3), g, [0.2, 0.05, -0.3], np.zeros(12), np.zeros(12))
+    assert np.allclose(inside[c], np.array([0.2, 0.05, -0.3]) * CMD_SCALE)

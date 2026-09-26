@@ -212,6 +212,15 @@ class Bus {
     return err ? ERR_SERVO : OK;
   }
 
+  // Single-byte WRITE_DATA to every servo at once (ID 0xFE). Servos execute a
+  // broadcast but never answer it, so there is no ACK to wait for -- confirm
+  // with per-servo reads if it matters (servo_fleet.h disarm, #437).
+  Result broadcast_write_byte(uint8_t reg, uint8_t val) {
+    uint8_t frame[MAX_FRAME_LEN];
+    uint8_t n = build_write(BROADCAST_ID, reg, &val, 1, frame);
+    return transmit_blocking(frame, n) ? OK : ERR_TX_BUSY;
+  }
+
   // Generic single-byte read.
   Result read_byte(uint8_t id, uint8_t reg, uint8_t* out, uint32_t timeout_us = 1500) {
     uint8_t frame[MAX_FRAME_LEN];

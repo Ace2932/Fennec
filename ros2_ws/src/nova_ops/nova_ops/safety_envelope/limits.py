@@ -20,6 +20,8 @@ import math
 from dataclasses import dataclass
 from typing import Dict, Iterable, Optional
 
+from .derived_signs import DERIVED_HAA_URDF_SIGN
+
 
 @dataclass
 class JointLimit:
@@ -47,9 +49,10 @@ class JointLimit:
 # Angles in radians. STS3215 supports ±180° physically but the leg
 # kinematics constrain a much smaller range; pick ranges that won't
 # crash linkages at first walk.
-# Per-haa-ID INBOARD sign in the *servo command frame* (the frame
-# /joint_commands positions are expressed in): +1 = increasing command
-# swings that leg toward the belly, -1 = decreasing does. UNKNOWN until
+# Per-haa-ID INBOARD sign in the RAW-COUNT frame: +1 = increasing raw
+# counts swing that leg toward the belly, -1 = decreasing does. NOT the
+# frame the wrapper or this table's windows are in (URDF radians) — convert
+# with confirmed_haa_inboard_urdf(), never use it directly (H1). UNKNOWN until
 # homing calibration observes real motion — the config.py search_dirs
 # are placeholders and encode "safe stop direction", NOT inboard.
 # While a sign is None its haa gets the CONSERVATIVE SYMMETRIC ±15 deg
@@ -71,7 +74,7 @@ class HaaSignConfirmation:
     inferred.
     """
 
-    sign: int  # +1 / -1, INBOARD sign in the servo command frame
+    sign: int  # +1 / -1, INBOARD sign in the RAW-COUNT frame (not URDF)
     observed_utc: str  # ISO-8601 UTC, when the motion was watched
     method: str  # how — e.g. "homing: +200 counts, foot toward belly"
     assembly: str  # which physical leg/servo the observation was made on
@@ -186,8 +189,39 @@ def confirmed_haa_sign(joint_id: int) -> Optional[int]:
     return sign
 
 
-def _hip_abduction(joint_id: int) -> JointLimit:
+def confirmed_haa_inboard_urdf(joint_id: int) -> Optional[int]:
+    """The confirmed INBOARD sign in the URDF-radian frame, or None.
+
+    FRAME BUG FIXED HERE (H1). ``HAA_INBOARD_SIGN`` / ``confirmed_haa_sign()``
+    are in the RAW-COUNT frame — that is what the bench probe observes
+    ("+N counts, foot went inboard", derived_signs.DERIVED_HAA_INBOARD_SIGN).
+    But every consumer of an inboard DIRECTION — the per-joint window below and
+    wrapper._clamp_posture — works on URDF radians, BEFORE the counts adapter,
+    and firmware_limits.build_joint_limits_data converts that URDF window to
+    counts through urdf_sign. Raw and URDF differ by the haa urdf_sign, which is
+    -1 at the FRONT (derived_signs step 4). Applying the raw sign directly
+    opened the 40 deg side INBOARD on FL and FR once they were confirmed —
+    toward the LiPo, the exact outcome the confirmation exists to prevent.
+
+    The conversion lives HERE, once, so no consumer can pick up the raw sign by
+    accident. The result is the model fact it must be — -1 on the left legs, +1
+    on the right (+URDF haa moves every foot toward +y,
+    test_positive_haa_moves_every_foot_toward_plus_y) — but it is reached
+    THROUGH the confirmation, so an unconfirmed hip still gets None.
+    """
     sign = confirmed_haa_sign(joint_id)
+    if sign is None:
+        return None
+    # ponytail: uses the DERIVED haa urdf_sign, because it is the only source —
+    # haa is excluded from hard-stop homing (#284) so no urdf_sign is ever
+    # OBSERVED for it, and confirm_haa_sign() only ever records the derived raw
+    # sign. Upgrade when haa gets an observed urdf_sign: take it from the
+    # resolved calibration, the same one firmware_limits converts with.
+    return sign * DERIVED_HAA_URDF_SIGN[joint_id]
+
+
+def _hip_abduction(joint_id: int) -> JointLimit:
+    sign = confirmed_haa_inboard_urdf(joint_id)
     if sign is None:
         # unknown direction -> both ways get the inboard cap
         lower, upper = -_HAA_INBOARD_CAP, _HAA_INBOARD_CAP

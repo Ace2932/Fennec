@@ -142,6 +142,111 @@ The 2-board stack is **face-to-face vertical**, NOT an edge-mate. Logic board on
 
 ---
 
+## Length matching (#416)
+
+A length-matching **rule and gate exist now** so the first board where mismatch is
+actually an electrical problem (see "Carry to LPL HIVE" below) already has the
+tooling. On the two active v6 boards today it is **not fixing anything** — no
+copper changed for this ticket — it is establishing the budget and the CI gate
+before they're needed.
+
+**Budget formula:** skew ≈ Δlength × ~6.8 ps/mm (FR-4 typical propagation
+delay). A group's `tolerance_mm` is chosen well under the electrical bound
+that formula gives (5% of the signal's bit period, converted to a length via
+that formula) — see each `length_match.json`'s `budget` string for the exact
+derivation per group. On these boards that electrical bound is 3-4 orders of
+magnitude looser than the routed lengths (a few thousand mm vs a few tens of
+mm), so `tolerance_mm` is set as a **layout-discipline bound** instead — a
+number close enough to the measured spread on main to still catch a gross
+miroute (a leg rerouted the long way around, a net that grew 10x), not to
+enforce timing margin that doesn't apply at these speeds.
+
+**Measured** (recomputed directly from the `.kicad_pcb` `(segment)`/`(via)`
+records by `tools/check_length_match.py`, 2026-09-25 — see that command's own
+output for the authoritative numbers; the issue's hand-measured table agreed
+within its own stated 0.1 mm tolerance except the via count, corrected below):
+
+`nova_pcb_v6_logic` — 155 segments, **4 vias** (the issue's "8 vias" counted
+`(vias allowed)` net-class lines, not `(via ...)` records — corrected here):
+
+| group | net | length | vias |
+|---|---|---|---|
+| Feetech bus (1 Mbaud half-duplex TTL, Pattern B) | `TEENSY_TX` | 55.65 mm | 0 |
+| | `TEENSY_RX` | 54.31 mm | 1 |
+| | `OE_TX` / `OE_RX` | 52.55 / 52.06 mm | 0 |
+| | `BUS_SIGNAL` / `BUS_SERVO` | 40.84 / 40.63 mm | 0 |
+| OLED SPI (Teensy/Nano → series-R `_F` nets → SSD1331) | `SPI_SCK`+`SPI_SCK_F` | 52.97+7.27 = 60.24 mm | 0 |
+| | `SPI_MOSI`+`SPI_MOSI_F` | 29.82+11.55 = 41.37 mm | 0 |
+| | `OLED_CS`+`OLED_CS_F` | 50.88+3.71 = 54.60 mm | 1 |
+| | `OLED_DC`+`OLED_DC_F` | 33.56+8.93 = 42.49 mm | 0 |
+| I²C (INA226, 400 kHz) | `I2C_SCL` / `I2C_SDA` | 46.44 / 46.44 mm | 0 |
+
+`nova_pcb_v6_power_v2`: `I2C_SDA` 196.16 mm (3 vias) vs `I2C_SCL` 162.76 mm (1
+via); `BUS_SERVO` 62.46 mm (2 vias, informational only — a single net has no
+partner to match against).
+
+**Gate:** `tools/check_length_match.py <board.kicad_pcb> <length_match.json>`
+— stdlib-only (no `pcbnew` import), so it runs in CI and on the Mac. Sums
+routed copper length per net from the board file, adds a per-via allowance
+(`via_allowance_mm` in the spec — derived from the board's own `(general
+(thickness …))`, since one through via traverses the full stackup), and
+checks each group's spread against `tolerance_mm` and each member against the
+optional `max_mm`. Nets are matched to the spec by **leaf name** — the part
+of the KiCad net name after the last `/` — because several nets here carry a
+hierarchical sheet prefix that itself contains `/` and even `+`
+(`/07 Aux MCU + Peripherals/SPI_SCK`), so a spec net list is a JSON array of
+leaf names, never a `+`-joined string.
+
+Exit codes: `0` pass, `1` a group's spread exceeds `tolerance_mm` or a member
+exceeds `max_mm`, `2` a net named in the spec is missing from the board or
+present but unrouted (0 length, 0 vias) — checked *before* 1, so a spec typo
+or a deleted net can never be graded as a silent pass. `--selftest` runs a
+synthetic two-net fixture through all four outcomes (pass, spread-fail,
+missing-net, unrouted-net) with no real board file needed.
+
+CI: `.github/workflows/cad-gates.yml`'s `pcb-length-match` job runs
+`--selftest` plus both real boards on every PR that touches the checker, a
+board's spec, or the two `.kicad_pcb` files. `tools/test_check_length_match.py`
+is the pytest regression suite (run in `ros-pytest.yml`, next to
+`test_fab_gate.py` — that file is a standalone script, not
+pytest-collectible, see its own docstring).
+
+**In-editor feedback (best effort):** `nova_pcb_v6_logic.kicad_dru` adds
+`(constraint length (max …))` rules matching the same `max_mm` ceilings, so
+KiCad's own DRC flags a wildly-over-length net while routing. **This is not
+the source of truth and cannot fully express the rule above:** KiCad's
+`skew` constraint only evaluates true differential pairs, and none of these
+groups are diff pairs (the Feetech bus is single-ended TTL, not RS-485 — see
+the bus README). There is no KiCad 9/10 DRC construct that checks *group
+spread* across independent single-ended nets, so the `.kicad_dru` rules are
+per-net `max` ceilings only — they cannot catch "net A grew 20 mm relative to
+net B while both stayed under max", which is exactly what
+`check_length_match.py` checks and CI enforces. Verified by tightening one
+rule to an obviously-violated bound and confirming `kicad-cli pcb drc` reports
+it (`length_out_of_range`); at the real thresholds committed here it adds
+**zero** new DRC violations (17 pre-existing `lib_footprint_mismatch` before
+and after — unrelated cosmetic findings, not touched by this ticket).
+
+**Adding a net to a group:** append its leaf name to the relevant
+`length_match.json` `members` list (a new list entry for a standalone net, or
+appended into an existing member's array to sum it with its `_F`/continuation
+net). Re-run the gate once — it will report the new spread — and only then
+decide whether `tolerance_mm` still holds or needs its own re-derivation
+(update the `budget` string, never just the number).
+
+**Carry to LPL HIVE:** same tool, different numbers, once a HIVE repo exists
+to hold them (none was reachable under `Ace2932` as of 2026-09-25). The groups
+that will actually need tight matching there: Ethernet MDI pairs (intra-pair
+≤ ~0.1 mm, inter-pair ≤ ~5 mm — real diff-pair matching, where KiCad's `skew`
+constraint DOES apply, unlike everything on the v6 boards), RMII
+(`REF_CLK` vs `TXD`/`RXD` within the PHY's setup/hold), SDMMC/eMMC
+(`CLK` vs `DAT0-3`/`DAT7`), QSPI flash, and the SAR ADC `SCLK`/`SDO` group.
+The checker is repo- and board-agnostic by construction (a `.kicad_pcb` path
++ a JSON spec) on the assumption HIVE is KiCad; only the parser would need to
+change for Altium.
+
+---
+
 ## Open questions for design phase
 
 - Final D42V55F7 footprint orientation on arm-rail reservation (depends on Phase 4 mechanical install)

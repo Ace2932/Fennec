@@ -1,0 +1,17 @@
+{
+  "board": "nova_pcb_v6_power_v2",
+  "via_allowance_mm": 1.62,
+  "via_allowance_budget": "board (general (thickness 1.62)) in this file -- one through via traverses the full stackup, so its length-equivalent is taken as the board thickness itself (a straight top-to-bottom traversal), rounded up rather than down so the allowance is never optimistic about a via's real contribution. (0.02 mm different from nova_pcb_v6_logic's 1.6 mm -- these are two separately fabbed boards with their own stackup.)",
+  "groups": [
+    {
+      "name": "i2c_telemetry",
+      "budget": "INA226 rail telemetry, 400 kHz fast-mode I2C (Wire.setClock(400000), firmware/teensy/firmware/src/main.cpp:858). Bit period 2500 ns; 5% skew budget = 125 ns = 125000 ps / ~6.8 ps/mm ~= 18382 mm electrical bound -- I2C has no real matching requirement at this speed. tolerance_mm = 45 mm is a layout-discipline ceiling sized to THIS board's own routing (I2C_SDA runs 196 mm across the board to reach the INA226s vs I2C_SCL's 163 mm -- measured spread 36.6 mm on main, 2026-09-25, including via allowance) -- it exists only to catch a gross miroute (e.g. a daisy-chained rather than star-routed SDA leg), not to enforce margin I2C doesn't need.",
+      "tolerance_mm": 45.0,
+      "max_mm": 250.0,
+      "members": [
+        {"nets": ["I2C_SCL"]},
+        {"nets": ["I2C_SDA"]}
+      ]
+    }
+  ]
+}

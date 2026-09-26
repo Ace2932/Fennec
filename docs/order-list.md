@@ -110,9 +110,15 @@ on VBAT (≈5470µF + lead L, no on-board TVS) can ring to ~22–33V → Vgs > 2
 > **⚠️ Terminal correction (2026-06-27):** earlier text said "source = BATT_NEG" — WRONG. For IRLB3034
 > (G-D-S = pin 1/2/3) the board has **drain = BATT_NEG, source = GND** = the correct low-side reverse-prot
 > orientation (body diode anode=GND/source, cathode=BATT_NEG/drain → blocks a reversed pack). ✅ Board correct.
-> The gate-harden (C_gs/D1/R_gs) ties to **BATT_NEG = drain**, not the literal source — still works: BATT_NEG ≈ GND ⚠ superseded by docs/power-chain-fmea.md#pc-01 (true only in normal polarity; reversed, D1 forward-biases and turns Q1 ON)
+> ~~The gate-harden (C_gs/D1/R_gs) ties to **BATT_NEG = drain**, not the literal source — still works: BATT_NEG ≈ GND
 > (≤21mV steady, ≤0.7V during pre-turn-on body-diode conduction) and clamping gate-to-drain bounds Vgs
-> *conservatively* (Vgd ≥ Vgs → zener trips protecting Vgs ≤ Vz). "gate-source" below = gate-to-BATT_NEG in practice.
+> *conservatively* (Vgd ≥ Vgs → zener trips protecting Vgs ≤ Vz). "gate-source" below = gate-to-BATT_NEG in practice.~~
+> **→ corrected 2026-09-25, #429: this argument checked NORMAL polarity only, and it breaks the reverse
+> protection.** With the pack reversed, `BATT_NEG` is the POSITIVE terminal. `D1` (anode on `BATT_NEG`) then
+> conducts forward into the gate and lifts it above the source (GND), so Q1 turns ON and passes the reversed
+> pack. That is the one case Q1 exists for. (FMEA row: `docs/power-chain-fmea.md#pc-01`.) Board file confirms `D1`.2, `R_gs1`.2 and `C_gs1`.2 all on
+> `BATT_NEG` (`Q1`.2). The network must reference the source, `Q1`.3. Rework and the reversed-`J1` bench test:
+> `hardware/pcb-mods/BUILD_PLAN.md` §6 gate 9a. Symbol root cause and v7 fix: BUILD_PLAN §8.
 
 **PRIMARY fix = gate soft-start on Q1 (prevents the ring at the source):** Q1 is already the pass
 element in the path. Add **C_gs (gate-source cap)** so the gate ramps slowly through R17 → Q1 turns

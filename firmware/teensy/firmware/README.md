@@ -8,7 +8,7 @@ End-to-end micro-ROS round-trip green on Jetson; 20-topic contract implemented; 
 
 - Teensy → XRCE-DDS over USB-CDC → `micro_ros_agent` → ROS 2 Humble
 - IntervalTimer ISR-driven 200 Hz tick. Skeleton-only p99 = 1 µs (=50× under the <100 µs gate). Real numbers will grow once a servo is on the bus and reads stop timing out — `/loop_exec_p99_us` is the topic to watch.
-- 18 publishers + 2 subscribers wired (see "ROS 2 topics" below). Heartbeat → joint-state-from-bus → joint-command-to-bus loop is closed in code.
+- 27 publishers + 5 subscribers wired (see "ROS 2 topics" below). The rmw pools that hold them are sized in `nova_microros.meta` (32 pub / 8 sub; upstream default is 10 / 5) -- `test_firmware_entity_caps.py` fails if main.cpp outgrows it. Heartbeat → joint-state-from-bus → joint-command-to-bus loop is closed in code.
 - Safety FSM with E-stop + battery-low latch, `/safety_clear` reset path, boot self-test seeding.
 - GitHub Actions CI green on every PR (Arduino-only env).
 
@@ -77,7 +77,7 @@ Group by purpose. All `std_msgs/Int32` counters are monotonic from boot unless n
 ### Joint I/O
 | Direction | Topic | Type | Rate | Notes |
 |-----------|-------|------|------|-------|
-| Pub | `/joint_states` | `sensor_msgs/JointState` | 200 Hz | 12 joints — raw position, velocity, load from STS3215 round-robin (~17 Hz per joint) |
+| Pub | `/joint_states` | `sensor_msgs/JointState` | 200 Hz | 12 joints — raw position, velocity, load from STS3215 round-robin (~17 Hz per joint). `effort` = signed load in 0.1 % of stall, **-1000..+1000** (register bit 10 = direction, decoded by `feetech::decode_load`) |
 | Sub | `/joint_commands` | `sensor_msgs/JointState` | 100 Hz target | latches into `latched_cmd_position[]`; broadcast to bus at 40 Hz via SYNC_WRITE when `safety_state == NORMAL` |
 | Pub | `/joint_cmd_rx_count` | `Int32` | 1 Hz | sub-callback fire counter (host-side ack) |
 | Pub | `/servo_present_mask` | `Int32` | 1 Hz | bit i = joint i has answered at least once since boot |
@@ -89,6 +89,7 @@ Group by purpose. All `std_msgs/Int32` counters are monotonic from boot unless n
 | Pub | `/servo_err_timeout` | `Int32` | 1 Hz | no servo response inside the read window |
 | Pub | `/servo_err_bad_frame` | `Int32` | 1 Hz | checksum / header garbled — bus-integrity signal |
 | Pub | `/servo_err_servo` | `Int32` | 1 Hz | servo responded with non-zero error byte (overheat/overload/voltage) |
+| Pub | `/torque_off_fail` | `Int32` | 1 Hz | lifetime count of servos that did not read back TORQUE_ENABLE=0 after a disarm (broadcast + per-servo write, 3 tries each; #437). **Non-zero = a stop left a joint holding torque** |
 
 ### Safety
 | Direction | Topic | Type | Rate | Notes |
@@ -122,7 +123,7 @@ its built-in defaults instead of the calibrated tables.
 ### Power telemetry
 | Direction | Topic | Type | Rate | Notes |
 |-----------|-------|------|------|-------|
-| Pub | `/power_rails` | `Float32MultiArray` | 10 Hz | **12 floats** with `NOVA_INA226_L2` (which IS set — `platformio.ini:61`, in `teensy_base.build_flags`): `[leg_v, leg_a, leg_w, hip_v, hip_a, hip_w, jetson_v, jetson_a, jetson_w, l2_v, l2_a, l2_w]`. **9 floats only if that flag is removed** — `POWER_RAILS_FIELDS` switches on it (`main.cpp:838-841`). Read by index, no MultiArrayLayout dims populated. ⚠️ **This row said 9 until 2026-08-12.** The 4th INA226 (L2 rail @0x45) was decided 2026-06-30 and the contract was never updated, so anything sized from this table would have silently dropped the L2 rail. |
+| Pub | `/power_rails` | `Float32MultiArray` | 10 Hz | **12 floats** with `NOVA_INA226_L2` (which IS set — `platformio.ini:61`, in `teensy_base.build_flags`): `[leg_v, leg_a, leg_w, hip_v, hip_a, hip_w, jetson_v, jetson_a, jetson_w, l2_v, l2_a, l2_w]`. **9 floats only if that flag is removed** — `POWER_RAILS_FIELDS` switches on it (`main.cpp:838-841`). Read by index, no MultiArrayLayout dims populated. **A rail whose INA226 did not ACK at boot, or whose latest poll failed an I²C read, publishes `NaN` in all three of its fields** (#439; ~~a chip that drops off mid-run is not yet detected — `Rail::poll()` never clears `valid` once set~~ — superseded: `rail_read()` in `rail_sample.h` now marks a failed read invalid, native-tested; a bench removal test is still owed) — 0.0 means a rail genuinely reading zero, never a dead sensor; consumers must `isnan`-check before using a value. ⚠️ **This row said 9 until 2026-08-12.** The 4th INA226 (L2 rail @0x45) was decided 2026-06-30 and the contract was never updated, so anything sized from this table would have silently dropped the L2 rail. |
 | Pub | `/servo_voltage` | `Float32MultiArray` | 5 Hz | 12 floats, per joint, volts (`PRESENT_VOLTAGE` raw × 0.1). **Added to this table 2026-08-10 — published since the servo-health work landed (`main.cpp:1493`) but never in the contract, so downstream guessed the name.** |
 | Pub | `/servo_temperature` | `Float32MultiArray` | 5 Hz | 12 floats, per joint, °C (`REG_PRESENT_TEMPERATURE` 0x3F, u8). Feeds the firmware-local overtemp guard at `NOVA_OVERTEMP_C` 70 °C, which trips limp ahead of the servo's own ~80 °C cutoff (`main.cpp:333`). **Same omission.** |
 
@@ -167,7 +168,7 @@ invented names. `test_firmware_topic_contract.py` now fails if a publisher is mi
 
 ### Build envs
 
-- `[env:teensy41]` — production / Jetson build. Includes `micro_ros_platformio` + `NOVA_USE_MICRO_ROS`. Used by `pio run -t upload`.
+- `[env:teensy41]` — production / Jetson build. Includes `micro_ros_platformio` + `NOVA_USE_MICRO_ROS`. Used by `pio run -t upload`. Entity caps come from `board_microros_user_meta = nova_microros.meta`; the library is cached after its first build, so after editing the meta run `pio run -e teensy41 -t clean_microros` first.
 - `[env:teensy41_ci]` — Arduino-only CI build (used by `.github/workflows/firmware-compile.yml`). No micro-ROS lib pull, finishes in seconds, exercises every non-ROS code path (feetech, INA226, ISR tick, safety FSM, histograms).
 
 ## Smoke test from host

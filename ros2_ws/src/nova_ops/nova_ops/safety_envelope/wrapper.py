@@ -53,9 +53,9 @@ import copy
 import math
 from typing import Deque, Dict, Optional
 
-from .limits import JointLimits
+from .limits import JointLimits, confirmed_haa_inboard_urdf
 from .counters import EnvelopeCounters
-from nova_ops.rom_envelope import hfe_bounds
+from nova_ops.rom_envelope import haa_urdf_canonical, hfe_bounds
 
 
 # Load check uses a time-window mean of /joint_states.effort[] per
@@ -63,6 +63,12 @@ from nova_ops.rom_envelope import hfe_bounds
 # so 3 samples ≠ 3 fresh reads of one joint. Window by time, not count:
 _LOAD_WINDOW_SEC = 0.30
 _LOAD_REFUSE_THRESHOLD = 0.70
+# /joint_states effort[] arrives in the firmware's wire unit: STS3215 present-load,
+# 0.1 % of stall per count, signed (-1000..+1000; firmware/teensy/firmware/README.md
+# /joint_states row). Every threshold here is a FRACTION of stall (0.70), so the
+# raw value must be scaled at ingest — feeding it unscaled made any load over 0.1 %
+# read as "over 70 %" and refused nearly every load-increasing move.
+_EFFORT_COUNTS_PER_STALL = 1000.0
 
 # If we haven't seen a command for this long, treat the next command as
 # the first sample (velocity check should not compare against ancient
@@ -176,11 +182,13 @@ class SafeJointCommandPublisher:
         for idx, eff in enumerate(msg.effort):
             joint_id = idx + 1
             # Keep the SIGN — the load-refusal direction check needs to know
-            # which way the joint is straining (effort is signed, normalized
-            # to ±fraction of stall torque). Was abs(): that discarded the
+            # which way the joint is straining. Was abs(): that discarded the
             # direction, which is why the refusal couldn't tell "push harder"
-            # from "back off" and blocked both.
-            self._load_samples[joint_id].append((stamp_ns, float(eff)))
+            # from "back off" and blocked both. Scaled from firmware counts to
+            # ±fraction of stall here, the one place effort enters.
+            self._load_samples[joint_id].append(
+                (stamp_ns, float(eff) / _EFFORT_COUNTS_PER_STALL)
+            )
 
     def _load_window(self, joint_id: int, now_ns: int):
         """Return (mean_abs, load_sign) over the effort samples within
@@ -215,12 +223,19 @@ class SafeJointCommandPublisher:
         toward hard stops. So the gate belongs HERE, where every publisher
         passes, not only in the IK.
 
-        HAA SIGN IS UNKNOWN in this frame. /joint_commands is in the SERVO
-        command frame, and which haa direction is inboard there is exactly what
-        HAA_INBOARD_SIGN records as None until homing observes real motion. So
-        while a sign is unfilled, evaluate the envelope for BOTH interpretations
-        of the commanded haa and take the tighter — the same conservative
-        posture limits.py already takes for the haa limit itself.
+        HAA FRAME. This runs on URDF radians (the counts adapter comes after
+        the wrapper), while hfe_bounds() takes CANONICAL haa (+ = outboard on
+        every leg). Until a hip's sign is CONFIRMED, evaluate the envelope for
+        BOTH interpretations of the commanded haa and take the tighter — the
+        same conservative posture limits.py takes for the haa window itself.
+
+        Once confirmed, check ONLY the real direction (M2). The both-ways
+        intersection charges an outboard splay with the inboard (belly-pack) cap,
+        so a confirmed front leg could never reach the #145 'down'/limp pose
+        (haa +40 outboard, hfe +40 -> clamped to +4.8). The sign comes from
+        limits.confirmed_haa_inboard_urdf(), the same URDF-frame sign the haa
+        window is built from, so the gate and the window cannot disagree about
+        which side is inboard.
         """
         legs = getattr(self, "_leg_ids", None)
         if legs is None:
@@ -230,9 +245,12 @@ class SafeJointCommandPublisher:
             if max(idxs) >= len(cmd_msg.position):
                 continue
             haa, hfe, kfe = (cmd_msg.position[i] for i in idxs)
-            lo_a, hi_a = hfe_bounds(leg, haa, kfe)
-            lo_b, hi_b = hfe_bounds(leg, -haa, kfe)  # sign unknown -> both ways
-            lo, hi = max(lo_a, lo_b), min(hi_a, hi_b)
+            if confirmed_haa_inboard_urdf(haa_id) is None:
+                lo_a, hi_a = hfe_bounds(leg, haa, kfe)
+                lo_b, hi_b = hfe_bounds(leg, -haa, kfe)  # unconfirmed -> both ways
+                lo, hi = max(lo_a, lo_b), min(hi_a, hi_b)
+            else:
+                lo, hi = hfe_bounds(leg, haa_urdf_canonical(leg, haa), kfe)
             if not (lo <= hfe <= hi):
                 clamped = max(lo, min(hi, hfe))
                 self._log(
@@ -256,7 +274,7 @@ class SafeJointCommandPublisher:
         """
         cmd_msg = copy.deepcopy(cmd_msg)
         now_ns = self.node.get_clock().now().nanoseconds
-        self._clamp_posture(cmd_msg)
+        touched = []  # joints whose _last_cmd is written AFTER the posture gate
 
         for idx in range(len(cmd_msg.position)):
             joint_id = idx + 1
@@ -343,8 +361,23 @@ class SafeJointCommandPublisher:
                 goal = last
                 cmd_msg.position[idx] = goal
 
-            # Remember for next iter
-            self._last_cmd[joint_id] = goal
+            touched.append(joint_id)
+
+        # Posture gate LAST, on the values that will actually be published (M1).
+        # It used to run first, on the COMMANDED haa/kfe; the velocity clamp
+        # then moved haa and hfe by different fractions, so a leg tucking its
+        # hip inboard while unfolding hfe published an intermediate pose the
+        # gate never saw — measured FL hfe +42.4 at haa -13 against a +20
+        # bound. The envelope is a property of the published pose, so it must
+        # be checked on it.
+        # ponytail: the gate wins over the velocity limit — its hfe step is not
+        # re-rate-limited, so it can exceed v_max for one tick. Upgrade: hold
+        # haa/kfe back instead of jumping hfe, if that jump ever matters.
+        self._clamp_posture(cmd_msg)
+
+        # Remember what was PUBLISHED, so the next velocity step starts from it.
+        for joint_id in touched:
+            self._last_cmd[joint_id] = cmd_msg.position[joint_id - 1]
             self._last_cmd_time_ns[joint_id] = now_ns
 
         # All joints sanitized — publish

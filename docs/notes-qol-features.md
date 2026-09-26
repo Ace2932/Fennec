@@ -194,7 +194,7 @@ A bash wrapper that just calls 6 launch files in sequence would mostly work, but
 **Safety belt:**
 
 - Refuse to deploy if E-stop is released (i.e., if a fault could cause motion during the post-flash reboot). Operator must engage E-stop first; `make deploy` reads the GPIO state via SSH before proceeding.
-- Refuse to deploy if the gait controller is running (`pgrep -f gait_controller`). Same reason.
+- Refuse to deploy if the gait controller is running (`pgrep -f 'gait_node|policy_node'` — those are the real entry points, `nova_locomotion/setup.py`). Same reason.
 
 **Open questions:**
 
