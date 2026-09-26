@@ -16,6 +16,12 @@ the joint-velocity history. `test_policy_runner.py` cross-checks this vs the sim
 import numpy as np
 
 CMD_SCALE = np.array([2.0, 2.0, 0.25], dtype=np.float32)
+# The command box the policy TRAINED on (sim env.py stage-2 _cmd_lo/_cmd_hi,
+# which stay inside the measured 2.8 rad/s actuator envelope). A /cmd_vel outside
+# it is extrapolation the policy has never seen, so it is clipped here, where
+# every caller's command enters the observation.
+CMD_LO = np.array([-0.15, -0.15, -0.5], dtype=np.float32)
+CMD_HI = np.array([0.35, 0.15, 0.5], dtype=np.float32)
 HIST = 3
 PROP = 30
 DT = 0.02                                   # 50 Hz control, as in sim
@@ -113,7 +119,7 @@ class NovaPolicy:
             self.prop_hist = np.concatenate([f[None], self.prop_hist[:-1]], axis=0)
         return np.concatenate([
             self.prop_hist.reshape(-1),
-            np.asarray(cmd, np.float32) * self.cmd_scale,   # from the artifact
+            np.clip(np.asarray(cmd, np.float32), CMD_LO, CMD_HI) * self.cmd_scale,
             self.last_action,
         ] + ([np.array([np.sin(2 * np.pi * self.phase),
                         np.cos(2 * np.pi * self.phase)], np.float32)]

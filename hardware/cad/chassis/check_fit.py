@@ -482,6 +482,16 @@ def load_leg_parts():
     tib = trimesh.load(f'{LEG}/tibia_R.stl')
     coax_mesh = trimesh.load(f'{LEG}/coax_R.stl')
     cb = coax_mesh.bounds
+    # #72 (2026-09-25): coax_hfe_block and the SM3_Foot shoe were never in
+    # this cloud, so the chassis ROM/crouch sweep swept bare coax/tibia only.
+    # coax_hfe_block is defined in the SAME coax world frame at identity, no
+    # transform needed (leg_v6/check_fit.py's own hip-pitch sweep unions it
+    # into 'coax' the same way). The shoe needs its real mount pose
+    # (leg_v6/check_shoe.py's shoe_pose(): band ctr 270 -> tibia stance-plumb
+    # -36deg), reused verbatim here rather than re-derived.
+    coax_hfe_block = trimesh.load(f'{LEG}/coax_hfe_block.stl')
+    shoe = trimesh.load(str(asset('SM3_Foot.stl')))
+    shoe_pose = T([129, 0, -30.5]) @ rot(54, [0, 0, 1]) @ T([0, -7.0, 0])
     rng = np.random.default_rng(1)
 
     def sphere_pts(c, r, n=120):
@@ -511,6 +521,9 @@ def load_leg_parts():
     ])
     return dict(
         coax=np.vstack([trimesh.sample.sample_surface(coax_mesh, 5000, seed=0)[0],
+                        # #72: coax_hfe_block bolts on at identity in the coax
+                        # frame (same as leg_v6/check_fit.py's hip-pitch sweep)
+                        trimesh.sample.sample_surface(coax_hfe_block, 1500, seed=0)[0],
                         coax_extra]),
         servo=trimesh.sample.sample_surface(servo, 5000, seed=0)[0],
         femur=np.vstack([trimesh.sample.sample_surface(
@@ -522,6 +535,9 @@ def load_leg_parts():
                          trimesh.sample.sample_surface(
                              trimesh.load(f'{LEG}/knee_bumper.stl'),
                              1500, seed=0)[0],
+                         # #72: SM3_Foot shoe, at its real mount pose (shoe_pose)
+                         tf(trimesh.sample.sample_surface(shoe, 2000, seed=0)[0],
+                            shoe_pose),
                          tibia_extra]),
     )
 
@@ -760,7 +776,7 @@ def floor_thickness_check():
         if not ok and not accepted:
             bad = True
         print(f"{tag} {part} {label} @ {tuple(mouth)}: "
-              f"floor {floor:.2f}mm (need >= {thr})"
+              f"floor {floor:.2f}mm (need >= {thr}, tol 0.05mm)"
               + ('  [#70b known-constrained]' if not ok and accepted else ''))
     return bad
 

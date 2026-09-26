@@ -82,4 +82,18 @@ inline void slew_apply(const uint16_t* targets, uint16_t* last_goal,
   }
 }
 
+//: Record what was ACTUALLY written this tick as next tick's slew origin.
+//:
+//: Called after PASS 4 (#280), which may pull an hfe goal back by more than
+//: max_delta. Without this, next tick ramps from the pre-clamp value — a
+//: goal that never reached the servo — and the moment the envelope window
+//: opens, hfe jumps by the whole clamped distance in one broadcast. Moved
+//: here from main.cpp (#358). The inline loop re-synced only the four hfe
+//: indices; this syncs all n. Same result: slew_apply() has just set
+//: last_goal[i] == out[i] for every i, and PASS 4 writes only hfe — pinned by
+//: test_commit_matches_the_original_hfe_only_resync.
+inline void slew_commit(uint16_t* last_goal, const uint16_t* written, size_t n) {
+  for (size_t i = 0; i < n; i++) last_goal[i] = written[i];
+}
+
 }  // namespace nova

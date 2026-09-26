@@ -71,7 +71,7 @@ S=ros2_ws/src
 PYTHONPATH=$S/nova_ops:$S/nova_locomotion:$S/nova_calibration:$S/nova_description \
   .venv/bin/python -m pytest $S/nova_ops/test $S/nova_locomotion/test $S/nova_calibration/test -q
 ```
-401 pass, 0 skipped (2026-09-25).
+409 pass, 0 skipped (2026-09-25).
 
 **No `--ignore`.** `test_preflight` used to be excluded here and in CI because importing the
 preflight registry pulled in `rclpy`, so it ran nowhere and went red unseen (#187). The checks now

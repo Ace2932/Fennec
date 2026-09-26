@@ -50,6 +50,20 @@ on:
       # above: narrowed to the one file that's the actual dependency, not the
       # whole lidar_selffilter/ directory.
       - 'ros2_ws/src/nova_ops/nova_ops/lidar_selffilter/mask.py'
+      # #416: pcb-length-match's own inputs. Narrowed to the exact files that
+      # job reads (the checker + each board's spec + each board's .kicad_pcb),
+      # not hardware/pcb-mods/** -- same lesson as the entries above, and the
+      # same tradeoff too: since path filters are workflow-scoped, not
+      # job-scoped, these five files ALSO wake the five unrelated CAD jobs
+      # above (leg/chassis/head-clearance/freshness, ~45 min). Accepted
+      # because the ticket asks for this job specifically in this workflow;
+      # a per-job filter would need a separate workflow file or a
+      # paths-filter action, out of scope here.
+      - 'hardware/pcb-mods/tools/check_length_match.py'
+      - 'hardware/pcb-mods/nova_pcb_v6_logic/length_match.json'
+      - 'hardware/pcb-mods/nova_pcb_v6_logic/nova_pcb_v6_logic.kicad_pcb'
+      - 'hardware/pcb-mods/nova_pcb_v6_power_v2/length_match.json'
+      - 'hardware/pcb-mods/nova_pcb_v6_power_v2/nova_pcb_v6_power_v2.kicad_pcb'
   push:
     branches: [main]
     paths:
@@ -79,6 +93,12 @@ on:
       - 'sim/nova_mjx/build_mjcf.py'
       - 'ros2_ws/src/nova_ops/nova_ops/rom_envelope_table.py'
       - 'ros2_ws/src/nova_ops/nova_ops/lidar_selffilter/mask.py'
+      # #416: see the matching comment in the pull_request paths above.
+      - 'hardware/pcb-mods/tools/check_length_match.py'
+      - 'hardware/pcb-mods/nova_pcb_v6_logic/length_match.json'
+      - 'hardware/pcb-mods/nova_pcb_v6_logic/nova_pcb_v6_logic.kicad_pcb'
+      - 'hardware/pcb-mods/nova_pcb_v6_power_v2/length_match.json'
+      - 'hardware/pcb-mods/nova_pcb_v6_power_v2/nova_pcb_v6_power_v2.kicad_pcb'
 
 jobs:
   leg-gates:
@@ -373,3 +393,37 @@ jobs:
         run: pip install -r hardware/cad/requirements.txt
       - name: ROM envelope table matches its producer, and both copies agree
         run: python -u hardware/cad/check_generated_fresh.py --only rom_envelope_table.py
+
+  pcb-length-match:
+    # #416: length-matching gate for the two active v6 PCBs. Unlike
+    # fab_gate.py (needs pcbnew, so it only runs on the Mac by hand), this
+    # checker parses the .kicad_pcb s-expression with stdlib only -- no
+    # KiCad install, so it actually runs here. It sums routed copper length
+    # per net, groups nets per each board's length_match.json, and fails
+    # (exit 1) on a spread over the documented tolerance or a length over
+    # max, or (exit 2) on a spec-named net that's missing or unrouted on the
+    # board -- see hardware/pcb-mods/README.md "Length matching" for the
+    # budget derivations and hardware/pcb-mods/tools/test_check_length_match.py
+    # for the pytest regression suite (run separately, in ros-pytest.yml).
+    #
+    # This ticket changes no copper: both boards must PASS with the
+    # tolerances committed here, on main, today.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Selftest (synthetic fixture — pass / spread-fail / missing-net / unrouted-net)
+        working-directory: hardware/pcb-mods
+        run: python3 tools/check_length_match.py --selftest
+
+      - name: nova_pcb_v6_logic length-match gate
+        working-directory: hardware/pcb-mods
+        run: python3 tools/check_length_match.py nova_pcb_v6_logic/nova_pcb_v6_logic.kicad_pcb nova_pcb_v6_logic/length_match.json
+
+      - name: nova_pcb_v6_power_v2 length-match gate
+        working-directory: hardware/pcb-mods
+        run: python3 tools/check_length_match.py nova_pcb_v6_power_v2/nova_pcb_v6_power_v2.kicad_pcb nova_pcb_v6_power_v2/length_match.json

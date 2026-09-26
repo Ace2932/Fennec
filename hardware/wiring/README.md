@@ -19,6 +19,8 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
                               │        LIT: lamp on the LOAD side, ground via SW2.1)
                               │
                               ├── MOSFET hard-cutoff @ ~12.56V measured (comparator-driven)
+                              │        → corrected 2026-09-25 (#432): 12.42 V falling /
+                              │          12.70 V rising, expected; 12.56 is the no-hyst midpoint
                               │
                               └─┬─ Pololu D42V110F7  → 7.5V/10A → leg rail
                                 │                                 (8× STS3215 19kg femur/tibia)
@@ -49,7 +51,7 @@ Power rail map and signal/data wiring for the as-built robot. Refer to BOM v3.4 
 elements in the battery feed — both act by pulling buck **EN** pins low (`EN_BUCKS`/`EN_JET`);
 the feed itself is only ever broken by the fuse, Q1 and SW1. (2) **The UBEC is deliberately
 NOT killed by either** — it has no EN, so `V5_AUX` stays up through a hardcut, which is what
-keeps the comparators latched. The one thing that kills it is SW1 (or the pack).
+keeps the comparators latched. The one thing that kills it is SW1 (or the pack). ⚠ superseded by ../../docs/power-chain-fmea.md#pc-07 (not latched: 0.28 V hysteresis only)
 
 ### Regen TVS clamps (harness parts — not on either PCB)
 
@@ -89,13 +91,18 @@ same idiom as every other XT/fuse joint (`docs/master-bom.md` harness-consumable
 | Trip | Pack V | Cell V | Action |
 |------|--------|--------|--------|
 | 1 | 13.2 V | 3.30 V/cell | 608AC charger LVC alarm (user-facing beep) |
-| 2 | ~~13.0 V~~ **13.03 V measured-parts** | 3.26 V/cell | LM393 comparator → Teensy GPIO **pin 4** → `/battery_low` Bool → Jetson `systemctl poweroff` (clean SD unmount). ~30-60 s window. |
-| 3 | ~~12.4 V~~ **12.56 V measured-parts** | 3.14 V/cell | Second LM393 stage → **BSS138 (Q2) pulls EN_BUCKS low → all bucks off** (leg/hip/L2/arm); Q4 also kills Jetson EN. Autonomous backstop. (Q1 IRLB3034 = reverse-polarity protection, separate — does NOT break the battery feed.) |
-| — | — | — | E-stop (manual, SW2 NC) — pulls EN_BUCKS low via Q3 → kills leg + hip + L2 + **arm** buck EN. Jetson stays alive. |
+| 2 | ~~13.0 V~~ ~~**13.03 V measured-parts**~~ **12.96 V falling / 13.06 V rising (expected, #432)** | ~~3.26~~ 3.24 V/cell falling | LM393 comparator → Teensy GPIO **pin 4** → `/battery_low` Bool → Jetson `systemctl poweroff` (clean SD unmount). ~30-60 s window. |
+| 3 | ~~12.4 V~~ ~~**12.56 V measured-parts**~~ **12.42 V falling / 12.70 V rising (expected, #432)** | ~~3.14~~ 3.10 V/cell falling | Second LM393 stage → **BSS138 (Q2) pulls EN_BUCKS low → all bucks off** (leg/hip/L2/arm); Q4 also kills Jetson EN. Autonomous backstop. (Q1 IRLB3034 = reverse-polarity protection, separate — does NOT break the battery feed.) |
+| — | — | — | E-stop (manual, SW2 NC) — pulls EN_BUCKS low via Q3 → kills leg + hip + L2 + **arm** buck EN. Jetson stays alive. **Needs `V5_AUX` up** (#430 — see below). |
 | — | — | — | E-stop (manual, J21 2nd NC) — same button press, tells software: contact opens → Teensy pin 5 reads HIGH (fail-safe) → `SafetyFSM` latches e-stop state, which is what preflight's estop check reads. Does not itself de-energize anything. |
 
 ⚠️ **The HB2-ES544 needs TWO separate NC contact blocks** — one per path above. SW2 is the
-hardware kill (button → Q3 → EN_BUCKS, de-energizes the bucks regardless of firmware); J21 is
+hardware kill (button → Q3 → EN_BUCKS, de-energizes the bucks ~~regardless of firmware~~ **→ corrected
+2026-09-25, #430: independent of firmware, but only while `V5_AUX` is up.** Pressing SW2 lets
+`R13` 10k pull Q3's gate up to `V5_AUX`, and R13 is the only pull-up on that gate (board file).
+With the UBEC dead or unplugged, Q3 stays off and the bucks keep running with the button
+pressed. Bench step: the E-stop section of "As-built switch wiring" below, and
+`docs/pre-power-on-validation.md` §3 step 5. v7 fix in `hardware/pcb-mods/BUILD_PLAN.md` §8); J21 is
 the software sense (button → Teensy → `SafetyFSM`, no power path). They are electrically
 independent so either one failing doesn't silently take out the other, but that also means
 both must be wired and both must change state on the same press — see harness row below and
@@ -106,6 +113,11 @@ fitted divider is 0.1794 (R2 99.7k / R3 21.8k) against the UBEC's measured 4.98 
 `pre-power-on-validation.md` §2 states it outright: *expect 13.03 / 12.56, NOT 13.0 / 12.4* —
 metering against the old nominals at bring-up would flag a correct board. The nominals are
 struck, not deleted, per house style.
+**→ corrected 2026-09-25, #432:** 13.03 / 12.56 is the no-hysteresis midpoint. In normal running
+both comparator outputs are LOW, so `R15` 1M and `R14` 470k pull the references down. The trips
+a discharging pack actually crosses are **12.96 V (`BATT_LOW`) and 12.42 V (`HARDCUT`)**. They
+release on the way back up at **13.06 / 12.70 V**. All four are expected values, pending the
+two-direction sweep in `pre-power-on-validation.md` §2, where the arithmetic is.
 
 ### 🔴 The whole low-voltage cutoff dies with `V5_AUX` — and that is what the buzzer is for
 
@@ -218,7 +230,7 @@ Teensy 4.1                          I²C bus (separate from Arduino Nano aux bus
                                               l2_v, l2_a, l2_w]
 ```
 
-**Current-sense wiring (CRITICAL — PCB carries NO shunt; R13/R14 deleted):** the INA226 reads current only if the rail flows through its onboard 2 mΩ shunt (IN+→IN−). The board exposes just I²C+power; IN+/IN− are the module's **screw terminals** → wire **inline in the harness**: rail source → IN+ → shunt → IN− → load.
+**Current-sense wiring (CRITICAL — PCB carries NO shunt; R13/R14 deleted):** the INA226 reads current only if the rail flows through its onboard 2 mΩ shunt (IN+→IN−). The board exposes just I²C+power; IN+/IN− are the module's **screw terminals** → wire **inline in the harness**: rail source → IN+ → shunt → IN− → load. ⚠ superseded by ../../docs/power-chain-fmea.md (R13/R14 designators were reused: R13 = e-stop pull-up, R14 = hardcut hysteresis — both live)
 - **Hip (0x41 @ J7) / Jetson (0x44 @ J12) / L2 (0x45 @ J13):** single XT30 injection → insert the module there → full rail current. ✓
 - **Leg (0x40):** rail stars into **4× XT30 (J3–J6) on the PCB** → no single point carries total leg current. **DECISION 2026-06-26: DEFERRED (not needed for v1).** ⚠️ Leg INA reads **nothing** unless IN−/VBUS is **tapped to the leg rail** at assembly (board wires only I²C+power; IN± = module screw terminals, VBUS tied to IN−): **tap IN− → `leg_v` valid, `leg_a` invalid** (no inline shunt) = voltage-only; **leave IN− unwired → BOTH `leg_v` and `leg_a` invalid** (not just current). Total leg current has no clean inline point (4× XT30 star) regardless. Leg stall/over-current is covered by **per-servo STS3215 load** (`effort[]` on the bus); hip/Jetson INA cover rail current. Adding total-leg sense (RAW/clean split + sense-loop connector at U1 VOUT) is a **v7-rev** item only if board-level total-leg-power logging is ever wanted — see scope in chat 2026-06-26.
 
@@ -489,7 +501,8 @@ get ferrules.
 
 ### E-stop — Mxuteuk HB2-ES544, TWO INDEPENDENT NC paths, 4× 22 AWG × 250 mm
 
-Block A → power `SW2` (`GND`/`EN_SW` — the hardware kill, works with firmware dead).
+Block A → power `SW2` (`GND`/`EN_SW` — the hardware kill, works with firmware dead
+**but not with `V5_AUX` dead**, #430).
 Block B → logic `J21` (pin 1 → Teensy pin 5 sense, pin 2 → GND). **Never series or
 parallel the blocks.** NC identified per block (released ~0 Ω / latched OL) — "2NC"
 parts ship with mixed blocks, check both. `SW2` is a dry contact: either orange on
@@ -515,6 +528,15 @@ itself, the powered lamp check (pack in, SW1 OFF → **dark**; lit = red/white s
 the diode-mode orientation on the lamp spade (cathode-vs-anode — wrong guess = dark
 lamp, harmless), and a TPU `cable_clip` anchor within ~50 mm of the board on each
 bundle.
+
+**Powered torque-cut test. Owed. Run it TWICE (#430, added 2026-09-25).** The table above is
+unpowered continuity. The real test is powered, per `docs/pre-power-on-validation.md` §3 step 5:
+bucks running, press → the `EN_BUCKS` rails (`U1`–`U3`) die and the Jetson rail stays up.
+Then **repeat the E-stop torque-cut test with the UBEC output disconnected** (nothing driving
+`V5_AUX`). "Block A works with firmware dead" (above) is true only while `V5_AUX` is up.
+`R13` 10k to `V5_AUX` is Q3's only gate pull-up, so with the UBEC down **expect the bucks to
+keep running with the button pressed**. That is the known #430 defect; record the result.
+`HARDCUT`'s pull-up (`R9`) is on `V5_AUX` too, so the low-voltage cut is also gone in that state.
 
 ## Strain relief + routing notes
 
@@ -592,7 +614,8 @@ bundle.
   fit the under-board pocket; reg34c = Pololu #5674, 31.75 × 43.18 × 9.02 mm), so the
   runs can be measured against the chosen placements. Until then do not cut — slack is
   unroutable in the 20 mm gap, short is scrap.
-- **`SW2`/`J21` e-stop verify table** (§ as-built above) — specified, not run.
+- **`SW2`/`J21` e-stop verify table** (§ as-built above) — specified, not run. Plus the powered
+  torque-cut test, both runs, the second with the UBEC output disconnected (#430).
 - Servo-bus extension cables (2× waveshare 5264 kits, re-ordered 2026-07-11, arr ~Jul 13):
   **confirm actually in hand and count the 12 in-box cables** before the harness build
   (`master-bom.md` #55 still says "verify routed lengths on receipt").

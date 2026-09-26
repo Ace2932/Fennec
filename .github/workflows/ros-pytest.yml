@@ -145,6 +145,15 @@ jobs:
           set -e
           # pytest-style: collectible normally.
           python -m pytest scripts/test_set_servo_ids.py -q
+          # #416: check_length_match.py's own pytest suite. Named explicitly
+          # rather than pointed at the whole tools/ directory, because
+          # test_fab_gate.py next to it is NOT pytest-collectible (see the
+          # comment right below) -- `pytest hardware/pcb-mods/tools -q` would
+          # hit that file during collection and bail with the same
+          # INTERNALERROR before running anything. (A conftest.py there now
+          # ignores test_fab_gate.py from collection too, so that directory
+          # form works if this ever needs to become a glob.)
+          python -m pytest hardware/pcb-mods/tools/test_check_length_match.py -q
           # NOT pytest-collectible — module-level sys.exit() makes pytest bail
           # with `INTERNALERROR> SystemExit: 0`. It is written as a standalone
           # script, so run it as one. Same rule the sim-tests job follows.

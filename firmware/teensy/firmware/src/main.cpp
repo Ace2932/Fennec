@@ -16,6 +16,8 @@
 #include "safety_state.h"
 #include "loop_timing.h"
 #include "limp_controller.h"
+#include "servo_fleet.h"
+#include "telemetry_schedule.h"
 
 // Joint count = 12 (4 legs × 3 joints). Names/frame_id stay empty in
 // skeleton — Nova URDF wiring lands once gait controller is on the Jetson.
@@ -221,7 +223,7 @@ void read_ina226_stub() {
   // Round-robin sample. Single chip per tick keeps the I²C bus + main loop
   // budget tight; full set refreshes every INA226_RAIL_COUNT ticks.
   rails[ina226_rr_idx]->poll();
-  ina226_rr_idx = (ina226_rr_idx + 1) % INA226_RAIL_COUNT;
+  ina226_rr_idx = nova::rr_next(ina226_rr_idx, INA226_RAIL_COUNT);
 }
 
 // ---------------- Servo round-robin telemetry ----------------
@@ -266,13 +268,24 @@ volatile uint32_t servo_read_err_count = 0;
 // via /safety_clear once the jam is fixed. Thresholds are build-flag tunable.
 #ifndef NOVA_STALL_LOAD_RAW
 #define NOVA_STALL_LOAD_RAW 900     // of 1000 = 90% of stall torque
+#endif
 // Fleet dynamics written on EVERY arm (RAM regs reset on servo power-cycle):
 // torque limit 600 permille — gait stance needs ~45% of the 19kg servos, so
 // 60% keeps 1.3x headroom while a trip/jam saturates at 60% instead of full
-// stall through the gears (leg_v6 movement review, 2026-07-03). Goal acc 50
-// (x100 steps/s^2) softens torque-on snap and commanded steps.
+// stall through the gears (leg_v6 movement review, 2026-07-03). Bench
+// 2026-09-25 (#466): this register is a PWM DUTY cap (peak duty clamps at
+// exactly 600, 3 Hz top speed 2500 -> 2100 steps/s). Raising it is #428.
+#ifndef NOVA_TORQUE_LIMIT_RAW
 #define NOVA_TORQUE_LIMIT_RAW 600
-#define NOVA_GOAL_ACC 50
+#endif
+// Goal acc 0 = "use the servo's maximum", which is reg 85 Maximum_Acceleration
+// (set to 254 at assembly: set-servo-ids.py --set-max-accel). Any NONZERO value
+// is the working accel limit: bench 2026-09-25 with reg 85 = 254, acc 50 gave a
+// 2 Hz sine ratio of 0.27 (the old ~8.5 rad/s^2 ceiling) while acc 0 or 100 gave
+// 0.99. So 50 here silently undid reg 85 on every arm. The torque-on snap it was
+// meant to soften is handled by arm() writing goal = present first.
+#ifndef NOVA_GOAL_ACC
+#define NOVA_GOAL_ACC 0
 #endif
 #ifndef NOVA_OVERTEMP_C
 #define NOVA_OVERTEMP_C 70          // °C — act before the servo's own ~80°C cutoff
@@ -283,20 +296,16 @@ volatile uint32_t servo_read_err_count = 0;
 uint8_t  servo_stall_count[NOVA_JOINT_COUNT] = {0};
 volatile uint16_t servo_stall_mask = 0;     // bit i set = joint i has tripped
 
-// Write TORQUE_ENABLE to every PRESENT servo. Blocking (~0.4 ms/servo) — only
-// called at boot, on stall-fault entry, and on fault clear; never the hot path.
+// Write TORQUE_ENABLE to every PRESENT servo (torque-off: broadcast first, then
+// per-servo write + read-back, #437). Blocking (~0.4 ms/servo, more on retry) — only
+// called on the first safety tick, on stall-fault entry, and on fault clear;
+// never the hot path. The logic lives in servo_fleet.h (native-tested,
+// test_servo_fleet); arming is refused until the first safety tick (#436).
+nova::ServoFleet<feetech::Bus> servo_fleet(servo_bus, SERVO_ID_BASE, NOVA_JOINT_COUNT,
+                                           NOVA_TORQUE_LIMIT_RAW, NOVA_GOAL_ACC);
 void set_fleet_torque(bool on) {
-  for (uint8_t i = 0; i < NOVA_JOINT_COUNT; i++) {
-    if (servo_present_mask & (uint16_t)(1u << i)) {
-      uint8_t id = SERVO_ID_BASE + i;
-      if (on) {
-        // dynamics BEFORE enable so the first held pose is already limited
-        servo_bus.set_torque_limit(id, NOVA_TORQUE_LIMIT_RAW);
-        servo_bus.set_goal_acc(id, NOVA_GOAL_ACC);
-      }
-      servo_bus.torque_enable(id, on);
-    }
-  }
+  if (on) servo_fleet.arm(servo_present_mask);
+  else    servo_fleet.disarm(servo_present_mask);
 }
 
 void poll_one_servo() {
@@ -313,6 +322,10 @@ void poll_one_servo() {
   uint8_t buf[8];
   feetech::Bus::Result rc = servo_bus.read_block(
       id, feetech::REG_PRESENT_POSITION_L, 8, buf, /*timeout_us=*/2500);
+  // #438: a servo answering again after a timeout has rebooted (brownout /
+  // bucks back after a hard cut) with default torque limit + goal acc;
+  // re-write both now, before this tick's broadcast_servo_commands().
+  servo_fleet.on_poll(servo_rr_idx, rc);
   if (rc == feetech::Bus::OK) {
     servo_position_raw[servo_rr_idx] = feetech::pack_u16_le(buf[0], buf[1]);
     servo_velocity_raw[servo_rr_idx] = feetech::pack_s16_le(buf[2], buf[3]);
@@ -352,18 +365,17 @@ void poll_one_servo() {
       default: break;
     }
   }
-  servo_rr_idx = (servo_rr_idx + 1) % NOVA_JOINT_COUNT;
+  servo_rr_idx = nova::rr_next(servo_rr_idx, NOVA_JOINT_COUNT);
 }
 
 // ---------------- Servo command broadcast ----------------
-// Every CMD_BROADCAST_DECIMATE ticks (= 40 Hz at 200 Hz tick) send a
+// Every CMD_BROADCAST_DECIMATE ticks (= 100 Hz at 200 Hz tick) send a
 // SYNC_WRITE goal-position frame to all 12 servos with the latest latched
 // commands. Decimation keeps bus utilization sane and matches typical gait
 // command rate. Gated on safety_fsm.motion_enabled() — never writes while
-// E-stop or battery-low are latched.
-constexpr uint8_t CMD_BROADCAST_DECIMATE = 2;   // 200 Hz / 2 = 100 Hz
-// (backlog #21 bus-schedule rework, 2026-07-06: was 5 = 40 Hz. Gait wants
-// >= 100 Hz command; the slew constant below scales with the period.)
+// E-stop or battery-low are latched. The constant and the decimator live in
+// telemetry_schedule.h (#358), where the resulting rate is tested.
+using nova::CMD_BROADCAST_DECIMATE;
 uint8_t cmd_decimate_count = 0;
 
 // Slew limit — max raw-units change per broadcast (= per 10 ms at 100 Hz).
@@ -374,10 +386,7 @@ uint8_t cmd_decimate_count = 0;
 #ifndef NOVA_SLEW_MAX_DELTA
 #define NOVA_SLEW_MAX_DELTA 20
 #endif
-// Feedback polls per 5 ms tick (per-joint rate = 200*N/12 Hz): 3 -> 50 Hz
-#ifndef NOVA_POLLS_PER_TICK
-#define NOVA_POLLS_PER_TICK 3
-#endif
+// NOVA_POLLS_PER_TICK (feedback polls per tick) moved to telemetry_schedule.h.
 
 // Per-joint last-commanded raw goal, used to compute the slew-limited
 // next value. Initialized to "no command yet" sentinel; on first broadcast
@@ -438,9 +447,7 @@ void broadcast_servo_commands() {
   // ever having arrived — the whole point of the firmware fault path is to
   // not depend on the host being alive.
   if (!limping && joint_cmd_rx_count == 0) return;
-  cmd_decimate_count++;
-  if (cmd_decimate_count < CMD_BROADCAST_DECIMATE) return;
-  cmd_decimate_count = 0;
+  if (!nova::decimate(cmd_decimate_count, CMD_BROADCAST_DECIMATE)) return;
 
   uint8_t ids[NOVA_JOINT_COUNT];
   uint16_t goals[NOVA_JOINT_COUNT];
@@ -520,12 +527,9 @@ void broadcast_servo_commands() {
   // into the LiPo, same "expected to collapse rather than fight the fault"
   // philosophy as the E-stop limp path. Keep last_cmd_goal in sync with
   // whatever this pass actually wrote so next tick's slew starts from the
-  // real (possibly clamped) position, not the pre-clamp one.
+  // real (possibly clamped) position, not the pre-clamp one (slew_limiter.h).
   hfe_envelope.apply(goals, servo_position_raw, servo_present_mask);
-  for (size_t leg = 0; leg < nova::HFE_ENV_LEGS; leg++) {
-    const size_t hi = nova::hfe_env_hfe_index(leg);
-    last_cmd_goal[hi] = goals[hi];
-  }
+  nova::slew_commit(last_cmd_goal, goals, NOVA_JOINT_COUNT);
 
   servo_bus.sync_write_goal_positions(ids, goals, NOVA_JOINT_COUNT);
 }
@@ -537,17 +541,13 @@ elapsedMillis power_rails_ms;
 elapsedMillis servo_health_ms;
 elapsedMillis imu_ms;
 const uint32_t TICK_PERIOD_US = 1000000UL / NOVA_LOOP_HZ;
-const uint32_t HEARTBEAT_PERIOD_MS = 1000;
-const uint32_t STATS_PERIOD_MS = 1000;
-const uint32_t IMU_PERIOD_MS = 10;             // 100 Hz — see note below
-const uint32_t POWER_RAILS_PERIOD_MS = 100;    // 10 Hz — matches Phase 1 spec
-const uint32_t SERVO_HEALTH_PERIOD_MS = 200;   // 5 Hz — voltage + temperature
-// 100 Hz. NOT a free choice: policy_node runs control_hz = 50 (policy_node.py:185)
-// and consumes gyro + projected gravity as observation dims 0..5, so the IMU must
-// publish at least at control rate; 2x gives margin for scheduling jitter without
-// the policy ever reusing a sample. poll_imu() already reads the chip and updates
-// the tilt filter every tick at NOVA_LOOP_HZ = 200, so every published sample here
-// is fresh -- this rate only controls how often that fresh state leaves the board.
+// Publish periods (and why IMU is 100 Hz) live in telemetry_schedule.h (#358),
+// where test_telemetry_schedule pins each topic's rate on a simulated clock.
+using nova::HEARTBEAT_PERIOD_MS;
+using nova::STATS_PERIOD_MS;
+using nova::IMU_PERIOD_MS;
+using nova::POWER_RAILS_PERIOD_MS;
+using nova::SERVO_HEALTH_PERIOD_MS;
 
 // IntervalTimer ISR drives the tick. Handler in loop() measures
 // ISR-fire → handler-entry latency = pure scheduling jitter (target: a
@@ -632,6 +632,7 @@ rcl_publisher_t servo_read_err_pub;
 rcl_publisher_t servo_err_timeout_pub;
 rcl_publisher_t servo_err_bad_frame_pub;
 rcl_publisher_t servo_err_servo_pub;
+rcl_publisher_t torque_off_fail_pub;   // #437
 rcl_publisher_t firmware_version_pub;
 rcl_publisher_t servo_voltage_pub;
 rcl_publisher_t servo_temperature_pub;
@@ -659,6 +660,7 @@ std_msgs__msg__Int32 servo_read_err_msg;
 std_msgs__msg__Int32 servo_err_timeout_msg;
 std_msgs__msg__Int32 servo_err_bad_frame_msg;
 std_msgs__msg__Int32 servo_err_servo_msg;
+std_msgs__msg__Int32 torque_off_fail_msg;
 std_msgs__msg__Bool  safety_clear_msg;
 std_msgs__msg__Float32MultiArray power_rails_msg;
 std_msgs__msg__String firmware_version_msg;
@@ -707,10 +709,11 @@ rclc_executor_t executor;
 // HOLDING TORQUE with no safety loop, no watchdog and no recovery. Now: cut
 // torque, flash a 10 Hz burst (distinct from the 2 Hz waiting-for-agent
 // blink), then reset exactly like the software watchdog (tick_isr) so the
-// board retries from scratch.
+// board retries from scratch. Since #436 setup() no longer arms, so the fleet
+// is already limp here; the cut stays as a backstop.
 // ponytail: a PERSISTENT init failure (e.g. entity caps too small, see
-// nova_microros.meta) becomes a reboot loop (~2 s+ per boot) that toggles
-// torque on/off each boot; add a boot-count in a noinit RAM word to stay limp
+// nova_microros.meta) becomes a reboot loop (~2 s+ per boot) -- limp, since
+// #436, but silent; add a boot-count in a noinit RAM word to stop retrying
 // after N tries if that is ever seen on the bench. A dead agent does NOT loop here --
 // rclc_support_init above retries forever before any RCCHECK runs.
 [[noreturn]] static void rc_init_fail_reset() {
@@ -906,11 +909,10 @@ void setup() {
     }
   }
 
-  // Arm servo torque on every present servo (decision 2026-06-27: FW ALWAYS
-  // writes TORQUE_ENABLE rather than trusting each servo's EEPROM default — a
-  // torque-off EEPROM would silently ignore every goal). Skip if booting into a
-  // latched fault; the loop re-arms on clear.
-  if (safety_fsm.motion_enabled()) set_fleet_torque(true);
+  // Servo torque is NOT armed here (#436). This point is before the micro-ROS
+  // agent wait (30-60 s on a cold boot) and before tick_timer.begin(), so
+  // armed servos would hold torque with no SafetyFSM, stall guard or watchdog
+  // running. The first safety tick in loop() arms instead (servo_fleet.h).
 
 #ifdef NOVA_USE_MICRO_ROS
   set_microros_serial_transports(Serial);
@@ -1070,6 +1072,13 @@ void setup() {
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
       "servo_err_servo"));
+  // #437 — servos that did not confirm TORQUE_ENABLE=0 after a disarm.
+  // Non-zero means a stop left at least one joint holding torque.
+  RCCHECK(rclc_publisher_init_default(
+      &torque_off_fail_pub,
+      &node,
+      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+      "torque_off_fail"));
   RCCHECK(rclc_publisher_init_default(
       &firmware_version_pub,
       &node,
@@ -1321,6 +1330,14 @@ void loop() {
       for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) servo_stall_count[i] = 0;
       limp_controller.reset();   // defensive — should already be idle here
     }
+    // #436: boot arm, on the FIRST safety tick — the FSM has just evaluated
+    // the live E-stop / battery-low pins, the tick timer and watchdog are
+    // running. Arm servo torque on every present servo (decision 2026-06-27:
+    // FW ALWAYS writes TORQUE_ENABLE rather than trusting each servo's EEPROM
+    // default — a torque-off EEPROM would silently ignore every goal). Skipped
+    // if booting into a latched fault (boot self-test); the clear path above
+    // re-arms. No-op on every later tick.
+    servo_fleet.safety_tick(safety_fsm.motion_enabled(), servo_present_mask);
 
 #ifdef NOVA_USE_MICRO_ROS
     // Edge-change publish for raw safety signals (host sees the source)
@@ -1372,8 +1389,7 @@ void loop() {
     exec_time_hist.record(exec_us);
   }
 
-  if (heartbeat_ms >= HEARTBEAT_PERIOD_MS) {
-    heartbeat_ms = 0;
+  if (nova::rate_due(heartbeat_ms, HEARTBEAT_PERIOD_MS)) {
     digitalWrite(LED_PIN, !digitalRead(LED_PIN));   // 1 Hz LED
 #ifdef NOVA_USE_MICRO_ROS
     heartbeat_msg.data++;
@@ -1413,10 +1429,12 @@ void loop() {
     RCSOFTCHECK(rcl_publish(&servo_err_timeout_pub,   &servo_err_timeout_msg,   NULL));
     RCSOFTCHECK(rcl_publish(&servo_err_bad_frame_pub, &servo_err_bad_frame_msg, NULL));
     RCSOFTCHECK(rcl_publish(&servo_err_servo_pub,     &servo_err_servo_msg,     NULL));
+    torque_off_fail_msg.data = (int32_t)servo_fleet.off_fail_count();
+    RCSOFTCHECK(rcl_publish(&torque_off_fail_pub, &torque_off_fail_msg, NULL));
     // Firmware version — publish every 10 s (1 Hz heartbeat / 10), low-rate
     // identity ping so reconnecting hosts can pick it up without restart.
     static uint32_t fw_pub_count = 0;
-    if ((fw_pub_count++ % 10) == 0) {
+    if (nova::every_nth_from_first(fw_pub_count, nova::FW_VERSION_EVERY_N_HEARTBEATS)) {
       RCSOFTCHECK(rcl_publish(&firmware_version_pub, &firmware_version_msg, NULL));
     }
 #else
@@ -1438,8 +1456,7 @@ void loop() {
   // real one -- its /imu liveness gate would go green on a sensor that is not
   // there. Silence is the honest signal; the gate then refuses, which is the
   // documented behaviour with no driver (policy_node.py:152).
-  if (imu_ms >= IMU_PERIOD_MS) {
-    imu_ms = 0;
+  if (nova::rate_due(imu_ms, IMU_PERIOD_MS)) {
 #ifdef NOVA_USE_MICRO_ROS
     if (imu_ok) {
       float q[4];
@@ -1460,8 +1477,7 @@ void loop() {
 #endif
   }
 
-  if (servo_health_ms >= SERVO_HEALTH_PERIOD_MS) {
-    servo_health_ms = 0;
+  if (nova::rate_due(servo_health_ms, SERVO_HEALTH_PERIOD_MS)) {
     // Convert raw voltage (0.1 V units) + temperature (°C, already cooked)
     // into float arrays. Conversion math stays here — host-side consumers
     // see scaled values, not raw bytes.
@@ -1475,36 +1491,22 @@ void loop() {
 #endif
   }
 
-  if (power_rails_ms >= POWER_RAILS_PERIOD_MS) {
-    power_rails_ms = 0;
+  if (nova::rate_due(power_rails_ms, POWER_RAILS_PERIOD_MS)) {
     // Pull the latest per-rail samples into the Float32MultiArray buffer.
     // Order: leg_v leg_a leg_w hip_v hip_a hip_w jetson_v jetson_a jetson_w
-    // (+ l2_v l2_a l2_w at [9..11] when NOVA_INA226_L2 → 12-float layout).
-    const nova::RailSample& s_leg    = rail_leg.sample();
-    const nova::RailSample& s_hip    = rail_hip.sample();
-    const nova::RailSample& s_jetson = rail_jetson.sample();
-    power_rails_data[0] = s_leg.bus_voltage_v;
-    power_rails_data[1] = s_leg.current_a;
-    power_rails_data[2] = s_leg.power_w;
-    power_rails_data[3] = s_hip.bus_voltage_v;
-    power_rails_data[4] = s_hip.current_a;
-    power_rails_data[5] = s_hip.power_w;
-    power_rails_data[6] = s_jetson.bus_voltage_v;
-    power_rails_data[7] = s_jetson.current_a;
-    power_rails_data[8] = s_jetson.power_w;
-#ifdef NOVA_INA226_L2
-    const nova::RailSample& s_l2 = rail_l2.sample();
-    power_rails_data[9]  = s_l2.bus_voltage_v;
-    power_rails_data[10] = s_l2.current_a;
-    power_rails_data[11] = s_l2.power_w;
-#endif
+    // (+ l2_v l2_a l2_w at [9..11] when NOVA_INA226_L2 → 12-float layout) —
+    // the order of rails[]. An invalid sample (INA226 did not ACK at boot)
+    // publishes NaN for all three of its fields, not 0.0 (#439, rail_sample.h).
+    static_assert(POWER_RAILS_FIELDS == 3 * INA226_RAIL_COUNT, "3 floats per rail");
+    for (uint8_t r = 0; r < INA226_RAIL_COUNT; r++) {
+      nova::rail_fields(rails[r]->sample(), &power_rails_data[3 * r]);
+    }
 #ifdef NOVA_USE_MICRO_ROS
     RCSOFTCHECK(rcl_publish(&power_rails_pub, &power_rails_msg, NULL));
 #endif
   }
 
-  if (stats_ms >= STATS_PERIOD_MS) {
-    stats_ms = 0;
+  if (nova::rate_due(stats_ms, STATS_PERIOD_MS)) {
 #ifdef NOVA_USE_MICRO_ROS
     loop_max_msg.data      = (int32_t)latency_hist.max_us();
     loop_p99_msg.data      = (int32_t)latency_hist.p99_us();

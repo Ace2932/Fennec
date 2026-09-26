@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #include "slew_limiter.h"
+#include "hfe_envelope.h"   // PASS 2/4 neighbours, for the last_goal re-sync tests
 
 using namespace nova;
 
@@ -204,6 +205,119 @@ void test_apply_treats_a_null_present_array_as_all_absent(void) {
   TEST_ASSERT_EQUAL_UINT16(4095, out[1]);
 }
 
+// --- the PASS-4 re-sync (slew_commit) ------------------------------------------
+//
+// main.cpp's PASS 2/3/4 on a 12-joint vector, built from the extracted pieces
+// exactly as broadcast_servo_commands() calls them.
+
+// Two buckets per leg: haa 0..2048 -> hfe cap 3500 (wide), haa 2048..4095 ->
+// hfe cap 800 (tucked). Same shape as test_hfe_envelope's build_asymmetric.
+static void load_asymmetric(HfeEnvelope& env) {
+  float b[HFE_ENV_MAX_FLOATS];
+  size_t i = 0;
+  b[i++] = 2.0f;
+  for (size_t leg = 0; leg < HFE_ENV_LEGS; leg++) {
+    b[i++] = 0.0f;    b[i++] = 2048.0f; b[i++] = 0.0f; b[i++] = 3500.0f;
+    b[i++] = 2048.0f; b[i++] = 4095.0f; b[i++] = 0.0f; b[i++] = 800.0f;
+  }
+  TEST_ASSERT_TRUE(env.load(b, i));
+}
+
+static void pipeline_tick(HfeEnvelope& env, const uint16_t* cmd, uint16_t* last,
+                          uint16_t* out, const volatile uint16_t* pos,
+                          uint16_t mask, uint16_t d, bool reference_resync) {
+  uint16_t t[12];
+  for (size_t i = 0; i < 12; i++) t[i] = cmd[i];
+  env.apply(t);                                // PASS 2
+  slew_apply(t, last, out, 12, pos, mask, d);  // PASS 3
+  env.apply(out, pos, mask);                   // PASS 4
+  if (reference_resync) {
+    // verbatim from main.cpp before slew_commit() existed
+    for (size_t leg = 0; leg < HFE_ENV_LEGS; leg++) {
+      const size_t hi = hfe_env_hfe_index(leg);
+      last[hi] = out[hi];
+    }
+  } else {
+    slew_commit(last, out, 12);
+  }
+}
+
+void test_commit_matches_the_original_hfe_only_resync(void) {
+  // Differential, random but seeded: 400 runs x 60 ticks through the whole
+  // PASS 2-4 pipeline, anti-snap seed branch included (every run starts at
+  // SLEW_UNINIT, and ~1 tick in 20 re-inits as a fault clear does).
+  HfeEnvelope env_a, env_b;
+  load_asymmetric(env_a);
+  load_asymmetric(env_b);
+  uint32_t x = 0x358u;
+  auto rnd = [&x]() { x = x * 1664525u + 1013904223u; return x >> 8; };
+  const uint16_t deltas[3] = {SHIPPING_DELTA, 200, RAW_MAX};
+  for (int run = 0; run < 400; run++) {
+    uint16_t last_a[12], last_b[12], out_a[12], out_b[12], cmd[12];
+    volatile uint16_t pos[12];
+    for (int i = 0; i < 12; i++) last_a[i] = last_b[i] = SLEW_UNINIT;
+    const uint16_t d = deltas[run % 3];
+    for (int tick = 0; tick < 60; tick++) {
+      for (int i = 0; i < 12; i++) { cmd[i] = rnd() % 4096; pos[i] = rnd() % 4096; }
+      const uint16_t mask = (uint16_t)(rnd() & 0x0FFF);
+      if (rnd() % 20 == 0)
+        for (int i = 0; i < 12; i++) last_a[i] = last_b[i] = SLEW_UNINIT;
+      pipeline_tick(env_a, cmd, last_a, out_a, pos, mask, d, true);
+      pipeline_tick(env_b, cmd, last_b, out_b, pos, mask, d, false);
+      for (int i = 0; i < 12; i++) {
+        if (out_a[i] != out_b[i] || last_a[i] != last_b[i]) {
+          char msg[96];
+          snprintf(msg, sizeof msg, "run %d tick %d joint %d: out %u/%u last %u/%u",
+                   run, tick, i, out_a[i], out_b[i], last_a[i], last_b[i]);
+          TEST_FAIL_MESSAGE(msg);
+        }
+      }
+    }
+  }
+}
+
+void test_a_path_clamp_becomes_next_ticks_slew_origin(void) {
+  // #280's endpoint vs path distinction, end to end on leg 0. Both endpoints
+  // are legal (haa 2000/hfe 3000 in the wide bucket; haa 2100/hfe 500 in the
+  // tucked one), so PASS 2 never clamps the far target. The PATH is not:
+  // haa crosses 2048 on the 3rd tick while hfe has only ramped 3000 -> 2940.
+  HfeEnvelope env;
+  load_asymmetric(env);
+  const size_t HAA = hfe_env_haa_index(0), HFE = hfe_env_hfe_index(0);
+  uint16_t last[12], out[12], cmd[12];
+  for (int i = 0; i < 12; i++) last[i] = cmd[i] = 2000;
+  last[HFE] = 3000;
+  cmd[HAA] = 2100;
+  cmd[HFE] = 500;
+
+  int prev = last[HFE];
+  int clamp_tick = -1;
+  for (int tick = 0; tick < 10; tick++) {
+    pipeline_tick(env, cmd, last, out, nullptr, 0, SHIPPING_DELTA, false);
+    // path: every WRITTEN hfe is legal for the haa written alongside it
+    if (out[HAA] > 2048) TEST_ASSERT_LESS_OR_EQUAL_UINT16(800, out[HFE]);
+    // rate: at most max_delta per tick, except the one PASS-4 snap
+    if (prev - (int)out[HFE] > (int)SHIPPING_DELTA) {
+      TEST_ASSERT_EQUAL_INT_MESSAGE(-1, clamp_tick, "more than one snap");
+      clamp_tick = tick;
+    }
+    TEST_ASSERT_EQUAL_UINT16_MESSAGE(out[HFE], last[HFE],
+        "last_goal[hfe] is not what was written (#280 re-sync)");
+    prev = out[HFE];
+  }
+  TEST_ASSERT_EQUAL_INT_MESSAGE(2, clamp_tick, "PASS 4 snap expected on the 3rd tick");
+  TEST_ASSERT_EQUAL_UINT16(800 - 7 * SHIPPING_DELTA, out[HFE]);
+
+  // The hazard the re-sync exists for: the host reverses and the window
+  // re-opens. hfe must ramp up FROM what was written (660) by max_delta, not
+  // restart from the pre-clamp goal that never reached the servo.
+  cmd[HAA] = 2000;
+  cmd[HFE] = 3000;
+  pipeline_tick(env, cmd, last, out, nullptr, 0, SHIPPING_DELTA, false);
+  TEST_ASSERT_EQUAL_UINT16_MESSAGE(prev + SHIPPING_DELTA, out[HFE],
+      "hfe did not ramp from the written goal: slew started from a clamped-away value");
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_matches_the_original_EXHAUSTIVELY_on_the_steady_state_branch);
@@ -219,5 +333,7 @@ int main(int, char**) {
   RUN_TEST(test_apply_writes_back_last_goal_so_the_next_tick_ramps_from_it);
   RUN_TEST(test_apply_uses_each_joints_OWN_present_bit_and_position);
   RUN_TEST(test_apply_treats_a_null_present_array_as_all_absent);
+  RUN_TEST(test_commit_matches_the_original_hfe_only_resync);
+  RUN_TEST(test_a_path_clamp_becomes_next_ticks_slew_origin);
   return UNITY_END();
 }
