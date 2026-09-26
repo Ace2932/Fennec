@@ -245,17 +245,23 @@ POSITION_MODE_ACC_REG = 75
 # ...but that ceiling is the FACTORY value of register 85 (Maximum_Acceleration =
 # 50). With reg85 = 254 (#466 bench) the servo tracks 0.97 / 0.99 / 0.55 at
 # 1.4 / 2 / 3 Hz with 60-75 ms lag — and the PLAIN actuator here (no profile,
-# --goal-acc-reg 0) is the closest model: 0.99 / 0.84 / 0.54, slightly slow at 2 Hz
-# because the damping caps no-load speed at 2.8 rad/s while the bench shows ~3.8.
-# Adding any profile only makes it slower. So: reg85=254 -> --goal-acc-reg 0.
+# --goal-acc-reg 0) with the bench no-load speed (build_mjcf VMAX_LEG 3.83) is the
+# closest model: 0.99 / 1.02 / 0.70 — exact in the 1-2 Hz trot band, over-tracking
+# 3 Hz where the real ~40 rad/s^2 ceiling bites. So: reg85=254 -> --goal-acc-reg 0.
 POSITION_MODE_R85_254_ACC_REG = 0
 
 FW_GOAL_SLEW = 2000 * 2 * 3.141592653589793 / 4096   # rad/s, firmware goal slew (3.07)
+DUTY_SOFT = 0.8        # --w-duty bills duty above this (the servo's own unload line)
 FW_GUARD_DUTY = 0.9    # main.cpp NOVA_STALL_LOAD_RAW 900 (of 1000)
 FW_GUARD_POLLS = 5     # main.cpp NOVA_STALL_PERSIST — 5 x 20 ms polls = 100 ms
+# Guard v2 (firmware stall_guard.h, #428): a poll counts only on a JAM = the duty
+# above AND >= ERR from goal AND moved <= STILL since the previous poll.
+FW_GUARD_ERR = 60 * 2 * 3.141592653589793 / 4096     # rad, NOVA_STALL_ERR_COUNTS 60
+FW_GUARD_STILL = 3 * 2 * 3.141592653589793 / 4096    # rad, NOVA_STALL_STILL_COUNTS 3
 OVERLOAD_DUTY = 0.8    # Feetech default unload: above 80 % duty ...
 OVERLOAD_S = 2.0       # ... for 2 s ...
 OVERLOAD_OUT = 0.2     # ... -> 20 % output (peer research, SmallDog + Feetech table)
+OVERLOAD_TOL = 5e-3    # numeric margin on the unload line (see step()); 80 % vs 80.5 %
 
 
 def goal_acc_rad(reg):
@@ -302,7 +308,7 @@ def ref_lift_table():
 #
 # The `airT_*` / `ghost_*` metrics keep BOTH definitions visible so this can never
 # silently drift again.
-FOOT_RADIUS = 0.014
+FOOT_RADIUS = 0.017      # #443: == build_mjcf.R_FOOT == nova_geometry.yaml leg.foot_radius
 CONTACT_EPS = 1e-3
 
 # COMMANDED footswing clearance target `c` (lift-v5, walk-these-ways pattern).
@@ -410,7 +416,7 @@ class NovaJoystick(PipelineEnv):
                  knee_config="elbow_back", torque_limit=1.0, goal_acc=0.0,
                  joint_stale_p=0.0, asym=False, ref_gait=False,
                  ref_height=REF_HEIGHT, overload_model=False, w_overload=0.0,
-                 goal_slew=0.0, **kwargs):
+                 goal_slew=0.0, w_duty=0.0, w_guard=0.0, w_tau2=0.0, **kwargs):
         self._heightmap = heightmap
         self._w_climb = w_climb          # climb-reward weight; sweep via --w-climb
         self._beta_climb = beta_climb    # PBRS density weight; sweep via --beta-climb (0=off)
@@ -472,6 +478,19 @@ class NovaJoystick(PipelineEnv):
         # clip rate is tracked either way (metric slew_clip = fraction of joints
         # whose commanded target moved faster than the firmware would pass).
         self._goal_slew = float(goal_slew)
+        # DUTY COST (v-next): trained policies sat at >= 90 % duty for ~0.5 s runs,
+        # which the firmware stall guard (900 / 100 ms) would fleet-limp at TL 1000.
+        # Bill duty above DUTY_SOFT per joint so the gait stops living at stall.
+        self._w_duty = float(w_duty)
+        # GUARD COST: bill each joint's CONSECUTIVE >= 90 % duty run past one poll,
+        # growing with the run — the firmware stall guard fleet-limps at 5 polls
+        # (100 ms). A linear duty cost (w_duty 0.5) still left 440-720 ms runs.
+        self._w_guard = float(w_guard)
+        # COPPER-LOSS COST (#484): sum (tau / tau_stall)^2 over the 12 joints, the
+        # legged_gym torque term. tau_stall = full-voltage stall AFTER eff_scale,
+        # BEFORE torque_limit, so i^2 is relative to the servo actually fitted.
+        self._w_tau2 = float(w_tau2)
+        self._tau_stall = sys.actuator_forcerange[:, 1]
         self._overload = bool(overload_model)
         self._w_overload = float(w_overload)
         if self._torque_limit != 1.0:
@@ -663,6 +682,8 @@ class NovaJoystick(PipelineEnv):
             "hot_t": jp.zeros(self._nu), "tripped": jp.zeros(self._nu, dtype=bool),
             # firmware stall-guard run length (polls) per joint, + episode max
             "g_run": jp.zeros(self._nu, dtype=jp.int32), "g_max": jp.zeros((), dtype=jp.int32),
+            "g2_run": jp.zeros(self._nu, dtype=jp.int32), "g2_max": jp.zeros((), dtype=jp.int32),
+            "i2_leg": jp.zeros(()), "tau_leg": jp.zeros(()),
             "step": 0,
             # climb telescoping state (see step()): base z at spawn, and the
             # running high-water mark. The metrics emit per-step DELTAS of these;
@@ -712,8 +733,8 @@ class NovaJoystick(PipelineEnv):
             "w_track", "w_yaw", "w_progress", "w_air", "w_clearance", "w_swingref",
             "w_pose", "w_upright", "w_angvel", "w_height", "w_z", "w_slip",
             "w_carry", "w_gait",
-            "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand", "w_overload",
-            "n_tripped", "slew_clip", "g_max",
+            "w_splay", "w_actrate", "w_energy", "w_jerk", "w_stand", "w_overload", "w_duty", "w_guard", "w_tau2",
+            "n_tripped", "slew_clip", "g_max", "g2_max", "i2_leg", "tau_leg",
             "w_climb", "w_beta_climb",
             # diagnostics: per-foot airborne fraction [FL, FR, RL, RR] — a
             # carried leg reads ~1.0 here while the others cycle
@@ -786,12 +807,28 @@ class NovaJoystick(PipelineEnv):
         # already carries TL x DR headroom: sag/heat). TL caps duty at TL.
         duty = jp.abs(pipeline_state.qfrc_actuator[6:]) / (
             self.sys.actuator_forcerange[:, 1] / self._torque_limit)
-        hot_t = jp.where(duty > OVERLOAD_DUTY, info["hot_t"] + self._dt, 0.0)
+        # + OVERLOAD_TOL: at TL <= 0.8 a saturated joint's duty is EXACTLY the TL
+        # mathematically. After DR scaling float32 rounded it to ~0.8000001 (3/16 DR
+        # robots latched at a held stall on CPU), and the GPU evaluation still showed
+        # 0.30 unloads/robot at TL 0.8 with a 1e-4 margin while the identical code on
+        # CPU showed 0 — consistent with reduced-precision GPU matmuls (UNVERIFIED:
+        # the GPU check could not run next to training). A real TL-800 servo clamps
+        # duty at 800, so 0.5 % margin changes nothing physical.
+        hot_t = jp.where(duty > OVERLOAD_DUTY + OVERLOAD_TOL, info["hot_t"] + self._dt, 0.0)
         # FIRMWARE stall guard (main.cpp NOVA_STALL_LOAD_RAW 900, NOVA_STALL_PERSIST
         # 5): consecutive 50 Hz polls at >= 90 % duty; 5 = 100 ms -> latched fleet limp.
         g_run = jp.where(duty >= FW_GUARD_DUTY, info["g_run"] + 1, 0)
-        info = {**info, "hot_t": hot_t, "g_run": g_run,
+        # guard v2 (diagnostic only, no reward): the same duty AND a jam
+        q_now, q_prev = pipeline_state.q[7:], state.pipeline_state.q[7:]
+        jam = ((duty >= FW_GUARD_DUTY) & (jp.abs(ctrl - q_now) >= FW_GUARD_ERR)
+               & (jp.abs(q_now - q_prev) <= FW_GUARD_STILL))
+        g2_run = jp.where(jam, info["g2_run"] + 1, 0)
+        i2 = (pipeline_state.qfrc_actuator[6:] / self._tau_stall) ** 2
+        info = {**info, "hot_t": hot_t, "g_run": g_run, "g2_run": g2_run,
+                "i2_leg": jp.mean(i2[jp.array([1, 2, 4, 5, 7, 8, 10, 11])]),
+                "tau_leg": jp.mean(jp.abs(pipeline_state.qfrc_actuator[6:][jp.array([1, 2, 4, 5, 7, 8, 10, 11])])),
                 "g_max": jp.maximum(info["g_max"], jp.max(g_run)),
+                "g2_max": jp.maximum(info["g2_max"], jp.max(g2_run)),
                 "tripped": info["tripped"] | (hot_t >= OVERLOAD_S)}
 
         # ---- mid-episode PUSH: kick base xy velocity, learn to recover ----
@@ -1186,6 +1223,9 @@ class NovaJoystick(PipelineEnv):
         # COST on sustained near-stall runs, starting at 1 s (half the unload
         # window): the policy should never get near the servo's 2 s self-unload.
         w_overload = -self._w_overload * jp.sum(jp.clip(info["hot_t"] - 1.0, 0.0, 1.0))
+        w_duty = -self._w_duty * jp.sum(jp.maximum(duty - DUTY_SOFT, 0.0))
+        w_guard = -self._w_guard * jp.sum(jp.clip(info["g_run"] - 1, 0, 10).astype(jp.float32))
+        w_tau2 = -self._w_tau2 * jp.sum(i2)
         w_actrate = -0.02 * act_rate
         w_energy = -2e-3 * energy
         w_jerk = -0.01 * jerk
@@ -1195,7 +1235,8 @@ class NovaJoystick(PipelineEnv):
                   + w_pose + 0.1 + w_climb + beta_climb + w_pbrs_climb
                   + w_upright + w_angvel + w_height + w_z
                   + w_slip + w_splay + w_carry
-                  + w_actrate + w_energy + w_jerk + w_stand + w_overload)
+                  + w_actrate + w_energy + w_jerk + w_stand + w_overload + w_duty + w_tau2
+                  + w_guard)
         # w_climb-aware clip — UPPER bound only. The climb reward can legitimately
         # spike to w_climb·(one riser) = w_climb·STAIR_RISE·level ≤ w_climb·0.08 (the
         # curriculum caps level at tmax=1) on top of the task; the flat +10 ceiling
@@ -1315,8 +1356,10 @@ class NovaJoystick(PipelineEnv):
             w_slip=w_slip, w_splay=w_splay, w_carry=w_carry, w_gait=w_gait,
             w_actrate=w_actrate,
             w_energy=w_energy, w_jerk=w_jerk, w_stand=w_stand, w_overload=w_overload,
+            w_duty=w_duty, w_guard=w_guard, w_tau2=w_tau2,
             n_tripped=jp.sum(info["tripped"].astype(jp.float32)), slew_clip=slew_clip,
-            g_max=info["g_max"].astype(jp.float32),
+            g_max=info["g_max"].astype(jp.float32), g2_max=info["g2_max"].astype(jp.float32),
+            i2_leg=info["i2_leg"], tau_leg=info["tau_leg"],
             w_climb=w_climb, w_beta_climb=beta_climb,
             air_FL=foot_air_f[0], air_FR=foot_air_f[1],
             air_RL=foot_air_f[2], air_RR=foot_air_f[3],

@@ -41,7 +41,12 @@ _LEG_ORDER = ["FL", "FR", "RL", "RR"]                # LEG_NAMES order
 # move it. If it does, the correct response is to re-measure and re-pin WITH the
 # version set recorded — not to widen the tolerance, which would retire the only
 # check that the deploy reward is frozen.
-BLIND_REWARD_PIN = 0.883890092373      # jax 0.6.0 / brax 0.14.2 / mujoco 3.10.0
+# RE-PINNED 2026-09-25 (sim v-next MODEL change, not a reward change): foot radius
+# 0.014 -> 0.017 (#443, measured shoe) and leg no-load speed 2.80 -> 3.83 rad/s
+# (reg85=254 bench). Verified: with the OLD constants restored, the v-next code
+# reproduces the old pin 0.883890092373 exactly, so every new env flag is
+# byte-neutral when off and the shift is the model alone.
+BLIND_REWARD_PIN = 0.4895232021808624  # jax 0.6.0 / brax 0.14.2 / mujoco 3.10.0 (Mac venv)
 
 
 def blind_pin_reward():

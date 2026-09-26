@@ -119,11 +119,32 @@ def test_nova_geometry_yaml_matches_leg_ik_and_urdf():
     # keys above). Deleted rather than fixed, since nothing reads them from
     # this file. Guard against a future field joining `leg` unchecked again —
     # the same drift, a second time.
-    assert set(leg) == {"hip_offset", "femur", "tibia"}, (
+    assert set(leg) == {"hip_offset", "femur", "tibia", "foot_radius"}, (
         "nova_geometry.yaml's `leg` block grew a field this test doesn't "
         "validate — either assert it against its real source of truth "
         "(URDF / LegParams) or don't add it (#72)"
     )
+
+
+@pytest.mark.skipif(
+    not (os.path.exists(_GEOMETRY_YAML) and os.path.exists(_URDF)),
+    reason="nova_geometry.yaml or URDF not present in this checkout",
+)
+def test_foot_radius_one_value():
+    """#443: shoe (measured, in nova_geometry.yaml), URDF collision sphere, MJCF
+    foot geom and the sim's contact-test radius must be ONE number. They were
+    ~0.017 / 0.012 / 0.014 / 0.014, so standing height and contact in sim did
+    not match the robot."""
+    with open(_GEOMETRY_YAML) as f:
+        r = yaml.safe_load(f)["leg"]["foot_radius"]
+    macro = open(os.path.join(os.path.dirname(_URDF), "leg.macro.xacro")).read()
+    urdf_r = float(re.search(r'<collision><geometry><sphere radius="([0-9.]+)"', macro).group(1))
+    mjcf_r = float(re.search(r'name="FL_foot" type="sphere" size="([0-9.]+)"', open(_MJCF).read()).group(1))
+    env_src = open(os.path.join(os.path.dirname(_MJCF), "env.py")).read()
+    env_r = float(re.search(r"^FOOT_RADIUS = ([0-9.]+)", env_src, re.M).group(1))
+    assert urdf_r == pytest.approx(r), f"URDF foot sphere {urdf_r} != yaml {r}"
+    assert mjcf_r == pytest.approx(r), f"MJCF foot geom {mjcf_r} != yaml {r}"
+    assert env_r == pytest.approx(r), f"sim env.FOOT_RADIUS {env_r} != yaml {r}"
 
 
 # ---- #165: the pitch-axis station, across CAD -> URDF -> MJCF ---------------
