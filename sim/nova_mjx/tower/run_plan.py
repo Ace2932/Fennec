@@ -56,6 +56,12 @@ def main(plan_path):
             cmd += ["--restore-params-pkl", str(src)]
         print(f"[plan] {st['name']}: {done:,} done, training {left:,}: {' '.join(cmd)}",
               flush=True)
+        # the code this stage trained with, appended per invocation (a resume can
+        # land on a moved worktree): replay/render needs the same robot model
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=HERE, capture_output=True, text=True)
+        dirty = subprocess.run(["git", "status", "--porcelain", "."], cwd=HERE, capture_output=True, text=True)
+        with open(sdir / "code.txt", "a") as f:
+            f.write(f"{head.stdout.strip() or 'unknown'}{' +dirty' if dirty.stdout.strip() else ''}\n")
         subprocess.run(cmd, cwd=HERE, check=True)
         (sdir / "DONE").write_text(f"{st['timesteps']}\n")
     final = run / plan["stages"][-1]["name"] / "policy.pkl"

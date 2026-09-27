@@ -20,9 +20,10 @@ from env import (NovaJoystick, goal_acc_rad, POSITION_MODE_ACC_REG,
 
 A = np.radians(15)
 BENCH = {1.4: 0.53, 2.0: 0.27}          # leg_sine15_1.4hz.csv / _2hz.csv headers
-BENCH_R85_254 = {1.4: 0.97, 3.0: 0.55}  # leg_sine15_r85_254_*.csv (#466)
-# known gap: at 2 Hz the bench (r85=254) reads 0.99, the sim plain actuator 0.84
-# (sim no-load speed 2.8 rad/s vs ~3.8 measured) — pessimistic, not asserted.
+BENCH_R85_254 = {1.4: 0.97, 2.0: 0.99}  # leg_sine15_r85_254_*.csv (#466), trot band
+# known gap: at 3 Hz the bench (r85=254) reads 0.55 — the ~40 rad/s^2 ceiling —
+# and the plain actuator (VMAX_LEG 3.83) over-tracks, 0.70. Any profile that fixes
+# 3 Hz under-tracks 2 Hz (follower chatter), and the gait lives at 1-2 Hz.
 TOL = 0.08
 
 

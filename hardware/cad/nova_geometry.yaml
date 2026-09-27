@@ -26,6 +26,12 @@ leg:
   hip_offset:  0.0643  # HAA axis -> HFE axis, lateral (+y). MEASURED 2026-07-02.
   femur:       0.1069  # HFE axis -> KFE axis.  MEASURED 2026-07-01 (STL bores).
   tibia:       0.1290  # KFE axis -> foot.      MEASURED 2026-07-01 (STL foot-post ctr).
+  # #443: the ONE foot contact radius. MEASURED 2026-09-25 from the SM3_Foot shoe
+  # mesh at its toe_v2 mount pose (check_shoe.shoe_pose): reach beyond the foot
+  # point along the tibia axis = 17.0 mm (sagittal max 18.5 at the crescent tips).
+  # Test-enforced equal to the URDF collision sphere, the MJCF foot geom and
+  # sim env.FOOT_RADIUS (test_urdf_sync.test_foot_radius_one_value).
+  foot_radius: 0.017
   # #72: haa_range/hfe_range/kfe_range placeholders (0.7 symmetric / 1.5 / 2.2)
   # used to live here, untested (test_urdf_sync.py only ever checked
   # hip_offset/femur/tibia) and stale against the real, asymmetric ROM
