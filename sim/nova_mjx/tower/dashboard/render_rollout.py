@@ -21,6 +21,7 @@ CUDA_VISIBLE_DEVICES= and Mesa's EGL vendor (llvmpipe, software GL), so neither
 the rollout nor the render can allocate GPU memory next to a training run.
 """
 import json
+import re
 import os
 
 # CPU-ONLY, enforced here as well as in the unit (review of #446): a manual
@@ -45,7 +46,10 @@ BOOL_FLAGS = {"--asym": "asym", "--ref-gait": "ref_gait", "--overload-model": "o
               "--heightmap": "heightmap"}
 VAL_FLAGS = {"--torque-limit": ("torque_limit", float), "--ref-height": ("ref_height", float),
              "--joint-stale-p": ("joint_stale_p", float), "--goal-slew": ("goal_slew", float),
-             "--cmd-stage": ("cmd_stage", int), "--goal-acc-reg": ("goal_acc_reg", int)}
+             "--cmd-stage": ("cmd_stage", int), "--goal-acc-reg": ("goal_acc_reg", int),
+             # servo-option runs (#484): without these a stronger/softer-servo policy is
+             # rendered on the stock servo
+             "--eff-scale": ("eff_scale", float), "--kp-scale": ("kp_scale", float)}
 
 
 def env_kwargs(args):
@@ -214,11 +218,24 @@ def gait_png(C, D, meta, path):
 
 # ------------------------------------------------------------------ queue ----
 
+def queue_code(qdir):
+    """The sim dir a queue's cmd trains from (`cd <dir>/sim/nova_mjx`), or None.
+
+    Rendering with any other code puts the policy in a different robot: the old
+    hardcoded map sent every non-vnext queue to gait-study code (tau2/kp/vnext2
+    rendered on the wrong model, without the servo flags)."""
+    try:
+        m = re.search(r"^\s*cd\s+(\S+/sim/nova_mjx)\s*$", (qdir / "cmd").read_text(), re.M)
+    except OSError:
+        return None
+    d = pathlib.Path(os.path.expanduser(m.group(1))) if m else None
+    return d if d and d.is_dir() else None
+
+
 def queue(runs, out, venv, code_gs, code_vn):
     out.mkdir(parents=True, exist_ok=True)
-    code_for = lambda q: code_vn if q == "vnext" else code_gs
-    # ponytail: queue->code map is hardcoded (vnext -> sim/v-next, rest -> gait-study);
-    # move it into each queue's cmd if a third code line appears.
+    # the queue's own training code; the old hardcoded map is only the fallback
+    code_for = lambda q: queue_code(runs / q) or (code_vn if q == "vnext" else code_gs)
     while True:
         todo = jobs(runs, out, code_for)
         if not todo:
@@ -242,6 +259,7 @@ def selftest():
     assert env_kwargs(["--cmd-stage", "2", "--asym", "--torque-limit", "0.8",
                        "--goal-acc-reg", "75", "--curriculum", "--terrain", "0.75"]) == \
         {"cmd_stage": 2, "asym": True, "torque_limit": 0.8, "goal_acc_reg": 75}
+    assert env_kwargs(["--eff-scale", "2.72", "--kp-scale", "2.72"]) == {"eff_scale": 2.72, "kp_scale": 2.72}
     with tempfile.TemporaryDirectory() as td:
         runs, out = pathlib.Path(td) / "runs", pathlib.Path(td) / "out"
         out.mkdir()
@@ -252,6 +270,13 @@ def selftest():
             (v / "s2" / "policy.pkl").write_text("x")
             if done:
                 (v / "s2" / "DONE").write_text("1")
+        code = pathlib.Path(td) / "code" / "sim" / "nova_mjx"
+        code.mkdir(parents=True)
+        (runs / "q" / "cmd").write_text(f"set -e\n  cd {code}\nfor v in x; do :; done\n")
+        assert queue_code(runs / "q") == code
+        assert queue_code(runs / "nope") is None                                  # no cmd -> fallback
+        (runs / "q" / "cmd").write_text("cd /does/not/exist/sim/nova_mjx\n")
+        assert queue_code(runs / "q") is None                                     # stale dir -> fallback
         cf = lambda q: pathlib.Path("/code")
         assert [j[3] for j in jobs(runs, out, cf)] == ["q__A__flat", "q__A__curb"]   # B unfinished
         (out / "q__A__flat.mp4").write_text("v")
