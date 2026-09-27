@@ -46,12 +46,19 @@ for later.
    **in the printed leg pocket** with a thermocouple and ≥ 2 servos. Nothing ships on sim numbers.
 4. **Sim i² is a relative metric** for comparing policies and servo options. It is not a temperature
    prediction. It still ranks the options: TL 1.0 walking ≈ 0.55, TL 0.8 ≈ 0.40, static stand 0.17.
-5. **Walk/climb levers:**
-   - idle stand mode;
-   - STS3250 legs (same case and spline, 4.9 N·m @ 12 V; the retrained run is still going);
+5. **Walk/climb levers (final tower results, §4):**
+   - **Only about 35 % of the leg torque is gravity work.** The rest is control effort, which stays at
+     **0.46-0.50 × stall however strong the servo is**. It falls with servo gain and barely moves with
+     the reward.
+   - So: idle stand mode;
+   - **P_Coefficient 16** (the only cheap lever that moves i²: −20 %, speed and falls unchanged;
+     LeRobot's deployed value; mapping UNVERIFIED → B1);
+   - a stronger servo **only together with lower gain** (the policy spends about half of any authority
+     it gets);
    - taller stance;
    - crawl for stairs.
-   The Σ τ² cost at w ≤ 1e-2 did **not** move i² (tau2 interim, §4); w = 3e-2 is pending.
+   - **Dropped:** the Σ τ² cost. It is flat up to w = 3e-2.
+   *[Rev 2 interim, superseded: "STS3250 run still going; Σ τ² at w ≤ 1e-2 flat, 3e-2 pending".]*
 6. **The leg rail is probably undersized for TL 1.0 walking** (sim lower bound ≥ 10-11 A vs ~10 A buck).
    INA226 L1c guards it; B6 measures it.
 
@@ -198,7 +205,7 @@ temperature, **Status** and **Present Current** in one frame: about +70 µs per 
 | **L0** servo hardware protection (final backstop) | inside the servo: duty > reg 36 for reg 35 → output reg 34; current > reg 28 for reg 38; temperature ≥ reg 13; enabled by reg 19 | **measured, in the servo, independent of our code** | per-servo output cut to 20 % or unload. Firmware **reads back 13/19/28/34/35/36/38 at every arm and refuses to arm on mismatch**. Status (65) is read each poll so the host sees an L0 trip | Feetech defaults; timing and recovery verified by B4; values confirmed by B5 | winding/driver heat, jam, overcurrent: still works if the Teensy is dead or the bus is down | factory variance or a wrong EEPROM (caught by the read-back). **Mid-walk 20 % drop:** fired 0.06-0.17 per robot per 9 s mixed episode in sim at TL 1.0; tune reg 35 → 254 only after B4. The board sensor lags the winding |
 | **L1a** per-servo current | Present Current (69-70) | **measured** | above I_lim for t_lim → **reversible** per-servo TORQUE_LIMIT derate (e.g. 1000 → 800), restored with hysteresis. Sustained above the second limit after derate → controlled sit | B1 (units; current vs known torque), B3 (in-pocket current ↔ temperature) | copper heat at the source; tracks load better than duty (B1 checks) | if the register is **supply** current (≈ duty × motor current) it reads low at low duty; B1 decides and the fallback is to derive motor current from duty. Blind on bus loss → L3 |
 | **L1b** temperature + slope | Present Temperature (63), dT/dt over a ≥ 20 s window | **measured** | T ≥ T_warn **and** dT/dt ≥ R → derate. T ≥ T_derate → derate. T ≥ T_sit (below reg 13 by the measured lag margin) → controlled sit, then torque off seated | B3 in pocket: thermocouple lag Δ between case and Present Temperature, per-unit spread across ≥ 2 servos, ambient recorded. T_sit = 70 − Δ − spread | the slope anticipates the sensor lag without a model | 1 °C steps make a short-window slope noisy, hence the ≥ 20 s window. Board sensor, not winding, hence Δ comes from B3. Slow: minutes, not seconds |
-| **L1c** rail current | INA226 leg and hip rails (`/power_rails`, I²C 0x40 leg / 0x41 hip, 50 Hz per rail, NaN on dropout) | **measured** | above the buck's continuous rating for t → **fleet** TORQUE_LIMIT foldback (reversible). Undervoltage → controlled sit | buck datasheet + B6 (tethered stand and trot) | the bucks; brownout → bus resets. Covers the undersized leg rail (M8) | aggregate: can't name the joint (L1a can). A millisecond sag is faster than any poll: the buck's own limit and the bulk caps handle that |
+| **L1c** rail current | INA226 leg and hip rails (`/power_rails`, I²C 0x40 leg / 0x41 hip, 50 Hz per rail, NaN on dropout) | **measured** | above the buck's continuous rating for t → **fleet** TORQUE_LIMIT foldback (reversible). Undervoltage → controlled sit | buck datasheet + B6 (tethered stand and trot) | the bucks; brownout → bus resets. Covers the undersized leg rail (M8). **A stronger-servo swap must re-size this:** the eff 2.72 policy uses 2.3× the absolute torque | aggregate: can't name the joint (L1a can). A millisecond sag is faster than any poll: the buck's own limit and the bulk caps handle that |
 | **L2** jam signature | #483: load ≥ 900 AND ≥ 60 counts off goal AND ≤ 3 counts moved, **persist ≥ 3 s** | **measured** (position, goal, load) | a jam is a hardware fault: that joint torque-off, controlled sit on the other 11; fleet limp if the sit cannot complete | persist = 2 × the walking max of 1.48 s (sim, 3 seeds, mixed; **re-measure on the tethered robot**); error/still counts **re-derived on the bench** (B1: \|goal − pos\| at 90 % static load), **at the P_Coefficient actually deployed**. Lower P means more steady error under load, so the 60-count threshold set at P 32 would false-trip at P 16 | gear and horn against a hard stop; the **sagged jam that heat cannot see** (M3) | 3 s is slow, but L0 acts at 2 s first. Mechanical shock (external backdrive) is not covered by any layer: that is a mechanical fix |
 | **L3** stale / missing telemetry | per-joint age of the last good poll (existing `servo_err_timeout` counters, #438 re-arm-on-reply); `cmd_stale` (500 ms, `main.cpp:35-52`, freezes the goal → slew decel); agent loss (#471) | **measured** (absence) | one joint blind > ~200 ms (10 polls) → fleet derate to conservative TL and hold (the `cmd_stale` behaviour). Several joints blind, or > 1 s → controlled sit. **#471 fix is a prerequisite:** today on agent loss the Teensy resets and never disarms, so *no* firmware guard runs | poll rate (50 Hz per joint), `NOVA_CMD_STALE_TIMEOUT_US` | the measured layers going blind silently | a dead bus means the derate itself can't be delivered. **L0 is then the only protection**, which is why L0 read-back is layer 1 of the firmware spec |
 | **L4** heat estimate (advisory) | I²t bucket on measured current (or a duty proxy), per joint | **modeled** | published to the host (`/thermal_budget`): planner slows, refuses or aborts a climb, drops to stand. May request **at most a soft reversible derate** (e.g. TL 1000 → 900). **Never** sits or limps alone: that needs L1 confirmation | relative only; τ/threshold tuned against B3 logs, never shipped from sim | early warning, so the robot backs off *before* L1 has to act | **false positive → a slower or more cautious robot, never a collapsed one.** False negative → L1/L0 still catch it |
@@ -255,15 +262,79 @@ pushed down the ranking. It still never becomes a hardware trip.]*
 Knee torque in a 2-leg trot stance is 1.47 N·m (82 %, `probe_stance_torque`). My geometry calculation
 (thigh 0.1069, shank 0.129, elbow-back) gives 80 % for the same pose, a cross-check within 2 points.
 
-**Rev 2: tau2 interim results** (tower, fennec-22's `~/fennec-runs/tau2/summary.py`, read directly
-2026-09-26). 30M-step fine-tunes from VA curbs, TL 1.0. i² = walk/mixed; ramp = 1-cell ramp, 64 eps.
+**Rev 2: FINAL tower results** (fennec-train@tau2 + @kp, fennec-22). I re-ran
+`~/fennec-runs/{tau2,kp}/summary.py` on the tower myself (2026-09-26) and the numbers match.
 
-| run | seeds | i² | 3 cm | 4 cm |
+Setup:
+- T and K runs: 30M-step fine-tunes from VA curbs.
+- E runs: full 3-stage **from scratch, one seed**, so not directly comparable to the fine-tunes.
+- TL 1.0; i² = hfe/kfe mean relative to the **fitted** servo's stall (walk/mixed); τ = raw hfe/kfe
+  mean |τ|; ramp = 1-cell ramp, 64 eps.
+- Every arm: speed 100-106 %, falls ≤ 2 %, old guard trips 100 %.
+
+| run | seeds | i² | mean \|τ\| N·m | 3 cm | 4 cm |
+|---|---|---|---|---|---|
+| T0 control (fine-tune, no cost) | 1 | 0.56 / 0.53 | 1.26 | 100 % | 91 % |
+| w_tau2 3e-3 | 3 | 0.55-0.56 / 0.52-0.53 | 1.25-1.26 | 97 / 80 / 100 % | 61 / 27 / 72 % |
+| w_tau2 1e-2 | 3 | 0.55-0.56 / 0.52 | 1.24-1.26 | 100 / 64 / 100 % | 48 / 30 / 75 % |
+| w_tau2 3e-2 | 3 | 0.54-0.55 / 0.50-0.51 | 1.23-1.24 | 97 / 73 / 100 % | 66 / 33 / 88 % |
+| **P_Coefficient 16** (kp_scale 0.5) | 3 | **0.44-0.45 / 0.39-0.41** | **1.08-1.09** | 100 / 59 / 97 % | 58 / 8 / 52 % |
+| P_Coefficient 24 (kp_scale 0.75) | 1 | 0.52 / 0.49 | 1.20 | 100 % | 86 % |
+| E eff 1.63 (C018 legs), from scratch | 1 | 0.48 / 0.43 | 1.85 | 100 % | 92 % |
+| E eff 2.72 (STS3250 legs), from scratch | 1 | 0.43 / 0.38 | 2.89 | 100 % | 92 % |
+
+**Where the torque goes (CALC on the SIM table).** In a trot's 2-leg stance, gravity alone costs
+the knee ~80 % of 1.8 N·m and the hfe ~F·1.5 cm averaged over a ±3 cm stroke. Stance is half the
+cycle, so the **gravity floor for mean \|τ\| over hfe/kfe is ≈ 0.44 N·m**. Everything above it is
+control effort:
+
+| arm | mean \|τ\| | excess over gravity | excess / stall | gravity share |
 |---|---|---|---|---|
-| T0 control (fine-tune, no cost) | 1 | 0.56 / 0.53 | 100 % | 91 % |
-| w_tau2 3e-3 | 3 | 0.55-0.56 / 0.52-0.53 | 97 / 80 / 100 % | 61 / 27 / 72 % |
-| w_tau2 1e-2 | 3 | 0.55-0.56 / 0.52 | 100 / 64 / 100 % | 48 / 30 / 75 % |
-| w_tau2 3e-2, eff 2.72 / 1.63 | — | running | | |
+| P 32 (T0) | 1.26 | 0.82 | **0.46** | 35 % |
+| w_tau2 3e-2 | 1.24 | 0.80 | 0.44 | 35 % |
+| P 24 | 1.20 | 0.76 | 0.42 | 36 % |
+| **P 16** | 1.08 | 0.65 | **0.36** | 40 % |
+| eff 1.63 | 1.85 | 1.41 | **0.48** | 24 % |
+| eff 2.72 | 2.89 | 2.45 | **0.50** | 15 % |
+
+**The control effort is a near-constant ~0.46-0.50 of whatever stall torque is available.** It shrinks
+with servo gain (0.46 → 0.42 → 0.36) and barely with the reward (0.46 → 0.44 at the strongest w). That
+is the signature of the saturation hypothesis: the position loop turns target error into ± full torque.
+The floor is a hand estimate. A different floor shifts every row equally and leaves the pattern intact.
+
+**fennec-22's readings, checked:**
+1. *"w_tau2 flat up to 3e-2, so the reward isn't the lever and the saturation hypothesis holds."*
+   **Confirmed, with one refinement.** i² moves 0.555 → 0.545 (−2 %) across a 10× weight range. At
+   w = 3e-2 the cost is ~0.16/step (12 joints × ~0.45), not negligible next to the carry cost
+   (0.9/step), so the weight isn't simply too small. The policy cannot lower torque through the reward
+   because it commands targets, not torque; torque comes from error × kp saturating. The saturation
+   hypothesis is **supported, not proven**: the gain sweep and the excess/stall table are the evidence.
+2. *"P16 is the only cheap lever that moves i² (−20 %, τ −14 %), and it's deployable."* **Confirmed in
+   sim:** i² 0.555 → 0.445 on 3 seeds, speed and falls unchanged. Deployable, yes, since LeRobot runs 16
+   on this servo. **But the size of the effect rests on the UNVERIFIED linear mapping `kp_scale = P/32`**,
+   so B1 (steady error at P 32 vs 16) decides the real-world number. The gain lever is also nearly
+   spent: at P 16 gravity is already 40 % of the torque, and halving P again cannot go below the ~0.44
+   N·m gravity floor.
+3. *"Seed 1 is weak at climbing in every arm, so the spread tracks the init seed, not the lever."*
+   **Confirmed.**
+   - s1 is the lowest in every 3-seed arm: 3 cm 80/64/73/59 %, 4 cm 27/30/33/8 %. Its VA base scored
+     44 % at 3 cm.
+   - The lone control (T0 s0, 4 cm 91 %) is the outlier among s0 fine-tunes, which scored 48-66 %
+     for every w and P 16, and 86 % for P 24.
+   - So **no lever here can be said to cost climbing.** P16 s1's 4 cm 8 % carries that caveat, not a
+     verdict.
+   - To resolve climbing effects, the control needs ≥ 3 seeds (tower item 7).
+4. *"Stronger servos lower relative i², but the policy spends the authority; rail current goes UP."*
+   **Half confirmed.**
+   - Confirmed: the policy spends the authority. The excess/stall stays ~0.5, so absolute torque rises
+     2.3× at eff 2.72.
+   - **Unverified: that rail current rises.** Supply current at stall ≈ i² × I_stall of the *new* servo
+     (8 × 0.43 × I_stall,STS3250 on a 12 V rail), and STS3250 stall current is UNVERIFIED. At ≥ 3.2 A
+     stall the 12 V leg rail would draw ≥ 11 A: the same amps as today at 1.6× the voltage, so more watts.
+   - Either way, **a stronger servo must come with lower gain** (tower item 8), and L1c must be sized for it.
+   - n = 1, from scratch.
+
+*Rev 2 interim bullets below are kept for the record; the final table above supersedes them.*
 
 *DR bug (fennec-22, fixed in 33ed61d):* `make_domain_randomize` drew kp as an absolute U(25, 45), which
 silently discarded `--kp-scale` in training and eval. It now draws U(25, 45) × kp/35 (identical at scale 1;
@@ -273,7 +344,7 @@ unaffected. The E_eff and K_P runs had not started, and they run with the fix.
 - **At w ≤ 1e-2 the copper-loss cost does not move i² at all** (±0.01): too weak to change behaviour.
 - The 4 cm drop against the single control is **within known seed variance**: the untuned VA seeds
   span 6-84 % at 4 cm. With one control seed, a real cost to climbing cannot be claimed.
-- Walking speed is unchanged (101-106 %). Lever 2 below is **downgraded pending 3e-2**. If 3e-2
+- *[Final: 3e-2 also flat, see above. Lever 2 is dropped.]* Walking speed is unchanged (101-106 %). Lever 2 below is **downgraded pending 3e-2**. If 3e-2
   also leaves i² flat, the bang-bang use is driven by the position-actuator saturation (kp 35 saturates
   past ~2.9°), not by anything the reward is billing. Then the fix is the action space or servo gain,
   not a cost.
@@ -281,9 +352,9 @@ unaffected. The E_eff and K_P runs had not started, and they run with the fix.
 | rank | lever | number | cost / risk | test |
 |---|---|---|---|---|
 | **1** | **Idle stand mode:** at \|cmd\| ≈ 0, hold a static stand pose instead of running the policy (policy_runner gate), or train a stand reward | knee i² 0.46 → 0.17 at idle (2.7× less heat); leg rail 9.1 → ~3.4 A | small host code; the transition in and out of the gait needs a blend | SIM stand trace |
-| **2** | **Copper-loss cost** w·Σ(τ/τ_stall)² at TL 1.0 | targets the bang-bang use (M6); predicted to lower mean i² without billing short climbing bursts (a burst is a small share of the integral), which the hinge did | **unproven**; could still hurt climbing. *[Rev 2: w ≤ 1e-2 tried, no i² effect (table above); 3e-2 pending]* | tower sweep, report i² **and** ramp for each point (§6) |
-| **3** | **STS3250 legs** (4.9 N·m @ 12 V) | 1.47 N·m = 30 % → i² ≈ 0.09 in static stance. A policy retrained with this authority should use it (fennec-22: an *un*-retrained policy just eats extra authority) | 8 × $43 ≈ $344; +~20 g each (74.5 g vs STS3215 ~55 g, UNVERIFIED; +0.16 kg ≈ +4 % mass); leg rail must become 12 V (D42V110F7 → F12 module; check the footprint is shared). Stall current and speed **UNVERIFIED**. Cheapest now, while unassembled | `--eff-scale 2.72` training run; check holes and screws on one unit |
-| **2b** *(rev 2)* | **Lower servo P gain** (reg 21 `P_Coefficient` 32 → 16/24; EEPROM, same write path as reg 85 in `set-servo-ids.py`) | tests the saturation hypothesis with the **real** lever: a softer servo saturates at a larger error, so it should be less bang-bang. The i² effect is unknown until fennec-train@kp reports | free (one register). **Risks:** more steady-state sag under load (stance height, foot placement); slower tracking; the L2 jam error threshold must be re-set at the deployed P. The sim mapping is assumed linear (UNVERIFIED) | tower: fennec-train@kp (K_P16 × 3 seeds, K_P24 × 1, kp_scale = P/32; i² + curb probe); bench B1 at P 32 vs 16 |
+| **2** | **Copper-loss cost** w·Σ(τ/τ_stall)² at TL 1.0 | targets the bang-bang use (M6); predicted to lower mean i² without billing short climbing bursts (a burst is a small share of the integral), which the hinge did | **unproven**; could still hurt climbing. *[Rev 2: w ≤ 1e-2 tried, no i² effect (table above); 3e-2 pending]* **[Final: DROPPED, flat up to 3e-2]** | tower sweep, report i² **and** ramp for each point (§6) |
+| **3** | **STS3250 legs** (4.9 N·m @ 12 V) | 1.47 N·m = 30 % → i² ≈ 0.09 in static stance. A policy retrained with this authority should use it (fennec-22: an *un*-retrained policy just eats extra authority) | 8 × $43 ≈ $344; +~20 g each (74.5 g vs STS3215 ~55 g, UNVERIFIED; +0.16 kg ≈ +4 % mass); leg rail must become 12 V (D42V110F7 → F12 module; check the footprint is shared). Stall current and speed **UNVERIFIED**. Cheapest now, while unassembled | `--eff-scale 2.72` training run; check holes and screws on one unit. **[Final: i² 0.43 relative, but mean \|τ\| 2.89 N·m (2.3×): the policy spends the authority. Buy only together with lower P; n = 1]** |
+| **2b** *(rev 2)* | **Lower servo P gain** (reg 21 `P_Coefficient` 32 → 16/24; EEPROM, same write path as reg 85 in `set-servo-ids.py`) | tests the saturation hypothesis with the **real** lever: a softer servo saturates at a larger error, so it should be less bang-bang. The i² effect is unknown until fennec-train@kp reports. **[Final: P16 i² −20 %, τ −14 %, 3 seeds, speed and falls unchanged; P24 −6 % (n = 1). Now the top cheap lever after idle stand]** | free (one register). **Risks:** more steady-state sag under load (stance height, foot placement); slower tracking; the L2 jam error threshold must be re-set at the deployed P. The sim mapping is assumed linear (UNVERIFIED) | tower: fennec-train@kp (K_P16 × 3 seeds, K_P24 × 1, kp_scale = P/32; i² + curb probe); bench B1 at P 32 vs 16 |
 | 3b | C018 legs (2.94 N·m @ 12 V, same SKU as the hips) | 50 % stance, i² ≈ 0.25 | 8 × ~$20; same 12 V rail change; 45 vs 52 RPM | `--eff-scale 1.63` |
 | 4 | **Taller stance** h 0.188 → 0.21 m | peak knee over a ±3 cm stance stroke 96 % → 76 % | less leg reserve for climbing; higher CoM | change DEFAULT_POSE/STAND_HEIGHT, retrain |
 | 5 | **Crawl for climbing** (3 legs down; v8 `CRAWL_DUTY` 0.75 schedule already in env) | knee 64 % peak (54 % static) vs 80-96 % | slow; needs gait switching (terrain-aware, Phase 3 path #413) | stair courses (§5) |
@@ -339,7 +410,12 @@ on a sim-derived number.**
 5. After B3: bucket τ and threshold → re-score all of the above with the bucket as a metric. *[Rev 2: as a relative/advisory metric only.]*
 6. *(rev 2)* **P_Coefficient 16 / 24** (fennec-train@kp, after tau2): K_P16_s{0,1,2}, K_P24_s0, 30M fine-tunes from VA curbs, kp_scale = P/32; i², speed, curb probe.
 
-Status 2026-09-26: 1 and 2 are queued/running as fennec-train@tau2 (fennec-22); interim numbers in §4. 6 is queued as fennec-train@kp.
+7. *(final)* **Control seeds:** T0 control × 3 seeds, so climbing differences can be resolved at all.
+8. *(final)* **Stronger servo + lower gain:** eff 2.72 × kp_scale 0.5·2.72 (STS3250 at P 16), and eff
+   1.63 × P 16, with ≥ 2 seeds. This tests whether gain caps the spent authority on a bigger servo.
+9. *(final)* **P 16 at TL 0.8**, if the robot has to fly TL 800 first: does the cheap lever stack?
+
+Status 2026-09-26: 1, 2 and 6 are **done** (final numbers in §4). 7-9 are proposals for fennec-22's queue.
 
 ### Firmware (for later; spec only, fennec-8f / #483 owner; rev 2 order)
 
