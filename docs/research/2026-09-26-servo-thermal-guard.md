@@ -322,7 +322,8 @@ The floor is a hand estimate. A different floor shifts every row equally and lea
    - The lone control (T0 s0, 4 cm 91 %) is the outlier among s0 fine-tunes, which scored 48-66 %
      for every w and P 16, and 86 % for P 24.
    - So **no lever here can be said to cost climbing.** P16 s1's 4 cm 8 % carries that caveat, not a
-     verdict.
+     verdict. *[Rev 3: SUPERSEDED for P 16. With 3 control seeds, P 16 costs 4 cm in all 3 seed pairs
+     (−17 to −33 pts). Still true for w_tau2.]*
    - To resolve climbing effects, the control needs ≥ 3 seeds (tower item 7).
 4. *"Stronger servos lower relative i², but the policy spends the authority; rail current goes UP."*
    **Half confirmed.**
@@ -333,6 +334,50 @@ The floor is a hand estimate. A different floor shifts every row equally and lea
      stall the 12 V leg rail would draw ≥ 11 A: the same amps as today at 1.6× the voltage, so more watts.
    - Either way, **a stronger servo must come with lower gain** (tower item 8), and L1c must be sized for it.
    - n = 1, from scratch.
+
+**Rev 3: overnight runs, tower items 7-9** (fennec-train@vnext3, code 1c843dd; I re-ran
+`~/fennec-runs/vnext3/summary.py` myself on 2026-09-28, and all 9 runs have eval and curb output):
+
+| run | seeds | i² | mean \|τ\| N·m | speed fwd/mixed | old guard | 3 cm | 4 cm |
+|---|---|---|---|---|---|---|---|
+| control (T0 s0 + C s1, s2) | 3 | 0.56 / 0.52-0.53 | 1.26 | 101-107 / 104-105 % | 100 % | 100 / 62 / 94 % | 91 / 25 / 77 % |
+| P 16 at TL 0.8 (VN recipe, w_duty 0.5) | 3 | **0.34 / 0.32** | 0.98-0.99 | 93-99 / **75-80 %** | **0 %** | 9 / 22 / 8 % | 0 / 0 / 0 % |
+| **C018 legs (eff 1.63) + P 16**, from scratch | 2 | 0.36 / 0.30-0.31 | 1.55 | 106-109 / 108-110 % | 100 % | **100 / 100 %** | **100 / 98 %** |
+| **STS3250 legs (eff 2.72) + P 16**, from scratch | 2 | **0.26 / 0.20** | 2.12 | 106-112 / 108-111 % | 100 % | **100 / 100 %** | 100 / 78 % |
+
+Falls are 1-6 % fwd and ≤ 1 % mixed. The from-scratch E runs fall slightly more (2-6 %).
+
+**Seed-paired against the 3-seed control** (Δ points, s0/s1/s2):
+
+| lever | 3 cm | 4 cm | mean 4 cm |
+|---|---|---|---|
+| w_tau2 3e-3 | −3 / +18 / +6 | −30 / +2 / −5 | −11 |
+| w_tau2 1e-2 | 0 / +2 / +6 | −43 / +5 / −2 | −13 |
+| w_tau2 3e-2 | −3 / +11 / +6 | −25 / +8 / +11 | −2 |
+| **P 16** | 0 / −3 / +3 | **−33 / −17 / −25** | **−25** |
+
+- **Correction to reading 3 above:** with 3 control seeds, **P 16 does cost 4 cm climbing**: −17 to −33
+  points, in all 3 seed pairs. It costs nothing at 3 cm. The w_tau2 arms still show no consistent cost:
+  only s0 drops, so it was the lucky control seed. So on the 7.4 V servo, P 16 trades 20 % less heat for
+  4 cm steps. That is a choice to make per mission, not a free lever.
+- **A stronger servo with P 16 is the best result in the study.**
+  - C018 legs + P 16: 4 cm **100 / 98 %** (control 91 / 25 / 77) at relative i² 0.36 (−35 %).
+  - STS3250 + P 16: relative i² 0.26 (−54 %), 4 cm 100 / 78 %.
+  - Gain cut the spent authority as predicted: excess over gravity is 0.38 / 0.34 × stall, vs
+    0.48 / 0.50 at P 32.
+  - Absolute torque is still 1.2× / 1.7× today's (1.55 / 2.12 vs 1.26 N·m), so L1c must be re-sized.
+  - n = 2, from scratch (no seed-matched from-scratch P 32 control; E at P 32 was n = 1), and speed
+    overshoots the command (106-112 %).
+- **P 16 at TL 0.8 is the coolest 7.4 V option** (i² 0.34, old guard never trips). It still can't climb
+  (3 cm ≤ 22 %, 4 cm 0), and mixed-command speed drops to 75-80 %. It's a fallback for a first walk,
+  not a climbing configuration.
+- **Recommendation update:** the lever list now reads
+  1. idle stand mode;
+  2. **C018 legs (8 × ~$20, the same SKU as the hips) + P 16**: best climbing per dollar, and the same
+     12 V rail change as the STS3250;
+  3. STS3250 + P 16 if heat matters more than cost;
+  4. on the stock 7.4 V servo, choose P 32 (climb) or P 16 (heat).
+  All of it still hinges on B1: the P → stiffness mapping is unverified.
 
 *Rev 2 interim bullets below are kept for the record; the final table above supersedes them.*
 
@@ -415,7 +460,7 @@ on a sim-derived number.**
    1.63 × P 16, with ≥ 2 seeds. This tests whether gain caps the spent authority on a bigger servo.
 9. *(final)* **P 16 at TL 0.8**, if the robot has to fly TL 800 first: does the cheap lever stack?
 
-Status 2026-09-26: 1, 2 and 6 are **done** (final numbers in §4). 7-9 are proposals for fennec-22's queue.
+Status 2026-09-28: 1, 2 and 6-9 are **all done** (final numbers in §4, rev 3).
 
 ### Firmware (for later; spec only, fennec-8f / #483 owner; rev 2 order)
 
