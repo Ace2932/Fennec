@@ -15,28 +15,39 @@ GUARD = os.path.join(HERE, "tower", "thermal-guard.sh")
 DASH_RE = re.compile(r"^(\S+ \S+) gpu (\d+)C cpu (\d+)C ([\d.]+)W")
 
 
-def run(readings, script=GUARD):
-    """readings: list of (gpu, cpu). Returns (log text, number of stop_training calls)."""
+def run(readings, script=GUARD, utils=None):
+    """readings: list of (gpu, cpu); utils: CPU busy % per reading ('' = first, unknown).
+    Returns (log text, number of stop_training calls). Alerts land in RUN_ALERTS."""
     with tempfile.TemporaryDirectory() as d:
-        log, stops, gpu, cpu = (os.path.join(d, n) for n in ("guard.log", "stops", "gpu", "cpu"))
+        log, stops, gpu, cpu, util, alerts = (os.path.join(d, n) for n in ("guard.log", "stops", "gpu", "cpu", "util", "alerts"))
+        utils = utils if utils is not None else [50] * len(readings)
+        with open(util, "w") as f:
+            f.write("\n".join(str(u) for u in utils) + "\n")
         with open(gpu, "w") as f:
             f.write("\n".join(str(g) for g, _ in readings) + "\n")
         with open(cpu, "w") as f:
             f.write("\n".join(str(c) for _, c in readings) + "\n")
         prog = f"""
 set -u
-THERMAL_GUARD_LIB=1 THERMAL_LOG={log!r} . {script!r}
+THERMAL_GUARD_LIB=1 THERMAL_LOG={log!r} THERMAL_ALERT_CMD="alert_stub" . {script!r}
+alert_stub() {{ echo "$*" >> {alerts!r}; }}
 i=0
 read_gpu() {{ sed -n "$((i+1))p" {gpu!r}; }}
 read_cpu() {{ sed -n "$((i+1))p" {cpu!r}; }}
 read_pw()  {{ echo 15.5; }}
+read_util() {{ UTIL=$(sed -n "$((i+1))p" {util!r}); }}
 stop_training() {{ echo x >> {stops!r}; }}
 for ((i=0; i<{len(readings)}; i++)); do check_once || true; done   # rc 10 = the GPU guard fired
 """
         subprocess.run(["bash", "-c", prog], check=True)
         text = open(log).read()
         n_stops = len(open(stops).read().split()) if os.path.exists(stops) else 0
+        global RUN_ALERTS
+        RUN_ALERTS = open(alerts).read().splitlines() if os.path.exists(alerts) else []
         return text, n_stops
+
+
+RUN_ALERTS = []
 
 
 def test_cpu_hot_never_stops_training():
@@ -65,6 +76,34 @@ def test_hot_cpu_does_not_count_toward_the_gpu_guard():
     # Interleaved: neither guard alone reaches 3 in a row. A shared counter would stop here.
     _, stops = run([(91, 50), (30, 96), (91, 50), (30, 96)])
     assert stops == 0
+
+
+def test_hot_while_idle_logs_and_alerts_once_a_day():
+    text, stops = run([(30, 85)] * 6, utils=[1] * 6)
+    assert stops == 0, "the idle-heat check never stops training"
+    assert text.count("CPU IDLE HOT") == 2, text
+    assert len(RUN_ALERTS) == 1 and "hot while idle" in RUN_ALERTS[0], RUN_ALERTS
+
+
+def test_hot_under_load_is_not_idle_heat():
+    text, _ = run([(30, 88)] * 3, utils=[60] * 3)
+    assert "CPU IDLE HOT" not in text and not RUN_ALERTS
+
+
+def test_a_few_busy_cores_is_not_idle_heat():
+    # Measured 2026-10-02: 4 single-threaded jobs = 6-9% of 32 threads, Tctl 70-74 C. Not a cooler fault.
+    text, _ = run([(28, 74)] * 3, utils=[7] * 3)
+    assert "CPU IDLE HOT" not in text and not RUN_ALERTS
+
+
+def test_warm_idle_below_threshold_is_quiet():
+    text, _ = run([(30, 65)] * 3, utils=[1] * 3)
+    assert "CPU IDLE HOT" not in text and not RUN_ALERTS
+
+
+def test_first_reading_with_unknown_load_does_not_count():
+    text, _ = run([(30, 85)] * 3, utils=["", 1, 1])
+    assert "CPU IDLE HOT" not in text, "an unknown load must not count toward idle heat"
 
 
 def test_log_lines_still_parse_for_the_dashboard():

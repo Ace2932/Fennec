@@ -78,7 +78,9 @@ systemctl --user start fennec-train@<run>
 
 `thermal-guard.sh` keeps separate guards. GPU >= 90 C for 3 consecutive 30 s checks stops every
 active `fennec-train@` unit. CPU >= 95 C for 3 checks writes a `CPU HOT` log line and never stops
-training: the Ryzen 9 9950X boosts toward 95 C under any all-core load by design. Log:
+training: the Ryzen 9 9950X boosts toward 95 C under any all-core load by design. A third check
+catches a failing cooler: CPU >= 70 C while < 3% busy (it idles near 41 C) for 3 checks writes
+`CPU IDLE HOT` and sends one `tower-alert` per day. Log:
 `~/fennec-runs/thermal-guard.log` (the dashboard reads it). Install, as aiden, no sudo:
 
     cp thermal-guard.sh ~/fennec-runs/ && cp thermal-guard.service ~/.config/systemd/user/
