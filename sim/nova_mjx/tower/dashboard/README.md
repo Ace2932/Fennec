@@ -18,7 +18,7 @@ A static page regenerated every 2 min from `~/fennec-runs`. It shows:
 - A STALE flag when a unit is active but its newest `train_log.csv` row is more
   than 15 min old.
 - A tower health strip: GPU °C, CPU °C and GPU W from `~/fennec-runs/thermal-guard.log`
-  (last 24 h), the 90 °C guard limit, and any `THERMAL STOP` line. Long history lives in
+  (last 24 h), the 90 °C GPU guard limit, and any `THERMAL STOP` line (GPU only; CPU ≥ 95 °C writes a `CPU HOT` line and never stops training, Fennec#490). Long history lives in
   Grafana: `/grafana/d/tower-metrics/tower` (linked from the page, relative — the front
   door serves Grafana at `/grafana/` on the same origin as this page's `/fennec/`).
 - Scorecard servo-protection columns when the eval JSON has them: `servos_tripped_end`,
