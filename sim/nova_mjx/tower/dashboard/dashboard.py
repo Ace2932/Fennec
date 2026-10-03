@@ -389,7 +389,7 @@ def health_html(h):
     chart = '<div class="hchart"><canvas id="health"></canvas></div>' if h["pts"] else \
         '<div class="muted">no thermal-guard.log data</div>'
     return (f'<div class="card"><b>Tower health</b> <span class="muted small">thermal-guard.log, last 24 h · '
-            f'guard stops training at {THERMAL_LIMIT}°C for 3 checks · history: '
+            f'guard stops training at GPU {THERMAL_LIMIT}°C for 3 checks (CPU ≥95°C is only logged, Fennec#490) · history: '
             f'<a id="grafana" href="{GRAFANA}">Grafana tower dashboard</a></span> {stops}{chart}</div>')
 
 

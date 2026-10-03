@@ -1,0 +1,10 @@
+[Unit]
+Description=Fennec thermal guard: stop fennec-train@ on GPU >=90C x3; log CPU >=95C x3 (never stops) (Fennec#490)
+
+[Service]
+ExecStart=%h/fennec-runs/thermal-guard.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
