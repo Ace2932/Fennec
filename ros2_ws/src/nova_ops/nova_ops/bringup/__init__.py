@@ -124,6 +124,9 @@ PROFILES = {
             # name, which is what POINT-LIO's own config already expects
             # (unilidar_l2.yaml: `lid_topic: /unilidar/cloud`) — so
             # POINT-LIO's launch action below needs no change at all.
+            # #495: upstream unilidar_sdk2 hardcoded cloud_topic; our fork
+            # (Ace2932/unilidar_sdk2) declares cloud_topic/imu_topic/rviz
+            # launch arguments so this override is honored by the driver node.
             (
                 "launch",
                 "unitree_lidar_ros2",
