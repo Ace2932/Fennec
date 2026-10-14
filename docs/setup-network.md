@@ -35,7 +35,7 @@ Nothing to house/power/crush-protect on the robot. (See harness plan #31.)
 
 ## Unitree L2 — confirmed launch params (from unitree_lidar_ros2/launch/launch.py)
 
-After building `unilidar_sdk2` on the Jetson (verified 2026-05-17), the bundled ROS 2 wrapper hardcodes these defaults — match the network plan to these:
+After building `unilidar_sdk2` on the Jetson (from our fork `Ace2932/unilidar_sdk2`), the bundled ROS 2 wrapper exposes `cloud_topic`, `imu_topic`, and `rviz` launch arguments, defaulting to:
 
 | Param | Value | Notes |
 |-------|-------|-------|
@@ -43,8 +43,8 @@ After building `unilidar_sdk2` on the Jetson (verified 2026-05-17), the bundled 
 | `lidar_port` | `6101` | L2 → Jetson UDP |
 | `local_ip` | `192.168.1.2` | Jetson `enP8p1s0` must be set to this |
 | `local_port` | `6201` | Jetson receive UDP |
-| `cloud_topic` | `/unilidar/cloud` | point cloud out |
-| `imu_topic` | `/unilidar/imu` | IMU out (~250 Hz) |
+| `cloud_topic` | `/unilidar/cloud` | point cloud out (remappable via launch arg `cloud_topic:=...`) |
+| `imu_topic` | `/unilidar/imu` | IMU out (~250 Hz, remappable via launch arg `imu_topic:=...`) |
 | `cloud_frame` | `unilidar_lidar` | TF frame for URDF |
 | `imu_frame` | `unilidar_imu` | TF frame for URDF |
 | `cloud_scan_num` | 18 | L2 vertical scan count |
@@ -56,7 +56,7 @@ Launch command (once L2 is on the network + Jetson static IP set):
 ros2 launch unitree_lidar_ros2 launch.py
 ```
 
-Auto-spawns rviz2 with `view.rviz` config.
+Defaults `rviz:=false` for headless operation; pass `rviz:=true` to spawn RViz with `view.rviz` config.
 
 ### POINT-LIO ROS 2 integration
 

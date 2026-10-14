@@ -511,7 +511,7 @@ Brings up the full L2 → ROS 2 → POINT-LIO pipeline on the Jetson. Builds `/u
 
 ### 15.2 IMU bridge fix — point ws at the fork
 
-Upstream `unitreerobotics/unilidar_sdk2` has a bug where `unitree_lidar_ros2` calls `getImuData()` twice in `timer_callback()`, draining the SDK queue before publish. `/unilidar/imu` is advertised but never carries data. Our fork [Ace2932/unilidar_sdk2 branch `fix/imu-bridge-double-call`](https://github.com/Ace2932/unilidar_sdk2/tree/fix/imu-bridge-double-call) removes the redundant call.
+Upstream `unitreerobotics/unilidar_sdk2` has a bug where `unitree_lidar_ros2` calls `getImuData()` twice in `timer_callback()`, draining the SDK queue before publish. `/unilidar/imu` is advertised but never carries data. Our fork [Ace2932/unilidar_sdk2 branch `fix/imu-bridge-double-call`](https://github.com/Ace2932/unilidar_sdk2/tree/fix/imu-bridge-double-call) removes the redundant call, and declares `cloud_topic`, `imu_topic`, and `rviz` launch arguments so bringup profiles can route raw point clouds through `lidar_selffilter_node` without topic collisions.
 
 ```bash
 cd ~/ros2_ws/src/unilidar_sdk2
