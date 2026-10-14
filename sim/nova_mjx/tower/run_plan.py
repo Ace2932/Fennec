@@ -27,8 +27,16 @@ sys.path.insert(0, str(HERE))
 from ckpt_utils import stage_done_steps                        # noqa: E402
 
 
+def attempt_dirs(sdir):
+    try:
+        return [p for p in sdir.iterdir()
+                if p.is_dir() and (p.name.startswith("run_") or p.name.startswith("stage"))]
+    except OSError:
+        return []
+
+
 def done_steps(sdir):
-    return sum(stage_done_steps(d) or 0 for d in sdir.glob("run_*") if d.is_dir())
+    return sum(stage_done_steps(d) or 0 for d in attempt_dirs(sdir))
 
 
 def main(plan_path):
@@ -50,7 +58,10 @@ def main(plan_path):
                "--out", str(sdir / "policy.pkl"), *st.get("args", [])]
         # first attempt = no Brax checkpoint (digit-named dir) yet; any other subdir
         # (e.g. an orbax tmp from a crash mid-first-write) doesn't count
-        if st.get("init") and not any(d.name.isdigit() for d in sdir.glob("run_*/*/")):
+        has_ckpt = any(d.is_dir() and d.name.isdigit()
+                       for ad in attempt_dirs(sdir)
+                       for d in ad.iterdir() if d.is_dir())
+        if st.get("init") and not has_ckpt:
             init = pathlib.Path(st["init"]).expanduser()
             src = init if init.is_absolute() else run / st["init"] / "policy.pkl"
             cmd += ["--restore-params-pkl", str(src)]
