@@ -913,6 +913,11 @@ void setup() {
   // agent wait (30-60 s on a cold boot) and before tick_timer.begin(), so
   // armed servos would hold torque with no SafetyFSM, stall guard or watchdog
   // running. The first safety tick in loop() arms instead (servo_fleet.h).
+  //
+  // #493: On warm resets (watchdog reboot, etc.), STS3215 servos retain holding
+  // torque from the previous session. Explicitly disarm the servo fleet here
+  // so no servo holds unmonitored torque across the micro-ROS agent wait.
+  set_fleet_torque(false);
 
 #ifdef NOVA_USE_MICRO_ROS
   set_microros_serial_transports(Serial);
