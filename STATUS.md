@@ -4,12 +4,41 @@ Single-pane blockers / in-progress / next-actions. Hand-maintained; the detail
 lives in `README.md` (Open Decisions + Build Roadmap), `docs/order-list.md`,
 per-board `ROUTING_HANDOFF.md`, and memory. Update when state changes.
 
-_Last updated: 2026-09-05 (review pass; solder state unchanged since 2026-08-16). **The solder/bench state here is a MIRROR of Notion
+_Last updated: 2026-09-29 (servo/locomotion next action added at the top; the solder/bench state below was NOT re-checked and still dates from 2026-09-05). Before that: 2026-09-05 (review pass; solder state unchanged since 2026-08-16). **The solder/bench state here is a MIRROR of Notion
 (🔧 Soldering / Assembly Steps) and normally lags it — read Notion before acting.**
 ⚠️ **On 2026-08-16 that relationship INVERTED**: Notion sat at its 2026-08-09 edit while
 this file and `BUILD_PLAN.md` already carried stages 7–9. Notion has since been brought
 forward, but "Notion wins" is a convention, not a mechanism — check the edit date on both
 before trusting either._
+
+## ⏭️ 2026-09-29 — NEXT: the thermal bench (#488) decides the leg servos
+
+**Scope agreed 2026-09-29:** flat walking plus bumps up to 3 cm. Standard 17-18 cm stairs are out
+of reach for this size with any servo (ceiling about 8-10 cm, with the height map and a crawl).
+
+**Why:** the firmware stall guard (load ≥ 900 for 100 ms) limps the robot in 100 % of TL 1.0
+walks in sim. TL 0.8 avoids it but fails 3 cm bumps (6-39 %). The real open risk is heat, not
+jams. From Feetech's own R and Kt, the stock leg STS3215 (C001, 7.4 V) makes 8.8 W at the trot
+stance torque (1.47 N·m). The 12 V C018 that the hips already use makes 1.9 W, in the same
+case at the same 55 g. Research and all numbers: PR #484 (open) and the decision thread #428.
+
+**#488:** clamp one leg C001 and one hip C018 side by side, 1.5 kg at 10 cm (1.47 N·m) on each
+horn, one 7.5 V supply. Log temperature for 15 min or until 65 °C.
+- **C001 settles below 60 °C → keep the stock legs.** Firmware per #484 (delete the 100 ms rule;
+  measured current/temperature/rail → derate → controlled sit; jam ≥ 3 s; stale fallback after
+  #471), servo gain P_Coefficient 16, idle stand mode. Sim: 3 cm bumps 100 / 59 / 97 % at
+  TL 1.0 + gain 16 (3 seeds; pick the deploy policy on the bump course).
+- **C001 heads for 70 °C → swap all 8 legs to C018 before assembly.** Every item changes:
+  1. 8 × ST-3215-C018 + spares. Leftover C001s go to the Phase-4 arm (7.4 V rail).
+  2. `U1` leg buck module → D42V110F12 (off-board on XT30, same footprint as `U2`; no copper).
+  3. **Both leg TVS SMBJ8.5A → SMBJ13A.** An SMBJ8.5A breaks down at 9.44-10.4 V and would
+     conduct continuously on 12 V (`hardware/wiring/README.md` TVS table). SMBJ13A stock is
+     unverified (5 were ordered for hip + L2 + spares).
+  4. **Power-chain FMEA PC-02 inverts:** the hazard becomes a leftover C001 on the 12 V leg
+     harness (1.6× over its rating). `set-servo-ids.py --identify` must show the 12 V family
+     (reg 0x0E) on all 12 IDs. The U1 no-load pass band becomes 11.8-12.2 V.
+  5. Docs: wiring TVS table, `pre-power-on-validation.md`, `master-bom.md`, `power-budget.md`
+     Rail 1, the INA226 leg comment. Sim: retrain with 2.94 N·m, 45 RPM legs.
 
 ## 🔍 2026-09-05 — FULL REVIEW PASS MERGED (CAD / PCB / wiring / cross-domain)
 
@@ -237,6 +266,8 @@ Full audit detail in memory: [[project-system-audit-2026-06]].
 (firmware CI), **#123** (sim). #232 and #234 are closed.
 
 ## ⏭️ Next actions (rewritten 2026-08-02 — items 1–3 were stale, all three are done)
+
+> *2026-09-29: the servo decision (#488) at the top of this file comes first. The items below were not re-verified on 2026-09-29.*
 
 1. ~~Check the solder drawer~~ ✅ **DONE 2026-08-01 — Sn63Pb37, 1 mm, 1.8 % flux core.** Leaded, so
    every *leaded* setpoint in `BUILD_PLAN.md` §2a is the live one and nothing shifts +30 °C.
