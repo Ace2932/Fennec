@@ -48,11 +48,14 @@ HAA_IN, HAA_OUT = 0.262, 0.698
 HFE_FOLD, HFE_EXT = 0.873, 1.501
 KFE = 1.9
 EFF_HIP, EFF_LEG = 2.9, 1.8                     # N*m stall torque (datasheet)
-# No-load speed caps (rad/s): leg 7.5V bench (peak 1800 raw = 2.76), hip 12V
-# datasheet 45 RPM. Enforced as the motor torque-speed slope via per-joint
+# No-load speed caps (rad/s): leg 7.5V bench, hip 12V datasheet 45 RPM.
+# LEG 2.80 -> 3.83 (2026-09-25): the old 2.76 (peak 1800 raw) was measured with the
+# servo's factory Maximum_Acceleration (reg 85 = 50), whose ~8.5 rad/s^2 profile
+# capped the peak, not the motor. With reg 85 = 254 (#466, the assembly setting)
+# the 3 Hz sine top speed is 2500 steps/s = 3.83 rad/s at 7.5 V. Enforced as the motor torque-speed slope via per-joint
 # damping d = stall/no_load -> available torque hits 0 at no-load speed, so the
 # joint can't exceed it even on a ballistic swing (docs/bench/README.md).
-VMAX_HIP, VMAX_LEG = 4.71, 2.80                 # rad/s no-load
+VMAX_HIP, VMAX_LEG = 4.71, 3.83                 # rad/s no-load
 DAMP_HIP, DAMP_LEG = EFF_HIP / VMAX_HIP, EFF_LEG / VMAX_LEG   # 0.616, 0.643
 
 # ---- inertials — tools/compute_inertials.py (diagonal, reasoned CoM sign) --
@@ -67,7 +70,7 @@ LINK_I = {
 BASE_I = (2.83, (0.0, 0.0, 0.0), (8.7e-3, 2.46e-2, 2.65e-2))
 
 # capsule half-geometry for collision/visual (radius m)
-R_THIGH, R_SHANK, R_FOOT = 0.013, 0.011, 0.014
+R_THIGH, R_SHANK, R_FOOT = 0.013, 0.011, 0.017   # R_FOOT: #443, nova_geometry.yaml
 
 # terrain heightfield (env.domain_randomize fills per-env; flat by default) —
 # keep TN/TR/TZ in sync with terrain.py

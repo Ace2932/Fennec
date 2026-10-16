@@ -99,7 +99,7 @@
       <visual>
         <geometry><mesh filename="package://nova_description/meshes/SM3_Foot.stl" scale="0.001 0.001 0.001"/></geometry>
       </visual>
-      <collision><geometry><sphere radius="0.012"/></geometry></collision>
+      <collision><geometry><sphere radius="0.017"/></geometry></collision>
       <xacro:foot_inertial reflect="${reflect}"/>
     </link>
 
