@@ -13,6 +13,7 @@
 #include "icm42688.h"
 #include "hfe_envelope.h"
 #include "slew_limiter.h"
+#include "stall_guard.h"
 #include "safety_state.h"
 #include "loop_timing.h"
 #include "limp_controller.h"
@@ -291,9 +292,24 @@ volatile uint32_t servo_read_err_count = 0;
 #define NOVA_OVERTEMP_C 70          // °C — act before the servo's own ~80°C cutoff
 #endif
 #ifndef NOVA_STALL_PERSIST
-#define NOVA_STALL_PERSIST 5        // consecutive bad reads (~300 ms @ ~60 ms/joint poll)
+#define NOVA_STALL_PERSIST 5        // consecutive bad polls of that joint (each joint is polled at 50 Hz)
 #endif
-uint8_t  servo_stall_count[NOVA_JOINT_COUNT] = {0};
+// JAM conditions (#428, stall_guard.h): high load alone is NOT a stall — a trot
+// stance sits at ~82 % duty. A poll is bad when load >= NOVA_STALL_LOAD_RAW AND
+// the joint is >= NOVA_STALL_ERR_COUNTS from its commanded goal AND moved
+// <= NOVA_STALL_STILL_COUNTS since the previous poll. UNVERIFIED on hardware:
+// bench the steady |goal - pos| of a leg held at ~90 % duty before trusting 60.
+#ifndef NOVA_STALL_ERR_COUNTS
+#define NOVA_STALL_ERR_COUNTS 60    // ~5.3 deg (4096 counts/rev)
+#endif
+#ifndef NOVA_STALL_STILL_COUNTS
+#define NOVA_STALL_STILL_COUNTS 3   // per 20 ms poll ~ 0.23 rad/s
+#endif
+static const nova::StallGuardConfig STALL_CFG = {
+    NOVA_STALL_LOAD_RAW, NOVA_STALL_ERR_COUNTS, NOVA_STALL_STILL_COUNTS,
+    NOVA_OVERTEMP_C, NOVA_STALL_PERSIST};
+nova::StallJointState servo_stall_state[NOVA_JOINT_COUNT];
+extern uint16_t last_cmd_goal[NOVA_JOINT_COUNT];   // defined with the command pipeline below
 volatile uint16_t servo_stall_mask = 0;     // bit i set = joint i has tripped
 
 // Write TORQUE_ENABLE to every PRESENT servo (torque-off: broadcast first, then
@@ -334,20 +350,17 @@ void poll_one_servo() {
     servo_temp_c      [servo_rr_idx] = buf[7];
     servo_present_mask |= (uint16_t)(1u << servo_rr_idx);
 
-    // Stall / overtemp guard: sustained high load OR overtemp on this joint
-    // trips a fleet LIMP (torque off) once — stops the stall current before it
-    // fries the servo or browns the hip rail. Latched; operator clears.
+    // Stall / overtemp guard (stall_guard.h, #428): a JAM (high load, far from
+    // its commanded goal, not moving) OR overtemp, sustained, trips a fleet LIMP
+    // (torque off) once — stops the stall current before it fries the servo or
+    // browns the hip rail. Latched; operator clears.
     uint16_t load_mag = feetech::load_magnitude(servo_load_raw[servo_rr_idx]);
-    bool joint_bad = (load_mag >= NOVA_STALL_LOAD_RAW) ||
-                     (servo_temp_c[servo_rr_idx] >= NOVA_OVERTEMP_C);
-    if (joint_bad) {
-      if (servo_stall_count[servo_rr_idx] < 0xFF) servo_stall_count[servo_rr_idx]++;
-    } else {
-      servo_stall_count[servo_rr_idx] = 0;
-    }
+    bool over = nova::stall_update(STALL_CFG, servo_stall_state[servo_rr_idx], load_mag,
+                                   servo_temp_c[servo_rr_idx],
+                                   servo_position_raw[servo_rr_idx],
+                                   last_cmd_goal[servo_rr_idx]);   // SLEW_UNINIT == STALL_GOAL_UNKNOWN
     uint16_t stall_bit = (uint16_t)(1u << servo_rr_idx);
-    if (servo_stall_count[servo_rr_idx] >= NOVA_STALL_PERSIST &&
-        !(servo_stall_mask & stall_bit)) {
+    if (over && !(servo_stall_mask & stall_bit)) {
       servo_stall_mask |= stall_bit;
       safety_fsm.trip_overload();
       set_fleet_torque(false);   // LIMP now — first trip cuts torque fleet-wide
@@ -1327,7 +1340,7 @@ void loop() {
       // Fault cleared → re-arm torque + reset the stall guard so it re-protects.
       set_fleet_torque(true);
       servo_stall_mask = 0;
-      for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) servo_stall_count[i] = 0;
+      for (size_t i = 0; i < NOVA_JOINT_COUNT; i++) nova::stall_reset(servo_stall_state[i]);
       limp_controller.reset();   // defensive — should already be idle here
     }
     // #436: boot arm, on the FIRST safety tick — the FSM has just evaluated
