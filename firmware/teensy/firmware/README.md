@@ -4,15 +4,15 @@ PlatformIO project for the Teensy 4.1 bus master (Pattern B per BOM v3.3).
 
 ## Status — 2026-05-20
 
-End-to-end micro-ROS round-trip green on Jetson; 20-topic contract implemented; bus + INA226 driver paths code-complete (compile-green skeletons, untested on wire).
+End-to-end micro-ROS round-trip green on Jetson; 27 publishers + 5 subscribers (32 topics) implemented; bus + INA226 driver paths code-complete (compile-green skeletons, untested on wire).
 
 - Teensy → XRCE-DDS over USB-CDC → `micro_ros_agent` → ROS 2 Humble
-- IntervalTimer ISR-driven 200 Hz tick. Skeleton-only p99 = 1 µs (=50× under the <100 µs gate). Real numbers will grow once a servo is on the bus and reads stop timing out — `/loop_exec_p99_us` is the topic to watch.
+- IntervalTimer ISR-driven 200 Hz tick. Loop timing is not yet measured with the servo bus and I²C in the loop. An earlier skeleton-only run (bus and I²C stubbed out) was timed; that is not a current figure and says nothing about the <100 µs gate. `/loop_exec_p99_us` is the topic to watch once the bus is live.
 - 27 publishers + 5 subscribers wired (see "ROS 2 topics" below). The rmw pools that hold them are sized in `nova_microros.meta` (32 pub / 8 sub; upstream default is 10 / 5) -- `test_firmware_entity_caps.py` fails if main.cpp outgrows it. Heartbeat → joint-state-from-bus → joint-command-to-bus loop is closed in code.
 - Safety FSM with E-stop + battery-low latch, `/safety_clear` reset path, boot self-test seeding.
 - GitHub Actions CI green on every PR (Arduino-only env).
 
-Awaiting bench hardware: 74HC125 driver board, real STS3215 on the TTL bus, INA226 breakouts on the 7.5 V / 12 V / 12 V rails.
+Awaiting bench hardware: 74LVC125 driver board, real STS3215 on the TTL bus, INA226 breakouts on the 7.5 V / 12 V / 12 V rails (plus the L2 12 V rail, 0x45).
 
 ## Where to build
 
@@ -44,8 +44,8 @@ pio run -t upload        # flash
 | Bus UART TX | 1 (Serial1 TX) | into SN74LVC125A TX gate |
 | Bus driver TX OE̅ | 2 | **active-LOW**: LOW = enable TX onto bus |
 | Bus driver RX OE̅ | 3 | **active-LOW**: LOW = enable RX from bus |
-| I²C SDA | 18 (Wire) | INA226 ×3 (×4 with L2) |
-| I²C SCL | 19 (Wire) | INA226 ×3 (×4 with L2) |
+| I²C SDA | 18 (Wire) | INA226 ×4 (leg, hip, Jetson, L2; default build) |
+| I²C SCL | 19 (Wire) | INA226 ×4 (leg, hip, Jetson, L2; default build) |
 | E-stop NC sense | 5 | INPUT_PULLUP, NC contact (J21). Idle (closed) = LOW; pressed OR wire-break/unplug = HIGH (fail-safe) |
 | Battery-low (13.0V comparator) | 4 | INPUT_PULLDOWN, HIGH = below 13.0V |
 | Heartbeat LED | 13 (LED_BUILTIN) | 1 Hz toggle |
@@ -77,7 +77,7 @@ Group by purpose. All `std_msgs/Int32` counters are monotonic from boot unless n
 ### Joint I/O
 | Direction | Topic | Type | Rate | Notes |
 |-----------|-------|------|------|-------|
-| Pub | `/joint_states` | `sensor_msgs/JointState` | 200 Hz | 12 joints — raw position, velocity, load from STS3215 round-robin (~17 Hz per joint). `effort` = signed load in 0.1 % of stall, **-1000..+1000** (register bit 10 = direction, decoded by `feetech::decode_load`) |
+| Pub | `/joint_states` | `sensor_msgs/JointState` | 200 Hz | 12 joints — raw position, velocity, load from STS3215 round-robin (3 servos/tick = 50 Hz per joint). `effort` = signed load in 0.1 % of stall, **-1000..+1000** (register bit 10 = direction, decoded by `feetech::decode_load`) |
 | Sub | `/joint_commands` | `sensor_msgs/JointState` | 100 Hz target | latches into `latched_cmd_position[]`; broadcast to bus at 40 Hz via SYNC_WRITE when `safety_state == NORMAL` |
 | Pub | `/joint_cmd_rx_count` | `Int32` | 1 Hz | sub-callback fire counter (host-side ack) |
 | Pub | `/servo_present_mask` | `Int32` | 1 Hz | bit i = joint i has answered at least once since boot |
@@ -148,13 +148,13 @@ invented names. `test_firmware_topic_contract.py` now fails if a publisher is mi
 
 ## Stubs to fill in (status 2026-05-20)
 
-- ✅ Bus driver — `feetech::Bus` in `feetech_bus.h` handles PING / READ_DATA / WRITE_DATA / SYNC_WRITE with 74HC125 OE control + Serial2 timing. Per-tick round-robin read of 6 bytes (pos+vel+load) from one servo + decimated SYNC_WRITE broadcast of goal positions. **Untested on hardware until 74HC125 + STS3215 on bench.**
+- ✅ Bus driver — `feetech::Bus` in `feetech_bus.h` handles PING / READ_DATA / WRITE_DATA / SYNC_WRITE with 74LVC125 OE control + Serial1 timing. Per-tick round-robin read of 6 bytes (pos+vel+load) from 3 servos + decimated SYNC_WRITE broadcast of goal positions. **Untested on hardware until 74LVC125 + STS3215 on bench.**
 - ✅ INA226 — Rob Tillaart's lib via PlatformIO `lib_deps`; round-robin one rail per tick; `/power_rails` Float32MultiArray @ 10 Hz. **Untested until INA226 boards arrive.**
 - ✅ `latched_cmd_position[]` consumer — wired through `broadcast_servo_commands()` SYNC_WRITE, gated on `safety_fsm.motion_enabled()`.
 - ✅ Edge-change publish for `/estop` and `/battery_low` + latched `/safety_state` FSM with `/safety_clear` reset path.
 - ⏳ Voltage + temperature telemetry — `REG_PRESENT_VOLTAGE` (0x3E) + `REG_PRESENT_TEMPERATURE` (0x3F). Add a second 2-byte read in `poll_one_servo()` or a separate sweep tick. Currently unread.
 - ⏳ DiagnosticArray proper — `/power_rails` is a fixed-layout Float32MultiArray shortcut. A `diagnostic_msgs/DiagnosticArray` consumer makes `rqt_robot_monitor` work natively.
-- ⏳ Acceptance gate verification (60 s window, loop p99 <100 µs) on real bench with real bus + I²C + servos answering. Skeleton baseline (stubs only) measured at 1 µs p99; real numbers grow once bus reads + I²C polls + executor spin are in the hot path.
+- ⏳ Acceptance gate verification (60 s window, loop p99 <100 µs) on real bench with real bus + I²C + servos answering. Not yet measured with bus + I²C in the loop. (An earlier skeleton-only run with stubbed bus and I²C is not a baseline for this gate.)
 
 ## Build flags (from `platformio.ini`)
 

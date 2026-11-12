@@ -104,12 +104,12 @@ uint8_t boot_self_test_flags = 0;
 
 // ---------------- Pinout ----------------
 // Pin numbers reconciled to nova_pcb_v6_logic board routing 2026-06-14.
-// UART1 (Serial1) → 74HC125 → Feetech bus
+// UART1 (Serial1) → 74LVC125 → Feetech bus
 constexpr uint8_t BUS_RX_PIN     = 0;   // Serial1 RX (board: U6 pad TEENSY_RX → pin 0)
 constexpr uint8_t BUS_TX_PIN     = 1;   // Serial1 TX (board: U6 pad TEENSY_TX → pin 1)
-constexpr uint8_t BUS_OE_TX_PIN  = 2;   // 74HC125 OE̅ for TX gate (ACTIVE-LOW: LOW = enable TX)
-constexpr uint8_t BUS_OE_RX_PIN  = 3;   // 74HC125 OE̅ for RX gate (ACTIVE-LOW: LOW = enable RX)
-// I2C0 (Wire) — INA226 ×3
+constexpr uint8_t BUS_OE_TX_PIN  = 2;   // 74LVC125 OE̅ for TX gate (ACTIVE-LOW: LOW = enable TX)
+constexpr uint8_t BUS_OE_RX_PIN  = 3;   // 74LVC125 OE̅ for RX gate (ACTIVE-LOW: LOW = enable RX)
+// I2C0 (Wire) — INA226 ×3, ×4 with NOVA_INA226_L2 (on in the default build)
 constexpr uint8_t I2C_SDA_PIN    = 18;
 constexpr uint8_t I2C_SCL_PIN    = 19;
 // Safety GPIO
@@ -118,9 +118,9 @@ constexpr uint8_t ESTOP_PIN       = 5;   // E-stop NC contact (J21) w/ INPUT_PUL
 constexpr uint8_t BATTERY_LOW_PIN = 4;   // input from 13.03V comparator (measured-parts; HIGH = below 13.03V)
 constexpr uint8_t LED_PIN         = LED_BUILTIN;
 
-// ---------------- Feetech bus (Pattern B half-duplex via 74HC125) ----------------
+// ---------------- Feetech bus (Pattern B half-duplex via 74LVC125) ----------------
 // Bus class owns the OE pins + Serial1; service_bus_stub still just toggles
-// direction until 74HC125 + a real servo are on the bench. Once hardware
+// direction until 74LVC125 + a real servo are on the bench. Once hardware
 // lands, replace the toggle with a round-robin ping/read cycle — the Bus
 // instance already has ping(), read_position(), write_goal_position(), and
 // sync_write_goal_positions() ready to go.
@@ -143,8 +143,8 @@ void service_bus_stub() {
 
 // ---------------- INA226 power-rail telemetry ----------------
 // 3 mandatory rails per BOM v3.4. Optional 4th (L2 LiDAR) gated by
-// NOVA_INA226_L2. Round-robin one rail per tick so each chip refreshes at
-// LOOP_HZ / N_RAILS (≈ 66 Hz for 3 rails @ 200 Hz tick) — well above the
+// NOVA_INA226_L2 (on in the default build). Round-robin one rail per tick so each chip refreshes at
+// LOOP_HZ / N_RAILS (≈ 66 Hz for 3 rails, 50 Hz for 4, @ 200 Hz tick) — well above the
 // 10 Hz /diagnostics publish rate.
 nova::Rail rail_leg   (nova::INA226_ADDR_LEG,    "leg_7v5");
 nova::Rail rail_hip   (nova::INA226_ADDR_HIP,    "hip_12v");
@@ -291,7 +291,7 @@ volatile uint32_t servo_read_err_count = 0;
 #define NOVA_OVERTEMP_C 70          // °C — act before the servo's own ~80°C cutoff
 #endif
 #ifndef NOVA_STALL_PERSIST
-#define NOVA_STALL_PERSIST 5        // consecutive bad reads (~300 ms @ ~60 ms/joint poll)
+#define NOVA_STALL_PERSIST 5        // consecutive bad reads (~100 ms: 3 polls/tick @ 200 Hz, 12 joints = one poll per joint every 20 ms)
 #endif
 uint8_t  servo_stall_count[NOVA_JOINT_COUNT] = {0};
 volatile uint16_t servo_stall_mask = 0;     // bit i set = joint i has tripped

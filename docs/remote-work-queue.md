@@ -26,7 +26,7 @@ Source of truth: `docs/bench/README.md`.
       the real 75 ms.
 - [x] EFF_LEG=1.8 / EFF_HIP=2.9 kept (≈ stall). DR narrowed to measured
       (kp 25-45, kv 0-0.3, damping 0.8-1.3×).
-- [x] Servo NOT modeled as first-order lag — rate-limit + delay + deadband.
+- [x] Servo NOT modeled as first-order lag — rate-limit + delay + deadband. (July model; superseded 2026-09-25 by acceleration-limited, see `docs/bench/README.md` "Sine tracking".)
 
 ## Tier 1 — TRAIN (the main event)
 - [ ] **Run PPO on Colab T4** (`train.py`, ~60M steps, 20–40 min) with the Tier-0

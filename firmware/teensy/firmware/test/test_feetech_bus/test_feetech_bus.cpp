@@ -5,7 +5,7 @@
 // the path EVERY joint command travels — had no test at all. The two things it
 // gets wrong are both invisible to a final-state check:
 //
-//   1. OE POLARITY. The 74HC125 output-enables are ACTIVE-LOW. The header
+//   1. OE POLARITY. The 74LVC125 output-enables are ACTIVE-LOW. The header
 //      records that the original firmware had these inverted, so "TX never
 //      drove the bus and the idle-high UART fought every servo response"
 //      (feetech_bus.h:29-36). A wrong polarity is a dead or contended bus.

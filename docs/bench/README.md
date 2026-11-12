@@ -45,8 +45,8 @@ at ~6 % of stall torque (gearbox friction carries the rest). Corrected 2026-09-2
   ~~**speed-governed / rate-limited**~~ **acceleration-limited** (corrected
   2026-09-25: peak speed rises with step size, 1.92 / 2.76 / 3.37 rad/s for
   30 / 60 / 90°, while v²/θ stays 7.0-7.3 rad/s². That is the servo's internal
-  trajectory profile, ~7-9 rad/s² even at accel = 0; see #428), not torque-limited. Model it as a
-  rate-limited position tracker in the sim (NOT a spring); torque-speed droop
+  trajectory profile, ~7-9 rad/s² even at accel = 0; see #428), not torque-limited. ~~Model it as a
+  rate-limited position tracker in the sim (NOT a spring)~~ **(superseded: the July rate-limit model was replaced by the acceleration-limited result in "Sine tracking" and "The ceiling is a register" below)**; torque-speed droop
   only near stall (~1.9 N·m ≈ 3.4 kg at this lever — not captured).
 - Load register senses direction (lift 1600 vs drop 500); ~~static hold anchors
   raw→N·m (~1048 raw @ 0.11 N·m)~~ the register is duty, not torque, so there is
@@ -189,7 +189,9 @@ SYNC read/write → 12 @ 50 Hz is established (protocol supports it). No bench t
 ~~RATE-LIMITED (constant-velocity traverse at ~2.8 rad/s)~~ **ACCELERATION-LIMITED
 (~7-9 rad/s², corrected 2026-09-25)**, NOT first-order. Fitting
 tau to settle time (324–541 ms) OVERSTATES lag — the real model is
-**rate-limiter (2.8/4.7 rad/s) + ~75 ms pure delay + 10-count deadband**, not a slow
+~~rate-limiter (2.8/4.7 rad/s) + ~75 ms pure delay + 10-count deadband~~ (July model,
+**superseded 2026-09-25**: the limit is acceleration, register 85, see "Sine tracking" and
+"The ceiling is a register" above; the ~75 ms delay and 10-count deadband still stand), not a slow
 lag. Do NOT bake "-140° @1.5 Hz" into the sim; use the rate+delay+deadband model.
 
 Ref: zeroth-robotics/bam-feetech (BAM friction sysID method — pendulum→MuJoCo, reusable
