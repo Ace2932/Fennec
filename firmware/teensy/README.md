@@ -6,11 +6,11 @@ Critical-path Phase 1 deliverable. The Teensy owns the Feetech servo bus in v1 �
 
 ### Responsibilities
 
-- **Bus master:** Hardware UART → 74HC125 half-duplex driver → 12-servo Feetech TTL bus at 1 Mbps (drop to 500k / 250k if bus errors emerge during bring-up)
-- **Direction control:** GPIO drives 74HC125 OE pins for TX/RX gating on the shared half-duplex line
+- **Bus master:** Hardware UART → SN74LVC125A half-duplex driver → 12-servo Feetech TTL bus at 1 Mbps (drop to 500k / 250k if bus errors emerge during bring-up)
+- **Direction control:** GPIO drives 74LVC125 OE pins for TX/RX gating on the shared half-duplex line
 - **Real-time loop:** 200-500 Hz tick. Read joint states (position, load, temp, voltage), publish `/joint_states`. Apply latest `/joint_commands`. Hard deadline per tick.
 - **Safety monitor:**
-  - INA226 ×3 I²C reads (leg / hip / Jetson rails; optional 4th on L2 rail) → `/diagnostics`
+  - INA226 I²C reads (leg 0x40 / hip 0x41 / Jetson 0x44 rails, plus the L2 rail 0x45 — the default build enables it via `-D NOVA_INA226_L2`, `platformio.ini` line 61) → `/diagnostics`
   - E-stop GPIO sense — when pressed, halts servo commands and publishes E-stop event
   - **Battery low GPIO sense** — 13.03V comparator output (measured-parts value; see `hardware/wiring/README.md`'s safety-chain trip-point table) → debounce → publish `/battery_low` (Jetson subscribes, runs `systemctl poweroff` for clean SD unmount before the 12.56V hard cutoff fires — 0.47V margin)
 - **micro-ROS client over USB** to Jetson
@@ -26,7 +26,7 @@ Critical-path Phase 1 deliverable. The Teensy owns the Feetech servo bus in v1 �
 
 ### Pattern A fallback path
 
-When `JP_BUS_MASTER` solder bridge is flipped to A, the bus is driven by FE-URT-1 (Jetson direct). Teensy stays alive for INA226 + E-stop duties but stops driving the 74HC125. Used for:
+When `JP_BUS_MASTER` solder bridge is flipped to A, the bus is driven by FE-URT-1 (Jetson direct). Teensy stays alive for INA226 + E-stop duties but stops driving the 74LVC125. Used for:
 - Initial servo ID assignment from workstation (Feetech FD / SCServo SDK Python)
 - Debug if Teensy firmware misbehaves
 - Post-mortem bus traffic inspection
@@ -120,8 +120,8 @@ Adversarial review, same day — three more, all fixed:
 
 - DMA vs ISR for UART TX/RX (DMA preferred for jitter; ISR simpler)
 - Per-servo poll interval — round-robin all 12 vs prioritize legs over arm/idle joints
-  (current: 1 servo/tick = 16.7 Hz per joint; budget fits 2/tick if closed-loop work
-  ever needs faster feedback)
+  (current: 3 servos/tick = 50 Hz per joint, `NOVA_POLLS_PER_TICK 3` in
+  `telemetry_schedule.h`; 4/tick would fit if closed-loop work ever needs faster feedback)
 - Failure-mode behavior: lost servo response → retry budget → flag dead in `/joint_states`
 - micro-ROS QoS profile — recommended resolution: `/joint_commands` best-effort keep-last-1
   (stale commands are worse than none), safety/state topics reliable
@@ -130,6 +130,6 @@ Resolve during firmware bring-up.
 
 ---
 
-> **Status (2026-05-23):** Firmware end-to-end on Jetson, 20-topic contract live, **loop p99 = 1 µs** (50× under <100 µs acceptance gate) after IntervalTimer ISR-driven 200 Hz tick replaced polled loop. Recent additions (2026-05-19 → 2026-05-21): safety FSM (E-stop + battery-low latch + `/safety_clear`), full STS3215 telemetry (pos+vel+load + voltage + temp @ 5 Hz), per-joint slew limiter on SYNC_WRITE broadcast, software watchdog (ISR-checked main-loop progress + AIRCR reset on hang), boot-time servo ping sweep populating real `/servo_present_mask`, INA226 → `/power_rails` Float32MultiArray @ 10 Hz, `/firmware_version` + boot self-test for safety GPIOs, categorised bus errors (timeout / bad_frame / servo). CI green on every PR.
+> **Status (2026-05-23):** Firmware end-to-end on Jetson, 32-topic contract live today (27 publishers + 5 subscribers, counted in `main.cpp`; 20 when this note was written). Loop timing has NOT been measured with the servo bus and I²C in the loop. An earlier skeleton-only run (bus and I²C stubbed out) was timed, and that figure is not a current measurement. The 200 Hz tick is IntervalTimer ISR-driven (it replaced a polled loop). Recent additions (2026-05-19 → 2026-05-21): safety FSM (E-stop + battery-low latch + `/safety_clear`), full STS3215 telemetry (pos+vel+load + voltage + temp @ 5 Hz), per-joint slew limiter on SYNC_WRITE broadcast, software watchdog (ISR-checked main-loop progress + AIRCR reset on hang), boot-time servo ping sweep populating real `/servo_present_mask`, INA226 → `/power_rails` Float32MultiArray @ 10 Hz, `/firmware_version` + boot self-test for safety GPIOs, categorised bus errors (timeout / bad_frame / servo). CI green on every PR.
 >
-> **Untested on wire** (skeletons compile-green, behavior unverified): `feetech::Bus` SYNC_WRITE broadcast against real STS3215, INA226 I²C reads against real breakouts, 74HC125 half-duplex driver gating. Phase 1 bench bring-up gate: re-measure `/loop_exec_p99_us` once real bus + I²C are in the hot path (skeleton 1 µs will grow). Live TODO in `firmware/teensy/firmware/README.md`.
+> **Untested on wire** (skeletons compile-green, behavior unverified): `feetech::Bus` SYNC_WRITE broadcast against real STS3215, INA226 I²C reads against real breakouts, 74LVC125 half-duplex driver gating. Phase 1 bench bring-up gate: measure `/loop_exec_p99_us` for the first time with the real bus + I²C in the hot path (the skeleton-only run is not a baseline for that). Live TODO in `firmware/teensy/firmware/README.md`.

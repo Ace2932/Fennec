@@ -3,7 +3,7 @@
 This single-board project (`nova_pcb_v6/`) is **superseded by the 2-board mezzanine**:
 
 - `../nova_pcb_v6_power/` — battery / rails / servo-bus / safety
-- `../nova_pcb_v6_logic/` — Teensy / 74HC125 / Nano
+- `../nova_pcb_v6_logic/` — Teensy / 74LVC125 / Nano
 
 joined by inter-board connector **J20**. Do new work on the mezzanine projects;
 this board is kept for reference/history only.

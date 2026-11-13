@@ -8,7 +8,7 @@
 
 ## 0. Open inputs needed before build
 
-- [x] **Notion page content** — received 2026-05-23. Status: Phase 1 firmware bring-up green (loop p99 = 1 µs), Phase 0 closing except PCB v6 schematic + spare-part backlog. Away-week 2026-05-29 → 2026-06-05 = laptop-only PCB v6 schematic work.
+- [x] **Notion page content** — received 2026-05-23. Status: Phase 1 firmware bring-up green, Phase 0 closing except PCB v6 schematic + spare-part backlog. Away-week 2026-05-29 → 2026-06-05 = laptop-only PCB v6 schematic work.
 - [x] **PCB v6 design spec exists** at [`hardware/pcb-mods/README.md`](../hardware/pcb-mods/README.md) — 130 lines, 8 feature sections covering battery input + 4-rail power + bus distribution + Pattern B/A bridge + bus integrity + safety chain + aux MCU + connector convention. Skill templates map 1:1 to these sections.
 - [x] Confirm scope: skill biased toward NOVA PCB v6 but generalizable. Templates parameterized so a non-NOVA quadruped (or any embedded-bus + safety-chain project) can reuse them.
 - [x] Confirm install target: `~/.claude/skills/pcb-design/` mirrors `parametric-3d-printing` layout.

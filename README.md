@@ -317,7 +317,7 @@ Full BOM lives in [`BOM.md`](./BOM.md). High-level summary:
 - [x] Pick LiPo charger → **ISDT 608AC**
 - [x] Power rail audit (XL4016 → Pololu D42V110-class)
 - [x] Confirm v1 scope = quadruped only (arm → Phase 4)
-- [x] Bus master decision → Pattern B (Teensy + 74HC125) v1 default
+- [x] Bus master decision → Pattern B (Teensy + SN74LVC125A) v1 default
 - [x] Set up GitHub repo with this README and BOM
 
 **Week 1 (2026-05-15 → 2026-05-22):**
@@ -515,7 +515,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-05-18 | **Unitree L2 LiDAR streaming end-to-end.** Wired L2 ↔ Cat 6 ↔ gigabit switch ↔ Cat 6 ↔ Jetson `enP8p1s0` (192.168.1.2/24 static via `nmcli connection nova-lan`). Ping to L2 (192.168.1.62) at 0.1 ms. `ros2 launch unitree_lidar_ros2 launch.py` brings up `/unilidar/cloud` at **12 Hz, 5042 points/scan, frame_id `unilidar_lidar`**. Followup: `/unilidar/imu` topic advertised but no UDP frames arriving — driver `initialize_type` config may need tuning (non-blocking since D456 IMU at 200 Hz covers EKF). **Full v1 perception stack online:** RGB + depth + 2 IMUs + 3D LiDAR all in ROS 2. |
 | 2026-05-19 | **POINT-LIO ROS 2 (dfloreaa fork) built green on Jetson** in 1:42 colcon. Phase 2 SLAM toolchain compile-ready. L2-specific config at `unilidar_l2.yaml` (scan_line 18, imu_time_inte 0.004 = 250 Hz). Runtime tests deferred until L2 IMU ROS bridge bug fixed OR `imu_en: false` LiDAR-only mode set. |
 | 2026-05-19 | **Teensy 4.1 PlatformIO firmware skeleton compile-green on Mac** in 9.58 s (Flash 12.8 KB / 8 MB free; RAM1 487 KB / RAM2 512 KB free). Pin map + 74HC125 OE GPIO scaffolding + INA226 I²C placeholder + safety GPIO sense + 1 Hz LED heartbeat + USB-CDC log lines. micro-ROS lib_deps gated behind `NOVA_USE_MICRO_ROS` — Mac build path breaks on Python 3.14 + missing ROS dev libs; reinstate on Jetson for runtime testing. Repo path: `firmware/teensy/firmware/`. |
-| 2026-05-19 | **Teensy firmware end-to-end on Jetson.** IntervalTimer ISR-driven 200 Hz tick → loop p99 = **1 µs** (50× under <100 µs acceptance gate). micro-ROS over USB-CDC + 20-topic contract live. `feetech::Bus` driver code-complete (untested on wire). |
+| 2026-05-19 | **Teensy firmware end-to-end on Jetson.** IntervalTimer ISR-driven 200 Hz tick. micro-ROS over USB-CDC + topic contract live. `feetech::Bus` driver code-complete (untested on wire). |
 | 2026-05-20 | **Firmware safety + telemetry batch:** safety FSM (E-stop + battery-low latch + `/safety_clear`), full STS3215 telemetry (pos+vel+load + voltage + temp @ 5 Hz), per-joint slew limiter on SYNC_WRITE broadcast, software watchdog (ISR-checked main-loop progress + AIRCR reset), boot-time servo ping sweep → first real `/servo_present_mask`, INA226 → `/power_rails` Float32MultiArray @ 10 Hz, `/firmware_version` + boot self-test for safety GPIOs, categorised bus errors (`/servo_err_timeout` + `/servo_err_bad_frame` + `/servo_err_servo`). CI green on every PR. |
 | 2026-05-21 | Threadlocker (Loctite 243) + tape ordered. DP adapter dropped (headless SSH path validated). |
 | 2026-05-23 | **L2 IMU bridge fixed** via Ace2932/unilidar_sdk2 fork — `/unilidar/imu` now publishes @ 250 Hz, POINT-LIO green end-to-end (init walks 1% → 100% within 250 ms). Per-room PCD capture procedure documented in `setup-jetson.md` §15. |
@@ -529,7 +529,7 @@ Full test sequence and acceptance criteria in [`BOM.md`](./BOM.md) Section 12.
 | 2026-07-06 | **System audit fully closed:** servo firmware-limits lane, limp mode, watchdogs, joint-map loader. rostest suites (firmware limits, watchdog, joint-map, liveness, locomotion) wired into CI. |
 | 2026-07-10 | **leg_v6 caliper session:** 25T horn disc-to-disc measured 35.5 mm, yoke fixed, servo insertion proven; battery mount redesigned (top-flange); chassis-integration audit closed. Measured femur 106.9 / tibia 129.0 mm → URDF + IK green. |
 | 2026-07-13 | **CAD fit-gate audit closed:** every leg + chassis screw joint gated on both sides (bolted-joint gate pattern — probe STL first, solid-ring guard, blind-pocket proof, negative control). Legs printing. |
-| 2026-07-16 | 🎉 **First walk — in simulation.** RL policy (MuJoCo MJX + Brax PPO, proprioceptive obs) trots on flat ground in `sim/nova_mjx`. Curriculum + DR bracket measured servo behavior (2.8 rad/s joint cap, ~75 ms latency). |
+| 2026-07-16 | 🎉 **First walk — in simulation.** RL policy (MuJoCo MJX + Brax PPO, proprioceptive obs) trots on flat ground in `sim/nova_mjx`. Curriculum + DR bracket measured servo behavior (2.8 rad/s joint cap, ~75 ms latency; the 2.8 cap is what `sim/nova_mjx/env.py` still models, and the bench shows a higher no-load speed: a 90° step peaks at 3.37 rad/s in `docs/bench/README.md`, and `env.py` lines 248-249 cite ~3.8 measured. Known gap, not yet closed). |
 | 2026-07-20 | **Terrain-relative reward rework** (#129/#130): resume-safe curriculum accounting; collision-exact terrain height under each foot — done/height/contact all terrain-relative, flat behavior bit-identical. |
 | 2026-07-21 | **Climb objective** (#131) + unidirectional staircases: privileged-heightmap teacher policy, signed non-farmable ascent reward. Project renamed **Fennec**. Stair-climb bootstrap iteration continues (climb-v2: PBRS approach density + joint pad curriculum). |
 | TBD | Phase 0 → Phase 1 transition (parts in hand) |

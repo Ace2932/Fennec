@@ -444,7 +444,7 @@ and it is not what unblocks anything else.
 ## Phase snapshot (2026-07-31)
 - **Phase 0** (pre-build): **CLOSED.** Both boards designed, fabbed, delivered.
 - **Phase 1** (HW bring-up): **STARTED — this is where we are.** Soldering in progress
-  (`BUILD_PLAN.md` stages 0–10). Firmware skeleton green (p99 1 µs, isolation); nothing on these
+  (`BUILD_PLAN.md` stages 0–10). Firmware skeleton green (compiles and runs, bus + I²C stubbed; loop timing not yet measured with them in the loop); nothing on these
   boards has been powered or bench-proven yet. B3 is the gate out of this phase.
 - **Phase 2+** (locomotion/autonomy/arm): groundwork only (URDF + IK/gait scaffolded, walks in sim
   on flat). Gated on the remainder of B2.
